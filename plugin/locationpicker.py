@@ -126,7 +126,7 @@ class LocationPicker:
                     if not open_basic_file(session, uri, position, flags):
                         self._window.status_message(f"Unable to open {uri}")
             else:
-                sublime_aio.run_coroutine(
+                sublime_aio.call_coroutine(
                     open_location(session, location, self._side_by_side, self._force_group, self._group)
                 )
         else:

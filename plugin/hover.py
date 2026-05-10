@@ -117,23 +117,18 @@ class LspHoverCommand(LspTextCommand):
         # rather than just the hover point.
 
         async def run_async() -> None:
-            trace()
             listener = wm.listener_for_view(self.view)
             if not listener:
-                trace()
                 return
             if not only_diagnostics:
-                trace()
                 self.request_symbol_hover_async(listener, hover_point)
                 if userprefs().link_highlight_style in {"underline", "none"}:
                     self.request_document_link_async(listener, hover_point)
             self._diagnostics_by_config = listener.get_diagnostics_async(
                 hover_point, userprefs().show_diagnostics_severity_level)
             if self._diagnostics_by_config:
-                trace()
                 self.show_hover(listener, hover_point, only_diagnostics)
             if userprefs().show_code_actions_in_hover:
-                trace()
                 region = sublime.Region(hover_point, hover_point)
                 kinds: list[str | CodeActionKind] = [CodeActionKind.QuickFix]
                 code_action_promises = [
@@ -145,7 +140,7 @@ class LspHoverCommand(LspTextCommand):
                 ]
                 Promise.all(code_action_promises).then(partial(self._handle_code_actions, listener, hover_point))
 
-        sublime_aio.run_coroutine(run_async())
+        sublime_aio.call_coroutine(run_async())
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         trace()
@@ -224,6 +219,7 @@ class LspHoverCommand(LspTextCommand):
         responses: list[tuple[str, list[Command | CodeAction]]]
     ) -> None:
         trace()
+        debug("responses:", responses)
         if actions := {config_name: code_actions for config_name, code_actions in responses if code_actions}:
             trace()
             self._actions_by_config = actions

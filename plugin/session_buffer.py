@@ -396,7 +396,7 @@ class SessionBuffer:
                     .then(partial(self._on_type_formatting_result_async, view, change_count))
             else:
                 debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
-                          lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
+                          lambda: view.is_valid() and change_count == view.change_count())
 
     def _cancel_pending_requests_async(self) -> None:
         for identifier, pending_request in self._document_diagnostic_pending_requests.items():
@@ -435,7 +435,7 @@ class SessionBuffer:
             return  # we're closing
         finally:
             self._pending_changes = None
-        self.session.bnotify_plugin_on_session_buffer_change_async(self)
+        self.session.notify_plugin_on_session_buffer_change_async(self)
         sublime.set_timeout_async(lambda: self._on_after_change_async(view, version, suppress_requests))
 
     def _on_after_change_async(self, view: sublime.View, version: int, suppress_requests: bool = False) -> None:

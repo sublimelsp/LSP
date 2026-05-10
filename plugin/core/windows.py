@@ -154,10 +154,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         # Update workspace folders in case the user have changed those since window was created.
         # There is no currently no notification in ST that would notify about folder changes.
         self.update_workspace_folders_async()
-        debug("checking if config is needed for", listener)
         if config := self._needed_config(listener.view):
-            debug("found config for", listener)
-            sublime_aio.run_coroutine(self.start(config, listener))
+            sublime_aio.call_coroutine(self.start(config, listener))
 
     def unregister_listener_async(self, listener: AbstractViewListener) -> None:
         self._listeners.discard(listener)
@@ -188,7 +186,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 elif not is_applicable and session_view:
                     session.shutdown_session_view_async(session_view)
             elif is_applicable:
-                sublime_aio.run_coroutine(self.start(config, listener))
+                sublime_aio.call_coroutine(self.start(config, listener))
 
     def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
         if file_path:
@@ -209,44 +207,28 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         return None
 
     def _needed_config(self, view: sublime.View) -> ClientConfig | None:
-        configs = self._config_manager.match_view(view, self._workspace.get_workspace_folders())
-        handled = False
-        file_name = view.file_name()
-        inside = self._workspace.contains(view)
-        for config in configs:
-            handled = False
-            for session in list(self._sessions):
-                if config.name == session.config.name and session.handles_path(file_name, inside):
-                    handled = True
-                    break
-            if not handled:
-                if plugin := get_plugin(config.name):
-                    if issubclass(plugin, LspPlugin):
-                        context = IsApplicableContext(config, view, self._workspace.get_workspace_folders())
-                        if plugin.is_applicable_async(context):
-                            return config
-                    elif plugin.is_applicable(view, config):
+        for config in self._config_manager.match_view(view, self._workspace.get_workspace_folders()):
+            if plugin := get_plugin(config.name):
+                if issubclass(plugin, LspPlugin):
+                    context = IsApplicableContext(config, view, self._workspace.get_workspace_folders())
+                    if plugin.is_applicable_async(context):
                         return config
-                else:
+                elif plugin.is_applicable(view, config):
                     return config
+            else:
+                return config
         return None
 
     async def start(self, config: ClientConfig, listener: AbstractViewListener) -> None:
-        trace()
         async with self._start_lock:
-            trace()
             file_path = listener.view.file_name() or ''
             inside = self._workspace.contains(file_path)
             for session in list(self._sessions):
-                trace()
-                debug(f"{session.config.name} =? {config.name} && session.handles_path({file_path}, {inside}) = {session.handles_path(file_path, inside)}")
                 if session.config.name == config.name and session.handles_path(file_path, inside):
                     # OK, this session is already initialized for this view.
                     self._listeners.add(listener)
-                    debug("found existing session for", listener)
                     session.config.set_view_status(listener.view, "")
                     listener.on_session_initialized_async(session)
-                    trace()
                     return
 
             config = ClientConfig.from_config(config, {})
@@ -254,7 +236,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             loop = asyncio.get_running_loop()
 
             try:
-                trace()
                 workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
                 plugin_class = get_plugin(config.name)
                 variables = extract_variables(self._window)
@@ -286,13 +267,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if plugin_class and issubclass(plugin_class, AbstractPlugin):
                     plugin_class.on_post_start(self._window, listener.view, workspace_folders, config)
             except PluginStartError as ex:
-                trace()
                 config.erase_view_status(listener.view)
                 message = f"cannot start {config.name}: {ex!s}"
                 self._config_manager.disable_config(config.name, only_for_session=True)
                 self._window.status_message(message)
             except Exception as e:
-                trace()
                 message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
                             'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
                            f'Palette.\n\n--- Error: ---\n{e}')
@@ -300,21 +279,17 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if isinstance(e, CalledProcessError):
                     print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
                 self._config_manager.disable_config(config.name, only_for_session=True)
+                config.erase_view_status(listener.view)
                 sublime.message_dialog(message)
                 return None
-            finally:
-                trace()
-                config.erase_view_status(listener.view)
 
             try:
-                trace()
-                config.set_view_status(listener.view, "initialize")
-                debug("initializing session")
+                config.set_view_status(listener.view, "initializing...")
                 await session.initialize(variables=variables, transport=transport, working_directory=cwd)
                 self._sessions.add(session)
-                debug(f"session {session} initialized")
                 self._listeners.add(listener)
                 listener.on_session_initialized_async(session)
+                config.set_view_status(listener.view, "")
             except Exception as e:
                 trace()
                 message = (f'Failed to initialize {config.name} - disabling for this window for the duration of the current '
@@ -325,10 +300,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
                 self._config_manager.disable_config(config.name, only_for_session=True)
                 sublime.message_dialog(message)
-                return None
-            finally:
-                trace()
                 config.erase_view_status(listener.view)
+                return None
 
     def _create_logger(self, config_name: str) -> Logger:
         logger_map = {
@@ -367,7 +340,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     def _end_sessions_async(self, config_names: list[str] | None = None) -> None:
         for session in list(self._sessions):
             if config_names is None or session.config.name in config_names:
-                session.end_async()
+                sublime_aio.call_coroutine(session.end())
                 self._sessions.discard(session)
 
     def get_project_path(self, file_path: str) -> str | None:

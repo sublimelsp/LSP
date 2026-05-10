@@ -95,7 +95,6 @@ from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
 from .edit import WorkspaceEditSummary
-from .executors import executor_async
 from .executors import executor_main
 from .file_watcher import DEFAULT_WATCH_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
@@ -176,7 +175,7 @@ import mdpopups
 import os
 import sublime
 import sublime_aio
-import threading
+import traceback
 import weakref
 
 if TYPE_CHECKING:
@@ -980,6 +979,7 @@ class CancellableInflightRequest(CancellableRequest[R]):
         """
         You can `await` the response of an in-flight request.
         However, note that immediately awaiting this object prevents you from ever canceling it.
+        When the language server replies with an error, an exception of type protocol.Error is raised.
         """
         return self._future.__await__()
 
@@ -993,7 +993,7 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
     """
 
     _future: asyncio.Future[R] | None
-    _stop: bool
+    _stopped: bool
 
     def __init__(self, id: int, session: "Session") -> None:
         super().__init__(id, session)
@@ -1026,7 +1026,7 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
 
     def __anext__(self) -> Awaitable[R]:
         if self._stopped:
-            raise StopAsyncIteration
+            raise StopAsyncIteration()
         self._future = asyncio.get_running_loop().create_future()
         return self._future
 
@@ -1094,7 +1094,6 @@ class Session(APIHandler, TransportCallbacks):
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
         self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, int | None] = {}
         self.exiting = False
-        self._request_cv = threading.Condition()
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0
         self._variables: dict[str, str] = {}
@@ -1111,6 +1110,7 @@ class Session(APIHandler, TransportCallbacks):
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
         self._logged_unsupported_commands: set[str] = set()
+        self._progress_lock = asyncio.Lock()
         super().__init__()
 
     def __getattr__(self, name: str) -> Any:
@@ -1147,7 +1147,13 @@ class Session(APIHandler, TransportCallbacks):
         self._session_views.discard(sv)
         if not self._session_views:
             current_count = self._views_opened
-            debounced(lambda: sublime_aio.run_coroutine(self.end()), 3000, lambda: self._views_opened == current_count)
+
+            async def maybe_end() -> None:
+                await asyncio.sleep(3)
+                if self._views_opened == current_count:
+                    await self.end()
+
+            asyncio.get_running_loop().create_task(maybe_end())
 
     def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
         """It is only safe to iterate over this in the async thread."""
@@ -1346,8 +1352,8 @@ class Session(APIHandler, TransportCallbacks):
         working_directory: str | None,
         transport: TransportWrapper
     ) -> InitializeResult:
+        loop = asyncio.get_running_loop()
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
-            loop = asyncio.get_running_loop()
             self._plugin = self._plugin_class(weakref.ref(self))
             await self._plugin.on_transport_ready(transport)
         self.transport = transport
@@ -1369,8 +1375,7 @@ class Session(APIHandler, TransportCallbacks):
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
             if issubclass(self._plugin_class, AbstractPlugin):
-                loop = asyncio.get_running_loop()
-                self._plugin = await loop.run_in_executor(executor_async, self._plugin_class, weakref.ref(self))
+                self._plugin = self._plugin_class(weakref.ref(self))
                 self._plugin.on_server_response_async('initialize', Response(-1, result))
         if self._plugin and isinstance(self._plugin, LspPlugin):
             await self._plugin.on_initialize()
@@ -1392,7 +1397,7 @@ class Session(APIHandler, TransportCallbacks):
                     ignores = config.get('ignores') or self._get_global_ignore_globs(folder.path)
                     watcher = self._watcher_impl.create(folder.path, patterns, events, ignores, self)
                     self._static_file_watchers.append(watcher)
-        self.do_workspace_diagnostics_async()
+        loop.call_soon(self.do_workspace_diagnostics_async)
         return result
 
     def _get_global_ignore_globs(self, root_path: str) -> list[str]:
@@ -1453,17 +1458,13 @@ class Session(APIHandler, TransportCallbacks):
             sublime.set_timeout(lambda: view.run_command("auto_complete"))
             return None
         if command_name == "editor.action.triggerParameterHints" and view:
-
-            def run_async() -> None:
-                session_view = self.session_view_for_view_async(view)
-                if not session_view:
-                    return
-                listener = session_view.listener()
-                if not listener:
-                    return
-                listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked)
-
-            sublime.set_timeout_async(run_async)
+            session_view = self.session_view_for_view_async(view)
+            if not session_view:
+                return
+            listener = session_view.listener()
+            if not listener:
+                return
+            listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked)
             return None
         # Handle VSCode-specific command which is often used for "References" code lenses
         if command_name == "editor.action.showReferences" and view:
@@ -1597,11 +1598,9 @@ class Session(APIHandler, TransportCallbacks):
             view = open_resource(self.window, uri, group)
             if view and r:
                 sublime.set_timeout(partial(center_selection, view, r))
-            sublime.set_timeout_async(lambda: result[1](view))
+            return view
 
-        result: PackagedTask[sublime.View | None] = Promise.packaged_task()
-        sublime.set_timeout(continue_on_main_thread)
-        return await result[0]
+        return await asyncio.get_running_loop().run_in_executor(executor_main, continue_on_main_thread)
 
     async def _open_uri_with_plugin(
         self,
@@ -1849,13 +1848,18 @@ class Session(APIHandler, TransportCallbacks):
 
     def do_workspace_diagnostics_async(self) -> None:
         if not self.get_workspace_folders():
+            trace()
             return
+        trace()
         for identifier in self.diagnostics.workspace_diagnostics_identifiers:
+            trace()
             if self.workspace_diagnostics_pending_responses.get(identifier) is not None:
                 # The server is probably leaving the request open intentionally, in order to continuously stream updates
                 # via $/progress notifications.
+                trace()
                 continue
             asyncio.get_running_loop().create_task(self._do_workspace_diagnostics(identifier))
+        trace()
 
     async def _do_workspace_diagnostics(self, identifier: DiagnosticsIdentifier) -> None:
         previous_result_ids: list[PreviousResultId] = [
@@ -1870,7 +1874,9 @@ class Session(APIHandler, TransportCallbacks):
             Request.workspaceDiagnostic(params)
         )
         try:
+            trace()
             async for partial_response in inflight_request:
+                trace()
                 for diagnostic_report in partial_response['items']:
                     uri = normalize_uri(diagnostic_report['uri'])
                     version = diagnostic_report['version']
@@ -2058,7 +2064,7 @@ class Session(APIHandler, TransportCallbacks):
                 self.capabilities.register(registration_id, capability_path, registration_path, options)
                 # We must inform our SessionViews of the new capabilities, in case it's for instance a hoverProvider
                 # or a completionProvider for trigger characters.
-                for sv in self.session_views():
+                for sv in self.session_views_async():
                     inform = partial(sv.on_capability_added_async, registration_id, capability_path, options)
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
@@ -2093,7 +2099,7 @@ class Session(APIHandler, TransportCallbacks):
                 # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
                 # or a completionProvider for trigger characters.
                 if isinstance(discarded, dict):
-                    for sv in self.session_views():
+                    for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, discarded)
 
     def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
@@ -2128,18 +2134,15 @@ class Session(APIHandler, TransportCallbacks):
     @request_handler('window/showDocument')
     async def on_window_show_document(self, params: ShowDocumentParams) -> ShowDocumentResult:
         uri = params.get("uri")
+        result: sublime.View | bool | None = True
         if params.get("external"):
             open_externally(uri)
         else:
             # TODO: ST API does not allow us to say "do not focus this new view"
-            result = await self.open_uri_async(uri, params.get("selection"))
-            if isinstance(b, bool):
-                pass
-            elif isinstance(b, sublime.View):
-                b = b.is_valid()
-            else:
-                b = False
-        return ({"success": b})
+            result = await self.open_uri(uri, params.get("selection"))
+            if isinstance(result, sublime.View):
+                result = result.is_valid()
+        return ({"success": result})
 
     @request_handler('window/workDoneProgress/create')
     async def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> None:
@@ -2191,9 +2194,7 @@ class Session(APIHandler, TransportCallbacks):
                     token = str(token)
                     request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                     request = self._response_handlers[request_id][0]
-                    sublime.set_timeout_async(
-                        lambda: self._invoke_views_async(request, "on_request_progress", request_id, params)
-                    )
+                    lambda: self._invoke_views_async(request, "on_request_progress", request_id, params)
                 except (TypeError, IndexError, ValueError, KeyError):
                     # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
                     # dealing with possibility (2).
@@ -2215,13 +2216,12 @@ class Session(APIHandler, TransportCallbacks):
             elif kind == 'end':
                 value = cast('WorkDoneProgressEnd', value)
                 progress = self._progress.pop(token)
-                if progress:
-                    assert isinstance(progress, WindowProgressReporter)
-                    title = progress.title
-                    progress = None
-                    message = value.get('message')
-                    if message:
-                        self.window.status_message(title + ': ' + message)
+                assert isinstance(progress, WindowProgressReporter)
+                title = progress.title
+                progress = None
+                message = value.get('message')
+                if message:
+                    self.window.status_message(title + ': ' + message)
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
@@ -2232,7 +2232,7 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin:
             self._plugin.on_session_end_async(None, None)
             self._plugin = None
-        for sv in self.session_views():
+        for sv in self.session_views_async():
             self.shutdown_session_view_async(sv)
         self.capabilities.clear()
         self._registrations.clear()
@@ -2259,79 +2259,77 @@ class Session(APIHandler, TransportCallbacks):
         self.transport = None
         self._response_handlers.clear()
         if self._plugin:
-            sublime.set_timeout_async(lambda: self._plugin.on_session_end_async(exit_code, exception))
+            self._plugin.on_session_end_async(exit_code, exception)
             self._plugin = None
-        if self._initialize_error:
-            # Override potential exit error with a saved one.
-            exit_code, exception = self._initialize_error
         if mgr := self.manager():
             await mgr.on_post_exit(self, exit_code, exception)
 
     # --- RPC message handling ----------------------------------------------------------------------------------------
 
-    def request(self, request: Request[P, R]) -> CancellableInflightRequest[R]:
-        """You must call this method from the sublime_aio loop thread. Callbacks will be run in the loop thread."""
+    def request(self, r: Request[P, R]) -> CancellableInflightRequest[R]:
+        """
+        Make a request to the language server.
+
+        You must call this method from the asyncio thread.
+
+        ```py
+        try:
+            result = await session.request(Request(...))
+            print(result)
+        except Error as error:
+            print(error.code)
+        ```
+        """
         self.request_id += 1
         request_id = self.request_id
-        future: asyncio.Future[R] = asyncio.Future()
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
         result = CancellableInflightRequest(future, request_id, self)
-        if request.progress and isinstance(request.params, dict):
-            request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
-        if request.on_partial_result and isinstance(request.params, dict):
-            request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
-
-        def on_result(response: R) -> None:
-            trace()
-            future.set_result(response)
-
-        def on_error(error: ResponseError) -> None:
-            trace()
-            future.set_exception(Error.from_lsp(error))
-
-        self._response_handlers[request_id] = (request, on_result, on_error)
-        self._invoke_views_async(request, "on_request_started_async", request_id, request)
+        if r.progress and isinstance(r.params, dict):
+            r.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
+        if r.on_partial_result and isinstance(r.params, dict):
+            r.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
+        self._response_handlers[request_id] = (r, future.set_result, lambda x: future.set_exception(Error.from_lsp(x)))
+        self._invoke_views_async(r, "on_request_started_async", request_id, r)
         if self._plugin:
-            self._plugin.on_pre_send_request_async(request_id, request)
-        self._logger.outgoing_request(request_id, request.method, request.params)
-        sublime_aio.run_coroutine(self.send_payload(request.to_payload(request_id)))
-        debug(f"created new request future with ID {request_id}")
+            self._plugin.on_pre_send_request_async(request_id, r)
+        self._logger.outgoing_request(request_id, r.method, r.params)
+        loop.create_task(self.send_payload(r.to_payload(request_id)))
         return result
 
-    def stream(self, request: Request[P, R]) -> CancellableInflightStreamingRequest[R]:
+    def stream(self, r: Request[P, R]) -> CancellableInflightStreamingRequest[R]:
         """
-        Stream a request.
+        Stream partial results from the language server.
+
+        You must call this method from the asyncio thread.
 
         Use in combination with `async for` syntax:
 
         ```py
-        async for partial_result in session.stream(Request(...)):
-            pass
+        try:
+            async for partial_result in session.stream(Request(...)):
+                print(partial_result)
+        except Error as error:
+            print(error.code)
         ```
         """
         self.request_id += 1
         request_id = self.request_id
         result = CancellableInflightStreamingRequest(request_id, self)
-        if request.progress and isinstance(request.params, dict):
-            request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
-        request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
-        request.on_partial_result = result.on_partial_result
-
-        def on_result(response: R) -> None:
-            result.on_partial_result(response)
-
-        def on_error(error: ResponseError) -> None:
-            result.on_error(error)
-
-        self._response_handlers[request_id] = (request, on_result, on_error)
-        self._invoke_views_async(request, "on_request_started_async", request_id, request)
+        if r.progress and isinstance(r.params, dict):
+            r.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
+        r.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
+        r.on_partial_result = result.on_partial_result
+        self._response_handlers[request_id] = (r, result.on_partial_result, result.on_error)
+        self._invoke_views_async(r, "on_request_started_async", request_id, r)
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
-            self._plugin.on_pre_send_request_async(request_id, request)
+            self._plugin.on_pre_send_request_async(request_id, r)
         elif self._plugin:
-            client_request = cast('ClientRequest', cast('object', {'method': request.method, 'params': request.params}))
-            self._plugin.on_pre_send_request_async(client_request, request.view)
-            request.params = cast('P', client_request['params'])
-        self._logger.outgoing_request(request_id, request.method, request.params)
-        sublime_aio.run_coroutine(self.send_payload(request.to_payload(request_id)))
+            client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
+            self._plugin.on_pre_send_request_async(client_request, r.view)
+            r.params = cast('P', client_request['params'])
+        self._logger.outgoing_request(request_id, r.method, r.params)
+        asyncio.get_running_loop().create_task(self.send_payload(r.to_payload(request_id)))
         return result
 
     @deprecated("use Session.request or Session.stream instead")
@@ -2345,14 +2343,15 @@ class Session(APIHandler, TransportCallbacks):
         result = self.request(request)
 
         def on_done(future: asyncio.Future[R]) -> None:
-            trace()
             if future.cancelled():
                 return
             if ex := future.exception():
-                if isinstance(ex, Error):
+                if callable(on_error) and isinstance(ex, Error):
                     on_error(ex.to_lsp())
-            else:
-                on_result(future.result())
+                    return
+                exception_log("Response error is ignored", ex)
+                return
+            on_result(future.result())
 
         result._future.add_done_callback(on_done)
         return result.id
@@ -2400,10 +2399,9 @@ class Session(APIHandler, TransportCallbacks):
         self._logger.outgoing_notification(notification.method, notification.params)
         await self.send_payload(notification.to_payload())
 
-    @deprecated("use Session.notify instead")
     def send_notification(self, notification: Notification[P]) -> None:
         self._logger.outgoing_notification(notification.method, notification.params)
-        sublime_aio.run_coroutine(self.notify(notification))
+        sublime_aio.call_coroutine(self.notify(notification))
 
     async def send_response(self, response: Response[P]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)
@@ -2477,14 +2475,11 @@ class Session(APIHandler, TransportCallbacks):
             try:
                 if req_id is None:
                     # server notification or client request
-                    debug(f"resolving {typestr} ({method}) with params: {result}")
-                    handler(result)
+                    asyncio.get_running_loop().call_soon(handler, result)
                 else:
                     # server request
                     try:
-                        debug(f"start handling server {typestr}: {req_id} {method}")
                         await self.send_response(await handler(result, req_id))
-                        debug(f"done  handling server {typestr}: {req_id} {method}")
                     except Error as err:
                         await self.send_error_response(req_id, err)
                     except Exception as ex:
@@ -2506,10 +2501,8 @@ class Session(APIHandler, TransportCallbacks):
     def response_handler(
         self, response_id: str | int, response: JSONRPCMessage
     ) -> tuple[Callable[[ResponseError], None], str | None, Any, bool]:
-        debug("looking up response handler for request ID", response_id)
         matching_handler = self._response_handlers.pop(response_id, None)
         if not matching_handler:
-            trace()
             error = {"code": ErrorCodes.InvalidParams, "message": f"unknown response ID {response_id}"}
             return (print_to_status_bar, None, error, True)
         request, handler, error_handler = matching_handler

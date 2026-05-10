@@ -32,6 +32,7 @@ from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
 from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
+from .core.logging import trace
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.panels import PanelName
@@ -165,7 +166,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         async def notify(action: ChangeEventAction) -> None:
             await asyncio.gather(*[listener.on_text_changed(change_count, changes, action) for listener in list(frozen_listeners)])
 
-        sublime_aio.run_coroutine(notify(self._last_edit_action))
+        sublime_aio.call_coroutine(notify(self._last_edit_action))
         self._reset_last_edit_action()
 
     def on_reload_async(self) -> None:
@@ -264,7 +265,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         for session in self.sessions_async():
             session.diagnostics.clear_identifiers_cache_for_view(self.view)
         # But this has to run on the asyncio thread again
-        sublime_aio.run_coroutine(self._activated_impl())
+        sublime_aio.call_coroutine(self._activated_impl())
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
@@ -389,7 +390,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
             return None
         if self.view.is_primary():
             for sv in self.session_views_async():
-                sv.on_text_changed(change_count, changes, action)
+                sv.on_text_changed_async(change_count, changes, action)
         self._on_view_updated_async()
 
     def get_uri(self) -> DocumentUri:
@@ -532,8 +533,11 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
             panel_manager.show_diagnostics_panel_async()
 
     async def on_close(self) -> None:
+        trace()
         if self._registered and self._manager:
+            trace()
             self._manager.unregister_listener_async(self)
+        trace()
         self._clear_session_views_async()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool | None:
@@ -1124,12 +1128,13 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         session_views = self._session_views
 
         def clear_async() -> None:
+            trace()
             nonlocal session_views
             for session_view in session_views.values():
                 session_view.on_before_remove()
             session_views.clear()
 
-        sublime_aio._loop.call_soon_threadsafe(clear_async)
+        sublime_aio.call_soon_threadsafe(clear_async)
 
     def on_userprefs_changed_async(self) -> None:
         if userprefs().document_highlight_style:

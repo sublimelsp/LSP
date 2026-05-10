@@ -40,6 +40,7 @@ from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
 from wcmatch.glob import IGNORECASE
+import asyncio
 import contextlib
 import fnmatch
 import os
@@ -178,7 +179,7 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
         if condition():
             f()
 
-    sublime_aio.run_coroutine(run())
+    sublime_aio.call_coroutine(run())
 
 
 class SettingsRegistration:
@@ -238,7 +239,7 @@ class DebouncerNonThreadSafe:
 
         current_id = self._current_id = self._next_id
         self._next_id += 1
-        sublime_aio.run_coroutine(run(current_id))
+        sublime_aio.call_coroutine(run(current_id))
 
     def cancel_pending(self) -> None:
         self._current_id = -1

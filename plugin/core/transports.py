@@ -3,7 +3,6 @@ from __future__ import annotations
 from .constants import ST_PLATFORM
 from .logging import debug
 from .logging import exception_log
-from .logging import trace
 from abc import ABC
 from abc import abstractmethod
 from asyncio.subprocess import Process
@@ -267,9 +266,7 @@ class Transport(ABC):
 async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str] | None:
     headers: dict[str, str] = {}
     while True:
-        debug("parse headers: reading one line")
         line = await reader.readline()
-        debug("parse headers: read line:", line)
         if not line:
             return None
         line = line.decode("ascii").strip()
@@ -296,9 +293,7 @@ class StreamTransport(Transport):
     async def read(self) -> JSONRPCMessage:
         headers: dict[str, str] | None = None
         try:
-            debug("parsing headers...")
             headers = await parse_headers(self._reader)
-            debug("parsed headers:", headers)
             if headers is None:
                 raise StopLoopError
             content_length = headers.get("content-length")
@@ -320,7 +315,6 @@ class StreamTransport(Transport):
     async def write(self, payload: JSONRPCMessage) -> None:
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
-        trace()
         await self._writer.drain()
 
     @override
@@ -331,7 +325,6 @@ class StreamTransport(Transport):
     @override
     async def close(self) -> None:
         self._writer.close()
-        trace()
         await self._writer.wait_closed()
 
 
@@ -358,7 +351,7 @@ class TransportWrapper:
         self._transport: Transport | None = transport
         self._process = process
         self._error_reader: ErrorReader | None = error_reader
-        self._future = sublime_aio.run_coroutine(self._read_loop())
+        self._task = asyncio.get_running_loop().create_task(self._read_loop())
 
     @property
     def process_args(self) -> Any:
@@ -366,52 +359,43 @@ class TransportWrapper:
 
     async def send(self, payload: JSONRPCMessage) -> None:
         if self._transport:
-            debug("sending payload:", payload)
             await self._transport.write(payload)
-            debug("sent payload:", payload)
 
     async def send_bytes(self, payload: bytes) -> None:
         if self._transport:
             await self._transport.write_bytes(payload)
 
     async def close(self) -> None:
-        if self._transport is not None:
-            if self._error_reader:
+        if self._error_reader:
+            try:
                 await self._error_reader.on_transport_close()
-                self._error_reader = None
-            if self._transport:
-                await self._transport.close()
-                self._transport = None
+            except TypeError:
+                pass
+            self._error_reader = None
+        if self._transport:
+            await self._transport.close()
+            self._transport = None
 
     async def _read_loop(self) -> None:
-        exception = None
+        exception: Exception | None = None
         try:
             while self._transport:
                 if (payload := await self._transport.read()) is None:
-                    debug("payload is None")
                     continue
 
                 async def process_payload() -> None:
                     if callback_object := self._callback_object():
                         await callback_object.on_payload(payload)
 
-                debug("received payload:", payload)
                 asyncio.get_running_loop().create_task(process_payload())
         except (AttributeError, BrokenPipeError, StopLoopError):
-            debug("exiting from _read_loop")
             pass
         except Exception as ex:
-            exception_log("exiting from _read_loop with exception", ex)
             exception = ex
-        if exception:
-            await self._end(exception)
-
-    async def _end(self, exception: Exception | None) -> None:
         exit_code: int | None = None
         if self._process:
             if not exception:
                 try:
-                    trace()
                     # Allow the process to stop itself.
                     exit_code = await asyncio.wait_for(self._process.wait(), timeout=1)
                 except (AttributeError, ProcessLookupError, asyncio.TimeoutError):
@@ -424,10 +408,8 @@ class TransportWrapper:
                     # Ignore the exit code in this case, it's going to be something non-zero because we sent SIGKILL.
                     await self._process.wait()
                 except (AttributeError, ProcessLookupError):
-                    trace()
                     pass
                 except Exception as ex:
-                    trace()
                     exception = ex  # TODO: Old captured exception is overwritten
         if callback_object := self._callback_object():
             await callback_object.on_transport_close(exit_code or 0, exception)
@@ -469,24 +451,24 @@ class ErrorReader:
     def __init__(self, callback_object: TransportCallbacks, reader: asyncio.StreamReader) -> None:
         self._callback_object = weakref.ref(callback_object)
         self._reader = reader
-        self._future = sublime_aio.run_coroutine(self._loop())
+        self._task = sublime_aio.call_coroutine(self._loop())
 
     def on_transport_close(self) -> None:
         self._reader = None
-        self._future.cancel()
+        self._task.cancel()
 
     async def _loop(self) -> None:
         try:
             while self._reader:
-                message = self._reader.readline().decode("utf-8", "replace")
+                message = (await self._reader.readline()).decode("utf-8", "replace")
                 if not message:
                     continue
                 if callback_object := self._callback_object():
                     callback_object.on_stderr_message(message.rstrip())
                 else:
                     break
-        except (BrokenPipeError, AttributeError, asyncio.CancelledError):
-            debug("exiting from ErrorReader._loop with expected error")
+        except (BrokenPipeError, AttributeError, asyncio.CancelledError) as ex:
+            debug(f"exiting from ErrorReader._loop with expected error (which is: {type(ex)}, message: {str(ex)})")
         except Exception as ex:
             exception_log("unexpected exception type in error reader", ex)
 

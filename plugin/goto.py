@@ -7,6 +7,7 @@ from ..protocol import Location
 from ..protocol import LocationLink
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.input_handlers import PreselectedListInputHandler
+from .core.logging import trace
 from .core.paths import simple_project_path
 from .core.protocol import Point
 from .core.protocol import Request
@@ -104,19 +105,25 @@ class LspGotoCommand(LspTextCommand):
         position: int,
         response: Location | list[Location] | list[LocationLink] | None
     ) -> None:
+        trace()
         if isinstance(response, dict):
+            trace()
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-            sublime_aio.run_coroutine(open_location(session, response, side_by_side, force_group, group))
+            sublime_aio.call_coroutine(open_location(session, response, side_by_side, force_group, group))
         elif isinstance(response, list):
+            trace()
             if len(response) == 0:
+                trace()
                 self._handle_no_results(fallback, side_by_side)
             elif len(response) == 1:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-                sublime_aio.run_coroutine(open_location(session, response[0], side_by_side, force_group, group))
+                trace()
+                sublime_aio.call_coroutine(open_location(session, response[0], side_by_side, force_group, group))
             else:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 placeholder = self.placeholder_text + " " + self.view.substr(self.view.word(position))
                 kind = get_symbol_kind_from_scope(self.view.scope_name(position))
+                trace()
                 sublime.set_timeout(
                     partial(LocationPicker,
                             self.view, session, response, side_by_side, force_group, group, placeholder, kind)
@@ -353,7 +360,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             self._open_file(value)
         elif session := self._session(value):
             location: Location = {'uri': self.uri, 'range': value['diagnostic']['range']}
-            sublime_aio.run_coroutine(session.open_location(location))
+            sublime_aio.call_coroutine(session.open_location(location))
 
     def _session(self, value: DiagnosticData) -> Session | None:
         session_name = value['session_name']

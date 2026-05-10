@@ -47,6 +47,7 @@ from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.signature_help import SignatureHelpStyle
+from .core.task_container import TaskContainer
 from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
@@ -164,7 +165,9 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         frozen_listeners = WeakSet(self.view_listeners)
 
         async def notify(action: ChangeEventAction) -> None:
-            await asyncio.gather(*[listener.on_text_changed(change_count, changes, action) for listener in list(frozen_listeners)])
+            await asyncio.gather(
+                *[listener.on_text_changed(change_count, changes, action) for listener in list(frozen_listeners)]
+            )
 
         sublime_aio.call_coroutine(notify(self._last_edit_action))
         self._reset_last_edit_action()
@@ -190,7 +193,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         return f"TextChangeListener({self.buffer.buffer_id})"
 
 
-class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
+class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, TaskContainer):
 
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     debounce_time = FEATURES_TIMEOUT
@@ -386,8 +389,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
     async def on_text_changed(
         self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
     ) -> None:
+        trace()
         if not self.session_views_async():
-            return None
+            return
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed_async(change_count, changes, action)
@@ -433,7 +437,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
     async def on_post_move(self) -> None:
         if ST_VERSION < 4184:  # Already handled in boot.Listener.on_pre_move
             return
-        self.on_post_move_window()
+        self.on_post_move_window_async()
 
     async def on_activated(self) -> None:
         debug("on_activated", self)
@@ -452,7 +456,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
             if sb.pending_refreshes & RequestFlags.CODE_LENS:
                 sb.do_code_lenses_async(self.view)
             if sb.pending_refreshes & RequestFlags.DIAGNOSTIC:
-                sb.do_document_diagnostic(self.view, self.view.change_count(), forced_update=True)
+                sb.do_document_diagnostic_async(self.view, self.view.change_count(), forced_update=True)
             if sb.pending_refreshes & RequestFlags.SEMANTIC_TOKENS \
                     and (session_view := sb.session.session_view_for_view_async(self.view)) \
                     and session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
@@ -576,10 +580,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
             return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
         return None
 
-    # @requires_session
+    @requires_session
     def on_hover(self, point: int, hover_zone: int) -> None:
-        if not self.session_views_async():
-            return
         if self.view.is_popup_visible():
             return
         if window := self.view.window():
@@ -626,18 +628,18 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         if scheme == CODE_ACTION_SCHEME:
             session_name, version, action = decode_code_action_uri(href)
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):
-                sublime_aio.call_soon_threadsafe(lambda: session.run_code_action_async(action, progress=True, view=self.view))
+                self.create_task_threadsafe(session.run_code_action(action, progress=True, view=self.view))
                 self.view.hide_popup()
         elif scheme == 'file':
             if window := self.view.window():
-                open_file_uri(window, href)
+                self.create_task(open_file_uri(window, href))
         elif scheme.lower() in {"http", "https"} or (not scheme and href.startswith('www.')):
             open_in_browser(href)
 
     @requires_session
     def on_text_command(self, command_name: str, args: dict[str, Any] | None) -> tuple[str, dict[str, Any]] | None:
         if not self.session_views_async():
-            return
+            return None
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:
@@ -669,7 +671,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in {"next_field", "prev_field"} and args is None:
-            sublime_aio.call_soon_threadsafe(lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange))
+            sublime_aio.call_soon_threadsafe(
+                lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
+            )
         if not self.view.is_popup_visible():
             return
         if self._is_documenation_popup_open and command_name in {"move", "commit_completion", "delete_word",
@@ -1041,7 +1045,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
             for listener in listeners:
                 if isinstance(listener, DocumentSyncListener):
                     debug("also registering", listener)
-                    asyncio.create_task(listener.on_load())
+                    self.create_task(listener.on_load())
 
     def _on_view_updated_async(self) -> None:
         if self._should_format_on_paste:

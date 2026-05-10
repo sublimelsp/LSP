@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+from .logging import trace
 from typing import Callable
 from typing import Generator
 from typing import Generic
 from typing import Protocol
 from typing import Tuple
+from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
-from .logging import trace
 import asyncio
 import functools
 import threading
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
 
 T = TypeVar('T')
 S = TypeVar('S')
@@ -108,6 +113,26 @@ class Promise(Generic[T]):
         promise = Promise(executor)
         assert callable(executor.resolver)
         return promise, executor.resolver
+
+    @staticmethod
+    def wrap_task(task: asyncio.Task[T]) -> Promise[T | BaseException]:
+
+        def executor(resolve: ResolveFunc[T | BaseException]) -> None:
+
+            def on_done(t: asyncio.Task[T]) -> None:
+                if ex := t.exception():
+                    resolve(ex)
+                else:
+                    resolve(t.result())
+
+            setattr(on_done, "_strong_task_ref", task)
+            task.add_done_callback(on_done)
+
+        return Promise(executor)
+
+    @staticmethod
+    def wrap_coroutine(coro: Coroutine[None, None, T]) -> Promise[T | BaseException]:
+        return Promise.wrap_task(asyncio.create_task(coro))
 
     # Could also support passing plain S.
     @staticmethod

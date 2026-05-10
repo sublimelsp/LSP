@@ -154,8 +154,16 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         # Update workspace folders in case the user have changed those since window was created.
         # There is no currently no notification in ST that would notify about folder changes.
         self.update_workspace_folders_async()
-        if config := self._needed_config(listener.view):
-            sublime_aio.call_coroutine(self.start(config, listener))
+        for config in self._config_manager.match_view(listener.view, self._workspace.get_workspace_folders()):
+            if plugin := get_plugin(config.name):
+                if issubclass(plugin, LspPlugin):
+                    context = IsApplicableContext(config, listener.view, self._workspace.get_workspace_folders())
+                    if plugin.is_applicable_async(context):
+                        sublime_aio.call_coroutine(self.start(config, listener))
+                elif plugin.is_applicable(listener.view, config):
+                    sublime_aio.call_coroutine(self.start(config, listener))
+            else:
+                sublime_aio.call_coroutine(self.start(config, listener))
 
     def unregister_listener_async(self, listener: AbstractViewListener) -> None:
         self._listeners.discard(listener)
@@ -204,19 +212,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         for session in self._sessions:
             if session.config.name == config_name and session.handles_path(file_path, inside):
                 return session
-        return None
-
-    def _needed_config(self, view: sublime.View) -> ClientConfig | None:
-        for config in self._config_manager.match_view(view, self._workspace.get_workspace_folders()):
-            if plugin := get_plugin(config.name):
-                if issubclass(plugin, LspPlugin):
-                    context = IsApplicableContext(config, view, self._workspace.get_workspace_folders())
-                    if plugin.is_applicable_async(context):
-                        return config
-                elif plugin.is_applicable(view, config):
-                    return config
-            else:
-                return config
         return None
 
     async def start(self, config: ClientConfig, listener: AbstractViewListener) -> None:

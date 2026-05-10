@@ -367,10 +367,7 @@ class TransportWrapper:
 
     async def close(self) -> None:
         if self._error_reader:
-            try:
-                await self._error_reader.on_transport_close()
-            except TypeError:
-                pass
+            self._error_reader.on_transport_close()
             self._error_reader = None
         if self._transport:
             await self._transport.close()
@@ -382,12 +379,8 @@ class TransportWrapper:
             while self._transport:
                 if (payload := await self._transport.read()) is None:
                     continue
-
-                async def process_payload() -> None:
-                    if callback_object := self._callback_object():
-                        await callback_object.on_payload(payload)
-
-                asyncio.get_running_loop().create_task(process_payload())
+                if callback_object := self._callback_object():
+                    await callback_object.on_payload(payload)
         except (AttributeError, BrokenPipeError, StopLoopError):
             pass
         except Exception as ex:
@@ -451,7 +444,7 @@ class ErrorReader:
     def __init__(self, callback_object: TransportCallbacks, reader: asyncio.StreamReader) -> None:
         self._callback_object = weakref.ref(callback_object)
         self._reader = reader
-        self._task = sublime_aio.call_coroutine(self._loop())
+        self._task = asyncio.get_running_loop().create_task(self._loop())
 
     def on_transport_close(self) -> None:
         self._reader = None
@@ -460,15 +453,16 @@ class ErrorReader:
     async def _loop(self) -> None:
         try:
             while self._reader:
-                message = (await self._reader.readline()).decode("utf-8", "replace")
-                if not message:
-                    continue
+                raw = await self._reader.readline()
+                if not raw:
+                    break
+                message = raw.decode("utf-8", "replace")
                 if callback_object := self._callback_object():
                     callback_object.on_stderr_message(message.rstrip())
                 else:
                     break
         except (BrokenPipeError, AttributeError, asyncio.CancelledError) as ex:
-            debug(f"exiting from ErrorReader._loop with expected error (which is: {type(ex)}, message: {str(ex)})")
+            debug(f"exiting from ErrorReader._loop with expected error (which is: {type(ex)}, message: {ex})")
         except Exception as ex:
             exception_log("unexpected exception type in error reader", ex)
 

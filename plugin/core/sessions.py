@@ -71,7 +71,6 @@ from ...protocol import WorkDoneProgressEnd
 from ...protocol import WorkDoneProgressReport
 from ...protocol import WorkspaceClientCapabilities
 from ...protocol import WorkspaceDiagnosticParams
-from ...protocol import WorkspaceDiagnosticReport
 from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFolder as LspWorkspaceFolder
@@ -127,12 +126,12 @@ from .protocol import ServerNotification
 from .protocol import ServerResponse
 from .settings import globalprefs
 from .settings import userprefs
+from .task_container import TaskContainer
 from .transports import TransportCallbacks
 from .transports import TransportWrapper
 from .types import Capabilities
 from .types import ClientConfig
 from .types import ClientStates
-from .types import debounced
 from .types import diff
 from .types import DocumentSelectorMatcher
 from .types import method2attr
@@ -151,7 +150,6 @@ from .workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
 from enum import IntFlag
-from collections.abc import Awaitable
 from functools import lru_cache
 from functools import partial
 from typing import Any
@@ -165,9 +163,9 @@ from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
+from typing_extensions import deprecated
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
-from typing_extensions import deprecated
 from weakref import WeakSet
 import asyncio
 import itertools
@@ -175,12 +173,12 @@ import mdpopups
 import os
 import sublime
 import sublime_aio
-import traceback
 import weakref
 
 if TYPE_CHECKING:
     from .active_request import ActiveRequest
     from .collections import DottedDict
+    from collections.abc import Awaitable
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
@@ -947,10 +945,10 @@ class CancellableRequest(Generic[R]):
     """A request that is cancellable."""
 
     _id: int
-    _weaksession: weakref.ref["Session"]
+    _weaksession: weakref.ref[Session]
 
-    def __init__(self, id: int, session: "Session") -> None:
-        self._id = id
+    def __init__(self, req_id: int, session: Session) -> None:
+        self._id = req_id
         self._weaksession = weakref.ref(session)
 
     def cancel(self) -> None:
@@ -971,8 +969,8 @@ class CancellableInflightRequest(CancellableRequest[R]):
 
     _future: asyncio.Future[R]
 
-    def __init__(self, future: asyncio.Future[R], id: int, session: "Session") -> None:
-        super().__init__(id, session)
+    def __init__(self, future: asyncio.Future[R], req_id: int, session: Session) -> None:
+        super().__init__(req_id, session)
         self._future = future
 
     def __await__(self) -> Awaitable[R]:
@@ -995,8 +993,8 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
     _future: asyncio.Future[R] | None
     _stopped: bool
 
-    def __init__(self, id: int, session: "Session") -> None:
-        super().__init__(id, session)
+    def __init__(self, req_id: int, session: Session) -> None:
+        super().__init__(req_id, session)
         self._future = None
         self._stopped = False
 
@@ -1018,15 +1016,13 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
         else:
             debug(f"streaming request with ID {self.id} got an error response without a future set: {error}")
 
-    def __aiter__(self) -> "CancellableInflightStreamingRequest":
-        """
-        Stream partial results using the `async for` syntax.
-        """
+    def __aiter__(self) -> CancellableInflightStreamingRequest:
+        """Stream partial results using the `async for` syntax."""
         return self
 
     def __anext__(self) -> Awaitable[R]:
         if self._stopped:
-            raise StopAsyncIteration()
+            raise StopAsyncIteration
         self._future = asyncio.get_running_loop().create_future()
         return self._future
 
@@ -1074,7 +1070,7 @@ _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 
-class Session(APIHandler, TransportCallbacks):
+class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
@@ -1153,7 +1149,7 @@ class Session(APIHandler, TransportCallbacks):
                 if self._views_opened == current_count:
                     await self.end()
 
-            asyncio.get_running_loop().create_task(maybe_end())
+            self.create_task(maybe_end())
 
     def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
         """It is only safe to iterate over this in the async thread."""
@@ -1435,10 +1431,10 @@ class Session(APIHandler, TransportCallbacks):
     async def execute_command(
         self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
         is_refactoring: bool = False,
-    ) -> R | None:  # pyright: ignore[reportInvalidTypeVarUse]
+    ) -> LSPAny:
         """Run a command from the asyncio thread."""
         if self._plugin:
-            task: PackagedTask[R | Error | None] = Promise.packaged_task()
+            task: PackagedTask[LSPAny | Error | None] = Promise.packaged_task()
             promise, resolve = task
             if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return await promise
@@ -1448,7 +1444,7 @@ class Session(APIHandler, TransportCallbacks):
                 if command_handler := self._plugin.get_command_handler(command_name):
                     return await command_handler(command.get('arguments'))
             else:
-                task: PackagedTask[R | Error | None] = Promise.packaged_task()
+                task: PackagedTask[LSPAny | Error | None] = Promise.packaged_task()
                 promise, resolve = task
                 if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                     return await promise
@@ -1460,10 +1456,10 @@ class Session(APIHandler, TransportCallbacks):
         if command_name == "editor.action.triggerParameterHints" and view:
             session_view = self.session_view_for_view_async(view)
             if not session_view:
-                return
+                return None
             listener = session_view.listener()
             if not listener:
-                return
+                return None
             listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked)
             return None
         # Handle VSCode-specific command which is often used for "References" code lenses
@@ -1500,7 +1496,7 @@ class Session(APIHandler, TransportCallbacks):
 
     async def run_code_action(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
-    ) -> R | None:
+    ) -> LSPAny:
         command = code_action.get("command")
         if isinstance(command, str):
             code_action = cast('Command', code_action)
@@ -1858,7 +1854,7 @@ class Session(APIHandler, TransportCallbacks):
                 # via $/progress notifications.
                 trace()
                 continue
-            asyncio.get_running_loop().create_task(self._do_workspace_diagnostics(identifier))
+            self.create_task(self._do_workspace_diagnostics(identifier))
         trace()
 
     async def _do_workspace_diagnostics(self, identifier: DiagnosticsIdentifier) -> None:
@@ -1905,7 +1901,7 @@ class Session(APIHandler, TransportCallbacks):
                         await asyncio.sleep(WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY / 1000.0)
                         await self._do_workspace_diagnostics(identifier)
 
-                    asyncio.get_running_loop().create_task(retry_later())
+                    self.create_task(retry_later())
                     return
             self.workspace_diagnostics_pending_responses[identifier] = None
 
@@ -2300,7 +2296,7 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin:
             self._plugin.on_pre_send_request_async(request_id, r)
         self._logger.outgoing_request(request_id, r.method, r.params)
-        loop.create_task(self.send_payload(r.to_payload(request_id)))
+        self.create_task(self.send_payload(r.to_payload(request_id)))
         return result
 
     def stream(self, r: Request[P, R]) -> CancellableInflightStreamingRequest[R]:
@@ -2335,7 +2331,7 @@ class Session(APIHandler, TransportCallbacks):
             self._plugin.on_pre_send_request_async(client_request, r.view)
             r.params = cast('P', client_request['params'])
         self._logger.outgoing_request(request_id, r.method, r.params)
-        asyncio.get_running_loop().create_task(self.send_payload(r.to_payload(request_id)))
+        self.create_task(self.send_payload(r.to_payload(request_id)))
         return result
 
     @deprecated("use Session.request or Session.stream instead")
@@ -2376,7 +2372,7 @@ class Session(APIHandler, TransportCallbacks):
     def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:
         task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
-        self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
+        self.send_request(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 
     @deprecated("use Session.request or Session.stream instead")

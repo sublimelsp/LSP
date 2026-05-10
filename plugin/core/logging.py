@@ -31,7 +31,7 @@ def trace() -> None:
     debug(f"TRACE {threading.current_thread().name:<16} {function_name:<32} {file_name}:{line_number}")
 
 
-def exception_log(message: str, ex: Exception) -> None:
+def exception_log(message: str, ex: BaseException) -> None:
     print(message)
     ex_traceback = ex.__traceback__
     print(''.join(traceback.format_exception(ex.__class__, ex, ex_traceback)))

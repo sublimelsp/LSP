@@ -43,6 +43,7 @@ from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.constants import SEMANTIC_TOKENS_MAP
 from .core.constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .core.edit import apply_text_edits
+from .core.logging import trace
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
@@ -643,21 +644,29 @@ class SessionBuffer:
     async def _do_document_diagnostic(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, *, forced_update: bool = False
     ) -> None:
+        trace()
         if version == self._diagnostics_versions.get(identifier, -1) and not forced_update:
+            trace()
             return
         if pending_request := self._document_diagnostic_pending_requests.get(identifier):
             if pending_request.version == version and not forced_update:
+                trace()
                 return
             self.session.cancel_request_async(pending_request.request_id)
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
         if identifier:
+            trace()
             params['identifier'] = identifier
         if (result_id := self.session.diagnostics_result_ids.get((self._last_known_uri, identifier))) is not None:
+            trace()
             params['previousResultId'] = result_id
+        trace()
         stream = self.session.stream(Request.documentDiagnostic(params, view))
         self._document_diagnostic_pending_requests[identifier] = PendingDocumentDiagnosticRequest(version, stream.id)
         try:
+            trace()
             async for response in stream:
+                trace()
                 self._diagnostics_versions[identifier] = version
                 self._document_diagnostic_pending_requests[identifier] = None
                 self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
@@ -670,6 +679,7 @@ class SessionBuffer:
                         if is_full_document_diagnostic_report(diagnostic_report):
                             self.session.handle_diagnostics(uri, identifier, None, diagnostic_report['items'])
         except Error as ex:
+            trace()
             self._document_diagnostic_pending_requests[identifier] = None
             if ex.code == LSPErrorCodes.ServerCancelled:
                 data = ex.data

@@ -1862,17 +1862,23 @@ class Session(APIHandler, TransportCallbacks):
         trace()
 
     async def _do_workspace_diagnostics(self, identifier: DiagnosticsIdentifier) -> None:
+        trace()
         previous_result_ids: list[PreviousResultId] = [
             {'uri': uri, 'value': result_id} for (uri, id_), result_id in self.diagnostics_result_ids.items()
             if id_ == identifier and result_id is not None
         ]
+        trace()
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
+        trace()
         if identifier is not None:
+            trace()
             params['identifier'] = identifier
 
+        trace()
         self.workspace_diagnostics_pending_responses[identifier] = inflight_request = self.stream(
             Request.workspaceDiagnostic(params)
         )
+        trace()
         try:
             trace()
             async for partial_response in inflight_request:
@@ -1886,7 +1892,7 @@ class Session(APIHandler, TransportCallbacks):
                         continue
                     self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
                     if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                        self.handle_diagnostics(uri, identifier, version, diagnostic_report['items'])
+                        self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
             self.workspace_diagnostics_pending_responses[identifier] = None
         except Error as e:
             if e.code == LSPErrorCodes.ServerCancelled:
@@ -2009,9 +2015,9 @@ class Session(APIHandler, TransportCallbacks):
 
     @notification_handler('textDocument/publishDiagnostics')
     def on_text_document_publish_diagnostics(self, params: PublishDiagnosticsParams) -> None:
-        self.handle_diagnostics(params['uri'], None, None, params['diagnostics'])
+        self.handle_diagnostics_async(params['uri'], None, None, params['diagnostics'])
 
-    def handle_diagnostics(
+    def handle_diagnostics_async(
         self, uri: DocumentUri, identifier: DiagnosticsIdentifier, version: int | None, diagnostics: list[Diagnostic]
     ) -> None:
         mgr = self.manager()

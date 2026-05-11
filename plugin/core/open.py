@@ -6,8 +6,6 @@ from .constants import ST_VERSION
 from .executors import executor_main
 from .logging import exception_log
 from .logging import trace
-from .promise import Promise
-from .promise import ResolveFunc
 from .protocol import UINT_MAX
 from .url import parse_uri
 from .views import range_to_region
@@ -98,7 +96,7 @@ async def open_file(
         # Is the view opening right now? Then return the associated unresolved future
         for fn, fut in g_opening_files.items():
             trace()
-            if fn == file or os.path.samefile(fn, file):
+            if fn == file or os.path.samefile(fn, file):  # noqa ASYNC240
                 trace()
                 # Return the unresolved future. A future on_load event will resolve the future.
                 future = fut
@@ -120,8 +118,8 @@ async def open_file(
             def on_main_thread() -> None:
                 trace()
 
-                # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's supposed
-                # to open as a separate view).
+                # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's
+                # supposed to open as a separate view).
                 view = _find_open_file(window, file)
                 if view and _return_existing_view(flags, window.get_view_index(view)[0], window.active_group(), group):
                     loop.call_soon_threadsafe(lambda: resolve_right_now(view))
@@ -131,8 +129,8 @@ async def open_file(
                 view = window.open_file(file, flags, group)
                 if not view.is_loading():
                     if was_already_open and (flags & sublime.NewFileFlags.SEMI_TRANSIENT):
-                        # workaround bug https://github.com/sublimehq/sublime_text/issues/2411 where transient view might not
-                        # get its view listeners initialized.
+                        # workaround bug https://github.com/sublimehq/sublime_text/issues/2411 where transient view
+                        # might not get its view listeners initialized.
                         sublime_plugin.check_view_event_listeners(view)  # type: ignore
                     # It's already loaded. Possibly already open in a tab.
                     loop.call_soon_threadsafe(lambda: resolve_right_now(view))

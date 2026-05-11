@@ -162,7 +162,6 @@ from typing import overload
 from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypeVar
-from typing import Union
 from typing_extensions import deprecated
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
@@ -973,7 +972,7 @@ class CancellableInflightRequest(CancellableRequest[R]):
         super().__init__(req_id, session)
         self._future = future
 
-    def __await__(self) -> Awaitable[R]:
+    def __await__(self) -> Generator[Any, None, R]:
         """
         You can `await` the response of an in-flight request.
         However, note that immediately awaiting this object prevents you from ever canceling it.
@@ -1088,7 +1087,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
-        self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, int | None] = {}
+        self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, CancellableInflightStreamingRequest | None] = {}  # noqa: E501
         self.exiting = False
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0
@@ -1357,7 +1356,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         try:
             result = await self.request(Request.initialize(params))
-        except Error as e:
+        except:
             await self.end()
             raise
         capabilities = result['capabilities']
@@ -1433,11 +1432,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         is_refactoring: bool = False,
     ) -> LSPAny:
         """Run a command from the asyncio thread."""
-        if self._plugin:
-            task: PackagedTask[LSPAny | Error | None] = Promise.packaged_task()
-            promise, resolve = task
-            if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
-                return await promise
         command_name = command['command']
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
@@ -1447,7 +1441,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 task: PackagedTask[LSPAny | Error | None] = Promise.packaged_task()
                 promise, resolve = task
                 if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
-                    return await promise
+                    return cast("LSPAny", await promise)
         # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and view:
             # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
@@ -1480,7 +1474,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         )
                         LocationPicker(view, self, locations, side_by_side=False)
             return None
-        future = self.request(Request[ExecuteCommandParams, Union[R, None]].executeCommand(command, progress=progress))
+        future = self.request(Request.executeCommand(command, progress=progress))
         if is_refactoring:
             self._is_executing_refactoring_command = True
             try:
@@ -1506,7 +1500,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
             is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
-            return await self.execute_command(command_params, progress=progress, view=view, is_refactoring=is_refactoring)
+            return await self.execute_command(
+                command_params, progress=progress, view=view, is_refactoring=is_refactoring
+            )
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
@@ -1514,13 +1510,28 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         code_action = await self._maybe_resolve_code_action(code_action, view)
         return await self._apply_code_action(code_action, view)
 
+    def run_code_action_async(
+        self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
+    ) -> Promise[BaseException | None]:
+        return Promise.wrap_coroutine(self.run_code_action(code_action, progress, view))
+
     async def try_open_uri(
         self,
         uri: DocumentUri,
         r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
-        group: int = -1
+        group: int = -1,
     ) -> sublime.View | bool | None:
+        """
+        Try to open an URI.
+
+        If the URI has the file: scheme, opens the file in a tab.
+        If the URI has the res: scheme, opens the Sublime resource file in a tab.
+        If the URI has the untitled: scheme, opens a scratch tab.
+        Otherwise, if there's a plugin attached, delegates to the plugin.
+        If the plugin does not handle the URI scheme, returns the constant boolean False.
+        If the URI can be opened, returns an optional sublime.View.
+        """
         if uri.startswith("file:"):
             return await self._open_file_uri(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
@@ -1532,11 +1543,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return view
         if uri.startswith('res:'):
             return await self._open_res_uri(uri, r, group)
+        loop = asyncio.get_running_loop()
         if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
 
-            def open_untitled_buffer() -> sublime.View:
+            def open_untitled_buffer(flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE) -> sublime.View:
                 flags &= sublime.NewFileFlags.TRANSIENT | sublime.NewFileFlags.ADD_TO_SELECTION
-                if name := uri[len('untitled:'):]:
+                if name := uri[len('untitled:') :]:
                     # Check if there is a pre-existing unsaved buffer with the given name
                     for view in self.window.views():
                         if view.file_name() is None and view.name() == name:
@@ -1550,16 +1562,16 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 view.set_scratch(True)
                 return view
 
-            return await asyncio.get_running_loop().run_in_executor(executor_main, open_untitled_buffer)
+            return await loop.run_in_executor(executor_main, open_untitled_buffer, flags)
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
                 scheme, _ = parse_uri(uri)
                 if handler := self._plugin.get_uri_handler(scheme):
                     sheet = await handler(uri, flags)
-                    await asyncio.get_running_loop().run_in_executor(executor_main, self._on_sheet_opened, sheet, uri, r)
-                else:
-                    return await self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
+                    await loop.run_in_executor(executor_main, self._on_sheet_opened, sheet, uri, r)
+            else:
+                return await self._open_uri_with_plugin(self._plugin, uri, r, flags, group)
         return False
 
     async def open_uri(
@@ -1568,8 +1580,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
-    ) -> sublime.View | bool | None:
-        return await self.try_open_uri(uri, r, flags, group)
+    ) -> sublime.View | None:
+        """Open a URI. If the URI can't be opened, raises RuntimeError."""
+        result = await self.try_open_uri(uri, r, flags, group)
+        if isinstance(result, bool):
+            raise RuntimeError(f"unable to open URI {uri}")  # noqa: TRY004
+        return result
 
     async def _open_file_uri(
         self,
@@ -1590,7 +1606,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         group: int = -1
     ) -> sublime.View | None:
 
-        def continue_on_main_thread() -> None:
+        def continue_on_main_thread() -> sublime.View | None:
             view = open_resource(self.window, uri, group)
             if view and r:
                 sublime.set_timeout(partial(center_selection, view, r))
@@ -1606,16 +1622,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         flags: sublime.NewFileFlags,
         group: int,
     ) -> sublime.View | bool | None:
-        # I cannot type-hint an unpacked tuple
         pair: PackagedTask[tuple[str | None, str, str]] = Promise.packaged_task()
-        # It'd be nice to have automatic tuple unpacking continuations
         callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
-            result: PackagedTask[sublime.View | None] = Promise.packaged_task()
-            pair[0].then(lambda tup: self.open_scratch_buffer(*tup, uri, r, flags, group)).then(result[1])
             title, content, syntax = await pair[0]
             return await self.open_scratch_buffer(title, content, syntax, uri, r, flags, group)
-        return None
+        return False
 
     async def open_scratch_buffer(
         self,
@@ -1640,7 +1652,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             view.set_name(title)
             view.run_command("append", {"characters": content})
             view.set_read_only(True)
-            sheet = view.sheet()
             return self._on_sheet_opened(view.sheet(), uri, r)
 
         return await asyncio.get_running_loop().run_in_executor(executor_main, continue_on_main_thread)
@@ -1704,7 +1715,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if arguments is not None:
                 execute_command['arguments'] = arguments
             await self.execute_command(execute_command, progress=False, view=view, is_refactoring=is_refactoring)
-        return None
 
     async def apply_workspace_edit(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
@@ -1719,36 +1729,32 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     async def apply_parsed_workspace_edits(
         self, changes: WorkspaceChanges, is_refactoring: bool = False
     ) -> WorkspaceEditSummary:
-
-        async def handle_view(
-            edits: list[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
-            label: str | None,
-            view_version: int | None,
-            uri: str,
-            view_state_actions: ViewStateActions,
-            view: sublime.View | None,
-        ) -> Promise[None]:
-            if view is None:
-                print(f'LSP: ignoring edits due to no view for uri: {uri}')
-                return
-            view = await apply_text_edits(view, edits, label=label, required_view_version=view_version)
-            if view:
-                await self._set_view_state(view_state_actions, view)
-
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
-        futures: list[asyncio.Future[None]] = []
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
         summary: WorkspaceEditSummary = {
             'total_changes': sum(len(value[0]) for value in changes.values()),
             'edited_files': len(changes)
         }
+        coros: list[Awaitable[None]] = []
         for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)
-            future = self.open_uri(uri)
-            future.add_done_callback(partial(handle_view, edits, label, view_version, uri, view_state_actions))
-            futures.append(future)
-        await asyncio.gather(*futures)
+
+            async def handle_view(
+                edits: list[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
+                label: str | None,
+                view_version: int | None,
+                uri: str,
+                view_state_actions: ViewStateActions,
+            ) -> None:
+                view = await self.open_uri(uri)
+                if view is None:
+                    print(f'LSP: ignoring edits due to no view for uri: {uri}')
+                elif view := await apply_text_edits(view, edits, label=label, required_view_version=view_version):
+                    await self._set_view_state(view_state_actions, view)
+
+            coros.append(handle_view(edits, label, view_version, uri, view_state_actions))
+        await asyncio.gather(*coros)
         self._set_selected_sheets(selected_sheets)
         self._set_focused_sheet(active_sheet)
         return summary
@@ -1786,8 +1792,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 actions |= ViewStateActions.SAVE
         return actions
 
-    def _set_view_state(self, actions: ViewStateActions, view: sublime.View) -> asyncio.Future[None]:
-        future = asyncio.get_running_loop().create_future()
+    def _set_view_state(self, actions: ViewStateActions, view: sublime.View) -> Promise[None]:
+        promise = Promise.resolve(None)
         should_save = bool(actions & ViewStateActions.SAVE)
         should_close = bool(actions & ViewStateActions.CLOSE)
         if should_save and view.is_dirty():
@@ -1894,8 +1900,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if e.code == LSPErrorCodes.ServerCancelled:
                 if is_diagnostic_server_cancellation_data(e.data) and e.data['retriggerRequest']:
                     # Retrigger the request after a short delay, but don't reset the pending response variable for this
-                    # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to prevent
-                    # infinite cycles of cancel -> retrigger, in case the server is busy.
+                    # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to
+                    # prevent infinite cycles of cancel -> retrigger, in case the server is busy.
 
                     async def retry_later() -> None:
                         await asyncio.sleep(WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY / 1000.0)
@@ -1926,7 +1932,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     @notification_handler('window/showMessage')
     def on_window_show_message(self, params: ShowMessageParams) -> None:
         if mgr := self.manager():
-            mgr.handle_show_message(self.config.name, params)
+            self.create_task(mgr.handle_show_message(self.config.name, params))
 
     @notification_handler('window/logMessage')
     def on_window_log_message(self, params: LogMessageParams) -> None:
@@ -1961,7 +1967,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
             for session_buffer, session_view in visible_session_buffers:
-                session_buffer.do_code_lenses(session_view.view)
+                session_buffer.do_code_lenses_async(session_view.view)
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.CODE_LENS)
 
@@ -2136,15 +2142,20 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     @request_handler('window/showDocument')
     async def on_window_show_document(self, params: ShowDocumentParams) -> ShowDocumentResult:
         uri = params.get("uri")
-        result: sublime.View | bool | None = True
+
+        def success(b: bool | sublime.View | None) -> ShowDocumentResult:
+            if isinstance(b, bool):
+                pass
+            elif isinstance(b, sublime.View):
+                b = b.is_valid()
+            else:
+                b = False
+            return ({"success": b})
+
         if params.get("external"):
-            open_externally(uri)
-        else:
-            # TODO: ST API does not allow us to say "do not focus this new view"
-            result = await self.open_uri(uri, params.get("selection"))
-            if isinstance(result, sublime.View):
-                result = result.is_valid()
-        return ({"success": result})
+            return success(open_externally(uri))
+        # TODO: ST API does not allow us to say "do not focus this new view"
+        return success(await self.try_open_uri(uri, params.get("selection")))
 
     @request_handler('window/workDoneProgress/create')
     async def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> None:
@@ -2293,8 +2304,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             r.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
         self._response_handlers[request_id] = (r, future.set_result, lambda x: future.set_exception(Error.from_lsp(x)))
         self._invoke_views_async(r, "on_request_started_async", request_id, r)
-        if self._plugin:
+        if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, r)
+        elif self._plugin:
+            client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
+            self._plugin.on_pre_send_request_async(client_request, r.view)
+            r.params = cast('P', client_request['params'])
         self._logger.outgoing_request(request_id, r.method, r.params)
         self.create_task(self.send_payload(r.to_payload(request_id)))
         return result
@@ -2472,7 +2487,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         return (None, None, None, None, None)
 
     async def on_payload(self, payload: JSONRPCMessage) -> None:
-        handler, result, req_id, typestr, method = await self.deduce_payload(payload)
+        handler, result, req_id, typestr, _method = await self.deduce_payload(payload)
         if handler:
             try:
                 if req_id is None:

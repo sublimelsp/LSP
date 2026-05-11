@@ -5,20 +5,19 @@ from .logging import debug
 from .logging import exception_log
 from abc import ABC
 from abc import abstractmethod
-from asyncio.subprocess import Process
 from typing import Any
 from typing import Callable
 from typing import final
 from typing import TYPE_CHECKING
 from typing_extensions import override
 import asyncio
+import asyncio.subprocess
 import contextlib
 import json
 import os
 import shutil
 import socket
 import sublime
-import sublime_aio
 import subprocess
 import weakref
 
@@ -263,18 +262,19 @@ class Transport(ABC):
         raise NotImplementedError
 
 
-async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str] | None:
+async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str]:
+    headers_bytes = (await reader.readuntil(b'\r\n\r\n')).decode("ascii").rstrip()
     headers: dict[str, str] = {}
-    while True:
-        line = await reader.readline()
-        if not line:
-            return None
-        line = line.decode("ascii").strip()
-        if not line:
-            break
+    for line in headers_bytes.split("\r\n"):
         key, value = line.split(":", 1)
-        headers[key.strip().lower()] = value.strip()
+        headers[key.lower()] = value
     return headers
+
+
+async def parse_content_length(reader: asyncio.StreamReader) -> int | None:
+    headers = await parse_headers(reader)
+    content_length = headers.get("content-length")
+    return int(content_length) if content_length else None
 
 
 class StreamTransport(Transport):
@@ -293,13 +293,10 @@ class StreamTransport(Transport):
     async def read(self) -> JSONRPCMessage:
         headers: dict[str, str] | None = None
         try:
-            headers = await parse_headers(self._reader)
-            if headers is None:
+            content_length = await parse_content_length(self._reader)
+            if content_length is None:
                 raise StopLoopError
-            content_length = headers.get("content-length")
-            if not isinstance(content_length, str):
-                raise TypeError("Missing Content-Length header")
-            body = await self._reader.read(int(content_length))
+            body = await self._reader.readexactly(content_length)
         except TypeError as ex:
             if str(headers) == "\n":
                 # Expected on process stopping. Gracefully stop the transport.

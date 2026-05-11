@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .logging import trace
+from typing import Any
 from typing import Callable
 from typing import Generator
 from typing import Generic
@@ -116,6 +116,7 @@ class Promise(Generic[T]):
 
     @staticmethod
     def wrap_task(task: asyncio.Task[T]) -> Promise[T | BaseException]:
+        """Wrap a task in a Promise. The Promise resolves when the task is done."""
 
         def executor(resolve: ResolveFunc[T | BaseException]) -> None:
 
@@ -132,6 +133,7 @@ class Promise(Generic[T]):
 
     @staticmethod
     def wrap_coroutine(coro: Coroutine[None, None, T]) -> Promise[T | BaseException]:
+        """Wrap a coroutine object in a Promise. The Promise resolves when the coroutine is done."""
         return Promise.wrap_task(asyncio.create_task(coro))
 
     # Could also support passing plain S.
@@ -241,14 +243,12 @@ class Promise(Generic[T]):
         future = loop.create_future()
         with self.mutex:
             if self.resolved:
-                trace()
                 future.set_result(self.value)
             else:
 
-                def resolve_callback(value: T) -> None:
+                def resolve_callback(resolve_value: T) -> None:
                     # We don't know from which thread we are resolving, so use call_soon_threadsafe.
-                    trace()
-                    loop.call_soon_threadsafe(functools.partial(future.set_result, value))
+                    loop.call_soon_threadsafe(functools.partial(future.set_result, resolve_value))
 
                 self.callbacks.append(resolve_callback)
         return future.__await__()

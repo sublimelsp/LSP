@@ -270,9 +270,9 @@ class Request(Generic[P, R]):
 
     @classmethod
     def workspaceDiagnostic(
-        cls, params: WorkspaceDiagnosticParams, on_partial_result: Callable[[WorkspaceDiagnosticReport], None]
+        cls, params: WorkspaceDiagnosticParams
     ) -> Request[WorkspaceDiagnosticParams, WorkspaceDiagnosticReport]:
-        return Request('workspace/diagnostic', params, on_partial_result=on_partial_result)
+        return Request('workspace/diagnostic', params)
 
     @classmethod
     def shutdown(cls) -> Request[None, None]:

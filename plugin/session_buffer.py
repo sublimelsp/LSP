@@ -43,7 +43,6 @@ from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.constants import SEMANTIC_TOKENS_MAP
 from .core.constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .core.edit import apply_text_edits
-from .core.logging import trace
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
@@ -80,11 +79,13 @@ from .core.views import will_save
 from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
 from .inlay_hint import inlay_hint_to_phantom
+from collections.abc import Coroutine
 from dataclasses import dataclass
 from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import Union
 from typing_extensions import Concatenate
 from typing_extensions import deprecated
 from typing_extensions import ParamSpec
@@ -96,6 +97,7 @@ import sublime
 import time
 
 P = ParamSpec('P')
+MaybeCoroutine = Union[None, Coroutine[None, None, None]]
 
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
@@ -391,7 +393,6 @@ class SessionBuffer(TaskContainer):
             self._pending_changes.update(change_count, changes)
             purge = True
         if purge:
-            trace()
             self._cancel_pending_requests_async()
             if userprefs().format_on_type and \
                     (params := self._get_on_type_formatting_params_async(view, action, last_change.str)):
@@ -522,7 +523,11 @@ class SessionBuffer(TaskContainer):
         """Reset the refresh marker for the request type(s) given by `flags`."""
         self.pending_refreshes &= ~flags
 
-    def _if_view_unchanged(self, f: Callable[Concatenate[sublime.View, P], None], version: int) -> Callable[P, None]:
+    def _if_view_unchanged(
+        self,
+        f: Callable[Concatenate[sublime.View, P], MaybeCoroutine | None],
+        version: int
+    ) -> Callable[P, None]:
         """Ensures that the view is at the same version when we were called, before calling the `f` function."""
         def handler(*args: P.args, **kwargs: P.kwargs) -> None:
             if (view := self.some_view()) and view.change_count() == version:
@@ -648,29 +653,21 @@ class SessionBuffer(TaskContainer):
     async def _do_document_diagnostic(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, *, forced_update: bool = False
     ) -> None:
-        trace()
         if version == self._diagnostics_versions.get(identifier, -1) and not forced_update:
-            trace()
             return
         if pending_request := self._document_diagnostic_pending_requests.get(identifier):
             if pending_request.version == version and not forced_update:
-                trace()
                 return
             self.session.cancel_request_async(pending_request.request_id)
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
         if identifier:
-            trace()
             params['identifier'] = identifier
         if (result_id := self.session.diagnostics_result_ids.get((self._last_known_uri, identifier))) is not None:
-            trace()
             params['previousResultId'] = result_id
-        trace()
         stream = self.session.stream(Request.documentDiagnostic(params, view))
         self._document_diagnostic_pending_requests[identifier] = PendingDocumentDiagnosticRequest(version, stream.id)
         try:
-            trace()
             async for response in stream:
-                trace()
                 self._diagnostics_versions[identifier] = version
                 self._document_diagnostic_pending_requests[identifier] = None
                 self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
@@ -683,7 +680,6 @@ class SessionBuffer(TaskContainer):
                         if is_full_document_diagnostic_report(diagnostic_report):
                             self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
         except Error as ex:
-            trace()
             self._document_diagnostic_pending_requests[identifier] = None
             if ex.code == LSPErrorCodes.ServerCancelled:
                 data = ex.data

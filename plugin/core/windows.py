@@ -233,13 +233,15 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if plugin_class:
                     if issubclass(plugin_class, LspPlugin):
                         config.set_view_status(listener.view, "installing...")
-                        # plugin_class.on_pre_start_async(context)
-                        await plugin_class.on_pre_start(context)
+                        if plugin_class.prefer_async_on_pre_start():
+                            await plugin_class.on_pre_start(context)
+                        else:
+                            await loop.run_in_executor(None, plugin_class.on_pre_start_async, context)
                         cwd = context.working_directory
                     else:
                         if plugin_class.needs_update_or_installation():
                             config.set_view_status(listener.view, "installing...")
-                            plugin_class.install_or_update()
+                            await loop.run_in_executor(None, plugin_class.install_or_update)
                         additional_variables = plugin_class.additional_variables()
                         if isinstance(additional_variables, dict):
                             variables.update(additional_variables)
@@ -260,6 +262,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 message = f"cannot start {config.name}: {ex!s}"
                 self._config_manager.disable_config(config.name, only_for_session=True)
                 self._window.status_message(message)
+                return
             except Exception as e:
                 message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
                             'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
@@ -280,9 +283,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 listener.on_session_initialized_async(session)
                 config.set_view_status(listener.view, "")
             except Exception as e:
-                message = (f'Failed to initialize {config.name} - disabling for this window for the duration of the current '
-                            'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
-                           f'Palette.\n\n--- Error: ---\n{e}')
+                message = (
+                    f'Failed to initialize {config.name} - disabling for this window for the duration of the current '
+                    'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
+                    f'Palette.\n\n--- Error: ---\n{e}'
+                )
                 exception_log(f"Unable to initialize language server for {config.name}", e)
                 if isinstance(e, CalledProcessError):
                     print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))

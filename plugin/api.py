@@ -451,7 +451,7 @@ class LspPlugin(APIHandler):
         return False
 
     @classmethod
-    async def on_pre_start(cls, context: OnPreStartContext) -> None:
+    def on_pre_start_async(cls, context: OnPreStartContext) -> None:
         """
         Called just before the language server process is started.
 
@@ -470,6 +470,21 @@ class LspPlugin(APIHandler):
                                 `context.working_directory` can be mutated to influence how the server is launched.
         """
         pass
+
+    @classmethod
+    async def on_pre_start(cls, context: OnPreStartContext) -> None:
+        """
+        Async version of on_pre_start_async.
+
+        :param      context:    The startup context. `context.configuration`, `context.variables` and
+                                `context.working_directory` can be mutated to influence how the server is launched.
+        """
+        pass
+
+    @classmethod
+    def prefer_async_on_pre_start(cls) -> bool:
+        """Override and return `true` to make LSP use `on_pre_start` instead of `on_pre_start_async`."""
+        return False
 
     def __init__(self, weaksession: ref[Session]) -> None:
         """

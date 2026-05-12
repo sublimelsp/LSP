@@ -2172,7 +2172,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     async def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> None:
         self._progress[params['token']] = None
 
-    def _invoke_views_async(self, request: Request[Any, Any], method: str, *args: Any) -> None:
+    def _invoke_views(self, request: Request[Any, Any], method: str, *args: Any) -> None:
         if request.view:
             if sv := self.session_view_for_view_async(request.view):
                 getattr(sv, method)(*args)
@@ -2218,7 +2218,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     token = str(token)
                     request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                     request = self._response_handlers[request_id][0]
-                    lambda: self._invoke_views_async(request, "on_request_progress", request_id, params)
+                    lambda: self._invoke_views(request, "on_request_progress", request_id, params)
                 except (TypeError, IndexError, ValueError, KeyError):
                     # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
                     # dealing with possibility (2).
@@ -2314,7 +2314,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if r.on_partial_result and isinstance(r.params, dict):
             r.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
         self._response_handlers[request_id] = (r, future.set_result, lambda x: future.set_exception(Error.from_lsp(x)))
-        self._invoke_views_async(r, "on_request_started_async", request_id, r)
+        self._invoke_views(r, "on_request_started_async", request_id, r)
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, r)
         elif self._plugin:
@@ -2349,7 +2349,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         r.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
         r.on_partial_result = result.on_partial_result
         self._response_handlers[request_id] = (r, result.on_partial_result, result.on_error)
-        self._invoke_views_async(r, "on_request_started_async", request_id, r)
+        self._invoke_views(r, "on_request_started_async", request_id, r)
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, r)
         elif self._plugin:
@@ -2413,7 +2413,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
             request, _, error_handler = self._response_handlers[request_id]
             error_handler({"code": LSPErrorCodes.RequestCancelled, "message": "Request canceled by client"})
-            self._invoke_views_async(request, "on_request_canceled_async", request_id)
+            self._invoke_views(request, "on_request_canceled_async", request_id)
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
     async def notify(self, notification: Notification[P]) -> None:
@@ -2534,7 +2534,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             error = {"code": ErrorCodes.InvalidParams, "message": f"unknown response ID {response_id}"}
             return (print_to_status_bar, None, error, True)
         request, handler, error_handler = matching_handler
-        self._invoke_views_async(request, "on_request_finished_async", response_id)
+        self._invoke_views(request, "on_request_finished_async", response_id)
         if "result" in response and "error" not in response:
             return (handler, request.method, response["result"], False)
         if "result" not in response and "error" in response:

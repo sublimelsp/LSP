@@ -1201,7 +1201,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.discard(sb)
 
-    def session_buffers(self) -> Generator[SessionBufferProtocol, None, None]:
+    def session_buffers_async(self) -> Generator[SessionBufferProtocol, None, None]:
         """It is only safe to iterate over this in the asyncio thread."""
         yield from self._session_buffers
 
@@ -1232,7 +1232,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return sb.get_uri() == path if sb else False
 
             predicate = compare_by_string
-        return next(filter(predicate, self.session_buffers()), None)
+        return next(filter(predicate, self.session_buffers_async()), None)
 
     # --- capability observers -----------------------------------------------------------------------------------------
 
@@ -1265,7 +1265,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if value is not False and value is not None:
             return True
         if check_views:
-            return any(sb.has_capability(capability) for sb in self.session_buffers())
+            return any(sb.has_capability(capability) for sb in self.session_buffers_async())
         return False
 
     def get_capability(self, capability: str) -> Any | None:
@@ -1310,7 +1310,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_config_status_async()
-        for sb in self.session_buffers():
+        for sb in self.session_buffers_async():
             sb.on_userprefs_changed_async()
 
     def markdown_language_id_to_st_syntax_map(self) -> MarkdownLangMap | None:
@@ -1845,7 +1845,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         ))
         visible_session_buffers: list[tuple[SessionBufferProtocol, SessionViewProtocol]] = []
         not_visible_session_buffers: list[SessionBufferProtocol] = []
-        for session_buffer in self.session_buffers():
+        for session_buffer in self.session_buffers_async():
             for session_view in session_buffer.session_views:
                 if (sheet := session_view.view.sheet()) and sheet in selected_sheets:
                     visible_session_buffers.append((session_buffer, session_view))
@@ -2076,7 +2076,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self._registrations[registration_id] = data
             if data.selector:
                 # The registration is applicable only to certain buffers, so let's check which buffers apply.
-                for sb in self.session_buffers():
+                for sb in self.session_buffers_async():
                     data.check_applicable(sb)
             else:
                 # The registration applies globally to all buffers.

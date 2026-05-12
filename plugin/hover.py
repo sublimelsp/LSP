@@ -9,6 +9,8 @@ from ..protocol import Hover
 from ..protocol import Position
 from ..protocol import Range
 from .code_actions import filter_quickfix_actions
+from .core.aio import call_soon_threadsafe
+from .core.aio import run_coroutine_threadsafe
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import MarkdownLangMap
 from .core.constants import RegionKey
@@ -47,7 +49,6 @@ from urllib.parse import urlunsplit
 import html
 import mdpopups
 import sublime
-import sublime_aio
 import sublime_plugin
 
 if TYPE_CHECKING:
@@ -139,7 +140,7 @@ class LspHoverCommand(LspTextCommand):
                 ]
                 Promise.all(code_action_promises).then(partial(self._handle_code_actions, listener, hover_point))
 
-        sublime_aio.call_soon_threadsafe(run_async)
+        call_soon_threadsafe(run_async)
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises: list[Promise[ResolvedHover]] = []
@@ -318,7 +319,7 @@ class LspHoverCommand(LspTextCommand):
             pass
         elif scheme == 'file':
             if window := self.view.window():
-                sublime_aio.call_coroutine(open_file_uri(window, uri))
+                run_coroutine_threadsafe(open_file_uri(window, uri))
         elif scheme == CODE_ACTION_SCHEME:
             session_name, version, action = decode_code_action_uri(uri)
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):

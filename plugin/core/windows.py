@@ -14,13 +14,14 @@ from ..api import IsApplicableContext
 from ..api import LspPlugin
 from ..api import OnPreStartContext
 from ..api import PluginStartError
+from .aio import call_soon_threadsafe
+from .aio import run_coroutine_threadsafe
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
 from .configurations import WindowConfigManager
 from .constants import MESSAGE_TYPE_LEVELS
-from .executors import executor_async
-from .logging import debug, trace
+from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .panels import LOG_LINES_LIMIT_SETTING_NAME
@@ -28,7 +29,6 @@ from .panels import MAX_LOG_LINES_LIMIT_OFF
 from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
-from .promise import Promise
 from .protocol import Error
 from .protocol import Point
 from .sessions import AbstractViewListener
@@ -50,7 +50,6 @@ from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
 from .workspace import WorkspaceFolder
-from collections import deque
 from datetime import datetime
 from subprocess import CalledProcessError
 from time import perf_counter
@@ -65,7 +64,6 @@ import functools
 import json
 import sublime
 import threading
-import sublime_aio
 
 if TYPE_CHECKING:
     from .collections import DottedDict
@@ -159,11 +157,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if issubclass(plugin, LspPlugin):
                     context = IsApplicableContext(config, listener.view, self._workspace.get_workspace_folders())
                     if plugin.is_applicable_async(context):
-                        sublime_aio.call_coroutine(self.start(config, listener))
+                        run_coroutine_threadsafe(self.start(config, listener))
                 elif plugin.is_applicable(listener.view, config):
-                    sublime_aio.call_coroutine(self.start(config, listener))
+                    run_coroutine_threadsafe(self.start(config, listener))
             else:
-                sublime_aio.call_coroutine(self.start(config, listener))
+                run_coroutine_threadsafe(self.start(config, listener))
 
     def unregister_listener_async(self, listener: AbstractViewListener) -> None:
         self._listeners.discard(listener)
@@ -194,7 +192,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 elif not is_applicable and session_view:
                     session.shutdown_session_view_async(session_view)
             elif is_applicable:
-                sublime_aio.call_coroutine(self.start(config, listener))
+                run_coroutine_threadsafe(self.start(config, listener))
 
     def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
         if file_path:
@@ -276,7 +274,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 self._config_manager.disable_config(config.name, only_for_session=True)
                 config.erase_view_status(listener.view)
                 sublime.message_dialog(message)
-                return None
+                return
 
             try:
                 config.set_view_status(listener.view, "initializing...")
@@ -286,7 +284,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 listener.on_session_initialized_async(session)
                 config.set_view_status(listener.view, "")
             except Exception as e:
-                trace()
                 message = (f'Failed to initialize {config.name} - disabling for this window for the duration of the current '
                             'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
                            f'Palette.\n\n--- Error: ---\n{e}')
@@ -296,7 +293,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 self._config_manager.disable_config(config.name, only_for_session=True)
                 sublime.message_dialog(message)
                 config.erase_view_status(listener.view)
-                return None
 
     def _create_logger(self, config_name: str) -> Logger:
         logger_map = {
@@ -335,7 +331,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     def _end_sessions_async(self, config_names: list[str] | None = None) -> None:
         for session in list(self._sessions):
             if config_names is None or session.config.name in config_names:
-                sublime_aio.call_coroutine(session.end())
+                run_coroutine_threadsafe(session.end())
                 self._sessions.discard(session)
 
     def get_project_path(self, file_path: str) -> str | None:
@@ -373,7 +369,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     async def on_post_exit(self, session: Session, exit_code: int, exception: Exception | None) -> None:
         self._sessions.discard(session)
         for listener in self._listeners:
-            sublime.set_timeout_async(lambda: listener.on_session_shutdown_async(session))
+            listener.on_session_shutdown_async(session)
         if exit_code != 0 or exception:
             config = session.config
             restart = self._config_manager.record_crash(config.name, exit_code, exception)

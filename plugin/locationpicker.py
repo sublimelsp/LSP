@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .core.aio import run_coroutine_threadsafe
 from .core.constants import ST_PACKAGES_PATH
 from .core.constants import SublimeKind
 from .core.logging import debug
@@ -8,9 +9,7 @@ from .core.views import location_to_human_readable
 from .core.views import to_encoded_filename
 from typing import TYPE_CHECKING
 from urllib.request import url2pathname
-import functools
 import sublime
-import sublime_aio
 import weakref
 
 if TYPE_CHECKING:
@@ -126,7 +125,7 @@ class LocationPicker:
                     if not open_basic_file(session, uri, position, flags):
                         self._window.status_message(f"Unable to open {uri}")
             else:
-                sublime_aio.call_coroutine(
+                run_coroutine_threadsafe(
                     open_location(session, location, self._side_by_side, self._force_group, self._group)
                 )
         else:

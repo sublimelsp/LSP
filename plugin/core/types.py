@@ -8,6 +8,8 @@ from ...protocol import ServerCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextDocumentSyncOptions
 from ...protocol import URI
+from .aio import run_coroutine_threadsafe
+from .aio import TaskContainer
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
 from .constants import MarkdownLangMap
@@ -47,7 +49,6 @@ import os
 import posixpath
 import re
 import sublime
-import sublime_aio
 import time
 import weakref
 
@@ -179,7 +180,7 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
         if condition():
             f()
 
-    sublime_aio.call_coroutine(run())
+    run_coroutine_threadsafe(run())
 
 
 class SettingsRegistration:
@@ -215,7 +216,8 @@ class DebouncerNonThreadSafe:
     This implementation is not thread safe. You must ensure that `debounce()` is called from the asyncio thread.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, task_container: TaskContainer) -> None:
+        self._task_container = task_container
         self._current_id = -1
         self._next_id = 0
 
@@ -239,7 +241,7 @@ class DebouncerNonThreadSafe:
 
         current_id = self._current_id = self._next_id
         self._next_id += 1
-        sublime_aio.call_coroutine(run(current_id))
+        self._task_container.create_task(run(current_id))
 
     def cancel_pending(self) -> None:
         self._current_id = -1

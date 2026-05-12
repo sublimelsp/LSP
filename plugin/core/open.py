@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from .aio import executor_main
 from .constants import ST_PACKAGES_PATH
 from .constants import ST_PLATFORM
 from .constants import ST_VERSION
-from .executors import executor_main
 from .logging import exception_log
-from .logging import trace
 from .protocol import UINT_MAX
 from .url import parse_uri
 from .views import range_to_region
@@ -90,33 +89,24 @@ async def open_file(
     """
     future: asyncio.Future[sublime.View | None] | None = None
     file = parse_uri(uri)[1]
-    trace()
     async with g_opening_files_lock:
-        trace()
         # Is the view opening right now? Then return the associated unresolved future
         for fn, fut in g_opening_files.items():
-            trace()
             if fn == file or os.path.samefile(fn, file):  # noqa ASYNC240
-                trace()
                 # Return the unresolved future. A future on_load event will resolve the future.
                 future = fut
-                trace()
                 break
         if future is None:
-            trace()
             loop = asyncio.get_running_loop()
             future = loop.create_future()
 
             def resolve_right_now(view: sublime.View | None) -> None:
-                trace()
                 future.set_result(view)
 
             def resolve_later() -> None:
-                trace()
                 g_opening_files[file] = future
 
             def on_main_thread() -> None:
-                trace()
 
                 # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's
                 # supposed to open as a separate view).
@@ -136,12 +126,9 @@ async def open_file(
                     loop.call_soon_threadsafe(lambda: resolve_right_now(view))
                     return
 
-                trace()
                 loop.call_soon_threadsafe(resolve_later)
 
-            trace()
             await loop.run_in_executor(executor_main, on_main_thread)
-    trace()
     return await future
 
 

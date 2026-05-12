@@ -5,6 +5,7 @@ from ..protocol import CodeActionKind
 from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
+from .core.aio import call_soon_threadsafe
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
@@ -30,7 +31,6 @@ from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import override
 import sublime
-import sublime_aio
 
 if TYPE_CHECKING:
     from .core.sessions import AbstractViewListener
@@ -464,7 +464,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
     def is_visible(self, index: int, event: dict | None = None) -> bool:
         if index == -1:
             if self._has_session(event):
-                sublime_aio.call_soon_threadsafe(partial(self._request_menu_actions_async, event))
+                call_soon_threadsafe(partial(self._request_menu_actions_async, event))
             return False
         return index < len(self.actions_cache) and self._is_cache_valid(event)
 

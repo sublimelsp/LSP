@@ -18,6 +18,9 @@ from ..protocol import SignatureHelpTriggerKind
 from .code_actions import filter_quickfix_actions
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
+from .core.aio import call_soon_threadsafe
+from .core.aio import run_coroutine_threadsafe
+from .core.aio import TaskContainer
 from .core.constants import ChangeEventAction
 from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
 from .core.constants import COMMAND_TO_CHANGE_EVENT_ACTION
@@ -46,7 +49,6 @@ from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.signature_help import SignatureHelpStyle
-from .core.task_container import TaskContainer
 from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
@@ -168,7 +170,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
                 *[listener.on_text_changed(change_count, changes, action) for listener in list(frozen_listeners)]
             )
 
-        sublime_aio.call_coroutine(notify(self._last_edit_action))
+        run_coroutine_threadsafe(notify(self._last_edit_action))
         self._reset_last_edit_action()
 
     def on_reload_async(self) -> None:
@@ -267,7 +269,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         for session in self.sessions_async():
             session.diagnostics.clear_identifiers_cache_for_view(self.view)
         # But this has to run on the asyncio thread again
-        sublime_aio.call_coroutine(self._activated_impl())
+        run_coroutine_threadsafe(self._activated_impl())
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
@@ -287,7 +289,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
-        debug("on_session_initialized", session, self)
         if session.config.name not in self._session_views:
             session_view = SessionView(self, session, self._uri)
             self._session_views[session.config.name] = session_view
@@ -420,7 +421,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
     async def on_load(self) -> None:
-        debug("on_load", self)
         if not self._registered and is_regular_view(self.view):
             self._register()
             return
@@ -438,11 +438,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self.on_post_move_window_async()
 
     async def on_activated(self) -> None:
-        debug("on_activated", self)
         await self._activated_impl()
 
     async def _activated_impl(self) -> None:
-        debug("_activated_impl", self)
         if self.view.is_loading() or not is_regular_view(self.view):
             return
         if not self._registered:
@@ -584,7 +582,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 if window.settings().get(HOVER_ENABLED_KEY, True):
                     self.view.run_command("lsp_hover", {"point": point})
             elif hover_zone == sublime.HoverZone.GUTTER:
-                sublime_aio.call_soon_threadsafe(partial(self._on_hover_gutter_async, point))
+                call_soon_threadsafe(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
         if userprefs().diagnostics_gutter_marker:
@@ -666,7 +664,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in {"next_field", "prev_field"} and args is None:
-            sublime_aio.call_soon_threadsafe(
+            call_soon_threadsafe(
                 lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
             )
         if not self.view.is_popup_visible():
@@ -680,7 +678,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         completion_list = sublime.CompletionList()
         triggered_manually = self._auto_complete_triggered_manually
         self._auto_complete_triggered_manually = False  # reset state for next completion popup
-        sublime_aio.call_soon_threadsafe(
+        call_soon_threadsafe(
             lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
         return completion_list
 
@@ -1132,7 +1130,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 session_view.on_before_remove()
             session_views.clear()
 
-        sublime_aio.call_soon_threadsafe(clear_async)
+        call_soon_threadsafe(clear_async)
 
     def on_userprefs_changed_async(self) -> None:
         if userprefs().document_highlight_style:

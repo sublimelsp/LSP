@@ -32,6 +32,7 @@ from ..protocol import UnchangedDocumentDiagnosticReport
 from .api import LspPlugin
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
+from .core.aio import TaskContainer
 from .core.constants import AUTO_CLOSE_BRACKETS
 from .core.constants import ChangeEventAction
 from .core.constants import CODE_LENS_ANNOTATION_SCOPE
@@ -52,7 +53,6 @@ from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
-from .core.task_container import TaskContainer
 from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
@@ -180,7 +180,7 @@ class SessionBuffer(TaskContainer):
         self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # noqa: E501
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
-        self._diagnostics_debouncer_async = DebouncerNonThreadSafe()
+        self._diagnostics_debouncer_async = DebouncerNonThreadSafe(self)
         self._color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self._document_links: list[DocumentLink] = []
         self.semantic_tokens = SemanticTokensData()

@@ -84,6 +84,10 @@ from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
+from .aio import call_soon_threadsafe
+from .aio import executor_main
+from .aio import run_coroutine_threadsafe
+from .aio import TaskContainer
 from .constants import ChangeEventAction
 from .constants import MarkdownLangMap
 from .constants import MARKO_MD_PARSER_VERSION
@@ -94,7 +98,6 @@ from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
 from .edit import WorkspaceEditSummary
-from .executors import executor_main
 from .file_watcher import DEFAULT_WATCH_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
@@ -126,7 +129,6 @@ from .protocol import ServerNotification
 from .protocol import ServerResponse
 from .settings import globalprefs
 from .settings import userprefs
-from .task_container import TaskContainer
 from .transports import TransportCallbacks
 from .transports import TransportWrapper
 from .types import Capabilities
@@ -171,7 +173,6 @@ import itertools
 import mdpopups
 import os
 import sublime
-import sublime_aio
 import weakref
 
 if TYPE_CHECKING:
@@ -2391,7 +2392,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in the asyncio thread."""
-        sublime_aio.call_soon_threadsafe(lambda: self.send_request_async(request, on_result, on_error))
+        call_soon_threadsafe(lambda: self.send_request_async(request, on_result, on_error))
 
     @deprecated("use Session.request or Session.stream instead")
     def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:
@@ -2428,7 +2429,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     def send_notification(self, notification: Notification[P]) -> None:
         self._logger.outgoing_notification(notification.method, notification.params)
-        sublime_aio.call_coroutine(self.notify(notification))
+        run_coroutine_threadsafe(self.notify(notification))
 
     async def send_response(self, response: Response[P]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)

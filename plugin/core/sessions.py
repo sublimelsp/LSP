@@ -86,7 +86,6 @@ from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import call_soon_threadsafe
 from .aio import executor_main
-from .aio import run_coroutine_threadsafe
 from .aio import TaskContainer
 from .constants import ChangeEventAction
 from .constants import MarkdownLangMap
@@ -2428,8 +2427,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         await self.send_payload(notification.to_payload())
 
     def send_notification(self, notification: Notification[P]) -> None:
-        self._logger.outgoing_notification(notification.method, notification.params)
-        run_coroutine_threadsafe(self.notify(notification))
+        self.create_task_threadsafe(self.notify(notification))
 
     async def send_response(self, response: Response[P]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)

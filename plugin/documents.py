@@ -32,7 +32,6 @@ from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
 from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
-from .core.logging import trace
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.panels import PanelName
@@ -389,7 +388,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     async def on_text_changed(
         self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
     ) -> None:
-        trace()
         if not self.session_views_async():
             return
         if self.view.is_primary():
@@ -537,11 +535,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             panel_manager.show_diagnostics_panel_async()
 
     async def on_close(self) -> None:
-        trace()
         if self._registered and self._manager:
-            trace()
             self._manager.unregister_listener_async(self)
-        trace()
         self._clear_session_views_async()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool | None:
@@ -1132,7 +1127,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         session_views = self._session_views
 
         def clear_async() -> None:
-            trace()
             nonlocal session_views
             for session_view in session_views.values():
                 session_view.on_before_remove()

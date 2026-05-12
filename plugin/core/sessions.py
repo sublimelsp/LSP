@@ -1205,7 +1205,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         """It is only safe to iterate over this in the asyncio thread."""
         yield from self._session_buffers
 
-    def get_session_buffer_for_uri(self, uri: DocumentUri) -> SessionBufferProtocol | None:
+    def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> SessionBufferProtocol | None:
         scheme, path = parse_uri(uri)
         if scheme == "file":
 
@@ -1546,7 +1546,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if uri.startswith("file:"):
             return await self._open_file_uri(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
-        if sb := self.get_session_buffer_for_uri(uri):
+        if sb := self.get_session_buffer_for_uri_async(uri):
             view = sb.get_view_in_group(group)
             self.window.focus_view(view)
             if r:
@@ -1900,7 +1900,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     uri = normalize_uri(diagnostic_report['uri'])
                     version = diagnostic_report['version']
                     # Skip if outdated
-                    if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri(uri)) and \
+                    if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri_async(uri)) and \
                             version < session_buffer.last_synced_version:
                         continue
                     self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
@@ -2042,7 +2042,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return
         self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
         mgr.on_diagnostics_updated()
-        if session_buffer := self.get_session_buffer_for_uri(uri):
+        if session_buffer := self.get_session_buffer_for_uri_async(uri):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
 

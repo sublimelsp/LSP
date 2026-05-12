@@ -787,6 +787,16 @@ class SessionBufferProtocol(Protocol):
     def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 
+    def request_code_actions_async(
+        self,
+        view: sublime.View,
+        region: sublime.Region,
+        diagnostics: list[Diagnostic],
+        kinds: list[str | CodeActionKind] | None = ...,
+        trigger_kind: CodeActionTriggerKind = ...
+    ) -> Promise[list[Command | CodeAction] | Error | None]:
+        ...
+
     async def request_code_actions(
         self,
         view: sublime.View,

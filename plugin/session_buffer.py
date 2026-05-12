@@ -990,6 +990,18 @@ class SessionBuffer(TaskContainer):
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
+    def request_code_actions_async(
+        self,
+        view: sublime.View,
+        region: sublime.Region,
+        diagnostics: list[Diagnostic],
+        kinds: list[str | CodeActionKind] | None = None,
+        trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic,
+    ) -> Promise[list[Command | CodeAction] | BaseException | None]:
+        return Promise.wrap_task(
+            self.create_task(self.request_code_actions(view, region, diagnostics, kinds, trigger_kind))
+        )
+
     async def request_code_actions(
         self,
         view: sublime.View,
@@ -1010,9 +1022,6 @@ class SessionBuffer(TaskContainer):
             'context': context
         }
         return await self.session.request(Request.codeAction(params, view))
-
-    def request_code_actions_async():
-        pass
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 

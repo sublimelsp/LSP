@@ -14,7 +14,6 @@ from ..api import IsApplicableContext
 from ..api import LspPlugin
 from ..api import OnPreStartContext
 from ..api import PluginStartError
-from .aio import call_soon_threadsafe
 from .aio import run_coroutine_threadsafe
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
@@ -175,12 +174,9 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 return listener
         return None
 
-    def recheck_is_applicable_async(self, view: sublime.View, config_name: str) -> None:
+    async def recheck_is_applicable(self, view: sublime.View, config_name: str) -> None:
         if not (listener := self.listener_for_view(view)):
             debug(f'No listener for view {view}')
-            return
-        if listener == self._new_listener:
-            debug(f'Already starting relevant sessions for view {view}.')
             return
         scheme = parse_uri(listener.get_uri())[0]
         if (config := self._config_manager.get_config(config_name)) and config.enabled:
@@ -192,7 +188,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 elif not is_applicable and session_view:
                     session.shutdown_session_view_async(session_view)
             elif is_applicable:
-                run_coroutine_threadsafe(self.start(config, listener))
+                await self.start(config, listener)
 
     def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
         if file_path:

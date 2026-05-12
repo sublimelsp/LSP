@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .aio import run_coroutine_threadsafe
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
@@ -249,11 +250,11 @@ class LspRestartServerCommand(LspTextCommand):
 class LspCheckApplicableCommand(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit, session_name: str) -> None:
-        sublime.set_timeout_async(lambda: self._run_async(session_name))
+        run_coroutine_threadsafe(self._run(session_name))
 
-    def _run_async(self, session_name: str) -> None:
+    async def _run(self, session_name: str) -> None:
         if wm := windows.lookup(self.view.window()):
-            wm.recheck_is_applicable_async(self.view, session_name)
+            await wm.recheck_is_applicable(self.view, session_name)
 
 
 def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = True) -> None:

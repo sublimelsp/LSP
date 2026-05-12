@@ -38,7 +38,6 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
-from .core.logging import debug
 from functools import partial
 from typing import Sequence
 from typing import TYPE_CHECKING
@@ -116,7 +115,7 @@ class LspHoverCommand(LspTextCommand):
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
         # rather than just the hover point.
 
-        async def run_async() -> None:
+        def run_async() -> None:
             listener = wm.listener_for_view(self.view)
             if not listener:
                 return
@@ -140,7 +139,7 @@ class LspHoverCommand(LspTextCommand):
                 ]
                 Promise.all(code_action_promises).then(partial(self._handle_code_actions, listener, hover_point))
 
-        sublime_aio.call_coroutine(run_async())
+        sublime_aio.call_soon_threadsafe(run_async)
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises: list[Promise[ResolvedHover]] = []
@@ -211,7 +210,6 @@ class LspHoverCommand(LspTextCommand):
         point: int,
         responses: list[tuple[str, list[Command | CodeAction]]]
     ) -> None:
-        debug("responses:", responses)
         if actions := {config_name: code_actions for config_name, code_actions in responses if code_actions}:
             self._actions_by_config = actions
             self.show_hover(listener, point, only_diagnostics=False)
@@ -320,7 +318,7 @@ class LspHoverCommand(LspTextCommand):
             pass
         elif scheme == 'file':
             if window := self.view.window():
-                open_file_uri(window, uri)
+                sublime_aio.call_coroutine(open_file_uri(window, uri))
         elif scheme == CODE_ACTION_SCHEME:
             session_name, version, action = decode_code_action_uri(uri)
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):

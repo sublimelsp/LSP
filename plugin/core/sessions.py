@@ -105,7 +105,6 @@ from .file_watcher import get_file_watcher_implementation
 from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
 from .logging import debug
 from .logging import exception_log
-from .logging import trace
 from .open import center_selection
 from .open import open_externally
 from .open import open_file
@@ -1860,41 +1859,28 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     def do_workspace_diagnostics_async(self) -> None:
         if not self.get_workspace_folders():
-            trace()
             return
-        trace()
         for identifier in self.diagnostics.workspace_diagnostics_identifiers:
-            trace()
             if self.workspace_diagnostics_pending_responses.get(identifier) is not None:
                 # The server is probably leaving the request open intentionally, in order to continuously stream updates
                 # via $/progress notifications.
-                trace()
                 continue
             self.create_task(self._do_workspace_diagnostics(identifier))
-        trace()
 
     async def _do_workspace_diagnostics(self, identifier: DiagnosticsIdentifier) -> None:
-        trace()
         previous_result_ids: list[PreviousResultId] = [
             {'uri': uri, 'value': result_id} for (uri, id_), result_id in self.diagnostics_result_ids.items()
             if id_ == identifier and result_id is not None
         ]
-        trace()
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
-        trace()
         if identifier is not None:
-            trace()
             params['identifier'] = identifier
 
-        trace()
         self.workspace_diagnostics_pending_responses[identifier] = inflight_request = self.stream(
             Request.workspaceDiagnostic(params)
         )
-        trace()
         try:
-            trace()
             async for partial_response in inflight_request:
-                trace()
                 for diagnostic_report in partial_response['items']:
                     uri = normalize_uri(diagnostic_report['uri'])
                     version = diagnostic_report['version']

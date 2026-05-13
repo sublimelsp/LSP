@@ -427,9 +427,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if initially_folded_kinds := userprefs().initially_folded:
             if session := self.session_async('foldingRangeProvider'):
                 params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
-                session.send_request_async(
-                    Request.foldingRange(params, self.view),
-                    partial(self._on_initial_folding_ranges, initially_folded_kinds))
+                self._on_initial_folding_ranges(
+                    initially_folded_kinds, await session.request(Request.foldingRange(params, self.view))
+                )
         await self._activated_impl()
 
     async def on_post_move(self) -> None:

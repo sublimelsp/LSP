@@ -27,7 +27,7 @@ class LspColorPresentationCommand(LspTextCommand):
                 'color': color_information['color'],
                 'range': self._range
             }
-            session.send_request_async(Request.colorPresentation(params, self.view), self._handle_response_async)
+            session.send_request(Request.colorPresentation(params, self.view), self._handle_response_async)
 
     def want_event(self) -> bool:
         return False

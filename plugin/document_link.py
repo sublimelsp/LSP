@@ -35,7 +35,7 @@ class LspOpenLinkCommand(LspTextCommand):
                             self.open_target(target)
                         elif session.has_capability("documentLinkProvider.resolveProvider"):
                             request = Request.resolveDocumentLink(link, self.view)
-                            session.send_request_async(request, self._on_resolved_async)
+                            session.send_request(request, self._on_resolved_async)
                         else:
                             debug("DocumentLink.target is missing, but the server doesn't support documentLink/resolve")
 

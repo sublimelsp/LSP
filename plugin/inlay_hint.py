@@ -67,7 +67,7 @@ class LspInlayHintClickCommand(LspTextCommand):
         session = self.session_by_name(session_name, 'inlayHintProvider')
         if session and session.has_capability('inlayHintProvider.resolveProvider'):
             request = Request.resolveInlayHint(inlay_hint, self.view)
-            session.send_request_async(
+            session.send_request(
                 request,
                 lambda response: self.handle(session_name, response, phantom_uuid, label_part))
             return

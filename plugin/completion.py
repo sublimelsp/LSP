@@ -389,7 +389,7 @@ class LspSelectCompletionCommand(LspTextCommand):
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
         additional_text_edits = item.get('additionalTextEdits')
         if session and not additional_text_edits:
-            session.send_request_async(
+            session.send_request(
                 Request.resolveCompletionItem(item, self.view),
                 functools.partial(self._on_resolved_async, session_name))
         else:

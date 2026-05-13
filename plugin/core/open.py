@@ -116,6 +116,13 @@ async def open_file(
                     return
 
                 was_already_open = view is not None
+                if not was_already_open and not os.path.isfile(file):
+                    # window.open_file creates a new view with empty content if the path from the given URI doesn't
+                    # exist as a file on disk, but we don't want that here. If the language server wants to create a new
+                    # file for a given URI, it must use the CreateFile resource operation in a WorkspaceEdit.
+                    loop.call_soon_threadsafe(lambda: resolve_right_now(view))
+                    return
+
                 view = window.open_file(file, flags, group)
                 if not view.is_loading():
                     if was_already_open and (flags & sublime.NewFileFlags.SEMI_TRANSIENT):
@@ -124,7 +131,6 @@ async def open_file(
                         sublime_plugin.check_view_event_listeners(view)  # type: ignore
                     # It's already loaded. Possibly already open in a tab.
                     loop.call_soon_threadsafe(lambda: resolve_right_now(view))
-                    return
 
                 loop.call_soon_threadsafe(resolve_later)
 

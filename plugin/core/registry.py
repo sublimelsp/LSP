@@ -240,11 +240,7 @@ class LspRestartServerCommand(LspTextCommand):
     def restart_server(self, wm: WindowManager, index: int) -> None:
         if index == -1:
             return
-
-        def run_async() -> None:
-            wm.restart_sessions_async([self._config_names[index]])
-
-        sublime.set_timeout_async(run_async)
+        run_coroutine_threadsafe(wm.restart_sessions([self._config_names[index]]))
 
 
 class LspCheckApplicableCommand(sublime_plugin.TextCommand):

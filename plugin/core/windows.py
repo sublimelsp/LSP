@@ -322,18 +322,21 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return MessageRequestHandler(view, params, config_name).show()
         return None
 
-    def restart_sessions_async(self, config_names: list[str]) -> None:
-        self._end_sessions_async(config_names)
+    async def restart_sessions(self, config_names: list[str]) -> None:
+        await self._end_sessions(config_names)
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
             self.register_listener_async(listener)
 
-    def _end_sessions_async(self, config_names: list[str] | None = None) -> None:
+    def _end_sessions(self, config_names: list[str] | None = None) -> asyncio.Future[list[BaseException | None]]:
+        coros = []
         for session in list(self._sessions):
             if config_names is None or session.config.name in config_names:
-                run_coroutine_threadsafe(session.end())
+                debug(f"stopping {session.config.name}")
+                coros.append(session.end())
                 self._sessions.discard(session)
+        return asyncio.gather(*coros, return_exceptions=True)
 
     def get_project_path(self, file_path: str) -> str | None:
         candidate: str | None = None
@@ -368,6 +371,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         return None
 
     async def on_post_exit(self, session: Session, exit_code: int, exception: Exception | None) -> None:
+        debug(f"{session.config.name} has stopped")
         self._sessions.discard(session)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)
@@ -388,15 +392,13 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             else:
                 self._config_manager.disable_config(config.name, only_for_session=True)
 
-    def destroy(self) -> None:
-        """
-        Called **from the main thread** when the plugin unloads. In that case we must destroy all sessions
-        from the main thread. That could lead to some dict/list being mutated while iterated over, so be careful.
-        """
-        self._end_sessions_async()
+    async def destroy(self) -> list[BaseException | None]:
+        """Destroy everything related to this instance."""
+        result = await self._end_sessions()
         if self.panel_manager:
             self.panel_manager.destroy_output_panels()
             self.panel_manager = None
+        return result
 
     def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
         if not userprefs().log_debug:
@@ -497,7 +499,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:
         config_names = [config.name for config in configs]
-        sublime.set_timeout_async(lambda: self.restart_sessions_async(config_names))
+        run_coroutine_threadsafe(self.restart_sessions(config_names))
 
     # --- Implements ViewStatusHandler ---------------------------------------------------------------------------------
 
@@ -532,13 +534,16 @@ class WindowRegistry(LspSettingsChangeListener):
         for window in sublime.windows():
             self.lookup(window)
 
-    def disable(self) -> None:
+    async def disable(self, print_exceptions: bool = True) -> None:
         self._enabled = False
-        for wm in self._windows.values():
-            try:
-                wm.destroy()
-            except Exception as ex:
-                exception_log("failed to destroy window", ex)
+        for result in await asyncio.gather(*[wm.destroy() for wm in self._windows.values()], return_exceptions=True):
+            if print_exceptions:
+                if isinstance(result, BaseException):
+                    exception_log("exception while disabling window", result)
+                elif isinstance(result, list):
+                    for possible_exception in result:
+                        if isinstance(possible_exception, BaseException):
+                            exception_log("exception while disabling window", possible_exception)
         self._windows = {}
 
     def lookup(self, window: sublime.Window | None) -> WindowManager | None:
@@ -559,7 +564,7 @@ class WindowRegistry(LspSettingsChangeListener):
 
     def discard(self, window: sublime.Window) -> None:
         if wm := self._windows.pop(window.id(), None):
-            sublime.set_timeout_async(wm.destroy)
+            run_coroutine_threadsafe(wm.destroy())
 
     # --- Implements LspSettingsChangeListener -------------------------------------------------------------------------
 

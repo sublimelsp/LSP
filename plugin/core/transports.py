@@ -263,11 +263,16 @@ class Transport(ABC):
 
 
 async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str]:
-    headers_bytes = (await reader.readuntil(b'\r\n\r\n')).decode("ascii").rstrip()
     headers: dict[str, str] = {}
-    for line in headers_bytes.split("\r\n"):
-        key, value = line.split(":", 1)
-        headers[key.lower()] = value
+    try:
+        headers_bytes = (await reader.readuntil(b'\r\n\r\n')).decode("ascii").rstrip()
+        for line in headers_bytes.split("\r\n"):
+            key, value = line.split(":", 1)
+            headers[key.lower()] = value
+    except asyncio.exceptions.IncompleteReadError:
+        # May happen when shutting down. parse_content_length will then return None,
+        # which will cause the read loop to stop.
+        pass
     return headers
 
 
@@ -291,18 +296,10 @@ class StreamTransport(Transport):
 
     @override
     async def read(self) -> JSONRPCMessage:
-        headers: dict[str, str] | None = None
-        try:
-            content_length = await parse_content_length(self._reader)
-            if content_length is None:
-                raise StopLoopError
-            body = await self._reader.readexactly(content_length)
-        except TypeError as ex:
-            if str(headers) == "\n":
-                # Expected on process stopping. Gracefully stop the transport.
-                raise StopLoopError from None
-            # Propagate server's output to the UI.
-            raise Exception(f"Unexpected payload in server's stdout:\n\n{headers}") from ex
+        content_length = await parse_content_length(self._reader)
+        if content_length is None:
+            raise StopLoopError
+        body = await self._reader.readexactly(content_length)
         try:
             return self._decoder(body)
         except Exception as ex:
@@ -381,6 +378,7 @@ class TransportWrapper:
         except (AttributeError, BrokenPipeError, StopLoopError):
             pass
         except Exception as ex:
+            exception_log("unexpected exception while stopping transport", ex)
             exception = ex
         exit_code: int | None = None
         if self._process:

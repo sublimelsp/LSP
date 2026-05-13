@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 import os
 import sublime
 import tempfile
-import unittest
 
 if TYPE_CHECKING:
     from LSP.plugin.core.sessions import SessionBufferProtocol
@@ -118,7 +117,6 @@ class ServerRequests(TextDocumentTestCase):
                 self.assertEqual(view.substr(sublime.Region(0, view.size())), expected[i])
                 view.close()
 
-    @unittest.skip("TODO: fix to not automatically create a new view for nonexistent file URI")
     def test_m_workspace_applyEdit_with_wrong_uri(self) -> Generator:
         uri = "file:///C:/wrong/uri.txt"
         yield from verify(

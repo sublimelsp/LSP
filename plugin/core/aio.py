@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from .logging import debug
 from .logging import exception_log
 from typing import Any
 from typing import Callable
 from typing import TYPE_CHECKING
+from typing import TypeVar
 import asyncio
 import concurrent.futures
 import sublime
@@ -17,13 +19,18 @@ if TYPE_CHECKING:
     from collections.abc import Coroutine
 
 
-def run_coroutine_threadsafe(coroutine: Coroutine[object, object, object]) -> concurrent.futures.Future:
+T = TypeVar("T")
+
+
+_futures: set[concurrent.futures.Future] = set()
+
+
+def run_coroutine_threadsafe(coroutine: Coroutine[object, object, T]) -> concurrent.futures.Future[T]:
     """
     Start the execution of a coroutine in the asyncio thread, from any thread.
 
-    When you are certain you are already in the asyncio thread (meaning: `asyncio.get_running_loop()` returns a valid
-    [AbstractEventLoop](https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.AbstractEventLoop)), then there
-    are better ways to start a coroutine from a "blocking" ("non-async") function. One way is to use
+    When you are certain you are already in the asyncio thread, then there are better ways to start a coroutine from a
+    "blocking" ("non-async") function. One way is to use
     [asyncio.create_task](https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.create_task). However,
     asyncio.create_task has the caveat that the returned [Task](https://docs.python.org/3/library/asyncio-task.html#asyncio.Task)
     object must be kept alive somewhere. If you don't care about keeping tasks associated to coroutines alive, then
@@ -32,7 +39,16 @@ def run_coroutine_threadsafe(coroutine: Coroutine[object, object, object]) -> co
     A big caveat: coroutines started this way do not print their exceptions when an exception occurs in the coroutine.
     To handle this, call `.add_done_callback` on the returned `Future` object.
     """
-    return sublime_aio.run_coroutine(coroutine)  # type: ignore
+    future: concurrent.futures.Future[T] = sublime_aio.run_coroutine(coroutine)  # type: ignore
+
+    def on_done(fut: concurrent.futures.Future[T]) -> None:
+        _futures.discard(fut)
+        if not fut.cancelled() and (ex := fut.exception()):
+            exception_log("coroutine finished with exception", ex)
+
+    future.add_done_callback(on_done)
+    _futures.add(future)
+    return future
 
 
 def call_soon_threadsafe(f: Callable[..., Any]) -> asyncio.Handle:
@@ -122,18 +138,25 @@ class TaskContainer:
     Note: don't forget to call `super().__init__()` when using this class.
 
     When an instance of this class is garbage-collected, then, when it is garbage-collected from the asyncio thread, all
-    running tasks are cancelled. Otherwise, the tasks are not cancelled.
+    running tasks are cancelled. Otherwise, you must call `cancel_all_tasks` manually.
     """
 
     def __init__(self) -> None:
         self._tasks: set[asyncio.Task] = set()
 
     def __del__(self) -> None:
-        loop = asyncio.get_running_loop()
-        if loop:
-            tasks = set(self._tasks)
-            for task in tasks:
-                task.cancel()
+        if self._tasks:
+            try:
+                self.cancel_all_tasks()
+            except RuntimeError:
+                debug("TaskContainer destroyed while there are still tasks running!")
+
+    def cancel_all_tasks(self) -> None:
+        # throws RuntimeError when not on the asyncio thread.
+        asyncio.get_running_loop()
+        tasks = set(self._tasks)
+        for task in tasks:
+            task.cancel()
 
     def create_task(self, coro: Coroutine[object, object, object], /, **kwargs: Any) -> asyncio.Task:
         """

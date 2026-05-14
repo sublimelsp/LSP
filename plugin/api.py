@@ -501,9 +501,9 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    def on_initialize_async(self) -> None:
+    def on_initialized_async(self) -> None:
         """
-        Called after the `initialize` response has been received from the language server.
+        Called after the `initialized` notification has been sent to the language server.
 
         Override to perform any post-initialization work, such as sending custom notifications or requests
         that depend on the server's capabilities reported in the `initialize` response.

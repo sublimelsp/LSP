@@ -94,7 +94,8 @@ class StdioTransportConfig(TransportConfig):
     ) -> TransportWrapper:
         if not command:
             raise RuntimeError('missing "command" to start a child process for running the language server')
-        process = await TransportConfig.resolve_launch_config(command, env, variables).start(
+        launch = TransportConfig.resolve_launch_config(command, env, variables)
+        process = await launch.start(
             cwd,
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,
@@ -106,6 +107,7 @@ class StdioTransportConfig(TransportConfig):
             callback_object=callbacks,
             transport=StreamTransport(encode_json, decode_json, process.stdout, process.stdin),
             process=process,
+            process_args=launch.command,
             error_reader=ErrorReader(callbacks, process.stderr),
         )
 
@@ -135,8 +137,10 @@ class TcpClientTransportConfig(TransportConfig):
         callbacks: TransportCallbacks,
     ) -> TransportWrapper:
         port = _add_and_resolve_port_variable(variables, self._port)
+        launch: LaunchConfig | None = None
         if command:
-            process = await TransportConfig.resolve_launch_config(command, env, variables).start(
+            launch = TransportConfig.resolve_launch_config(command, env, variables)
+            process = await launch.start(
                 cwd,
                 stdout=asyncio.subprocess.PIPE,
                 stdin=asyncio.subprocess.DEVNULL,
@@ -153,6 +157,7 @@ class TcpClientTransportConfig(TransportConfig):
             callback_object=callbacks,
             transport=StreamTransport(encode_json, decode_json, reader, writer),
             process=process,
+            process_args=launch.command if launch else None,
             error_reader=error_reader,
         )
 
@@ -195,7 +200,7 @@ class TcpServerTransportConfig(TransportConfig):
             async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
                 async with self.cv:
                     transport = StreamTransport(encode_json, decode_json, reader, writer)
-                    self.wrapper = TransportWrapper(callbacks, transport, self.process, self.error_reader)
+                    self.wrapper = TransportWrapper(callbacks, transport, self.process, command, self.error_reader)
                     self.cv.notify()
 
         callback = ClientConnectedCallback()
@@ -339,17 +344,23 @@ class TransportWrapper:
         callback_object: TransportCallbacks,
         transport: Transport,
         process: asyncio.subprocess.Process | None,
+        process_args: list[str] | None,
         error_reader: ErrorReader | None,
     ) -> None:
         self._callback_object = weakref.ref(callback_object)
         self._transport: Transport | None = transport
         self._process = process
+        self._process_args = process_args
         self._error_reader: ErrorReader | None = error_reader
         self._task = asyncio.get_running_loop().create_task(self._read_loop())
 
     @property
-    def process_args(self) -> Any:
-        return self._process.args if self._process else None
+    def process_args(self) -> list[str] | None:
+        """
+        The arguments for the process launched by this wrapper, or None if there is no process launched (such as with
+        a remote TCP/websocket connection).
+        """
+        return self._process_args
 
     async def send(self, payload: JSONRPCMessage) -> None:
         if self._transport:

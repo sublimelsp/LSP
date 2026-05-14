@@ -1391,9 +1391,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if issubclass(self._plugin_class, AbstractPlugin):
                 self._plugin = self._plugin_class(weakref.ref(self))
                 self._plugin.on_server_response_async('initialize', Response(-1, result))
-        if self._plugin and isinstance(self._plugin, LspPlugin):
-            await self._plugin.on_initialize()
         await self.notify(Notification.initialized())
+        if self._plugin and isinstance(self._plugin, LspPlugin):
+            if self._plugin.use_asyncio():
+                await self._plugin.on_initialize()
+            else:
+                self._plugin.on_initialize_async()
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")

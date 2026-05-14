@@ -525,15 +525,17 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    async def on_initialize(self) -> None:
+    def on_initialize_async(self) -> None:
         """
-        Called after the `initialize` response has been received from the language server.
-
-        TODO: invoked before or after the `initialized` notification?
+        Called after the `initialized` notification has been sent to the language server.
 
         Override to perform any post-initialization work, such as sending custom notifications or requests
         that depend on the server's capabilities reported in the `initialize` response.
         """
+        pass
+
+    async def on_initialize(self) -> None:
+        """Async version of `on_initialize_async`."""
         pass
 
     def on_pre_send_request_async(self, request: ClientRequest, view: sublime.View | None) -> None:

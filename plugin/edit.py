@@ -109,13 +109,9 @@ class LspApplyTextDocumentEditCommand(sublime_plugin.TextCommand):
         self,
         edit: sublime.Edit,
         edits: list[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
-        version: int | None = None,
         label: str | None = None
     ) -> None:
         if not edits:
-            return
-        if version is not None and version != self.view.change_count():
-            debug('ignoring edit due to non-matching document version')
             return
         if listener := windows.listener_for_view(self.view):
             listener.set_change_event_action(ChangeEventAction.OTHER)

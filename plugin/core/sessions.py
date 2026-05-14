@@ -3,6 +3,8 @@ from __future__ import annotations
 from ...protocol import AnnotatedTextEdit
 from ...protocol import ApplyWorkspaceEditParams
 from ...protocol import ApplyWorkspaceEditResult
+from ...protocol import ChangeAnnotation
+from ...protocol import ChangeAnnotationIdentifier
 from ...protocol import ClientCapabilities
 from ...protocol import CodeAction
 from ...protocol import CodeActionKind
@@ -11,6 +13,8 @@ from ...protocol import Command
 from ...protocol import CompletionItemKind
 from ...protocol import CompletionItemTag
 from ...protocol import ConfigurationParams
+from ...protocol import CreateFile
+from ...protocol import DeleteFile
 from ...protocol import Diagnostic
 from ...protocol import DiagnosticOptions
 from ...protocol import DiagnosticServerCancellationData
@@ -48,6 +52,7 @@ from ...protocol import ProgressToken
 from ...protocol import PublishDiagnosticsParams
 from ...protocol import Range
 from ...protocol import RegistrationParams
+from ...protocol import RenameFile
 from ...protocol import SemanticTokenModifiers
 from ...protocol import SemanticTokenTypes
 from ...protocol import ShowDocumentParams
@@ -59,6 +64,7 @@ from ...protocol import SnippetTextEdit
 from ...protocol import SymbolKind
 from ...protocol import SymbolTag
 from ...protocol import TextDocumentClientCapabilities
+from ...protocol import TextDocumentEdit
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextEdit
 from ...protocol import TokenFormat
@@ -94,6 +100,10 @@ from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .edit import apply_text_edits
+from .edit import is_create_file
+from .edit import is_delete_file
+from .edit import is_rename_file
+from .edit import is_text_document_edit
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
 from .edit import WorkspaceEditSummary
@@ -1725,6 +1735,108 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 execute_command['arguments'] = arguments
             await self.execute_command(execute_command, progress=False, view=view, is_refactoring=is_refactoring)
 
+    async def apply_document_changes(
+        self,
+        document_changes: list[TextDocumentEdit | CreateFile | RenameFile | DeleteFile],
+        change_annotations: dict[ChangeAnnotationIdentifier, ChangeAnnotation],
+        *,
+        label: str | None = None,
+        is_refactoring: bool = False
+    ) -> ApplyWorkspaceEditResult:
+        active_sheet = self.window.active_sheet()
+        selected_sheets = self.window.selected_sheets()
+        auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
+        index = 0  # Assuming 0-based indexing for the ApplyWorkspaceEditResult.faildedChange value
+        result = await self._apply_document_changes_recursive(
+            document_changes, change_annotations, index, label, auto_save)
+        self._set_selected_sheets(selected_sheets)
+        self._set_focused_sheet(active_sheet)
+        return result
+
+    async def _apply_document_changes_recursive_async(
+        self,
+        document_changes: list[TextDocumentEdit | CreateFile | RenameFile | DeleteFile],
+        change_annotations: dict[ChangeAnnotationIdentifier, ChangeAnnotation],
+        index: int,
+        label: str | None,
+        auto_save: str
+    ) -> ApplyWorkspaceEditResult:
+
+        async def apply_text_document_edit(
+            view: sublime.View | None,
+            uri: DocumentUri,
+            edits: list[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
+            version: int | None,
+            view_state_actions: ViewStateActions
+        ) -> str | None:
+            if not view:
+                return f'Failed to open URI {uri}'
+            if version is not None and version != (change_count := view.change_count()):
+                return f'Document version for URI {uri} is {change_count}, but required {version}'
+            for edit in edits:
+                # Use more specific label for this particular TextDocumentEdit if available
+                if annotation_id := edit.get('annotationId'):
+                    edit_label = change_annotations[annotation_id]['label']
+                    break
+            else:
+                edit_label = label
+            view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': edit_label})
+            if view and view_state_actions:
+                await self._set_view_state(view_state_actions, view)
+            return None
+
+        async def _continue(failure_reason: str | None) -> ApplyWorkspaceEditResult:
+            if failure_reason:
+                return {
+                    'applied': False,
+                    'failureReason': failure_reason,
+                    'failedChange': index
+                }
+            return await self._apply_document_changes_recursive(
+                document_changes, change_annotations, index + 1, label, auto_save)
+
+        try:
+            document_change = document_changes.pop(0)
+        except IndexError:
+            # All document changes were handled
+            return {'applied': True}
+        if is_text_document_edit(document_change):
+            text_document = document_change['textDocument']
+            uri = text_document['uri']
+            version = text_document['version']
+            view_state_actions = self._get_view_state_actions(uri, auto_save)
+            view = await self.open_uri(uri)
+            failure_reason = await apply_text_document_edit(
+                view, uri, document_change['edits'], version, view_state_actions)
+            return await _continue(failure_reason)
+        if is_create_file(document_change):
+            # TODO: add support for ResourceOperationKind.Create
+            return {
+                'applied': False,
+                'failureReason': 'CreateFile not yet supported by client',
+                'failedChange': index
+            }
+        if is_rename_file(document_change):
+            # TODO: add support for ResourceOperationKind.Rename
+            return {
+                'applied': False,
+                'failureReason': 'RenameFile not yet supported by client',
+                'failedChange': index
+            }
+        if is_delete_file(document_change):
+            # TODO: add support for ResourceOperationKind.Delete
+            return {
+                'applied': False,
+                'failureReason': 'DeleteFile not yet supported by client',
+                'failedChange': index
+            }
+        # Should be unreachable, but must return value on all code paths to satisfy type checker
+        return {
+            'applied': False,
+            'failureReason': 'Unknown document change type',
+            'failedChange': index
+        }
+
     async def apply_workspace_edit(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
     ) -> WorkspaceEditSummary:
@@ -1953,8 +2065,14 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     @request_handler('workspace/applyEdit')
     async def on_workspace_apply_edit(self, params: ApplyWorkspaceEditParams) -> ApplyWorkspaceEditResult:
-        is_refactoring = params.get('metadata', {}).get('isRefactoring', False)
-        await self.apply_workspace_edit(params['edit'], label=params.get('label'), is_refactoring=is_refactoring)
+        edit = params['edit']
+        label = params.get('label')
+        is_refactoring = metadata.get('isRefactoring', False) if (metadata := params.get('metadata')) else False
+        if document_changes := edit.get('documentChanges'):
+            change_annotations = edit.get('changeAnnotations', {})
+            return await self.apply_document_changes(
+                document_changes, change_annotations, label=label, is_refactoring=is_refactoring)
+        await self.apply_workspace_edit(edit, label=label, is_refactoring=is_refactoring)
         return {'applied': True}
 
     @request_handler('workspace/codeLens/refresh')

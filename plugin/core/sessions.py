@@ -803,7 +803,7 @@ class SessionBufferProtocol(Protocol):
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = ...,
         trigger_kind: CodeActionTriggerKind = ...
-    ) -> Promise[list[Command | CodeAction] | Error | None]:
+    ) -> Promise[list[Command | CodeAction] | BaseException | None]:
         ...
 
     async def request_code_actions(
@@ -2447,7 +2447,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.request_id += 1
         request_id = self.request_id
         result = CancellableInflightStreamingRequest(request_id, self)
-        if r.progress and isinstance(r.params, dict):
+        if not isinstance(r.params, dict):
+            raise TypeError("request should have dict params")
+        if r.progress:
             r.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         r.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
         r.on_partial_result = result.on_partial_result

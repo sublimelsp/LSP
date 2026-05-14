@@ -2525,6 +2525,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
     async def notify(self, notification: Notification[P]) -> None:
+        """Send a notification to the server."""
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_notification_async(notification)
         elif self._plugin:
@@ -2535,7 +2536,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._logger.outgoing_notification(notification.method, notification.params)
         await self.send_payload(notification.to_payload())
 
+    def send_notification_async(self, notification: Notification[P]) -> None:
+        """Send a notification to the server. Not thread safe. Must be called from the asyncio thread."""
+        self.create_task(self.notify(notification))
+
     def send_notification(self, notification: Notification[P]) -> None:
+        """Send a notification to the server. Thread safe. Can be called from any thread."""
         self.create_task_threadsafe(self.notify(notification))
 
     async def send_response(self, response: Response[P]) -> None:

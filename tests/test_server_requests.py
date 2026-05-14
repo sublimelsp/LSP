@@ -117,6 +117,90 @@ class ServerRequests(TextDocumentTestCase):
                 self.assertEqual(view.substr(sublime.Region(0, view.size())), expected[i])
                 view.close()
 
+    def test_m_workspace_applyEdit_with_wrong_uri(self) -> Generator:
+        uri = "file:///C:/wrong/uri.txt"
+        yield from verify(
+            self,
+            "workspace/applyEdit",
+            {
+                "edit": {
+                    "documentChanges": [
+                        {
+                            "textDocument": {
+                                "uri": uri,
+                                "version": None
+                            },
+                            "edits": [
+                                {
+                                    "range": {
+                                        "start": {"line": 0, "character": 0},
+                                        "end": {"line": 0, "character": 1}
+                                    },
+                                    "newText": "hello"
+                                },
+                                {
+                                    "range": {
+                                        "start": {"line": 0, "character": 2},
+                                        "end": {"line": 0, "character": 3}
+                                    },
+                                    "newText": "there"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "applied": False,
+                "failureReason": f"Failed to open URI {uri}",
+                "failedChange": 0
+            }
+        )
+
+    def test_m_workspace_applyEdit_with_wrong_document_version(self) -> Generator:
+        with tempfile.TemporaryDirectory() as dirpath:
+            file_name = os.path.join(dirpath, "file3.txt")
+            uri = filename_to_uri(file_name)
+            version = 123
+            Path(file_name).write_text("a b", encoding="utf-8")
+            yield from verify(
+                self,
+                "workspace/applyEdit",
+                {
+                    "edit": {
+                        "documentChanges": [
+                            {
+                                "textDocument": {
+                                    "uri": uri,
+                                    "version": version
+                                },
+                                "edits": [
+                                    {
+                                        "range": {
+                                            "start": {"line": 0, "character": 0},
+                                            "end": {"line": 0, "character": 1}
+                                        },
+                                        "newText": "hello"
+                                    },
+                                    {
+                                        "range": {
+                                            "start": {"line": 0, "character": 2},
+                                            "end": {"line": 0, "character": 3}
+                                        },
+                                        "newText": "there"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "applied": False,
+                    "failureReason": f"Document version for URI {uri} is 0, but required {version}",
+                    "failedChange": 0
+                }
+            )
+
     def test_m_client_registerCapability(self) -> Generator:
         yield from verify(
             self,

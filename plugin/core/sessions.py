@@ -2154,8 +2154,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if mgr := self.manager():
             mgr.on_diagnostics_updated()
 
+    # Keep this request handler as backwards-compatible method that returns a Promise, to ensure Promises keep working
+    # for now.
     @request_handler('client/registerCapability')
-    async def on_client_register_capability(self, params: RegistrationParams) -> None:
+    def on_client_register_capability(self, params: RegistrationParams) -> Promise[None]:
         new_diagnostics_provider = False
         new_workspace_diagnostics_provider = False
         for registration in params["registrations"]:
@@ -2202,6 +2204,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 self.do_workspace_diagnostics_async()
 
         asyncio.get_running_loop().call_soon(continue_after_response)
+        return Promise.resolve(None)
 
     @request_handler('client/unregisterCapability')
     async def on_client_unregister_capability(self, params: UnregistrationParams) -> None:

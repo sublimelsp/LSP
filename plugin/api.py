@@ -433,6 +433,11 @@ class LspPlugin(APIHandler):
         unregister_plugin_impl(cls)
 
     @classmethod
+    def use_asyncio(cls) -> bool:
+        """Override and return `true` to make LSP use `async def` variants."""
+        return False
+
+    @classmethod
     def is_applicable_async(cls, context: IsApplicableContext) -> bool:
         """
         Determine whether the server should run on the view given by `context.view`.
@@ -483,11 +488,6 @@ class LspPlugin(APIHandler):
                                 `context.working_directory` can be mutated to influence how the server is launched.
         """
         pass
-
-    @classmethod
-    def prefer_async_on_pre_start(cls) -> bool:
-        """Override and return `true` to make LSP use `on_pre_start` instead of `on_pre_start_async`."""
-        return False
 
     def __init__(self, weaksession: ref[Session]) -> None:
         """

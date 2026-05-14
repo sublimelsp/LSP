@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from ..protocol import DocumentRangesFormattingParams
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextEdit
 from .code_actions import CodeActionsOnFormatTask
+from .core.aio import run_coroutine_threadsafe
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
 from .core.promise import Promise
 from .core.protocol import Error
+from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import userprefs
@@ -156,7 +159,7 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
 
     def on_result_async(self, result: FormatResponse) -> None:
         if result and not isinstance(result, Error):
-            apply_text_edits(self.view, result, label="Format File")
+            run_coroutine_threadsafe(apply_text_edits(self.view, result, label="Format File"))
 
     def select_formatter(self, base_scope: str, session_names: list[str]) -> None:
         if window := self.view.window():
@@ -203,25 +206,29 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         return False
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
+        run_coroutine_threadsafe(self._run())
+
+    async def _run(self) -> None:
         if listener := self.get_listener():
             listener.purge_changes_async()
+        session: Session | None = None
+        request: Request[DocumentRangesFormattingParams, list[TextEdit] | None] | None = None
         if has_single_nonempty_selection(self.view):
             session = self.best_session(self.capability)
             selection = first_selection_region(self.view)
             if session and selection is not None:
-                request = text_document_range_formatting(self.view, selection)
-                session.send_request_task(request).then(self._handle_response_async)
+                request = text_document_ranges_formatting(self.view)
         elif self.view.has_non_empty_selection_region():
             if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
                 request = text_document_ranges_formatting(self.view)
-                session.send_request_task(request).then(self._handle_response_async)
-
-    def _handle_response_async(self, response: FormatResponse) -> None:
-        if isinstance(response, Error):
-            sublime.status_message(f'Formatting error: {response}')
-            return
-        if response:
-            apply_text_edits(self.view, response, label="Format Selection")
+        if session and request:
+            try:
+                text_edits = await session.request(request)
+                if text_edits is not None:
+                    await apply_text_edits(self.view, text_edits)
+            except Error as error:
+                sublime.status_message(f'Formatting error: {error}')
+                return
 
 
 class LspFormatCommand(LspTextCommand):

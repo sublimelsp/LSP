@@ -503,8 +503,12 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             # The URI scheme hasn't changed so the only thing we have to do is to inform the attached session views
             # about the new URI.
             if self.view.is_primary():
-                for sv in self.session_views_async():
-                    sv.on_post_save_async(self._uri)
+
+                def on_post_save_session_views() -> None:
+                    for sv in self.session_views_async():
+                        sv.on_post_save_async(self._uri)
+
+                call_soon_threadsafe(on_post_save_session_views)
         else:
             # The URI scheme has changed. This means we need to re-determine whether any language servers should
             # be attached to the view.

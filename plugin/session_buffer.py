@@ -433,8 +433,7 @@ class SessionBuffer(TaskContainer):
             changes = self._pending_changes.changes
             version = self._pending_changes.version
         try:
-            notification = did_change(view, version, changes)
-            self.session.send_notification(notification)
+            self.create_task(self.session.notify(did_change(view, version, changes)))
             self._last_synced_version = version
         except MissingUriError:
             return  # we're closing
@@ -806,7 +805,7 @@ class SessionBuffer(TaskContainer):
         self, view: sublime.View, version: int, result: list[TextEdit] | Error | None
     ) -> None:
         if result and not isinstance(result, Error) and version == view.change_count():
-            apply_text_edits(view, result)
+            self.create_task(apply_text_edits(view, result))
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 

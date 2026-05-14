@@ -385,25 +385,14 @@ class LspSelectCompletionCommand(LspTextCommand):
             self.view.run_command("insert_snippet", {"contents": new_text})
         else:
             self.view.run_command("insert", {"characters": new_text})
-        # TODO: this should all run from the worker thread
+
+    async def _run(self, item: CompletionItem, session_name: str) -> None:
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
         additional_text_edits = item.get('additionalTextEdits')
         if session and not additional_text_edits:
-            session.send_request(
-                Request.resolveCompletionItem(item, self.view),
-                functools.partial(self._on_resolved_async, session_name))
-        else:
-            self._on_resolved(session_name, item)
-
-    def want_event(self) -> bool:
-        return False
-
-    def _on_resolved_async(self, session_name: str, item: CompletionItem) -> None:
-        sublime.set_timeout(functools.partial(self._on_resolved, session_name, item))
-
-    def _on_resolved(self, session_name: str, item: CompletionItem) -> None:
+            item = await session.request(Request.resolveCompletionItem(item, self.view))
         if additional_edits := item.get('additionalTextEdits', []):
-            apply_text_edits(self.view, additional_edits)
+            await apply_text_edits(self.view, additional_edits)
         if command := item.get("command"):
             debug(f'Running server command "{command}" for view {self.view.id()}')
             args = {
@@ -412,6 +401,9 @@ class LspSelectCompletionCommand(LspTextCommand):
                 "session_name": session_name
             }
             self.view.run_command("lsp_execute", args)
+
+    def want_event(self) -> bool:
+        return False
 
     def _translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
         selection = self.view.sel()

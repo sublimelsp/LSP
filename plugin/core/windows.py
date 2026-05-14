@@ -320,7 +320,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         self, config_name: str, params: ShowMessageRequestParams
     ) -> MessageActionItem | None:
         if view := self._window.active_view():
-            return MessageRequestHandler(view, params, config_name).show()
+            return await MessageRequestHandler(view, params, config_name).show()
         return None
 
     async def restart_sessions(self, config_names: list[str]) -> None:

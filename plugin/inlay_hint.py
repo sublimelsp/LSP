@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .core.aio import run_coroutine_threadsafe
 from .core.constants import RequestFlags
 from .core.constants import ST_VERSION
 from .core.css import css
@@ -61,46 +62,28 @@ class LspInlayHintClickCommand(LspTextCommand):
 
     def run(self, _edit: sublime.Edit, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
             event: dict | None = None, label_part: InlayHintLabelPart | None = None) -> None:
+        run_coroutine_threadsafe(self._run(session_name, inlay_hint, phantom_uuid, label_part))
+
+    async def _run(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
+            label_part: InlayHintLabelPart | None = None) -> None:
         # Insert textEdits for the given inlay hint.
         # If a InlayHintLabelPart was clicked, label_part will be passed as an argument to the LspInlayHintClickCommand
         # and InlayHintLabelPart.command will be executed.
         session = self.session_by_name(session_name, 'inlayHintProvider')
         if session and session.has_capability('inlayHintProvider.resolveProvider'):
-            request = Request.resolveInlayHint(inlay_hint, self.view)
-            session.send_request(
-                request,
-                lambda response: self.handle(session_name, response, phantom_uuid, label_part))
-            return
-        self.handle(session_name, inlay_hint, phantom_uuid, label_part)
+            inlay_hint = await session.request(Request.resolveInlayHint(inlay_hint, self.view))
 
-    def handle(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
-               label_part: InlayHintLabelPart | None = None) -> None:
-        self.handle_inlay_hint_text_edits(session_name, inlay_hint, phantom_uuid)
-        self.handle_label_part_command(session_name, label_part)
+        if session and (text_edits := inlay_hint.get('textEdits')):
+            for sb in session.session_buffers_async():
+                sb.remove_inlay_hint_phantom(phantom_uuid)
+            await apply_text_edits(self.view, text_edits, label="Insert Inlay Hint")
 
-    def handle_inlay_hint_text_edits(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str) -> None:
-        session = self.session_by_name(session_name, 'inlayHintProvider')
-        if not session:
-            return
-        text_edits = inlay_hint.get('textEdits')
-        if not text_edits:
-            return
-        for sb in session.session_buffers_async():
-            sb.remove_inlay_hint_phantom(phantom_uuid)
-        apply_text_edits(self.view, text_edits, label="Insert Inlay Hint")
-
-    def handle_label_part_command(self, session_name: str, label_part: InlayHintLabelPart | None = None) -> None:
-        if not label_part:
-            return
-        command = label_part.get('command')
-        if not command:
-            return
-        args = {
-            "session_name": session_name,
-            "command_name": command["command"],
-            "command_args": command.get("arguments")
-        }
-        self.view.run_command("lsp_execute", args)
+        if label_part and (command := label_part.get('command')):
+            self.view.run_command("lsp_execute", {
+                "session_name": session_name,
+                "command_name": command["command"],
+                "command_args": command.get("arguments")
+            })
 
 
 def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Session) -> sublime.Phantom:

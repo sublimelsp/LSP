@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .core.aio import run_coroutine_threadsafe
 from .core.edit import apply_text_edits
 from .core.protocol import Request
 from .core.registry import LspTextCommand
@@ -60,4 +61,4 @@ class LspColorPresentationCommand(LspTextCommand):
         if index > -1:
             color_pres = self._filtered_response[index]
             text_edit = color_pres.get('textEdit') or {'range': self._range, 'newText': color_pres['label']}
-            apply_text_edits(self.view, [text_edit], label="Change Color Format", required_view_version=self._version)
+            run_coroutine_threadsafe(apply_text_edits(self.view, [text_edit], label="Change Color Format", required_view_version=self._version))

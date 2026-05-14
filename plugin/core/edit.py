@@ -88,22 +88,26 @@ def parse_lsp_position(position: Position) -> tuple[int, int]:
     return position['line'], min(UINT_MAX, position['character'])
 
 
-def apply_text_edits(
+# TODO: this function right now doesn't need to be async (see RUF029). But it should be async, because the results from
+# the text commands lsp_apply_document_edit and lsp_apply_text_document_edit should be communicated back to this
+# function.
+async def apply_text_edits(  # noqa: RUF029
     view: sublime.View,
     edits: Sequence[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
     *,
     label: str | None = None,
     process_placeholders: bool = False,
     required_view_version: int | None = None
-) -> Promise[sublime.View | None]:
+) -> sublime.View | None:
     if not edits:
-        return Promise.resolve(view)
+        return view
     if not view.is_valid():
         print('LSP: ignoring edits due to view not being open')
-        return Promise.resolve(None)
+        return None
     if process_placeholders:
         # TODO: remove rust-analyzer specific handling for placeholders in TextEdit, because SnippetTextEdit is now part
         # of the LSP specs.
+        # TODO: Communicate results back.
         view.run_command(
             'lsp_apply_document_edit',
             {
@@ -114,10 +118,11 @@ def apply_text_edits(
             }
         )
     elif required_view_version is None or required_view_version == view.change_count():
+        # TODO: Communicate results back.
         view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': label})
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
     # thread, and that we've received view changes in the asynchronous thread.
-    return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(view if view.is_valid() else None)))
+    return view if view.is_valid() else None
 
 
 def show_summary_message(window: sublime.Window, summary: WorkspaceEditSummary) -> None:

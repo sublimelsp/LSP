@@ -2190,7 +2190,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     inform = partial(sv.on_capability_added_async, registration_id, capability_path, options)
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
-                    sublime.set_timeout_async(inform)
+                    asyncio.get_running_loop().call_soon(inform)
             if capability_path == "didChangeWatchedFilesProvider":
                 capability_options = cast('DidChangeWatchedFilesRegistrationOptions', options)
                 self.register_file_system_watchers(registration_id, capability_options['watchers'])

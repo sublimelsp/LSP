@@ -14,6 +14,7 @@ from ..api import IsApplicableContext
 from ..api import LspPlugin
 from ..api import OnPreStartContext
 from ..api import PluginStartError
+from .aio import call_soon_threadsafe
 from .aio import run_coroutine_threadsafe
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
@@ -581,9 +582,9 @@ class WindowRegistry(LspSettingsChangeListener):
         for wm in self._windows.values():
             wm.on_diagnostics_updated()
             for session in wm.get_sessions():
-                sublime.set_timeout_async(session.on_userprefs_changed_async)
+                call_soon_threadsafe(session.on_userprefs_changed_async)
             for listener in wm.listeners():
-                sublime.set_timeout_async(listener.on_userprefs_changed_async)
+                call_soon_threadsafe(listener.on_userprefs_changed_async)
 
 
 class RequestTimeTracker:

@@ -323,7 +323,7 @@ class LspHoverCommand(LspTextCommand):
         elif scheme == CODE_ACTION_SCHEME:
             session_name, version, action = decode_code_action_uri(uri)
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):
-                sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
+                run_coroutine_threadsafe(session.run_code_action(action, progress=True, view=self.view))
                 self.view.hide_popup()
         elif uri == "quick-panel:DocumentLink":
             if window := self.view.window():
@@ -340,19 +340,20 @@ class LspHoverCommand(LspTextCommand):
             if session := self.session_by_name(session_name):
                 position: Position = {"line": row, "character": col_utf16}
                 r: Range = {"start": position, "end": position}
-                sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
+                run_coroutine_threadsafe(session.open_uri(uri, r))
         elif scheme.lower() in {"http", "https"} or (not scheme and uri.startswith('www.')):
             open_in_browser(uri)
         elif scheme:
-            sublime.set_timeout_async(partial(self.try_open_custom_uri_async, uri))
+            run_coroutine_threadsafe(self.try_open_custom_uri(uri))
 
-    def try_open_custom_uri_async(self, uri: str) -> None:
+    async def try_open_custom_uri(self, uri: str) -> None:
         uri_parts = urlsplit(uri)
         r = lsp_range_from_uri_fragment(uri_parts.fragment)
         if r:
             uri = urlunsplit(uri_parts._replace(fragment=''))
         for session in self.sessions():
-            if session.try_open_uri_async(uri, r) is not None:
+            result = await session.try_open_uri(uri, r)
+            if isinstance(result, sublime.View) or result is None:
                 return
 
 
@@ -369,7 +370,7 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         enable = not self.is_checked()
         self.window.settings().set(HOVER_ENABLED_KEY, enable)
-        sublime.set_timeout_async(partial(self._update_views_async, enable))
+        call_soon_threadsafe(self._update_views_async, enable)
 
     def _has_hover_provider(self, view: sublime.View) -> bool:
         listener = windows.listener_for_view(view)

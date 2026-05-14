@@ -90,11 +90,15 @@ from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
 from typing import Any
+from typing import TYPE_CHECKING
 import os
 import sublime
 import sublime_aio
 import sublime_plugin
 import warnings
+
+if TYPE_CHECKING:
+    import asyncio
 
 warnings.simplefilter('always', DeprecationWarning)  # turn off filter
 
@@ -278,7 +282,7 @@ class Listener(sublime_aio.EventListener):
 
     async def _find_opening_file_future(self, file_name: str) -> asyncio.Future[sublime.View | None] | None:
         async with g_opening_files_lock:
-            for fn in g_opening_files.keys():
+            for fn in g_opening_files:
                 if fn == file_name or os.path.samefile(fn, file_name):
                     return g_opening_files.pop(fn, None)
         return None

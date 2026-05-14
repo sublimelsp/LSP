@@ -6,6 +6,7 @@ from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
 from .core.aio import call_soon_threadsafe
+from .core.aio import run_coroutine_threadsafe
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
@@ -66,9 +67,9 @@ def is_quickfix(action: Command | CodeAction) -> bool:
 
 
 def filter_quickfix_actions(
-    only_with_diagnostics: bool, response: list[Command | CodeAction] | Error | None
+    only_with_diagnostics: bool, response: list[Command | CodeAction] | BaseException | None
 ) -> list[Command | CodeAction]:
-    if isinstance(response, Error) or not response:
+    if isinstance(response, BaseException) or not response:
         return []
     if only_with_diagnostics:
         # If there are multiple diagnostics for the region, in the hover popup we can only use those code actions which
@@ -303,7 +304,7 @@ class CodeActionsTaskBase(LspTask):
         if self._cancelled:
             return
         view = self._task_runner.view
-        tasks: list[Promise[None]] = []
+        tasks: list[Promise[BaseException | None]] = []
         config_name, code_actions = response
         session = self._task_runner.session_by_name(config_name, 'codeActionProvider')
         if session and code_actions:
@@ -387,9 +388,9 @@ class LspCodeActionsCommand(LspTextCommand):
         if code_actions_by_config:
             self._handle_code_actions(code_actions_by_config, run_first=True)
             return
-        self._run_async(only_kinds)
+        run_coroutine_threadsafe(self._run(only_kinds))
 
-    def _run_async(self, only_kinds: list[str | CodeActionKind] | None = None) -> None:
+    async def _run(self, only_kinds: list[str | CodeActionKind] | None = None) -> None:
         view = self.view
         region = first_selection_region(view)
         if region is None:
@@ -428,13 +429,13 @@ class LspCodeActionsCommand(LspTextCommand):
         if index == -1:
             return
 
-        def run_async() -> None:
+        async def run() -> None:
             config_name, action = actions[index]
             if session := self.session_by_name(config_name):
-                session.run_code_action_async(action, progress=True, view=self.view) \
-                    .then(lambda response: self._handle_response_async(config_name, response))
+                response = await session.run_code_action(action, progress=True, view=self.view)
+                self._handle_response_async(config_name, response)
 
-        sublime.set_timeout_async(run_async)
+        run_coroutine_threadsafe(run())
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
@@ -489,14 +490,14 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
         return True
 
     def run(self, index: int, event: dict | None = None) -> None:
-        sublime.set_timeout_async(partial(self.run_async, index, event))
+        run_coroutine_threadsafe(self._run(index, event))
 
-    def run_async(self, index: int, event: dict | None) -> None:
+    async def _run(self, index: int, event: dict | None) -> None:
         if self._is_cache_valid(event):
             config_name, action = self.actions_cache[index]
             if session := self.session_by_name(config_name):
-                session.run_code_action_async(action, progress=True, view=self.view) \
-                    .then(lambda response: self._handle_response_async(config_name, response))
+                response = await session.run_code_action(action, progress=True, view=self.view)
+                self._handle_response_async(config_name, response)
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):

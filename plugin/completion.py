@@ -14,6 +14,7 @@ from ..protocol import MarkupContent
 from ..protocol import MarkupKind
 from ..protocol import Range
 from ..protocol import TextEdit
+from .core.aio import run_coroutine_threadsafe
 from .core.constants import COMPLETION_KINDS
 from .core.constants import MarkdownLangMap
 from .core.edit import apply_text_edits
@@ -292,19 +293,18 @@ class QueryCompletionsTask:
 class LspResolveDocsCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, index: int, session_name: str, event: dict | None = None) -> None:
+        run_coroutine_threadsafe(self._run(index, session_name, event))
 
-        def run_async() -> None:
-            items, item_defaults = LspSelectCompletionCommand.completions[session_name]
-            item = completion_with_defaults(items[index], item_defaults)
-            if session := self.session_by_name(session_name, 'completionProvider.resolveProvider'):
-                request = Request.resolveCompletionItem(item, self.view)
-                language_map = session.markdown_language_id_to_st_syntax_map()
-                handler = functools.partial(self._handle_resolve_response_async, language_map)
-                session.send_request_async(request, handler)
-            else:
-                self._handle_resolve_response_async(None, item)
-
-        sublime.set_timeout_async(run_async)
+    async def _run(self, index: int, session_name: str, event: dict | None = None) -> None:
+        items, item_defaults = LspSelectCompletionCommand.completions[session_name]
+        item = completion_with_defaults(items[index], item_defaults)
+        if session := self.session_by_name(session_name, 'completionProvider.resolveProvider'):
+            language_map = session.markdown_language_id_to_st_syntax_map()
+            item = await session.request(Request.resolveCompletionItem(item, self.view))
+            # TODO: why do we only pass the language_map when the langserver is a resolveProvider?
+            self._handle_resolve_response_async(language_map, item)
+        else:
+            self._handle_resolve_response_async(None, item)
 
     def _handle_resolve_response_async(self, language_map: MarkdownLangMap | None, item: CompletionItem) -> None:
         detail = ""

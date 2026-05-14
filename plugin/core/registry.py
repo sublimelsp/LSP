@@ -201,23 +201,19 @@ class LspOpenLocationCommand(LspWindowCommand):
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
                 elif 'shift' in modifier_keys:
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
-        sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
+        run_coroutine_threadsafe(self._run(location, session_name, flags, group))
 
     def want_event(self) -> bool:
         return True
 
-    def _run_async(
+    async def _run(
         self, location: Location | LocationLink, session_name: str | None, flags: sublime.NewFileFlags, group: int
     ) -> None:
         if session := self.session_by_name(session_name) if session_name else self.session():
-            session.open_location_async(location, flags, group) \
-                .then(lambda view: self._handle_continuation(location, view is not None))
-
-    def _handle_continuation(self, location: Location | LocationLink, success: bool) -> None:
-        if not success:
-            uri, _ = get_uri_and_position_from_location(location)
-            message = f"Failed to open {uri}"
-            sublime.status_message(message)
+            if not await session.open_location(location, flags, group):
+                uri, _ = get_uri_and_position_from_location(location)
+                message = f"Failed to open {uri}"
+                sublime.status_message(message)
 
 
 class LspRestartServerCommand(LspTextCommand):

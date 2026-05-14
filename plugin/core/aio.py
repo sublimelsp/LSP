@@ -17,6 +17,7 @@ import weakref
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
+    from contextvars import Context
 
 
 T = TypeVar("T")
@@ -51,9 +52,9 @@ def run_coroutine_threadsafe(coroutine: Coroutine[object, object, T]) -> concurr
     return future
 
 
-def call_soon_threadsafe(f: Callable[..., Any]) -> asyncio.Handle:
+def call_soon_threadsafe(f: Callable[..., Any], *args: Any, context: Context | None = None) -> asyncio.Handle:
     """Invoke a function in the asyncio thread, from any thread."""
-    return sublime_aio.call_soon_threadsafe(f)  # type: ignore
+    return sublime_aio.call_soon_threadsafe(f, *args, context=context)
 
 
 class _Executor(concurrent.futures.Executor):
@@ -127,7 +128,7 @@ executor_main = _Executor(sublime.set_timeout)
 """Executor instance that runs functions on the Sublime Text main (GUI) thread."""
 
 executor_async = _Executor(sublime.set_timeout_async)
-"""Executro instance that runs functions on the Sublime Text "async" thread."""
+"""Executor instance that runs functions on the Sublime Text "async" thread."""
 
 
 class TaskContainer:

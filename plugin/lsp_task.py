@@ -1,22 +1,28 @@
 from __future__ import annotations
 
+from .core.aio import call_soon_threadsafe
+from .core.aio import run_coroutine_threadsafe
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
+from .core.types import debounced
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
 from typing import Any
 from typing import Callable
 from typing import final
+from typing import TYPE_CHECKING
 from typing_extensions import override
-import sublime
+
+if TYPE_CHECKING:
+    import sublime
 
 
 class LspTask(ABC):
     """
     Base class for tasks that run from `LspTextCommandWithTasks` command.
 
-    Note: The whole task runs on the async thread.
+    Note: The whole task runs on the asyncio thread.
     """
 
     @classmethod
@@ -33,7 +39,7 @@ class LspTask(ABC):
 
     def run_async(self) -> None:
         self._erase_view_status()
-        sublime.set_timeout_async(self._on_timeout, userprefs().on_save_task_timeout_ms)
+        debounced(self._on_timeout, userprefs().on_save_task_timeout_ms)
 
     def _on_timeout(self) -> None:
         if not self._completed and not self._cancelled:
@@ -46,7 +52,7 @@ class LspTask(ABC):
 
     def _set_view_status(self, text: str) -> None:
         self._task_runner.view.set_status(self._status_key, text)
-        sublime.set_timeout_async(self._erase_view_status, 5000)
+        call_soon_threadsafe(self._erase_view_status, 5000)
 
     def _erase_view_status(self) -> None:
         self._task_runner.view.erase_status(self._status_key)
@@ -73,7 +79,7 @@ class TasksRunner:
         self._pending_tasks: list[LspTask] = []
         self._canceled = False
 
-    def run(self) -> None:
+    async def run(self) -> None:
         for task in self._tasks:
             if task.is_applicable(self._text_command.view):
                 self._pending_tasks.append(task(self._text_command, self._on_task_completed_async))
@@ -89,11 +95,11 @@ class TasksRunner:
         if self._pending_tasks:
             # Even though we might be on an async thread already, we want to give ST a chance to notify us about
             # potential document changes.
-            sublime.set_timeout_async(self._run_next_task_async)
+            run_coroutine_threadsafe(self._run_next_task())
         else:
             self._on_tasks_completed()
 
-    def _run_next_task_async(self) -> None:
+    async def _run_next_task(self) -> None:
         if self._canceled:
             return
         current_task = self._pending_tasks[0]
@@ -131,4 +137,4 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
             self._tasks_runner.cancel()
         self.on_before_tasks()
         self._tasks_runner = TasksRunner(self, self.tasks, partial(self._on_tasks_completed, **kwargs))
-        self._tasks_runner.run()
+        run_coroutine_threadsafe(self._tasks_runner.run())

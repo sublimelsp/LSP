@@ -49,7 +49,7 @@ def is_rename_file(document_change: TextDocumentEdit | CreateFile | RenameFile |
 
 
 def is_delete_file(document_change: TextDocumentEdit | CreateFile | RenameFile | DeleteFile) -> TypeGuard[DeleteFile]:
-    return document_change.get('kind') == 'rename'
+    return document_change.get('kind') == 'delete'
 
 
 def is_snippet_text_edit(edit: TextEdit | AnnotatedTextEdit | SnippetTextEdit) -> TypeGuard[SnippetTextEdit]:

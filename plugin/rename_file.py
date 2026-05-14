@@ -186,11 +186,8 @@ class LspRenamePathCommand(LspWindowCommand):
         except Exception as error:
             sublime.status_message(f"Rename error: {error}")
             return False
-
-        async def _open(file_name: str, group: tuple[int, int], selection: list[sublime.Region]) -> None:
+        for file_name, group, selection in reversed(restore_files):
             self.restore_view(selection, group, await open_file_uri(self.window, file_name, group=group[0]))
-
-        await asyncio.gather(*starmap(_open, reversed(restore_files)))
         self.focus_view(last_active_view)
         return True
 

@@ -131,6 +131,15 @@ executor_async = _Executor(sublime.set_timeout_async)
 """Executor instance that runs functions on the Sublime Text "async" thread."""
 
 
+async def next_frame() -> None:
+    """Wait until (at least one) UI frame has passed."""
+
+    def noop() -> None:
+        pass
+
+    await asyncio.get_running_loop().run_in_executor(executor_main, noop)
+
+
 class TaskContainer:
     """
     A [mixin class](https://en.wikipedia.org/wiki/Mixin) for adding "fire-and-forget" functionality to a class for

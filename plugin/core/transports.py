@@ -19,6 +19,7 @@ import shutil
 import socket
 import sublime
 import subprocess
+import time
 import weakref
 
 if TYPE_CHECKING:
@@ -152,14 +153,29 @@ class TcpClientTransportConfig(TransportConfig):
         else:
             process = None
             error_reader = None
-        reader, writer = await asyncio.wait_for(asyncio.open_connection('localhost', port), timeout=TCP_CONNECT_TIMEOUT)
-        return TransportWrapper(
-            callback_object=callbacks,
-            transport=StreamTransport(encode_json, decode_json, reader, writer),
-            process=process,
-            process_args=launch.command if launch else None,
-            error_reader=error_reader,
-        )
+        start_time = time.time()
+        current_time = start_time
+        delta = 0
+        while delta < TCP_CONNECT_TIMEOUT:
+            time_left = TCP_CONNECT_TIMEOUT - delta
+            try:
+                reader, writer = await asyncio.wait_for(asyncio.open_connection('localhost', port), timeout=time_left)
+                return TransportWrapper(
+                    callback_object=callbacks,
+                    transport=StreamTransport(encode_json, decode_json, reader, writer),
+                    process=process,
+                    process_args=launch.command if launch else None,
+                    error_reader=error_reader,
+                )
+            except ConnectionRefusedError:
+                # Can happen when the language server is still starting. Just wait a bit and retry.
+                await asyncio.sleep(TCP_CONNECT_TIMEOUT / 10)
+            except TimeoutError:
+                # We passed the TCP_CONNECT_TIMEOUT and the process didn't respond.
+                break
+            current_time = time.time()
+            delta = current_time - start_time
+        raise RuntimeError(f"Failed to connect to TCP port {port}")
 
 
 class TcpServerTransportConfig(TransportConfig):

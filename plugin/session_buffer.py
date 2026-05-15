@@ -79,12 +79,12 @@ from .core.views import will_save
 from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
 from .inlay_hint import inlay_hint_to_phantom
-from collections.abc import Coroutine
 from dataclasses import dataclass
 from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import Coroutine
 from typing import Union
 from typing_extensions import Concatenate
 from typing_extensions import deprecated

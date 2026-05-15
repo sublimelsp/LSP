@@ -95,7 +95,6 @@ import os
 import sublime
 import sublime_aio
 import sublime_plugin
-import warnings
 
 if TYPE_CHECKING:
     import asyncio

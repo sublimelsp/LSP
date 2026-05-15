@@ -3,6 +3,13 @@
 # Features
 
 - Introduce LspPlugin API (#2739) (Rafał Chłodnicki)
+
+  `LspPlugin` is the new, simpler and more flexible base class for building LSP helper packages.
+  It replaces the older `AbstractPlugin` (now deprecated).
+
+  If you maintain an LSP helper package, feel free to migrate to `LspPlugin`. See the migration
+  guide at https://lsp.sublimetext.io/migrating_to_lsp_plugin/ for step-by-step instructions.
+
 - Disable plugins on repl views (#2887) (Rafał Chłodnicki)
 - Add support for SnippetTextEdit (#2884) (jwortmann)
 

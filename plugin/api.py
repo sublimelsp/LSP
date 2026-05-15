@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
 from typing import Any
+from typing import Awaitable
 from typing import Callable
 from typing import Final
 from typing import final

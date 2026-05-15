@@ -6,7 +6,6 @@ from ..protocol import ExecuteCommandParams
 from ..protocol import LSPAny
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
-from .core.logging import debug
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
@@ -16,7 +15,6 @@ from .core.url import parse_uri
 from .core.views import uri_from_view
 from abc import ABC
 from abc import abstractmethod
-from collections.abc import Awaitable
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path

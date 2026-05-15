@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from ..protocol import DocumentRangesFormattingParams
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextEdit
 from .code_actions import CodeActionsOnFormatTask
@@ -212,23 +211,20 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         if listener := self.get_listener():
             listener.purge_changes_async()
         session: Session | None = None
-        request: Request[DocumentRangesFormattingParams, list[TextEdit] | None] | None = None
-        if has_single_nonempty_selection(self.view):
-            session = self.best_session(self.capability)
-            selection = first_selection_region(self.view)
-            if session and selection is not None:
-                request = text_document_ranges_formatting(self.view)
-        elif self.view.has_non_empty_selection_region():
-            if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
-                request = text_document_ranges_formatting(self.view)
-        if session and request:
-            try:
-                text_edits = await session.request(request)
-                if text_edits is not None:
-                    await apply_text_edits(self.view, text_edits)
-            except Error as error:
-                sublime.status_message(f'Formatting error: {error}')
-                return
+        text_edits: list[TextEdit] | None = None
+        try:
+            if has_single_nonempty_selection(self.view):
+                session = self.best_session(self.capability)
+                selection = first_selection_region(self.view)
+                if session and selection is not None:
+                    text_edits = await session.request(text_document_range_formatting(self.view, selection))
+            elif self.view.has_non_empty_selection_region():
+                if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
+                    text_edits = await session.request(text_document_ranges_formatting(self.view))
+            if text_edits is not None:
+                await apply_text_edits(self.view, text_edits)
+        except Error as error:
+            sublime.status_message(f'Formatting error: {error}')
 
 
 class LspFormatCommand(LspTextCommand):

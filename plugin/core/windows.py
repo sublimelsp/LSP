@@ -107,6 +107,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         self._config_manager.add_change_listener(self)
 
     @property
+    @override
     def window(self) -> sublime.Window:
         return self._window
 
@@ -191,6 +192,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             elif is_applicable:
                 await self.start(config, listener)
 
+    @override
     def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
         if file_path:
             return self._find_session(config_name, file_path)
@@ -209,6 +211,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 return session
         return None
 
+    @override
     async def start(self, config: ClientConfig, listener: AbstractViewListener) -> Session | None:
         async with self._start_lock:
             file_path = listener.view.file_name() or ''
@@ -319,6 +322,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             router_logger.append(logger(self, config_name))
         return router_logger
 
+    @override
     async def handle_message_request(
         self, config_name: str, params: ShowMessageRequestParams
     ) -> MessageActionItem | None:
@@ -342,6 +346,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 self._sessions.discard(session)
         return asyncio.gather(*coros, return_exceptions=True)
 
+    @override
     def get_project_path(self, file_path: str) -> str | None:
         candidate: str | None = None
         for folder in self._workspace.folders:
@@ -350,6 +355,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     candidate = folder
         return candidate
 
+    @override
     def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> str | None:
         scheme, path = parse_uri(uri)
         if scheme != "file":
@@ -374,6 +380,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return "matches a project's folder_exclude_patterns"
         return None
 
+    @override
     async def on_post_exit(self, session: Session, exit_code: int, exception: Exception | None) -> None:
         debug(f"{session.config.name} has stopped")
         self._sessions.discard(session)
@@ -404,6 +411,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             self.panel_manager = None
         return result
 
+    @override
     def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
         if not userprefs().log_debug:
             return
@@ -414,6 +422,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         if message_type == MessageType.Error:
             self.window.status_message(f"{config_name}: {message}")
 
+    @override
     def handle_stderr_log(self, config_name: str, message: str) -> None:
         self.handle_server_message_async(config_name, message)
 
@@ -437,6 +446,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         panel = self.panel_manager and self.panel_manager.get_panel(PanelName.Log)
         return bool(panel and panel.settings().get(LOG_LINES_LIMIT_SETTING_NAME, True))
 
+    @override
     def handle_show_message(self, config_name: str, params: ShowMessageParams) -> None:
         level = MESSAGE_TYPE_LEVELS[params['type']]
         message = params['message']
@@ -444,6 +454,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         debug(msg)
         self.window.status_message(msg)
 
+    @override
     def on_diagnostics_updated(self) -> None:
         self.total_error_count = 0
         self.total_warning_count = 0

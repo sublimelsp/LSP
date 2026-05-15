@@ -278,10 +278,12 @@ class Manager(ABC):
     # Mutators
 
     @abstractmethod
-    async def start(self, configuration: ClientConfig, initiating_view: sublime.View) -> Session | None:
+    async def start(self, config: ClientConfig, listener: AbstractViewListener) -> Session | None:
         """
-        Start a new Session with the given configuration. The initiating view is the view that caused this method to
+        Start a new Session with the given configuration. The listener is the listener that caused this method to
         be called.
+
+        Returns the initialized Session object, or None if nothing was started.
         """
         raise NotImplementedError
 

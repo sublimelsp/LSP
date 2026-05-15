@@ -209,7 +209,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 return session
         return None
 
-    async def start(self, config: ClientConfig, listener: AbstractViewListener) -> None:
+    async def start(self, config: ClientConfig, listener: AbstractViewListener) -> Session | None:
         async with self._start_lock:
             file_path = listener.view.file_name() or ''
             inside = self._workspace.contains(file_path)
@@ -219,7 +219,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     self._listeners.add(listener)
                     session.config.set_view_status(listener.view, "")
                     listener.on_session_initialized_async(session)
-                    return
+                    return session
 
             config = ClientConfig.from_config(config, {})
             config.set_view_status_handler(self)
@@ -263,7 +263,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 message = f"cannot start {config.name}: {ex!s}"
                 self._config_manager.disable_config(config.name, only_for_session=True)
                 self._window.status_message(message)
-                return
+                return None
             except Exception as e:
                 message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
                             'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
@@ -274,7 +274,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 self._config_manager.disable_config(config.name, only_for_session=True)
                 config.erase_view_status(listener.view)
                 sublime.message_dialog(message)
-                return
+                return None
 
             try:
                 config.set_view_status(listener.view, "initializing...")
@@ -295,6 +295,9 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 self._config_manager.disable_config(config.name, only_for_session=True)
                 sublime.message_dialog(message)
                 config.erase_view_status(listener.view)
+            else:
+                return session
+            return None
 
     def _create_logger(self, config_name: str) -> Logger:
         logger_map = {

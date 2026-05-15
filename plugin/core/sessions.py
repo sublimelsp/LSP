@@ -2045,7 +2045,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     @notification_handler('window/showMessage')
     def on_window_show_message(self, params: ShowMessageParams) -> None:
         if mgr := self.manager():
-            self.create_task(mgr.handle_show_message(self.config.name, params))
+            mgr.handle_show_message(self.config.name, params)
 
     @notification_handler('window/logMessage')
     def on_window_log_message(self, params: LogMessageParams) -> None:

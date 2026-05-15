@@ -26,7 +26,6 @@
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
 | `on_session_buffer_changed_async(session_buffer)` | `on_text_changed_async(session_buffer)` |
 | `register_plugin(MyPlugin)` / `unregister_plugin(MyPlugin)` | `MyPlugin.register()` / `MyPlugin.unregister()` - no standalone import needed |
-| *(not present)* | `on_transport_ready_async(transport)` - new hook, called after transport is up but before `initialize` |
 | *(not present)* | `on_initialized_async()` |
 | *(not present)* | `on_pre_send_response_async(response)` |
 
@@ -197,15 +196,6 @@ def __init__(self, weaksession: ref[Session]) -> None:
     super().__init__(weaksession)
     if session := self.weaksession():
         log_start(session.window, session.config)
-```
-
-If your `on_post_start` sent raw bytes or custom JSON-RPC messages before the `initialize` request, use the new `on_transport_ready_async` hook instead - it receives the live `TransportWrapper` and has no equivalent in `AbstractPlugin`:
-
-```python
-from LSP.plugin.core.transports import TransportWrapper
-
-def on_transport_ready_async(self, transport: TransportWrapper) -> None:
-    transport.send({"jsonrpc": "2.0", "method": "myServer/handshake"})
 ```
 
 ---

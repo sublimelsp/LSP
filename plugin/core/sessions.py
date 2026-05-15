@@ -1267,7 +1267,6 @@ class Session(APIHandler, TransportCallbacks):
     ) -> None:
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
-            self._plugin.on_transport_ready_async(transport)
         self.transport = transport
         self.working_directory = working_directory
         self._variables = variables

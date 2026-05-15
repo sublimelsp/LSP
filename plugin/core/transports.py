@@ -386,7 +386,9 @@ class TransportWrapper:
                     continue
                 if callback_object := self._callback_object():
                     await callback_object.on_payload(payload)
-        except (AttributeError, BrokenPipeError, StopLoopError):
+        except (AttributeError, BrokenPipeError, StopLoopError, TypeError):
+            # TypeError happens when `callback_object` becomes None.
+            # It can become `None` even when the if-condition above that passes.
             pass
         except Exception as ex:
             exception_log("unexpected exception while stopping transport", ex)

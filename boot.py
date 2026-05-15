@@ -100,7 +100,8 @@ import warnings
 if TYPE_CHECKING:
     import asyncio
 
-warnings.simplefilter('always', DeprecationWarning)  # turn off filter
+# Uncomment to see all invocations that are marked @deprecated in the Console.
+# warnings.simplefilter('always', DeprecationWarning)
 
 __all__ = (
     "DocumentSyncListener",

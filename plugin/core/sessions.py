@@ -303,7 +303,7 @@ class Manager(ABC):
         ...
 
     @abstractmethod
-    async def handle_show_message(
+    def handle_show_message(
         self, config_name: str, params: ShowMessageParams
     ) -> MessageActionItem | None:
         ...

@@ -283,7 +283,7 @@ class Listener(sublime_aio.EventListener):
     async def _find_opening_file_future(self, file_name: str) -> asyncio.Future[sublime.View | None] | None:
         async with g_opening_files_lock:
             for fn in g_opening_files:
-                if fn == file_name or os.path.samefile(fn, file_name):
+                if fn == file_name or os.path.samefile(fn, file_name):  # noqa: ASYNC240
                     return g_opening_files.pop(fn, None)
         return None
 

@@ -14,13 +14,11 @@ from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri
 from .edit import prompt_for_workspace_edits
 from functools import partial
-from itertools import starmap
 from pathlib import Path
 from typing import Any
 from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing_extensions import NotRequired
-import asyncio
 import sublime
 import sublime_plugin
 import weakref

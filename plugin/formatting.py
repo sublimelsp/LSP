@@ -8,7 +8,6 @@ from .core.collections import DottedDict
 from .core.edit import apply_text_edits
 from .core.promise import Promise
 from .core.protocol import Error
-from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import userprefs

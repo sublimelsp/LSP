@@ -41,7 +41,6 @@ from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
-import functools
 import html
 import sublime
 import weakref

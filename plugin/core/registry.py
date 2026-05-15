@@ -138,15 +138,12 @@ class LspTextCommand(sublime_plugin.TextCommand):
             # At least one active session with the given capability must exist.
             position = get_position(self.view, event, point)
             if position is None:
-                # debug("LspTextCommand is not enabled, because position is None")
                 return False
             if not self.best_session(self.capability, position):
-                # debug("LspTextCommand is not enabled, because there is no best session")
                 return False
         if self.session_name:
             # There must exist an active session with the given (config) name.
             if not self.session_by_name(self.session_name):
-                # debug("LspTextCommand is not enabled, because I couldn't find a session by the name of", self.session_name)
                 return False
         if not self.capability and not self.session_name:
             # Any session will do.

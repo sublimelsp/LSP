@@ -77,19 +77,20 @@ from functools import wraps
 from os.path import basename
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Generator
 from typing import Iterable
 from typing import Literal
 from typing import overload
 from typing import Sequence
 from typing import TYPE_CHECKING
-from typing import TypeVar
 from typing_extensions import Concatenate
 from typing_extensions import override
 from typing_extensions import ParamSpec
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import asyncio
+import inspect
 import itertools
 import sublime
 import sublime_aio
@@ -100,24 +101,33 @@ import webbrowser
 if TYPE_CHECKING:
     from .core.windows import WindowManager
     from .session_buffer import SessionBuffer
+    from collections.abc import Coroutine
 
-P = ParamSpec('P')
-R = TypeVar('R')
+
+P = ParamSpec("P")
 
 
 def requires_session(
-    func: Callable[Concatenate[DocumentSyncListener, P], R]
-) -> Callable[Concatenate[DocumentSyncListener, P], R | None]:
-    """
-    A decorator for the `DocumentSyncListener` event handlers, which immediately returns `None` if there are no
-    `SessionView`s.
-    """
+    func: Callable[Concatenate[DocumentSyncListener, P], Any],
+) -> Callable[Concatenate[DocumentSyncListener, P], Any]:
+
+    if inspect.iscoroutinefunction(func):
+
+        @wraps(func)
+        async def async_wrapper(self: DocumentSyncListener, *args: P.args, **kwargs: P.kwargs) -> Any:
+            if not self.session_views_async():
+                return None
+            return await func(self, *args, **kwargs)
+
+        return cast("Callable[Concatenate[DocumentSyncListener, P], Coroutine[Any, Any, Any]]", async_wrapper)
+
     @wraps(func)
-    def wrapper(self: DocumentSyncListener, *args: P.args, **kwargs: P.kwargs) -> R | None:
+    def sync_wrapper(self: DocumentSyncListener, *args: P.args, **kwargs: P.kwargs) -> Any:
         if not self.session_views_async():
             return None
         return func(self, *args, **kwargs)
-    return wrapper
+
+    return cast("Callable[Concatenate[DocumentSyncListener, P], Any]", sync_wrapper)
 
 
 def is_regular_view(v: sublime.View) -> bool:
@@ -388,12 +398,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     def session_views_async(self) -> list[SessionView]:
         return list(self._session_views.values())
 
-    # @requires_session
+    @requires_session
     async def on_text_changed(
         self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
     ) -> None:
-        if not self.session_views_async():
-            return
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed_async(change_count, changes, action)
@@ -467,10 +475,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if userprefs().show_code_actions:
             self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
 
-    # @requires_session
+    @requires_session
     async def on_selection_modified(self) -> None:
-        if not self.session_views_async():
-            return
         first_region, _ = self._update_stored_selection()
         if first_region is None:
             return
@@ -638,8 +644,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     @requires_session
     def on_text_command(self, command_name: str, args: dict[str, Any] | None) -> tuple[str, dict[str, Any]] | None:
-        if not self.session_views_async():
-            return None
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:

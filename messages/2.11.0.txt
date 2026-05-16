@@ -1,0 +1,25 @@
+=> 2.11.0
+
+# Features
+
+- Introduce LspPlugin API (#2739) (Rafał Chłodnicki)
+
+  `LspPlugin` is the new, simpler and more flexible base class for building LSP helper packages.
+  It replaces the older `AbstractPlugin` (now deprecated).
+
+  If you maintain an LSP helper package, feel free to migrate to `LspPlugin`. See the migration
+  guide at https://lsp.sublimetext.io/migrating_to_lsp_plugin/ for step-by-step instructions.
+
+- Disable plugins on repl views (#2887) (Rafał Chłodnicki)
+- Add support for SnippetTextEdit (#2884) (jwortmann)
+
+# Fixes
+
+- Fix some cases in ST pattern to glob conversion (#2891) (Rafał Chłodnicki)
+- Fix lsp_check_applicable starting extra server instance (#2893) (Rafał Chłodnicki)
+- Fix new view on open file URI with path not existing on disk (#2898) (jwortmann)
+- Return correct result for workspace/applyEdit request (#2896) (jwortmann)
+
+# Enhancements
+
+- Update and reorder client capabilities (#2892) (jwortmann)

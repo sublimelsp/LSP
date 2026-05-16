@@ -40,7 +40,6 @@ if TYPE_CHECKING:
     from .core.sessions import Session
     from .core.sessions import SessionBufferProtocol
     from .core.sessions import SessionViewProtocol
-    from .core.transports import TransportWrapper
     from .core.types import ClientConfig
     from .core.workspace import WorkspaceFolder
     from weakref import ref
@@ -483,27 +482,9 @@ class LspPlugin(APIHandler):
         cls.name = cls.__module__.split('.')[0]  # pyright: ignore[reportAttributeAccessIssue]
         cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.name)  # pyright: ignore[reportAttributeAccessIssue]
 
-    def on_transport_ready_async(self, transport: TransportWrapper) -> None:
+    def on_initialized_async(self) -> None:
         """
-        Called after the transport is established but before the LSP `initialize` request is sent.
-
-        Override this method when your server requires out-of-band communication that must happen
-        before LSP negotiation begins — for example, sending a proprietary handshake or
-        authentication token over the raw transport.
-
-        Warning:
-            Anything sent via `transport.send()` or `transport.send_bytes()` bypasses the LSP message queue.
-            Only use this hook for pre-initialization data that your server explicitly expects before the
-            `initialize` request. Sending arbitrary LSP messages here will corrupt the session.
-
-        :param transport:   The raw transport. `send(payload)` writes a JSON-RPC message; `send_bytes(payload)`
-                            writes raw bytes - both go directly to the server process.
-        """
-        pass
-
-    def on_initialize_async(self) -> None:
-        """
-        Called after the `initialize` response has been received from the language server.
+        Called after the `initialized` notification has been sent to the language server.
 
         Override to perform any post-initialization work, such as sending custom notifications or requests
         that depend on the server's capabilities reported in the `initialize` response.

@@ -15,6 +15,7 @@ from ..api import LspPlugin
 from ..api import OnPreStartContext
 from ..api import PluginStartError
 from .aio import call_soon_threadsafe
+from .aio import gather_and_flatten_exceptions
 from .aio import run_coroutine_threadsafe
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
@@ -23,6 +24,7 @@ from .configurations import WindowConfigManager
 from .constants import MESSAGE_TYPE_LEVELS
 from .logging import debug
 from .logging import exception_log
+from .logging import exceptions_log
 from .message_request_handler import MessageRequestHandler
 from .panels import LOG_LINES_LIMIT_SETTING_NAME
 from .panels import MAX_LOG_LINES_LIMIT_OFF
@@ -89,7 +91,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._window = window
         self._config_manager = config_manager
-        self._start_lock = asyncio.Lock()
+        self._start_lock: asyncio.Lock | None = None
         self._sessions: set[Session] = set()
         self._workspace = workspace
         self._listeners: WeakSet[AbstractViewListener] = WeakSet()
@@ -213,6 +215,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
     @override
     async def start(self, config: ClientConfig, listener: AbstractViewListener) -> Session | None:
+        if not self._start_lock:
+            self._start_lock = asyncio.Lock()
         async with self._start_lock:
             file_path = listener.view.file_name() or ''
             inside = self._workspace.contains(file_path)
@@ -330,21 +334,22 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return await MessageRequestHandler(view, params, config_name).show()
         return None
 
-    async def restart_sessions(self, config_names: list[str]) -> None:
-        await self._end_sessions(config_names)
+    async def restart_sessions(self, config_names: list[str]) -> list[Exception]:
+        exceptions = await self._end_sessions(config_names)
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
             self.register_listener_async(listener)
+        return exceptions
 
-    def _end_sessions(self, config_names: list[str] | None = None) -> asyncio.Future[list[BaseException | None]]:
+    async def _end_sessions(self, config_names: list[str] | None = None) -> list[Exception]:
         coros = []
         for session in list(self._sessions):
             if config_names is None or session.config.name in config_names:
                 debug(f"stopping {session.config.name}")
                 coros.append(session.end())
                 self._sessions.discard(session)
-        return asyncio.gather(*coros, return_exceptions=True)
+        return await gather_and_flatten_exceptions(*coros)
 
     @override
     def get_project_path(self, file_path: str) -> str | None:
@@ -384,16 +389,22 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     async def on_post_exit(self, session: Session, exit_code: int, exception: Exception | None) -> None:
         debug(f"{session.config.name} has stopped")
         self._sessions.discard(session)
-        for listener in self._listeners:
-            listener.on_session_shutdown_async(session)
+        exceptions_log(
+            "Error shutting down listeners",
+            await gather_and_flatten_exceptions(
+                *(listener.on_session_shutdown(session) for listener in self._listeners)
+            ),
+        )
         if exit_code != 0 or exception:
             config = session.config
             restart = self._config_manager.record_crash(config.name, exit_code, exception)
             if not restart:
-                msg = (f'The {config.name} server has crashed {RETRY_MAX_COUNT} times in the last '
-                       f'{int(RETRY_COUNT_TIMEDELTA.total_seconds())} seconds.\n\nYou can try to Restart it or you can '
-                        'choose Cancel to disable it for this window for the duration of the current session. '
-                        'Re-enable by running "LSP: Enable Language Server In Project" from the Command Palette.')
+                msg = (
+                    f'The {config.name} server has crashed {RETRY_MAX_COUNT} times in the last '
+                    f'{int(RETRY_COUNT_TIMEDELTA.total_seconds())} seconds.\n\nYou can try to Restart it or you can '
+                    'choose Cancel to disable it for this window for the duration of the current session. '
+                    'Re-enable by running "LSP: Enable Language Server In Project" from the Command Palette.'
+                )
                 if exception:
                     msg += f"\n\n--- Error: ---\n{exception}"
                 restart = sublime.ok_cancel_dialog(msg, "Restart")
@@ -403,7 +414,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             else:
                 self._config_manager.disable_config(config.name, only_for_session=True)
 
-    async def destroy(self) -> list[BaseException | None]:
+    async def destroy(self) -> list[Exception]:
         """Destroy everything related to this instance."""
         result = await self._end_sessions()
         if self.panel_manager:
@@ -514,6 +525,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:
         config_names = [config.name for config in configs]
+        # TODO: handle exception list?
         run_coroutine_threadsafe(self.restart_sessions(config_names))
 
     # --- Implements ViewStatusHandler ---------------------------------------------------------------------------------
@@ -549,17 +561,11 @@ class WindowRegistry(LspSettingsChangeListener):
         for window in sublime.windows():
             self.lookup(window)
 
-    async def disable(self, print_exceptions: bool = True) -> None:
+    async def disable(self) -> list[Exception]:
         self._enabled = False
-        for result in await asyncio.gather(*[wm.destroy() for wm in self._windows.values()], return_exceptions=True):
-            if print_exceptions:
-                if isinstance(result, BaseException):
-                    exception_log("exception while disabling window", result)
-                elif isinstance(result, list):
-                    for possible_exception in result:
-                        if isinstance(possible_exception, BaseException):
-                            exception_log("exception while disabling window", possible_exception)
+        exceptions = await gather_and_flatten_exceptions(*(wm.destroy() for wm in self._windows.values()))
         self._windows = {}
+        return exceptions
 
     def lookup(self, window: sublime.Window | None) -> WindowManager | None:
         if not self._enabled or not window or not window.is_valid():

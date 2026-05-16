@@ -90,8 +90,10 @@ from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
+from .aio import aclosing
 from .aio import call_soon_threadsafe
 from .aio import executor_main
+from .aio import gather_and_flatten_exceptions
 from .aio import TaskContainer
 from .constants import ChangeEventAction
 from .constants import MarkdownLangMap
@@ -115,6 +117,7 @@ from .file_watcher import get_file_watcher_implementation
 from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
 from .logging import debug
 from .logging import exception_log
+from .logging import exceptions_log
 from .open import center_selection
 from .open import open_externally
 from .open import open_file
@@ -673,7 +676,7 @@ class SessionViewProtocol(Protocol):
     def has_capability_async(self, capability_path: str) -> bool:
         ...
 
-    def shutdown_async(self) -> None:
+    async def shutdown(self) -> list[Exception]:
         ...
 
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
@@ -860,7 +863,7 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def on_session_shutdown_async(self, session: Session) -> None:
+    async def on_session_shutdown(self, session: Session) -> list[Exception]:
         raise NotImplementedError
 
     @abstractmethod
@@ -1008,41 +1011,34 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
     An empty list signals the end of the stream. So the class knows when to signal the end of the `async for` loop.
     """
 
-    _future: asyncio.Future[R] | None
-    _stopped: bool
-
     def __init__(self, req_id: int, session: Session) -> None:
         super().__init__(req_id, session)
-        self._future = None
-        self._stopped = False
+        self._queue: asyncio.Queue[R | Error | None] = asyncio.Queue()
 
     def on_partial_result(self, response: R) -> None:
-        if self._future:
-            if response:
-                self._future.set_result(response)
-            elif not self._stopped:
-                self._future.set_exception(StopAsyncIteration())
-                self._stopped = True
-            else:
-                debug(f"streaming request with ID {self.id} got partial result while already stopped: {response}")
-        else:
-            debug(f"streaming request with ID {self.id} is missing a future!")
+        # Note: R should have type list[...]. If an empty list is returned, then this signals the end of the partial
+        # result stream. In that case we put `None` in the queue.
+        self._queue.put_nowait(response or None)
 
     def on_error(self, error: ResponseError) -> None:
-        if self._future:
-            self._future.set_exception(Error.from_lsp(error))
-        else:
-            debug(f"streaming request with ID {self.id} got an error response without a future set: {error}")
+        self._queue.put_nowait(Error.from_lsp(error))
 
     def __aiter__(self) -> CancellableInflightStreamingRequest:
         """Stream partial results using the `async for` syntax."""
         return self
 
-    def __anext__(self) -> Awaitable[R]:
-        if self._stopped:
+    async def __anext__(self) -> R:
+        """Get the next partial result."""
+        item = await self._queue.get()
+        if item is None:
             raise StopAsyncIteration
-        self._future = asyncio.get_running_loop().create_future()
-        return self._future
+        if isinstance(item, Error):
+            raise item
+        return item
+
+    async def aclose(self) -> None:
+        # See: https://docs.python.org/3/library/asyncio-dev.html#close-asynchronous-generators-explicitly
+        self._queue.put_nowait(None)
 
 
 def print_to_status_bar(error: ResponseError) -> None:
@@ -1124,7 +1120,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
         self._logged_unsupported_commands: set[str] = set()
-        self._progress_lock = asyncio.Lock()
+        self._maybe_end_task: asyncio.Task | None = None
         super().__init__()
 
     def __getattr__(self, name: str) -> Any:
@@ -1157,17 +1153,33 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         for status_key, message in self._status_messages.items():
             sv.view.set_status(status_key, message)
 
-    def unregister_session_view_async(self, sv: SessionViewProtocol) -> None:
+    async def unregister_session_view(self, sv: SessionViewProtocol) -> None:
         self._session_views.discard(sv)
-        if not self._session_views:
-            current_count = self._views_opened
+        if self._session_views:
+            return
+        current_count = self._views_opened
 
-            async def maybe_end() -> None:
-                await asyncio.sleep(3)
-                if self._views_opened == current_count:
-                    await self.end()
+        async def maybe_end() -> None:
+            await asyncio.sleep(3)
+            if self._views_opened == current_count:
+                exceptions_log(f"Exception while stopping {self.config.name}", await self.end())
+                self._maybe_end_task = None
 
-            self.create_task(maybe_end())
+        if self.exiting:
+            # This means we're really ending, just return and let this object shutdown.
+            return
+        # If we're at this point, then we are certain the `end()` method isn't running. Maybe there is an existing
+        # `maybe_end` task running, in which case, at this point, we are certain it's sleeping.
+        if self._maybe_end_task:
+            # Cancel the sleep.
+            if self._maybe_end_task.cancel():
+                try:
+                    await self._maybe_end_task
+                except asyncio.CancelledError:
+                    pass
+        # The maybe_end task is special. Inside of the `end()` method, we call `cancel_all_tasks()`. If this
+        # maybe_end task is part of that task list, then it will itself also be cancelled, which we don't want.
+        self._maybe_end_task = asyncio.create_task(maybe_end())
 
     def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
         """It is only safe to iterate over this in the async thread."""
@@ -1376,7 +1388,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         try:
             result = await self.request(Request.initialize(params))
         except:
-            await self.end()
+            await self.end()  # ignore exceptions
             raise
         capabilities = result['capabilities']
         self.capabilities.assign(capabilities)
@@ -1995,18 +2007,22 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             Request.workspaceDiagnostic(params)
         )
         try:
-            async for partial_response in inflight_request:
-                for diagnostic_report in partial_response['items']:
-                    uri = normalize_uri(diagnostic_report['uri'])
-                    version = diagnostic_report['version']
-                    # Skip if outdated
-                    if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri_async(uri)) and \
-                            version < session_buffer.last_synced_version:
-                        continue
-                    self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-                    if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                        self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
-            self.workspace_diagnostics_pending_responses[identifier] = None
+            async with aclosing(inflight_request) as stream:
+                async for partial_response in stream:
+                    for diagnostic_report in partial_response['items']:
+                        uri = normalize_uri(diagnostic_report['uri'])
+                        version = diagnostic_report['version']
+                        # Skip if outdated
+                        if (
+                            isinstance(version, int)
+                            and (session_buffer := self.get_session_buffer_for_uri_async(uri))
+                            and version < session_buffer.last_synced_version
+                        ):
+                            continue
+                        self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
+                        if is_workspace_full_document_diagnostic_report(diagnostic_report):
+                            self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
+                self.workspace_diagnostics_pending_responses[identifier] = None
         except Error as e:
             if e.code == LSPErrorCodes.ServerCancelled:
                 if is_diagnostic_server_cancellation_data(e.data) and e.data['retriggerRequest']:
@@ -2358,15 +2374,16 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
-    async def end(self) -> None:
+    async def end(self) -> list[Exception]:
         if self.exiting:
-            return
+            return []
         self.exiting = True
         if self._plugin:
             self._plugin.on_session_end_async(None, None)
             self._plugin = None
-        for sv in self.session_views_async():
-            self.shutdown_session_view_async(sv)
+        exceptions = await gather_and_flatten_exceptions(
+            *(self.shutdown_session_view(sv) for sv in self.session_views_async())
+        )
         self.capabilities.clear()
         self._registrations.clear()
         for watcher in self._static_file_watchers:
@@ -2376,15 +2393,19 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             watcher.destroy()
         self._dynamic_file_watchers = {}
         self.state = ClientStates.STOPPING
+        exceptions.extend(await self.cancel_all_tasks())
         try:
             await self.request(Request.shutdown())
+        except Exception as shutdown_exception:
+            exceptions.append(shutdown_exception)
         finally:
             await self.exit()
+        return exceptions
 
-    def shutdown_session_view_async(self, session_view: SessionViewProtocol) -> None:
+    async def shutdown_session_view(self, session_view: SessionViewProtocol) -> list[Exception]:
         for status_key in self._status_messages:
             session_view.view.erase_status(status_key)
-        session_view.shutdown_async()
+        return await session_view.shutdown()
 
     async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
         self.exiting = True
@@ -2444,8 +2465,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
         ```py
         try:
-            async for partial_result in session.stream(Request(...)):
-                print(partial_result)
+            async .core.aio.aclosing(session.stream(Request(...))) as stream:
+                async for partial_result in stream:
+                    print(partial_result)
         except Error as error:
             print(error.code)
         ```

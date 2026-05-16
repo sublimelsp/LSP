@@ -19,6 +19,7 @@ from .code_actions import filter_quickfix_actions
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.aio import call_soon_threadsafe
+from .core.aio import gather_and_flatten_exceptions
 from .core.aio import run_coroutine_threadsafe
 from .core.aio import TaskContainer
 from .core.constants import ChangeEventAction
@@ -35,6 +36,7 @@ from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
 from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
+from .core.logging import exceptions_log
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.panels import PanelName
@@ -260,7 +262,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self._stored_selection = []
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
-        self._clear_session_views_async()
+        # run_coroutine_threadsafe(self._clear_session_views())
 
     def _reset(self) -> None:
         # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
@@ -316,15 +318,16 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                             sb.session.cancel_request_async(request_id)
                             sb.semantic_tokens.pending_response = None
 
-    def on_session_shutdown_async(self, session: Session) -> None:
+    async def on_session_shutdown(self, session: Session) -> list[Exception]:
         if removed_session := self._session_views.pop(session.config.name, None):
-            removed_session.on_before_remove()
+            result = await removed_session.on_before_remove()
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
                 self._registered = False
-        else:
-            # SessionView was likely not created for this config so remove status here.
-            session.config.erase_view_status(self.view)
+            return result
+        # SessionView was likely not created for this config so remove status here.
+        session.config.erase_view_status(self.view)
+        return []
 
     def _diagnostics_async(
         self, allow_stale: bool = False
@@ -539,7 +542,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     async def on_close(self) -> None:
         if self._registered and self._manager:
             self._manager.unregister_listener_async(self)
-        self._clear_session_views_async()
+        exceptions_log("Exception while closing document", await self._clear_session_views())
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool | None:
         # You can filter key bindings by the precense of a provider,
@@ -1125,16 +1128,11 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
         sublime.set_timeout(run_sync)
 
-    def _clear_session_views_async(self) -> None:
+    async def _clear_session_views(self) -> list[Exception]:
         session_views = self._session_views
-
-        def clear_async() -> None:
-            nonlocal session_views
-            for session_view in session_views.values():
-                session_view.on_before_remove()
-            session_views.clear()
-
-        call_soon_threadsafe(clear_async)
+        exceptions = await gather_and_flatten_exceptions(*(s.on_before_remove() for s in session_views.values()))
+        session_views.clear()
+        return exceptions
 
     def on_userprefs_changed_async(self) -> None:
         if userprefs().document_highlight_style:

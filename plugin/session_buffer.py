@@ -276,13 +276,14 @@ class SessionBuffer(TaskContainer):
         self.session_views.add(sv)
         sv.handle_code_lenses_async(self._filter_supported_code_lenses())
 
-    def remove_session_view(self, sv: SessionViewProtocol) -> None:
+    async def remove_session_view(self, sv: SessionViewProtocol) -> list[Exception]:
         self._clear_semantic_token_regions(sv.view)
         self.session_views.remove(sv)
         if len(self.session_views) == 0:
-            self._on_before_destroy(sv.view)
+            return await self._on_before_destroy(sv.view)
+        return []
 
-    def _on_before_destroy(self, view: sublime.View) -> None:
+    async def _on_before_destroy(self, view: sublime.View) -> list[Exception]:
         self.remove_all_inlay_hints()
         # With pull diagnostics, the client is responsible to update or clear diagnostics when appropriate.
         # Clear all diagnostics for this view if the file is outside of the workspace folders, so that they don't
@@ -299,6 +300,7 @@ class SessionBuffer(TaskContainer):
             # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
             self._check_did_close(view)
             self.session.unregister_session_buffer_async(self)
+        return await self.cancel_all_tasks()
 
     def register_capability_async(
         self,
@@ -663,33 +665,37 @@ class SessionBuffer(TaskContainer):
             params['identifier'] = identifier
         if (result_id := self.session.diagnostics_result_ids.get((self._last_known_uri, identifier))) is not None:
             params['previousResultId'] = result_id
-        stream = self.session.stream(Request.documentDiagnostic(params, view))
-        self._document_diagnostic_pending_requests[identifier] = PendingDocumentDiagnosticRequest(version, stream.id)
+        req = self.session.request(Request.documentDiagnostic(params, view))
+        self._document_diagnostic_pending_requests[identifier] = PendingDocumentDiagnosticRequest(version, req.id)
+        error: Error | None = None
         try:
-            async for response in stream:
-                self._diagnostics_versions[identifier] = version
-                self._document_diagnostic_pending_requests[identifier] = None
-                self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
-                if is_related_full_document_diagnostic_report(response):
-                    self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])
-                if related_documents := response.get('relatedDocuments'):
-                    for uri, diagnostic_report in related_documents.items():
-                        uri = normalize_uri(uri)
-                        self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-                        if is_full_document_diagnostic_report(diagnostic_report):
-                            self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
-        except Error as ex:
+            response = await req
+            self._diagnostics_versions[identifier] = version
+            self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
+            if is_related_full_document_diagnostic_report(response):
+                self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])
+            if related_documents := response.get('relatedDocuments'):
+                for uri, diagnostic_report in related_documents.items():
+                    uri = normalize_uri(uri)
+                    self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
+                    if is_full_document_diagnostic_report(diagnostic_report):
+                        self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
+        except Error as e:
+            error = e
+        finally:
             self._document_diagnostic_pending_requests[identifier] = None
-            if ex.code == LSPErrorCodes.ServerCancelled:
-                data = ex.data
-                if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
-                    # Retrigger the request after a short delay, but only if there are no additional changes to the
-                    # buffer in the meanwhile, because in that case a new request will be sent automatically after the
-                    # didChange notification.
-                    if version != view.change_count():
-                        return
-                    await asyncio.sleep(DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY)
-                    self._if_view_unchanged(self._do_document_diagnostic, version)(identifier, version)
+        if (
+            error
+            and error.code == LSPErrorCodes.ServerCancelled
+            and is_diagnostic_server_cancellation_data(error.data)
+            and error.data['retriggerRequest']
+        ):
+            # Retrigger the request after a short delay, but only if there are no additional changes to the
+            # buffer in the meanwhile, because in that case a new request will be sent automatically after the
+            # didChange notification.
+            await asyncio.sleep(DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY)
+            if version == view.change_count():
+                self.create_task(self._do_document_diagnostic(view, identifier, version))
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 

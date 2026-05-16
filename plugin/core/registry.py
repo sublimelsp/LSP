@@ -233,6 +233,7 @@ class LspRestartServerCommand(LspTextCommand):
     def restart_server(self, wm: WindowManager, index: int) -> None:
         if index == -1:
             return
+        # TODO: handle exception list?
         run_coroutine_threadsafe(wm.restart_sessions([self._config_names[index]]))
 
 

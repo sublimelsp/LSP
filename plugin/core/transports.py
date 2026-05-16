@@ -330,7 +330,12 @@ class StreamTransport(Transport):
     async def write(self, payload: JSONRPCMessage) -> None:
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
-        await self._writer.drain()
+        try:
+            await self._writer.drain()
+        except ConnectionResetError:
+            # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
+            # there's other logic that will make the transport shut down.
+            pass
 
     @override
     async def write_bytes(self, payload: bytes) -> None:

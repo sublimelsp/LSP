@@ -110,6 +110,7 @@ from .file_watcher import get_file_watcher_implementation
 from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
 from .logging import debug
 from .logging import exception_log
+from .logging import printf
 from .open import center_selection
 from .open import open_externally
 from .open import open_file
@@ -1696,7 +1697,7 @@ class Session(APIHandler, TransportCallbacks):
 
         def _continue(failure_reason: str | None) -> Promise[ApplyWorkspaceEditResult]:
             if failure_reason:
-                debug(f'Error while applying WorkspaceEdit: {failure_reason}')
+                printf(f'Error while applying WorkspaceEdit: {failure_reason}')
                 return Promise.resolve({
                     'applied': False,
                     'failureReason': failure_reason,

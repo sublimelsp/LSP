@@ -97,13 +97,10 @@ from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import SUPPORTED_DIAGNOSTIC_TAGS
-from .edit import apply_text_edits
 from .edit import is_create_file
 from .edit import is_delete_file
 from .edit import is_rename_file
 from .edit import is_text_document_edit
-from .edit import parse_workspace_edit
-from .edit import WorkspaceChanges
 from .edit import WorkspaceEditSummary
 from .file_watcher import DEFAULT_WATCH_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
@@ -161,6 +158,7 @@ from abc import abstractmethod
 from enum import IntFlag
 from functools import lru_cache
 from functools import partial
+from operator import itemgetter
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -1698,6 +1696,7 @@ class Session(APIHandler, TransportCallbacks):
 
         def _continue(failure_reason: str | None) -> Promise[ApplyWorkspaceEditResult]:
             if failure_reason:
+                debug(f'Error while applying WorkspaceEdit: {failure_reason}')
                 return Promise.resolve({
                     'applied': False,
                     'failureReason': failure_reason,
@@ -1749,50 +1748,41 @@ class Session(APIHandler, TransportCallbacks):
 
     def apply_workspace_edit_async(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
-    ) -> Promise[WorkspaceEditSummary]:
+    ) -> Promise[tuple[ApplyWorkspaceEditResult, WorkspaceEditSummary]]:
         """
         Apply a WorkspaceEdit, and return a promise that resolves on the async thread again after the edits have been
-        applied. The resolved promise contains a summary of the changes in the WorkspaceEdit.
+        applied. The resolved promise contains the ApplyWorkspaceEditResult and a summary of the changes in the
+        WorkspaceEdit.
         """
-        is_refactoring = self._is_executing_refactoring_command or is_refactoring
-        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
-
-    def apply_parsed_workspace_edits(
-        self, changes: WorkspaceChanges, is_refactoring: bool = False
-    ) -> Promise[WorkspaceEditSummary]:
-
-        def handle_view(
-            edits: list[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
-            label: str | None,
-            view_version: int | None,
-            uri: str,
-            view_state_actions: ViewStateActions,
-            view: sublime.View | None,
-        ) -> Promise[None]:
-            if view is None:
-                print(f'LSP: ignoring edits due to no view for uri: {uri}')
-                return Promise.resolve(None)
-            return apply_text_edits(view, edits, label=label, required_view_version=view_version) \
-                .then(lambda view: self._set_view_state(view_state_actions, view) if view else None)
-
-        active_sheet = self.window.active_sheet()
-        selected_sheets = self.window.selected_sheets()
-        promises: list[Promise[None]] = []
-        auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
+        if not (document_changes := edit.get('documentChanges', [])):
+            document_changes: list[TextDocumentEdit | CreateFile | RenameFile | DeleteFile] = [
+                cast('TextDocumentEdit', {'textDocument': {'uri': uri, 'version': None}, 'edits': edits})
+                for uri, edits in edit.get('changes', {}).items()
+            ]
+        change_annotations = edit.get('changeAnnotations', {})
         summary: WorkspaceEditSummary = {
-            'total_changes': sum(len(value[0]) for value in changes.values()),
-            'edited_files': len(changes)
+            'total_changes': 0,
+            'edited_files': 0,
+            'created_files': 0,
+            'renamed_files': 0,
+            'deleted_files': 0
         }
-        for uri, (edits, label, view_version) in changes.items():
-            view_state_actions = self._get_view_state_actions(uri, auto_save)
-            promises.append(
-                self.open_uri_async(uri)
-                    .then(partial(handle_view, edits, label, view_version, uri, view_state_actions))
-            )
-        return Promise.all(promises) \
-            .then(lambda _: self._set_selected_sheets(selected_sheets)) \
-            .then(lambda _: self._set_focused_sheet(active_sheet)) \
-            .then(lambda _: summary)
+        for document_change in document_changes:
+            if is_text_document_edit(document_change):
+                summary['total_changes'] += len(document_change['edits'])
+                summary['edited_files'] += 1
+            elif is_create_file(document_change):
+                summary['created_files'] += 1
+            elif is_rename_file(document_change):
+                summary['renamed_files'] += 1
+            elif is_delete_file(document_change):
+                summary['deleted_files'] += 1
+        return self.apply_document_changes_async(
+            document_changes,
+            change_annotations,
+            label=label,
+            is_refactoring=is_refactoring or self._is_executing_refactoring_command
+        ).then(lambda result: (result, summary))
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
@@ -1989,15 +1979,10 @@ class Session(APIHandler, TransportCallbacks):
 
     @request_handler('workspace/applyEdit')
     def on_workspace_apply_edit(self, params: ApplyWorkspaceEditParams) -> Promise[ApplyWorkspaceEditResult]:
-        edit = params['edit']
-        label = params.get('label')
         is_refactoring = metadata.get('isRefactoring', False) if (metadata := params.get('metadata')) else False
-        if document_changes := edit.get('documentChanges'):
-            change_annotations = edit.get('changeAnnotations', {})
-            return self.apply_document_changes_async(
-                document_changes, change_annotations, label=label, is_refactoring=is_refactoring)
-        return self.apply_workspace_edit_async(edit, label=label, is_refactoring=is_refactoring).then(
-            lambda _: {'applied': True})
+        return self.apply_workspace_edit_async(
+            params['edit'], label=params.get('label'), is_refactoring=is_refactoring
+        ).then(itemgetter(0))
 
     @request_handler('workspace/codeLens/refresh')
     def on_workspace_code_lens_refresh(self, _: None) -> Promise[None]:

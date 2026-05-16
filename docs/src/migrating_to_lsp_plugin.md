@@ -16,7 +16,7 @@
 | `storage_path()` | `ST_STORAGE_PATH` constant or `plugin_storage_path` class attribute |
 | `needs_update_or_installation()` + `install_or_update()` + `can_start()` + `on_pre_start()` + `additional_variables()` | `on_pre_start_async(context)` |
 | `on_post_start(window, view, folders, config)` | `__init__(weaksession)` |
-| `on_settings_changed(settings: DottedDict)` | `on_initialize_async()` for one-time setup; `on_pre_send_response_async(response)` for dynamic `workspace/configuration` |
+| `on_settings_changed(settings: DottedDict)` | `on_initialized_async()` for one-time setup; `on_pre_send_response_async(response)` for dynamic `workspace/configuration` |
 | `is_applicable(view, config)` | `is_applicable_async(context: IsApplicableContext)` |
 | `on_workspace_configuration(params, configuration)` | `on_pre_send_response_async(response)` — intercept `workspace/configuration` response |
 | `on_pre_server_command(command, done_callback)` | `@command_handler` decorator |
@@ -26,8 +26,7 @@
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
 | `on_session_buffer_changed_async(session_buffer)` | `on_text_changed_async(session_buffer)` |
 | `register_plugin(MyPlugin)` / `unregister_plugin(MyPlugin)` | `MyPlugin.register()` / `MyPlugin.unregister()` - no standalone import needed |
-| *(not present)* | `on_transport_ready_async(transport)` - new hook, called after transport is up but before `initialize` |
-| *(not present)* | `on_initialize_async()` |
+| *(not present)* | `on_initialized_async()` |
 | *(not present)* | `on_pre_send_response_async(response)` |
 
 The methods `on_selection_modified_async` and `on_session_end_async` are available in `LspPlugin` with the same name and the same signature. `on_pre_send_notification_async` and `on_server_notification_async` keep the same names but use more specific argument types — see step 11.
@@ -199,26 +198,17 @@ def __init__(self, weaksession: ref[Session]) -> None:
         log_start(session.window, session.config)
 ```
 
-If your `on_post_start` sent raw bytes or custom JSON-RPC messages before the `initialize` request, use the new `on_transport_ready_async` hook instead - it receives the live `TransportWrapper` and has no equivalent in `AbstractPlugin`:
-
-```python
-from LSP.plugin.core.transports import TransportWrapper
-
-def on_transport_ready_async(self, transport: TransportWrapper) -> None:
-    transport.send({"jsonrpc": "2.0", "method": "myServer/handshake"})
-```
-
 ---
 
 ### 6. Remove `on_settings_changed`
 
 `LspPlugin` does not provide an `on_settings_changed` override point. The method has been removed because it was only called once right after sending the `initialize` request. Depending on what you were doing in it, one of these replacements applies:
 
-**One-time setup at startup** — move the logic to `on_initialize_async`, which is called after a successful `initialize` response:
+**One-time setup at startup** — move the logic to `on_initialized_async`, which is called after a `initialized` notification:
 
 ```python
 # After — one-time setup
-def on_initialize_async(self) -> None:
+def on_initialized_async(self) -> None:
     if session := self.weaksession():
         session.config.settings.set('foo', 'bar')
 ```

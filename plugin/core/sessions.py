@@ -1381,7 +1381,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         loop = asyncio.get_running_loop()
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
-            await self._plugin.on_transport_ready(transport)
         self.transport = transport
         self.working_directory = working_directory
         params = get_initialize_params(variables, self._workspace_folders, self.config)
@@ -1406,9 +1405,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         await self.notify(Notification.initialized())
         if self._plugin and isinstance(self._plugin, LspPlugin):
             if self._plugin.use_asyncio():
-                await self._plugin.on_initialize()
+                await self._plugin.on_initialized()
             else:
-                self._plugin.on_initialize_async()
+                self._plugin.on_initialized_async()
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")

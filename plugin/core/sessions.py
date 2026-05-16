@@ -1754,11 +1754,12 @@ class Session(APIHandler, TransportCallbacks):
         applied. The resolved promise contains the ApplyWorkspaceEditResult and a summary of the changes in the
         WorkspaceEdit.
         """
-        if not (document_changes := edit.get('documentChanges', [])):
-            document_changes: list[TextDocumentEdit | CreateFile | RenameFile | DeleteFile] = [
+        document_changes = edit.get('documentChanges', [])
+        if not document_changes:
+            document_changes.extend([
                 cast('TextDocumentEdit', {'textDocument': {'uri': uri, 'version': None}, 'edits': edits})
                 for uri, edits in edit.get('changes', {}).items()
-            ]
+            ])
         change_annotations = edit.get('changeAnnotations', {})
         summary: WorkspaceEditSummary = {
             'total_changes': 0,

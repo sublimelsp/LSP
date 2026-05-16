@@ -401,9 +401,6 @@ class LspSelectCompletionCommand(LspTextCommand):
             }
             self.view.run_command("lsp_execute", args)
 
-    def want_event(self) -> bool:
-        return False
-
     def _translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
         selection = self.view.sel()
         primary_cursor_position = selection[0].b

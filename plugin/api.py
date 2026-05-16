@@ -398,6 +398,9 @@ class LspPlugin(APIHandler):
     Use this as your directory to install server files. Its path is `$DATA/Package Storage/<Package Name>`.
     """
 
+    use_asyncio: bool = False
+    """Set to `true` to make LSP use `async def` variants."""
+
     @classmethod
     @final
     def register(cls) -> None:
@@ -429,11 +432,6 @@ class LspPlugin(APIHandler):
         ```
         """
         unregister_plugin_impl(cls)
-
-    @classmethod
-    def use_asyncio(cls) -> bool:
-        """Override and return `true` to make LSP use `async def` variants."""
-        return False
 
     @classmethod
     def is_applicable_async(cls, context: IsApplicableContext) -> bool:

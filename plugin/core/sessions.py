@@ -1404,7 +1404,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 self._plugin.on_server_response_async('initialize', Response(-1, result))
         await self.notify(Notification.initialized())
         if self._plugin and isinstance(self._plugin, LspPlugin):
-            if self._plugin.use_asyncio():
+            if self._plugin.use_asyncio:
                 await self._plugin.on_initialized()
             else:
                 self._plugin.on_initialized_async()

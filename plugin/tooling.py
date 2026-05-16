@@ -521,7 +521,7 @@ class ServerTestRunner(TransportCallbacks):
             if plugin_class:
                 # TODO: We should share this common code with WindowManager.start
                 if issubclass(plugin_class, LspPlugin):
-                    if plugin_class.use_asyncio():
+                    if plugin_class.use_asyncio:
                         await plugin_class.on_pre_start(context)
                     else:
                         await loop.run_in_executor(None, plugin_class.on_pre_start_async, context)

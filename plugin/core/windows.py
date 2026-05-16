@@ -241,7 +241,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if plugin_class:
                     if issubclass(plugin_class, LspPlugin):
                         config.set_view_status(listener.view, "installing...")
-                        if plugin_class.use_asyncio():
+                        if plugin_class.use_asyncio:
                             await plugin_class.on_pre_start(context)
                         else:
                             await loop.run_in_executor(None, plugin_class.on_pre_start_async, context)

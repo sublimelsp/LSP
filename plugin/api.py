@@ -462,8 +462,8 @@ class LspPlugin(APIHandler):
         Override to perform any preparation needed before startup - for example installing or updating server binaries,
         resolving the working directory, or injecting extra template variables into `context.variables`.
 
-        Attempt to use non-blocking functionality for downloading binaries and running subprocesses in order to not
-        block the asyncio thread.
+        This method runs on a worker thread so perform any blocking I/O (e.g. downloading a binary, running
+        `npm install`) directly here without spawning additional threads.
 
         Mutations to `context.working_directory` and `context.variables` are picked up and used when launching the
         server process.
@@ -479,6 +479,9 @@ class LspPlugin(APIHandler):
     async def on_pre_start(cls, context: OnPreStartContext) -> None:
         """
         Async version of on_pre_start_async.
+
+        Attempt to use non-blocking functionality for downloading binaries and running subprocesses in order to not
+        block the asyncio thread.
 
         :param      context:    The startup context. `context.configuration`, `context.variables` and
                                 `context.working_directory` can be mutated to influence how the server is launched.

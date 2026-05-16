@@ -21,7 +21,7 @@ from .plugin.core.aio import run_coroutine_threadsafe
 from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
 from .plugin.core.open import g_opening_files
-from .plugin.core.open import g_opening_files_lock
+from .plugin.core.open import get_opening_files_lock
 from .plugin.core.panels import PanelName
 from .plugin.core.registry import LspCheckApplicableCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
@@ -281,7 +281,7 @@ class Listener(sublime_aio.EventListener):
             future.set_result(None)
 
     async def _find_opening_file_future(self, file_name: str) -> asyncio.Future[sublime.View | None] | None:
-        async with g_opening_files_lock:
+        async with get_opening_files_lock():
             for fn in g_opening_files:
                 if fn == file_name or os.path.samefile(fn, file_name):  # noqa: ASYNC240
                     return g_opening_files.pop(fn, None)

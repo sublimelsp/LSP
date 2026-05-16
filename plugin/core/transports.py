@@ -490,8 +490,9 @@ class ErrorReader:
                     callback_object.on_stderr_message(message.rstrip())
                 else:
                     break
-        except (BrokenPipeError, AttributeError, asyncio.CancelledError) as ex:
-            debug(f"exiting from ErrorReader._loop with expected error (which is: {type(ex)}, message: {ex})")
+        except (BrokenPipeError, AttributeError, asyncio.CancelledError):
+            # debug(f"exiting from ErrorReader._loop with expected error (which is: {type(ex)}, message: {ex})")
+            pass
         except Exception as ex:
             exception_log("unexpected exception type in error reader", ex)
 

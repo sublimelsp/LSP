@@ -178,15 +178,14 @@ class TaskContainer:
         Moreover, this method will print any exception that occured during the exception of the coroutine, if any.
         """
         task = asyncio.create_task(coro, **kwargs)
-        self._tasks.add(task)
-        weakself = weakref.ref(self)
+        tasks = self._tasks
+        tasks.add(task)
 
         def on_done(t: asyncio.Task) -> None:
-            if this := weakself():
-                this._tasks.discard(t)
+            tasks.discard(t)
             if t.cancelled():
                 return
-            if ex := task.exception():
+            if ex := t.exception():
                 exception_log(f"Task {t.get_name()} finished with exception", ex)
 
         task.add_done_callback(on_done)

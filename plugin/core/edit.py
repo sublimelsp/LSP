@@ -123,7 +123,10 @@ async def apply_text_edits(
     return view if view.is_valid() else None
 
 
-def show_summary_message(window: sublime.Window, summary: WorkspaceEditSummary) -> None:
-    message = f"Applied {summary['total_changes']} changes in {summary['edited_files']} files"
+def show_summary_message(window: sublime.Window, summary: WorkspaceEditSummary | BaseException) -> None:
+    if isinstance(summary, BaseException):
+        message = f"Error: {summary}"
+    else:
+        message = f"Applied {summary['total_changes']} changes in {summary['edited_files']} files"
     # a 300ms timeout prevents "Detect indentation: ..." status message from overriding the summary status message
     sublime.set_timeout(lambda: window.status_message(message), 300)

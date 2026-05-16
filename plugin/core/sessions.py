@@ -1544,6 +1544,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         code_action = await self._maybe_resolve_code_action(code_action, view)
         return await self._apply_code_action(code_action, view)
 
+    @deprecated("use Session.run_code_action instead")
     def run_code_action_async(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
     ) -> Promise[BaseException | None]:
@@ -1861,6 +1862,14 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         """
         is_refactoring = self._is_executing_refactoring_command or is_refactoring
         return await self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
+
+    @deprecated("use Session.apply_workspace_edit instead")
+    def apply_workspace_edit_async(
+        self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
+    ) -> Promise[WorkspaceEditSummary | BaseException]:
+        return Promise.wrap_task(
+            self.create_task(self.apply_workspace_edit(edit, label=label, is_refactoring=is_refactoring))
+        )
 
     async def apply_parsed_workspace_edits(
         self, changes: WorkspaceChanges, is_refactoring: bool = False

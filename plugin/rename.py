@@ -149,7 +149,7 @@ class LspSymbolRenameCommand(LspTextCommand):
     ) -> None:
         if accepted and (session := weak_session()):
             session.apply_workspace_edit_async(response, is_refactoring=True) \
-                .then(lambda summary: show_summary_message(session.window, summary))
+                .then(lambda tup: show_summary_message(session.window, *tup))
 
     def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:

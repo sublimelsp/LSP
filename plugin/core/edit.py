@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ...protocol import AnnotatedTextEdit
+from ...protocol import ApplyWorkspaceEditResult
 from ...protocol import CreateFile
 from ...protocol import DeleteFile
 from ...protocol import Position
@@ -120,7 +121,14 @@ def apply_text_edits(
     return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(view if view.is_valid() else None)))
 
 
-def show_summary_message(window: sublime.Window, summary: WorkspaceEditSummary) -> None:
-    message = f"Applied {summary['total_changes']} changes in {summary['edited_files']} files"
+def show_summary_message(
+    window: sublime.Window, result: ApplyWorkspaceEditResult, summary: WorkspaceEditSummary
+) -> None:
+    if result['applied']:
+        message = f"Applied {summary['total_changes']} changes in {summary['edited_files']} files"
+    else:
+        message = "Error while applying WorkspaceEdit"
+        if failure_reason := result.get('failureReason'):
+            message += f": {failure_reason}"
     # a 300ms timeout prevents "Detect indentation: ..." status message from overriding the summary status message
     sublime.set_timeout(lambda: window.status_message(message), 300)

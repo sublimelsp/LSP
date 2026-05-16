@@ -1516,6 +1516,19 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 self._is_executing_refactoring_command = False
         return await future
 
+    @deprecated("use Session.execute_command instead")
+    def execute_command_async(
+        self,
+        command: ExecuteCommandParams,
+        *,
+        progress: bool = False,
+        view: sublime.View | None = None,
+        is_refactoring: bool = False,
+    ) -> Promise[LSPAny | BaseException]:
+        return Promise.wrap_task(
+            self.create_task(self.execute_command(command, progress=progress, view=view, is_refactoring=is_refactoring))
+        )
+
     def check_log_unsupported_command(self, command: str) -> None:
         if userprefs().log_debug and command not in self._logged_unsupported_commands:
             self._logged_unsupported_commands.add(command)
@@ -1732,7 +1745,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if not code_action:
             return
         if isinstance(code_action, Error):
-            # TODO: our promise must be able to handle exceptions (or, wait until we can use coroutines)
+            # TODO: do something with the error?
             self.window.status_message(f"Failed to apply code action: {code_action}")
             return
         title = code_action['title']
@@ -1740,8 +1753,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
         if edit:
             await self.apply_workspace_edit(edit, label=title, is_refactoring=is_refactoring)
-        command = code_action.get("command")
-        if command is not None:
+        if command := code_action.get("command"):
             execute_command: ExecuteCommandParams = {
                 "command": command["command"],
             }
@@ -1856,11 +1868,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
     ) -> WorkspaceEditSummary:
         """
-        Apply a WorkspaceEdit, and return a promise that resolves on the async thread again after the edits have been
-        applied. The resolved promise contains a summary of the changes in the WorkspaceEdit.
+        Apply a WorkspaceEdit.
+
+        Returns a summary of the changes in the WorkspaceEdit.
         """
-        is_refactoring = self._is_executing_refactoring_command or is_refactoring
-        return await self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
+        return await self.apply_parsed_workspace_edits(
+            parse_workspace_edit(edit, label), self._is_executing_refactoring_command or is_refactoring
+        )
 
     @deprecated("use Session.apply_workspace_edit instead")
     def apply_workspace_edit_async(
@@ -2644,16 +2658,20 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         return (None, None, None, None, None)
 
     async def on_payload(self, payload: JSONRPCMessage) -> None:
-        handler, result, req_id, typestr, _method = await self.deduce_payload(payload)
+        handler, result, req_id, typestr, method = await self.deduce_payload(payload)
         if handler:
             try:
                 if req_id is None:
-                    # server notification or client request
-                    asyncio.get_running_loop().call_soon(handler, result)
+                    # server notification or (response to) client request
+                    handler(result)
                 else:
                     # server request
                     try:
-                        await self.send_response(await handler(result, req_id))
+                        await self.send_response(
+                            self._handle_plugin_on_pre_send_response_async(
+                                method, result, await handler(result, req_id)
+                            )
+                        )
                     except Error as err:
                         await self.send_error_response(req_id, err)
                     except Exception as ex:

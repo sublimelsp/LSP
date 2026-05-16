@@ -5,22 +5,45 @@ from __future__ import annotations
 from .logging import debug
 from .logging import exception_log
 from typing import Any
+from typing import AsyncIterator
 from typing import Callable
+from typing import Coroutine
+from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypeVar
 import asyncio
 import concurrent.futures
+import contextlib
 import sublime
 import sublime_aio
+import sys
 import threading
-import weakref
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
     from contextvars import Context
 
 
+class SupportsAclose(Protocol):
+    async def aclose(self) -> None: ...
+
+
 T = TypeVar("T")
+S = TypeVar("S", bound="SupportsAclose")
+
+
+# `async with aclosing(stream(...))`. This function in the contextlib module is available since python 3.10, but we also
+# need to support python 3.8.
+# See: https://docs.python.org/3/library/contextlib.html#contextlib.aclosing
+if sys.version_info >= (3, 10, 0):
+    aclosing = contextlib.aclosing
+else:
+
+    @contextlib.asynccontextmanager
+    async def aclosing(thing: S) -> AsyncIterator[S]:
+        try:
+            yield thing
+        finally:
+            await thing.aclose()
 
 
 _futures: set[concurrent.futures.Future] = set()
@@ -140,6 +163,23 @@ async def next_frame() -> None:
     await asyncio.get_running_loop().run_in_executor(executor_main, noop)
 
 
+async def gather_and_flatten_exceptions(*coros: Coroutine[Any, Any, list[Exception]]) -> list[Exception]:
+    """
+    Takes a list of coroutines, runs them concurrently using asyncio.gather, collects all exceptions, and returns a
+    flattened list of Exceptions that occurred for each coroutine. BaseExceptions are filtered out.
+    """
+    exceptions: list[Exception] = []
+    items: list[BaseException | list[Exception]] = await asyncio.gather(*coros, return_exceptions=True)
+    for item in items:
+        # Only keep exceptions derived from Exception. Exceptions derived from BaseException, but not derived from
+        # Exception are things like asyncio.CancelledError or SystemExit and should be ignored.
+        if isinstance(item, Exception):
+            exceptions.append(item)
+        elif isinstance(item, list):
+            exceptions.extend(item)
+    return exceptions
+
+
 class TaskContainer:
     """
     A [mixin class](https://en.wikipedia.org/wiki/Mixin) for adding "fire-and-forget" functionality to a class for
@@ -147,8 +187,7 @@ class TaskContainer:
 
     Note: don't forget to call `super().__init__()` when using this class.
 
-    When an instance of this class is garbage-collected, then, when it is garbage-collected from the asyncio thread, all
-    running tasks are cancelled. Otherwise, you must call `cancel_all_tasks` manually.
+    Ensure the `cancel_all_tasks` async function is ran before this class is destroyed.
     """
 
     def __init__(self) -> None:
@@ -156,17 +195,10 @@ class TaskContainer:
 
     def __del__(self) -> None:
         if self._tasks:
-            try:
-                self.cancel_all_tasks()
-            except RuntimeError:
-                debug("TaskContainer destroyed while there are still tasks running!")
+            debug("WARNING: TaskContainer is destroyed but there are still tasks running!")
 
-    def cancel_all_tasks(self) -> None:
-        # throws RuntimeError when not on the asyncio thread.
-        asyncio.get_running_loop()
-        tasks = set(self._tasks)
-        for task in tasks:
-            task.cancel()
+    async def cancel_all_tasks(self) -> list[Exception]:
+        return [x for x in await asyncio.gather(*self._tasks, return_exceptions=True) if isinstance(x, Exception)]
 
     def create_task(self, coro: Coroutine[object, object, object], /, **kwargs: Any) -> asyncio.Task:
         """

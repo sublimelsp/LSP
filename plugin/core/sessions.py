@@ -1476,7 +1476,7 @@ class Session(APIHandler, TransportCallbacks):
             if isinstance(self._plugin, LspPlugin):
                 scheme, _ = parse_uri(uri)
                 if handler := self._plugin.get_uri_handler(scheme):
-                    return handler(uri, flags).then(lambda sheet: self._on_sheet_opened(sheet, uri, r))
+                    return handler(uri, flags).then(lambda sheet: sheet.view() if sheet else None)
             else:
                 return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None

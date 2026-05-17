@@ -26,24 +26,24 @@ def get_auto_complete_trigger(sb: SessionBufferProtocol) -> list[dict[str, str]]
     return None
 
 
-def verify(testcase: TextDocumentTestCase, method: str, input_params: Any, expected_output_params: Any) -> Generator:
-    promise = testcase.make_server_do_fake_request(method, input_params)
-    yield from testcase.await_promise(promise)
-    testcase.assertEqual(promise.result(), expected_output_params)
+async def verify(testcase: TextDocumentTestCase, method: str, input_params: Any, expected_output_params: Any) -> None:
+    result = await testcase.make_server_do_fake_request(method, input_params)
+    testcase.assertEqual(result, expected_output_params)
 
 
 class ServerRequests(TextDocumentTestCase):
 
-    def test_unknown_method(self) -> Generator:
-        yield from verify(self, "foobar/qux", {}, {"code": ErrorCodes.MethodNotFound, "message": "foobar/qux"})
+    async def test_unknown_method(self) -> None:
+        await verify(self, "foobar/qux", {}, {"code": ErrorCodes.MethodNotFound, "message": "foobar/qux"})
 
-    def test_m_workspace_workspaceFolders(self) -> Generator:
+    async def test_m_workspace_workspaceFolders(self) -> None:
         expected_output = [{"name": os.path.basename(f), "uri": filename_to_uri(f)}
                            for f in sublime.active_window().folders()]
         self.maxDiff = None
-        yield from verify(self, "workspace/workspaceFolders", {}, expected_output)
+        await verify(self, "workspace/workspaceFolders", {}, expected_output)
 
-    def test_m_workspace_configuration(self) -> Generator:
+    async def test_m_workspace_configuration(self) -> None:
+        assert self.session
         self.session.config.settings.set("foo.bar", "$hello")
         self.session.config.settings.set("foo.baz", "$world")
         self.session.config.settings.set("foo.a", 1)
@@ -53,27 +53,27 @@ class ServerRequests(TextDocumentTestCase):
         method = "workspace/configuration"
         params = {"items": [{"section": "foo"}]}
         expected_output = [{"bar": "X", "baz": "Y", "a": 1, "b": None, "c": ["asdf X Y"]}]
-        yield from verify(self, method, params, expected_output)
+        await verify(self, method, params, expected_output)
         self.session.config.settings.clear()
 
-    def test_m_workspace_applyEdit(self) -> Generator:
+    async def test_m_workspace_applyEdit(self) -> None:
         old_change_count = self.insert_characters("hello\nworld\n")
         edit = {
             "newText": "there",
             "range": {"start": {"line": 1, "character": 0}, "end": {"line": 1, "character": 5}}}
         params = {"edit": {"changes": {filename_to_uri(self.view.file_name()): [edit]}}}
-        yield from verify(self, "workspace/applyEdit", params, {"applied": True})
+        await verify(self, "workspace/applyEdit", params, {"applied": True})
         yield lambda: self.view.change_count() > old_change_count
         self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "hello\nthere\n")
 
-    def test_m_workspace_applyEdit_with_nontrivial_promises(self) -> Generator:
+    async def test_m_workspace_applyEdit_with_nontrivial_promises(self) -> None:
         with tempfile.TemporaryDirectory() as dirpath:
             initial_text = ["a b", "c d"]
             file_paths = []
             for i in range(2):
                 file_paths.append(os.path.join(dirpath, f"file{i}.txt"))
                 Path(file_paths[-1]).write_text(initial_text[i], encoding="utf-8")
-            yield from verify(
+            await verify(
                 self,
                 "workspace/applyEdit",
                 {
@@ -117,9 +117,9 @@ class ServerRequests(TextDocumentTestCase):
                 self.assertEqual(view.substr(sublime.Region(0, view.size())), expected[i])
                 view.close()
 
-    def test_m_workspace_applyEdit_with_wrong_uri(self) -> Generator:
+    async def test_m_workspace_applyEdit_with_wrong_uri(self) -> None:
         uri = "file:///C:/wrong/uri.txt"
-        yield from verify(
+        await verify(
             self,
             "workspace/applyEdit",
             {
@@ -157,13 +157,13 @@ class ServerRequests(TextDocumentTestCase):
             }
         )
 
-    def test_m_workspace_applyEdit_with_wrong_document_version(self) -> Generator:
+    async def test_m_workspace_applyEdit_with_wrong_document_version(self) -> None:
         with tempfile.TemporaryDirectory() as dirpath:
             file_name = os.path.join(dirpath, "file3.txt")
             uri = filename_to_uri(file_name)
             version = 123
             Path(file_name).write_text("a b", encoding="utf-8")
-            yield from verify(
+            await verify(
                 self,
                 "workspace/applyEdit",
                 {
@@ -201,8 +201,8 @@ class ServerRequests(TextDocumentTestCase):
                 }
             )
 
-    def test_m_client_registerCapability(self) -> Generator:
-        yield from verify(
+    async def test_m_client_registerCapability(self) -> None:
+        await verify(
             self,
             "client/registerCapability",
             {
@@ -248,14 +248,14 @@ class ServerRequests(TextDocumentTestCase):
         self.assertTrue(trigger)
         self.assertEqual(trigger.get("characters"), "!@#")
 
-    def test_m_client_unregisterCapability(self) -> Generator:
-        yield from verify(
+    async def test_m_client_unregisterCapability(self) -> None:
+        await verify(
             self,
             "client/registerCapability",
             {"registrations": [{"method": "foo/bar", "id": "hello"}]},
             None)
         self.assertIn("barProvider", self.session.capabilities)
-        yield from verify(
+        await verify(
             self,
             "client/unregisterCapability",
             {"unregisterations": [{"method": "foo/bar", "id": "hello"}]},
@@ -279,8 +279,8 @@ class ServerRequestsWithAutoCompleteSelector(TextDocumentTestCase):
             }
         )
 
-    def test_m_client_registerCapability(self) -> Generator:
-        yield from verify(
+    async def test_m_client_registerCapability(self) -> None:
+        await verify(
             self,
             "client/registerCapability",
             {

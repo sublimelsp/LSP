@@ -57,11 +57,11 @@ class DiagnosticsTestCase(TextDocumentTestCase):
 
         def insert_text_and_clear_diagnostics_async() -> None:
             self.insert_characters('// anything')
-            next(self.await_client_notification("textDocument/publishDiagnostics", create_test_diagnostics([])))
+            next(self.mock_client_notification("textDocument/publishDiagnostics", create_test_diagnostics([])))
 
         self.insert_characters('const x = 1')
         yield from self.await_message("textDocument/didChange")
-        yield from self.await_client_notification(
+        yield from self.mock_client_notification(
             "textDocument/publishDiagnostics",
             create_test_diagnostics([('error', Point(0, 0), Point(0, 11))])
         )
@@ -72,18 +72,18 @@ class DiagnosticsTestCase(TextDocumentTestCase):
         yield AWAIT_WORKER
         # Just a dummy wait to ensure that the `textDocument/publishDiagnostics` triggered from async thread
         # is processed since we can't await it there.
-        yield from self.await_client_notification('$/dummy', [])
+        yield from self.mock_client_notification('$/dummy', [])
         self.assertEqual(len(session_buffer.diagnostics), 0)
 
     def test_ignores_publish_diagnostics_version(self) -> Generator:
         self.insert_characters('const x = 1')
         yield from self.await_message("textDocument/didChange")
-        yield from self.await_client_notification(
+        yield from self.mock_client_notification(
             "textDocument/publishDiagnostics", create_test_diagnostics([('error', Point(0, 0), Point(0, 11))])
         )
         session_buffer = self.session.get_session_buffer_for_uri_async(TEST_FILE_URI)
         self.assertEqual(len(session_buffer.diagnostics), 1)
-        yield from self.await_client_notification(
+        yield from self.mock_client_notification(
             "textDocument/publishDiagnostics", create_test_diagnostics([], version=1000)
         )
         self.assertEqual(len(session_buffer.diagnostics), 0)
@@ -91,7 +91,7 @@ class DiagnosticsTestCase(TextDocumentTestCase):
     def test_handles_unknown_tag_gracefully(self) -> Generator:
         self.insert_characters('const x = 1')
         yield from self.await_message("textDocument/didChange")
-        yield from self.await_client_notification(
+        yield from self.mock_client_notification(
             "textDocument/publishDiagnostics",
             {
                 "uri": TEST_FILE_URI,
@@ -110,7 +110,7 @@ class DiagnosticsTestCase(TextDocumentTestCase):
     def test_handles_multiple_tags(self) -> Generator:
         self.insert_characters('const x = 1')
         yield from self.await_message("textDocument/didChange")
-        yield from self.await_client_notification(
+        yield from self.mock_client_notification(
             "textDocument/publishDiagnostics",
             {
                 "uri": TEST_FILE_URI,

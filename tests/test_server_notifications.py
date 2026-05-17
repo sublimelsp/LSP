@@ -38,7 +38,7 @@ class ServerNotifications(TextDocumentTestCase):
                 }
             ]
         }
-        yield from self.await_client_notification("textDocument/publishDiagnostics", params)
+        yield from self.mock_client_notification("textDocument/publishDiagnostics", params)
         errors_icon_regions = self.view.get_regions("lspTESTds1_icon")
         errors_underline_regions = self.view.get_regions("lspTESTds1_underline")
         warnings_icon_regions = self.view.get_regions("lspTESTds2_icon")

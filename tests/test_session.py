@@ -47,24 +47,22 @@ class MockManager(Manager):
     def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> str | None:
         return None
 
-    def start_async(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
+    async def start(self, configuration: ClientConfig, initiating_view: sublime.View) -> Session | None:
         pass
 
-    def on_post_exit_async(self, session: Session, exit_code: int, exception: Exception | None) -> None:
+    async def on_post_exit(self, session: Session, exit_code: int, exception: Exception | None) -> None:
         pass
 
     def on_diagnostics_updated(self) -> None:
         pass
 
-    def handle_message_request(
+    async def handle_message_request(
         self, config_name: str, params: ShowMessageRequestParams
-    ) -> Promise[MessageActionItem | None]:
-        return Promise.resolve(None)
+    ) -> MessageActionItem | None:
+        return None
 
-    def handle_show_message(
-        self, config_name: str, params: ShowMessageParams
-    ) -> Promise[MessageActionItem | None]:
-        return Promise.resolve(None)
+    def handle_show_message(self, config_name: str, params: ShowMessageParams) -> None:
+        return None
 
     def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
         ...

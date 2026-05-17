@@ -7,36 +7,21 @@ from .setup import make_stdio_test_config
 from .setup import make_tcp_client_test_config
 from .setup import make_tcp_server_test_config
 from .setup import remove_config
-from .setup import TIMEOUT_TIME
-from .setup import YieldPromise
-from LSP.plugin.core.logging import debug
+from .setup import SublimeAioTestCase
+from LSP.plugin.core.open import open_file
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
-from LSP.plugin.core.types import ClientStates
-from LSP.plugin.documents import DocumentSyncListener
+from LSP.plugin.core.url import filename_to_uri
 from os.path import join
-from sublime_plugin import view_event_listeners
-from typing import Any
-from typing import Generator
-from unittesting import DeferrableTestCase
+from typing_extensions import override
+import asyncio
 import sublime
 
 
-class WindowDocumentHandlerTests(DeferrableTestCase):
+class WindowDocumentHandlerTests(SublimeAioTestCase):
 
-    def ensure_document_listener_created(self) -> bool:
-        assert self.view
-        # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
-        # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
-        # opening file (manager missing in DocumentSyncListener)
-        # Revisit this once we're on ST4.
-        for listener in view_event_listeners[self.view.id()]:
-            if isinstance(listener, DocumentSyncListener):
-                sublime.set_timeout_async(listener.on_activated_async)
-                return True
-        return False
-
-    def setUp(self) -> Generator:
+    @override
+    async def setUp(self) -> None:
         initialization_options = {
             "serverResponse": {
                 "capabilities": {
@@ -57,6 +42,8 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         self.config2 = make_tcp_client_test_config("TEST-2", initialization_options)
         self.config3 = make_tcp_server_test_config("TEST-3", initialization_options)
         self.wm = windows.lookup(self.window)
+        self.assertIsNotNone(self.wm)
+        assert self.wm
         add_config(self.config1)
         add_config(self.config2)
         add_config(self.config3)
@@ -64,58 +51,50 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         self.wm.get_config_manager().all[self.config2.name] = self.config2
         self.wm.get_config_manager().all[self.config3.name] = self.config3
 
-    def test_sends_did_open_to_multiple_sessions(self) -> Generator:
+    async def test_sends_did_open_to_multiple_sessions(self) -> None:
         filename = expand(join("$packages", "LSP", "tests", "testfile.txt"), self.window)
-        open_view = self.window.find_open_file(filename)
-        yield from close_test_view(open_view)
-        self.view = self.window.open_file(filename)
-        yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
+        await close_test_view(self.window.find_open_file(filename))
+        self.view = await open_file(self.window, filename_to_uri(filename))
+        self.assertIsNotNone(self.wm)
+        assert self.wm
+        assert self.view
         self.assertTrue(self.wm.get_config_manager().match_view(self.view, self.wm.workspace_folders))
         # self.init_view_settings()
-        yield {"condition": self.ensure_document_listener_created, "timeout": TIMEOUT_TIME}
-        yield {
-            "condition": lambda: self.wm.get_session(self.config1.name, self.view.file_name()) is not None,
-            "timeout": TIMEOUT_TIME}
-        yield {
-            "condition": lambda: self.wm.get_session(self.config2.name, self.view.file_name()) is not None,
-            "timeout": TIMEOUT_TIME}
-        yield {
-            "condition": lambda: self.wm.get_session(self.config3.name, self.view.file_name()) is not None,
-            "timeout": TIMEOUT_TIME}
-        self.session1 = self.wm.get_session(self.config1.name, self.view.file_name())
-        self.session2 = self.wm.get_session(self.config2.name, self.view.file_name())
-        self.session3 = self.wm.get_session(self.config3.name, self.view.file_name())
+        listener = await self.ensure_document_listener_created()
+        self.assertIsNotNone(listener)
+        assert listener
+        self.session1 = await self.wm.start(self.config1, listener)
+        self.session2 = await self.wm.start(self.config2, listener)
+        self.session3 = await self.wm.start(self.config3, listener)
         self.assertIsNotNone(self.session1)
         self.assertIsNotNone(self.session2)
         self.assertIsNotNone(self.session3)
+        assert self.session1
+        assert self.session2
+        assert self.session3
         self.assertEqual(self.session1.config.name, self.config1.name)
         self.assertEqual(self.session2.config.name, self.config2.name)
         self.assertEqual(self.session3.config.name, self.config3.name)
-        yield {"condition": lambda: self.session1.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
-        yield {"condition": lambda: self.session2.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
-        yield {"condition": lambda: self.session3.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
-        yield from self.await_message("initialize")
-        yield from self.await_message("initialized")
-        yield from self.await_message("textDocument/didOpen")
+        await self.assert_rpc_message("initialize")
+        await self.assert_rpc_message("initialized")
+        await self.assert_rpc_message("textDocument/didOpen")
         self.view.run_command("insert", {"characters": "a"})
-        yield from self.await_message("textDocument/didChange")
-        yield from close_test_view(self.view)
-        yield from self.await_message("textDocument/didClose")
+        await self.assert_rpc_message("textDocument/didChange")
+        await close_test_view(self.view)
+        await self.assert_rpc_message("textDocument/didClose")
 
-    def doCleanups(self) -> Generator:
+    @override
+    async def tearDown(self) -> None:
         try:
-            yield from close_test_view(self.view)
+            await close_test_view(self.view)
         except Exception:
             pass
         if self.session1:
-            sublime.set_timeout_async(self.session1.end_async)
-            yield lambda: self.session1.state == ClientStates.STOPPING
+            await self.session1.end()
         if self.session2:
-            sublime.set_timeout_async(self.session2.end_async)
-            yield lambda: self.session2.state == ClientStates.STOPPING
+            await self.session2.end()
         if self.session3:
-            sublime.set_timeout_async(self.session3.end_async)
-            yield lambda: self.session3.state == ClientStates.STOPPING
+            await self.session3.end()
         try:
             remove_config(self.config3)
         except ValueError:
@@ -128,31 +107,16 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
             remove_config(self.config1)
         except ValueError:
             pass
+        assert self.wm
         self.wm.get_config_manager().all.pop(self.config3.name, None)
         self.wm.get_config_manager().all.pop(self.config2.name, None)
         self.wm.get_config_manager().all.pop(self.config1.name, None)
-        yield from super().doCleanups()
 
-    def await_message(self, method: str) -> Generator:
-        promise1 = YieldPromise()
-        promise2 = YieldPromise()
-        promise3 = YieldPromise()
-
-        def handler1(params: Any) -> None:
-            promise1.fulfill(params)
-
-        def handler2(params: Any) -> None:
-            promise2.fulfill(params)
-
-        def handler3(params: Any) -> None:
-            promise3.fulfill(params)
-
-        def error_handler(params: Any) -> None:
-            debug("Got error:", params, "awaiting timeout :(")
-
-        self.session1.send_request(Request("$test/getReceived", {"method": method}), handler1, error_handler)
-        self.session2.send_request(Request("$test/getReceived", {"method": method}), handler2, error_handler)
-        self.session3.send_request(Request("$test/getReceived", {"method": method}), handler3, error_handler)
-        yield {"condition": promise1, "timeout": TIMEOUT_TIME}
-        yield {"condition": promise2, "timeout": TIMEOUT_TIME}
-        yield {"condition": promise3, "timeout": TIMEOUT_TIME}
+    async def assert_rpc_message(self, method: str) -> None:
+        assert self.session1
+        assert self.session2
+        assert self.session3
+        timeout = 5
+        await asyncio.wait_for(self.session1.request(Request("$test/getReceived", {"method": method})), timeout=timeout)
+        await asyncio.wait_for(self.session2.request(Request("$test/getReceived", {"method": method})), timeout=timeout)
+        await asyncio.wait_for(self.session3.request(Request("$test/getReceived", {"method": method})), timeout=timeout)

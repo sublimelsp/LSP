@@ -8,6 +8,7 @@ from ..protocol import DocumentUri
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.constants import DIAGNOSTIC_SEVERITY_SCOPES
 from .core.constants import REGIONS_INITIALIZE_FLAGS
+from .core.logging import debug
 from .core.protocol import Point
 from .core.settings import userprefs
 from .core.types import DocumentSelectorMatcher
@@ -160,7 +161,11 @@ class DiagnosticsAnnotationsView:
         self._severity_colors = self._get_severity_colors()
 
     def _get_severity_colors(self) -> dict[DiagnosticSeverity, str]:
-        return {
-            severity: self._view.style_for_scope(scope)['foreground']
-            for severity, scope in DIAGNOSTIC_SEVERITY_SCOPES.items()
-        }
+        try:
+            return {
+                severity: self._view.style_for_scope(scope)['foreground']
+                for severity, scope in DIAGNOSTIC_SEVERITY_SCOPES.items()
+            }
+        except KeyError:
+            # Happens when the view is already closed.
+            return {}

@@ -198,7 +198,11 @@ class SessionBuffer(TaskContainer):
         self._on_type_formatting_triggers: tuple[str, ...] = ()
         self._update_supported_commands()
         self._update_on_type_formatting_triggers()
-        self._update_color_scheme_rules(view)
+        try:
+            self._update_color_scheme_rules(view)
+        except KeyError:
+            # Happens when the view is already closed in the meantime.
+            pass
 
     @property
     def session(self) -> Session:

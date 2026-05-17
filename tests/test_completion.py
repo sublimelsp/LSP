@@ -85,7 +85,7 @@ class CompletionsTestsBase(TextDocumentTestCase):
     def verify(self, *, completion_items: list[dict[str, Any]], insert_text: str, expected_text: str) -> Generator:
         if insert_text:
             self.type(insert_text)
-        self.set_response("textDocument/completion", completion_items)
+        self.mock_response("textDocument/completion", completion_items)
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
         yield from self.await_message("textDocument/didChange")
@@ -94,7 +94,7 @@ class CompletionsTestsBase(TextDocumentTestCase):
 
 class QueryCompletionsTests(CompletionsTestsBase):
     def test_none(self) -> Generator:
-        self.set_response("textDocument/completion", None)
+        self.mock_response("textDocument/completion", None)
         self.view.run_command('auto_complete')
         yield lambda: self.view.is_auto_complete_visible() is False
 
@@ -367,7 +367,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         completion_item = {
             'label': 'asdf'
         }
-        self.set_response("completionItem/resolve", {
+        self.mock_response("completionItem/resolve", {
             'label': 'asdf',
             'additionalTextEdits': [
                 {
@@ -391,7 +391,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             expected_text='import asdf;\nasdf')
 
     def test_prefix_should_include_the_dollar_sign(self) -> Generator:
-        self.set_response(
+        self.mock_response(
             'textDocument/completion',
             {
                 "items":
@@ -478,7 +478,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         self.assertEqual(len(selection), 3)
         for region in selection:
             self.assertEqual(self.view.substr(self.view.line(region)), "fd")
-        self.set_response("textDocument/completion", [completion])
+        self.mock_response("textDocument/completion", [completion])
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
         self.assertEqual(self.read_file(), 'fmod()\nfmod()\nfmod()')
@@ -520,7 +520,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
     def test_nontrivial_text_edit_removal(self) -> Generator:
         self.type('#include <u>')
         self.move_cursor(0, 11)  # Put the cursor inbetween 'u' and '>'
-        self.set_response("textDocument/completion", [{
+        self.mock_response("textDocument/completion", [{
             'filterText': 'uchar.h>',
             'label': ' uchar.h>',
             'textEdit': {
@@ -539,7 +539,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
     def test_nontrivial_text_edit_removal_with_buffer_modifications_clangd(self) -> Generator:
         self.type('#include <u>')
         self.move_cursor(0, 11)  # Put the cursor inbetween 'u' and '>'
-        self.set_response("textDocument/completion", [{
+        self.mock_response("textDocument/completion", [{
             'filterText': 'uchar.h>',
             'label': ' uchar.h>',
             'textEdit': {
@@ -568,7 +568,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
     def test_nontrivial_text_edit_removal_with_buffer_modifications_json(self) -> Generator:
         self.type('{"k"}')
         self.move_cursor(0, 3)  # Put the cursor inbetween 'k' and '"'
-        self.set_response("textDocument/completion", [{
+        self.mock_response("textDocument/completion", [{
             'kind': 10,
             'documentation': 'Array of single or multiple keys',
             'insertTextFormat': 2,
@@ -596,7 +596,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
     def test_text_edit_plaintext_with_multiple_lines_indented(self) -> Generator[None, None, None]:
         self.type("\t\n\t")
         self.move_cursor(1, 2)
-        self.set_response("textDocument/completion", [{
+        self.mock_response("textDocument/completion", [{
             'label': 'a',
             'textEdit': {
                 'range': {'start': {'line': 1, 'character': 4}, 'end': {'line': 1, 'character': 4}},
@@ -612,7 +612,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
     def test_insert_insert_mode(self) -> Generator:
         self.type('{{ title }}')
         self.move_cursor(0, 5)  # Put the cursor inbetween 'i' and 't'
-        self.set_response("textDocument/completion", [{
+        self.mock_response("textDocument/completion", [{
            'label': 'title',
            'textEdit': {
                 'newText': 'title',
@@ -627,7 +627,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
     def test_replace_insert_mode(self) -> Generator:
         self.type('{{ title }}')
         self.move_cursor(0, 4)  # Put the cursor inbetween 't' and 'i'
-        self.set_response("textDocument/completion", [{
+        self.mock_response("textDocument/completion", [{
            'label': 'turtle',
            'textEdit': {
                 'newText': 'turtle',

@@ -2427,7 +2427,7 @@ class Session(APIHandler, TransportCallbacks):
                     self._plugin.on_server_notification_async(Notification(method, result))
                 elif self._plugin:
                     server_notification = cast('ServerNotification',
-                                               cast('object', {'method': method, 'result': result}))
+                                               cast('object', {'method': method, 'params': result}))
                     self._plugin.on_server_notification_async(server_notification)
                 return res
         elif "id" in payload:

@@ -53,6 +53,7 @@ from ...protocol import PublishDiagnosticsParams
 from ...protocol import Range
 from ...protocol import RegistrationParams
 from ...protocol import RenameFile
+from ...protocol import ResourceOperationKind
 from ...protocol import SemanticTokenModifiers
 from ...protocol import SemanticTokenTypes
 from ...protocol import ShowDocumentParams
@@ -546,6 +547,11 @@ def get_initialize_params(
         "applyEdit": True,
         "workspaceEdit": {
             "documentChanges": True,
+            "resourceOperations": [
+                ResourceOperationKind.Create,
+                ResourceOperationKind.Rename,
+                ResourceOperationKind.Delete
+            ],
             "failureHandling": FailureHandlingKind.Abort,
             "normalizesLineEndings": True,
             "changeAnnotationSupport": {
@@ -1695,6 +1701,43 @@ class Session(APIHandler, TransportCallbacks):
                 return promise.then(lambda _: self._set_view_state(view_state_actions, view))  # pyright: ignore[reportReturnType]
             return promise
 
+        def create_file(path: str) -> Promise[str | None]:
+            # TODO: We cannot really distinguish whether the target path should be a file or a folder, because files
+            # don't necessarily have a file extension. Should we create a folder instead, if there is no file extension?
+            try:
+                open(path, 'x').close()
+            except FileExistsError as ex:
+                return Promise.resolve(str(ex))
+            except OSError as ex:
+                return Promise.resolve(str(ex))
+            return Promise.resolve(None)
+
+        def rename_file(old_path: str, new_path: str) -> Promise[str | None]:
+            view = self.window.find_open_file(old_path) if os.path.isfile(old_path) else None
+            try:
+                os.rename(old_path, new_path)
+            except FileExistsError as ex:
+                return Promise.resolve(str(ex))
+            except IsADirectoryError as ex:
+                return Promise.resolve(str(ex))
+            except NotADirectoryError as ex:
+                return Promise.resolve(str(ex))
+            except OSError as ex:
+                return Promise.resolve(str(ex))
+            if view:
+                view.retarget(new_path)
+            return Promise.resolve(None)
+
+        def delete_file(path: str) -> Promise[None]:
+            # The delete_file command moves the given files into the recycle bin
+            self.window.run_command('delete_file', {'files': [path], 'prompt': False})
+            return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None)))
+
+        def delete_folder(path: str) -> Promise[None]:
+            # The delete_folder command moves the given folders into the recycle bin
+            self.window.run_command('delete_folder', {'dirs': [path], 'prompt': False})
+            return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None)))
+
         def _continue(failure_reason: str | None) -> Promise[ApplyWorkspaceEditResult]:
             if failure_reason:
                 printf(f'Error while applying WorkspaceEdit: {failure_reason}')
@@ -1720,32 +1763,62 @@ class Session(APIHandler, TransportCallbacks):
                 lambda view: apply_text_document_edit(view, uri, document_change['edits'], version, view_state_actions)
             ).then(_continue)
         if is_create_file(document_change):
-            # TODO: add support for ResourceOperationKind.Create
-            return Promise.resolve({
-                'applied': False,
-                'failureReason': 'CreateFile not yet supported by client',
-                'failedChange': index
-            })
+            uri = document_change['uri']
+            options = document_change.get('options', {})
+            scheme, path = parse_uri(uri)
+            if scheme != 'file':
+                return _continue(f'CreateFile not supported for URI {uri}')
+            if os.path.isfile(path):
+                if options.get('overwrite'):
+                    return delete_file(path).then(lambda _: create_file(path)).then(_continue)
+                elif options.get('ignoreIfExists'):
+                    return _continue(None)
+                else:
+                    return _continue(f'CreateFile failed because a file already exists at target {uri}')
+            elif os.path.isdir(path):
+                # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
+                return _continue(f'CreateFile failed because a folder already exists at target {uri}')
+            return create_file(path).then(_continue)
         if is_rename_file(document_change):
-            # TODO: add support for ResourceOperationKind.Rename
-            return Promise.resolve({
-                'applied': False,
-                'failureReason': 'RenameFile not yet supported by client',
-                'failedChange': index
-            })
+            old_uri = document_change['oldUri']
+            new_uri = document_change['newUri']
+            options = document_change.get('options', {})
+            old_scheme, old_path = parse_uri(old_uri)
+            if old_scheme != 'file':
+                return _continue(f'RenameFile not supported for URI {old_uri}')
+            if not os.path.exists(old_path):
+                return _continue(f'RenameFile failed because {old_uri} does not exist')
+            new_scheme, new_path = parse_uri(new_uri)
+            if new_scheme != 'file':
+                return _continue(f'RenameFile not supported for URI {new_uri}')
+            if os.path.isfile(new_path):
+                if options.get('overwrite') and os.path.isfile(old_path):
+                    return delete_file(new_path).then(lambda _: rename_file(old_path, new_path)).then(_continue)
+                elif options.get('ignoreIfExists'):
+                    return _continue(None)
+                else:
+                    return _continue(f'RenameFile failed because target {new_uri} already exists')
+            elif os.path.isdir(new_path):
+                # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
+                return _continue(f'RenameFile failed because target {new_uri} already exists')
+            return rename_file(old_path, new_path).then(_continue)
         if is_delete_file(document_change):
-            # TODO: add support for ResourceOperationKind.Delete
-            return Promise.resolve({
-                'applied': False,
-                'failureReason': 'DeleteFile not yet supported by client',
-                'failedChange': index
-            })
+            uri = document_change['uri']
+            options = document_change.get('options', {})
+            scheme, path = parse_uri(uri)
+            if scheme != 'file':
+                return _continue(f'DeleteFile not supported for URI {uri}')
+            if os.path.isfile(path):
+                return delete_file(path).then(_continue)
+            if os.path.isdir(path):
+                if os.listdir() and not options.get('recursive'):
+                    return _continue(f'DeleteFile failed because folder {uri} is not empty')
+                return delete_folder(path).then(_continue)
+            if options.get('ignoreIfNotExists'):
+                return _continue(None)
+            return _continue(f'DeleteFile failed because {uri} does not exist')
         # Should be unreachable, but must return value on all code paths to satisfy type checker
-        return Promise.resolve({
-            'applied': False,
-            'failureReason': 'Unknown document change type',
-            'failedChange': index
-        })
+        return _continue('Unknown document change type')
 
     def apply_workspace_edit_async(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False

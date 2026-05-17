@@ -28,6 +28,7 @@ from .core.protocol import ClientRequest
 from .core.protocol import ClientResponse
 from .core.protocol import Error
 from .core.protocol import Notification
+from .core.protocol import Point
 from .core.protocol import Request
 from .core.protocol import Response
 from .core.protocol import ServerNotification
@@ -74,6 +75,7 @@ __all__ = [
     'OnPreStartContext',
     'PackagedTask',
     'PluginStartError',
+    'Point',
     'Promise',
     'Request',
     'Response',

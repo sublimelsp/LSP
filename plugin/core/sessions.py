@@ -2500,4 +2500,4 @@ class Session(APIHandler, TransportCallbacks):
                 return plugin_handler
         if handler_name := self.handler_attr_map.get(name):
             return getattr(self, handler_name)
-        raise AttributeError(name)
+        return None

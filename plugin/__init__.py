@@ -46,6 +46,7 @@ from .core.url import filename_to_uri
 from .core.url import parse_uri
 from .core.url import uri_to_filename  # deprecated
 from .core.version import __version__
+from .core.views import position_to_offset
 from .core.views import uri_from_view
 from .core.workspace import WorkspaceFolder
 
@@ -92,6 +93,7 @@ __all__ = [
     'matches_pattern',
     'notification_handler',
     'parse_uri',
+    'position_to_offset',
     'register_file_watcher_implementation',
     'register_plugin',
     'request_handler',

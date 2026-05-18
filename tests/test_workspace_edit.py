@@ -107,8 +107,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             # Changes should have been applied
             window = self.view.window()
             for file, expected_text in zip([file1, file2], ['hello there', 'general kenobi']):
-                view = window.find_open_file(file)
-                self.assertTrue(view)
+                view = window.open_file(file)
                 self.assertEqual(entire_content(view), expected_text)
                 view.set_scratch(True)
                 view.close()
@@ -160,3 +159,327 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             'failedChange': 0
         }
         yield from verify(self, 'workspace/applyEdit', params, expected_result)
+
+    def test_create_file(self) -> Generator:
+        window = self.view.window()
+        with tempfile.TemporaryDirectory() as dirpath:
+            filepath = os.path.join(dirpath, 'newfile.txt')
+            uri = filename_to_uri(filepath)
+            new_text = 'hello\nworld\n'
+            workspace_edit: WorkspaceEdit = {
+                'documentChanges': [
+                    {
+                        'kind': 'create',
+                        'uri': uri
+                    },
+                    {
+                        'textDocument': {'uri': uri, 'version': None},
+                        'edits': [
+                            {
+                                'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}},
+                                'newText': new_text
+                            }
+                        ]
+                    }
+                ]
+            }
+            params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+            expected_result: ApplyWorkspaceEditResult = {'applied': True}
+            self.assertFalse(os.path.isfile(filepath))
+            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            # The file should have been created
+            self.assertTrue(os.path.isfile(filepath))
+            # The TextDocumentEdit (second item in `documentChanges`) should have been applied
+            content = entire_content(window.open_file(filepath))
+            self.assertEqual(content, new_text)
+
+    def test_fails_create_file_exists(self) -> Generator:
+        with tempfile.TemporaryDirectory() as dirpath:
+            filepath = os.path.join(dirpath, 'newfile.txt')
+            old_text = 'hello\nthere\n'
+            new_text = 'hello\nworld\n'
+            Path(filepath).write_text(old_text, encoding='utf-8')
+            uri = filename_to_uri(filepath)
+            workspace_edit: WorkspaceEdit = {
+                'documentChanges': [
+                    {
+                        'kind': 'create',
+                        'uri': uri
+                    },
+                    {
+                        'textDocument': {'uri': uri, 'version': None},
+                        'edits': [
+                            {
+                                'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}},
+                                'newText': new_text
+                            }
+                        ]
+                    }
+                ]
+            }
+            params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+            expected_result: ApplyWorkspaceEditResult = {
+                'applied': False,
+                'failureReason': f'CreateFile failed because a file already exists at target {uri}',
+                'failedChange': 0
+            }
+            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            # The file should still have its original content
+            content = Path(filepath).read_text(encoding='utf-8')
+            self.assertEqual(content, old_text)
+
+    def test_create_file_exists_ignore(self) -> Generator:
+        window = self.view.window()
+        with tempfile.TemporaryDirectory() as dirpath:
+            filepath = os.path.join(dirpath, 'newfile.txt')
+            old_text = 'hello\nthere\n'
+            new_text = 'hello\nworld\n'
+            Path(filepath).write_text(old_text, encoding='utf-8')
+            uri = filename_to_uri(filepath)
+            workspace_edit: WorkspaceEdit = {
+                'documentChanges': [
+                    {
+                        'kind': 'create',
+                        'uri': uri,
+                        'options': {
+                            'ignoreIfExists': True
+                        }
+                    },
+                    {
+                        'textDocument': {'uri': uri, 'version': None},
+                        'edits': [
+                            {
+                                'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}},
+                                'newText': new_text
+                            }
+                        ]
+                    }
+                ]
+            }
+            params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+            expected_result: ApplyWorkspaceEditResult = {'applied': True}
+            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            # The TextDocumentEdit (second item in `documentChanges`) should have been applied
+            content = entire_content(window.open_file(filepath))
+            self.assertEqual(content, new_text + old_text)
+
+    def test_create_file_exists_overwrite(self) -> Generator:
+        window = self.view.window()
+        with tempfile.TemporaryDirectory() as dirpath:
+            filepath = os.path.join(dirpath, 'newfile.txt')
+            old_text = 'hello\nthere\n'
+            new_text = 'hello\nworld\n'
+            Path(filepath).write_text(old_text, encoding='utf-8')
+            uri = filename_to_uri(filepath)
+            workspace_edit: WorkspaceEdit = {
+                'documentChanges': [
+                    {
+                        'kind': 'create',
+                        'uri': uri,
+                        'options': {
+                            'overwrite': True,
+                            'ignoreIfExists': True  # Overwrite wins over `ignoreIfExists`
+                        }
+                    },
+                    {
+                        'textDocument': {'uri': uri, 'version': None},
+                        'edits': [
+                            {
+                                'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}},
+                                'newText': new_text
+                            }
+                        ]
+                    }
+                ]
+            }
+            params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+            expected_result: ApplyWorkspaceEditResult = {'applied': True}
+            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            # The file content should only be the new text because the file was overwritten
+            content = entire_content(window.open_file(filepath))
+            self.assertEqual(content, new_text)
+
+    def test_rename_file(self) -> Generator:
+        window = self.view.window()
+        with tempfile.TemporaryDirectory() as dirpath:
+            old_path = os.path.join(dirpath, 'old_file.txt')
+            new_path = os.path.join(dirpath, 'new_file.txt')
+            old_uri = filename_to_uri(old_path)
+            new_uri = filename_to_uri(new_path)
+            old_text = 'hello\nthere\n'
+            new_text = 'hello\nworld\n'
+            Path(old_path).write_text(old_text, encoding='utf-8')
+            workspace_edit: WorkspaceEdit = {
+                'documentChanges': [
+                    {
+                        'kind': 'rename',
+                        'oldUri': old_uri,
+                        'newUri': new_uri
+                    },
+                    {
+                        'textDocument': {'uri': new_uri, 'version': None},
+                        'edits': [
+                            {
+                                'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}},
+                                'newText': new_text
+                            }
+                        ]
+                    }
+                ]
+            }
+            params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+            expected_result: ApplyWorkspaceEditResult = {'applied': True}
+            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            # The file should have been renamed
+            self.assertFalse(os.path.isfile(old_path))
+            self.assertTrue(os.path.isfile(new_path))
+            # The TextDocumentEdit (second item in `documentChanges`) should have been applied
+            content = entire_content(window.open_file(new_path))
+            self.assertEqual(content, new_text + old_text)
+
+    def test_rename_file_exists(self) -> Generator:
+        with tempfile.TemporaryDirectory() as dirpath:
+            old_path = os.path.join(dirpath, 'old_file.txt')
+            new_path = os.path.join(dirpath, 'new_file.txt')
+            old_uri = filename_to_uri(old_path)
+            new_uri = filename_to_uri(new_path)
+            old_text1 = 'hello\nthere 1\n'
+            old_text2 = 'hello\nthere 2\n'
+            new_text = 'hello\nworld\n'
+            Path(old_path).write_text(old_text1, encoding='utf-8')
+            Path(new_path).write_text(old_text2, encoding='utf-8')
+            workspace_edit: WorkspaceEdit = {
+                'documentChanges': [
+                    {
+                        'kind': 'rename',
+                        'oldUri': old_uri,
+                        'newUri': new_uri
+                    },
+                    {
+                        'textDocument': {'uri': new_uri, 'version': None},
+                        'edits': [
+                            {
+                                'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}},
+                                'newText': new_text
+                            }
+                        ]
+                    }
+                ]
+            }
+            params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+            expected_result: ApplyWorkspaceEditResult = {
+                'applied': False,
+                'failureReason': f'RenameFile failed because target {new_uri} already exists',
+                'failedChange': 0
+            }
+            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            # The old file should *not* have been deleted (rename operation failed)
+            self.assertTrue(os.path.isfile(old_path))
+            # The target file should still have its original content
+            content = Path(new_path).read_text(encoding='utf-8')
+            self.assertEqual(content, old_text2)
+
+    def test_rename_file_exists_ignore(self) -> Generator:
+        window = self.view.window()
+        with tempfile.TemporaryDirectory() as dirpath:
+            old_path = os.path.join(dirpath, 'old_file.txt')
+            new_path = os.path.join(dirpath, 'new_file.txt')
+            old_uri = filename_to_uri(old_path)
+            new_uri = filename_to_uri(new_path)
+            old_text1 = 'hello\nthere 1\n'
+            old_text2 = 'hello\nthere 2\n'
+            new_text = 'hello\nworld\n'
+            Path(old_path).write_text(old_text1, encoding='utf-8')
+            Path(new_path).write_text(old_text2, encoding='utf-8')
+            workspace_edit: WorkspaceEdit = {
+                'documentChanges': [
+                    {
+                        'kind': 'rename',
+                        'oldUri': old_uri,
+                        'newUri': new_uri,
+                        'options': {
+                            'ignoreIfExists': True
+                        }
+                    },
+                    {
+                        'textDocument': {'uri': new_uri, 'version': None},
+                        'edits': [
+                            {
+                                'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}},
+                                'newText': new_text
+                            }
+                        ]
+                    }
+                ]
+            }
+            params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+            expected_result: ApplyWorkspaceEditResult = {'applied': True}
+            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            # The old file should *not* have been deleted (rename operation ignored)
+            self.assertTrue(os.path.isfile(old_path))
+            # The TextDocumentEdit (second item in `documentChanges`) should have been applied to the target file
+            content = entire_content(window.open_file(new_path))
+            self.assertEqual(content, new_text + old_text2)
+
+    def test_rename_file_exists_overwrite(self) -> Generator:
+        window = self.view.window()
+        with tempfile.TemporaryDirectory() as dirpath:
+            old_path = os.path.join(dirpath, 'old_file.txt')
+            new_path = os.path.join(dirpath, 'new_file.txt')
+            old_uri = filename_to_uri(old_path)
+            new_uri = filename_to_uri(new_path)
+            old_text1 = 'hello\nthere 1\n'
+            old_text2 = 'hello\nthere 2\n'
+            new_text = 'hello\nworld\n'
+            Path(old_path).write_text(old_text1, encoding='utf-8')
+            Path(new_path).write_text(old_text2, encoding='utf-8')
+            workspace_edit: WorkspaceEdit = {
+                'documentChanges': [
+                    {
+                        'kind': 'rename',
+                        'oldUri': old_uri,
+                        'newUri': new_uri,
+                        'options': {
+                            'overwrite': True,
+                            'ignoreIfExists': True  # Overwrite wins over `ignoreIfExists`
+                        }
+                    },
+                    {
+                        'textDocument': {'uri': new_uri, 'version': None},
+                        'edits': [
+                            {
+                                'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}},
+                                'newText': new_text
+                            }
+                        ]
+                    }
+                ]
+            }
+            params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+            expected_result: ApplyWorkspaceEditResult = {'applied': True}
+            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            # The old file should have been deleted (rename operation succeeded)
+            self.assertFalse(os.path.isfile(old_path))
+            # The TextDocumentEdit (second item in `documentChanges`) should have been applied to the renamed file
+            content = entire_content(window.open_file(new_path))
+            self.assertEqual(content, new_text + old_text1)
+
+    def test_delete_file(self) -> Generator:
+        with tempfile.TemporaryDirectory() as dirpath:
+            filepath = os.path.join(dirpath, 'newfile.txt')
+            Path(filepath).write_text('hello\nworld\n', encoding='utf-8')
+            uri = filename_to_uri(filepath)
+            workspace_edit: WorkspaceEdit = {
+                'documentChanges': [
+                    {
+                        'kind': 'delete',
+                        'uri': uri
+                    }
+                ]
+            }
+            params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+            expected_result: ApplyWorkspaceEditResult = {'applied': True}
+            self.assertTrue(os.path.isfile(filepath))
+            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            # The file should have been deleted
+            self.assertFalse(os.path.isfile(filepath))

@@ -1780,7 +1780,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._set_focused_sheet(active_sheet)
         return result
 
-    async def _apply_document_changes_recursive_async(
+    async def _apply_document_changes_recursive(
         self,
         document_changes: list[TextDocumentEdit | CreateFile | RenameFile | DeleteFile],
         change_annotations: dict[ChangeAnnotationIdentifier, ChangeAnnotation],

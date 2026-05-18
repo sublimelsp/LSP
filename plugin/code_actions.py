@@ -5,6 +5,7 @@ from ..protocol import CodeActionKind
 from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
+from ..protocol import LSPAny
 from .core.aio import call_soon_threadsafe
 from .core.aio import run_coroutine_threadsafe
 from .core.promise import Promise
@@ -25,12 +26,14 @@ from abc import abstractmethod
 from functools import partial
 from typing import Any
 from typing import cast
+from typing import Coroutine
 from typing import final
 from typing import List
 from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import override
+import asyncio
 import sublime
 
 if TYPE_CHECKING:
@@ -38,7 +41,6 @@ if TYPE_CHECKING:
     from .core.sessions import SessionBufferProtocol
     from collections.abc import Callable
     from collections.abc import Generator
-    from collections.abc import Iterator
     from typing_extensions import TypeGuard
 
 
@@ -283,35 +285,19 @@ class CodeActionsTaskBase(LspTask):
         }
 
     @override
-    def run_async(self) -> None:
-        super().run_async()
-        view = self._task_runner.view
+    async def run(self) -> None:
+        await super().run()
+        view = self._text_command.view
         code_action_kinds = self.get_code_action_kinds(view)
-        request_iterator = actions_manager.request_on_save_or_format_async(view, code_action_kinds)
-        self._process_next_request(request_iterator)
-
-    def _process_next_request(self, request_iterator: Iterator[Promise[CodeActionsByConfigName]]) -> None:
-        if self._cancelled:
-            return
-        if request := next(request_iterator, None):
-            request.then(lambda response: self._handle_response_async(response, request_iterator))
-        else:
-            self._on_complete()
-
-    def _handle_response_async(
-        self, response: CodeActionsByConfigName, request_iterator: Iterator[Promise[CodeActionsByConfigName]]
-    ) -> None:
-        if self._cancelled:
-            return
-        view = self._task_runner.view
-        tasks: list[Promise[BaseException | None]] = []
-        config_name, code_actions = response
-        session = self._task_runner.session_by_name(config_name, 'codeActionProvider')
-        if session and code_actions:
-            tasks.extend([
-                session.run_code_action_async(action, progress=False, view=view) for action in code_actions
-            ])
-        Promise.all(tasks).then(lambda _: self._process_next_request(request_iterator))
+        tasks: list[Coroutine[None, None, LSPAny | BaseException]] = []
+        for request in actions_manager.request_on_save_or_format_async(view, code_action_kinds):
+            config_name, code_actions = await request
+            if code_actions and (session := self._text_command.session_by_name(config_name, 'codeActionProvider')):
+                tasks.extend(
+                    session.run_code_action(action, progress=False, view=self._text_command.view)
+                    for action in code_actions
+                )
+        await asyncio.gather(*tasks)
 
 
 @final

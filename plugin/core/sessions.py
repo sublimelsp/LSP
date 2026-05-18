@@ -172,6 +172,7 @@ from typing import TypeVar
 from typing import Union
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
+from urllib.parse import urldefrag
 from weakref import WeakSet
 import itertools
 import mdpopups
@@ -1578,7 +1579,8 @@ class Session(APIHandler, TransportCallbacks):
         self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
     ) -> Promise[sublime.View | None]:
         if sheet and (view := sheet.view()):
-            view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
+            uri_no_fragment = urldefrag(uri).url
+            view.settings().set('lsp_uri', uri_no_fragment)
             if r:
                 center_selection(view, r)
             return Promise.resolve(view)

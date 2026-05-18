@@ -161,6 +161,7 @@ from enum import IntFlag
 from functools import lru_cache
 from functools import partial
 from operator import itemgetter
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -1705,7 +1706,7 @@ class Session(APIHandler, TransportCallbacks):
             # TODO: We cannot really distinguish whether the target path should be a file or a folder, because files
             # don't necessarily have a file extension. Should we create a folder instead, if there is no file extension?
             try:
-                open(path, 'x').close()
+                Path(path).open('x', encoding='utf-8').close()
             except FileExistsError as ex:
                 return Promise.resolve(str(ex))
             except OSError as ex:
@@ -1715,7 +1716,7 @@ class Session(APIHandler, TransportCallbacks):
         def rename_file(old_path: str, new_path: str) -> Promise[str | None]:
             view = self.window.find_open_file(old_path) if os.path.isfile(old_path) else None
             try:
-                os.rename(old_path, new_path)
+                Path(old_path).rename(new_path)
             except FileExistsError as ex:
                 return Promise.resolve(str(ex))
             except IsADirectoryError as ex:
@@ -1771,11 +1772,10 @@ class Session(APIHandler, TransportCallbacks):
             if os.path.isfile(path):
                 if options.get('overwrite'):
                     return delete_file(path).then(lambda _: create_file(path)).then(_continue)
-                elif options.get('ignoreIfExists'):
+                if options.get('ignoreIfExists'):
                     return _continue(None)
-                else:
-                    return _continue(f'CreateFile failed because a file already exists at target {uri}')
-            elif os.path.isdir(path):
+                return _continue(f'CreateFile failed because a file already exists at target {uri}')
+            if os.path.isdir(path):
                 # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
                 return _continue(f'CreateFile failed because a folder already exists at target {uri}')
             return create_file(path).then(_continue)
@@ -1794,11 +1794,10 @@ class Session(APIHandler, TransportCallbacks):
             if os.path.isfile(new_path):
                 if options.get('overwrite') and os.path.isfile(old_path):
                     return delete_file(new_path).then(lambda _: rename_file(old_path, new_path)).then(_continue)
-                elif options.get('ignoreIfExists'):
+                if options.get('ignoreIfExists'):
                     return _continue(None)
-                else:
-                    return _continue(f'RenameFile failed because target {new_uri} already exists')
-            elif os.path.isdir(new_path):
+                return _continue(f'RenameFile failed because target {new_uri} already exists')
+            if os.path.isdir(new_path):
                 # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
                 return _continue(f'RenameFile failed because target {new_uri} already exists')
             return rename_file(old_path, new_path).then(_continue)

@@ -11,6 +11,7 @@ from typing import TypeVar
 from typing import Union
 import asyncio
 import functools
+import inspect
 import threading
 
 if TYPE_CHECKING:
@@ -261,6 +262,8 @@ class Promise(Generic[T]):
             self.resolved = True
             self.value = new_value
             for callback in self.callbacks:
+                if inspect.iscoroutine(callback) or inspect.iscoroutinefunction(callback):
+                    raise RuntimeError("Cannot await a coroutine in a Promise.then")
                 callback(new_value)
 
     def _add_callback(self, callback: ResolveFunc[T]) -> None:

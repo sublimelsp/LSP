@@ -1549,8 +1549,8 @@ class Session(APIHandler, TransportCallbacks):
         title: str,
         content: str,
         syntax: str,
-        uri: DocumentUri,
-        r: Range | None,
+        uri: DocumentUri | None = None,
+        r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1,
     ) -> Promise[sublime.View]:
@@ -1573,10 +1573,13 @@ class Session(APIHandler, TransportCallbacks):
         sublime.set_timeout(continue_on_main_thread)
         return promise
 
-    def _on_sheet_opened(self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None) -> sublime.View | None:
+    def _on_sheet_opened(
+        self, sheet: sublime.Sheet | None, uri: DocumentUri | None, r: Range | None
+    ) -> sublime.View | None:
         if sheet and (view := sheet.view()):
-            uri_no_fragment = urldefrag(uri).url
-            view.settings().set('lsp_uri', uri_no_fragment)
+            if uri:
+                uri_no_fragment = urldefrag(uri).url
+                view.settings().set('lsp_uri', uri_no_fragment)
             if r:
                 center_selection(view, r)
             return view

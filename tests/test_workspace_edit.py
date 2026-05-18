@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from ..protocol import ApplyWorkspaceEditParams
+from ..protocol import ApplyWorkspaceEditResult
+from ..protocol import WorkspaceEdit
 from .setup import TextDocumentTestCase
 from LSP.plugin.core.url import filename_to_uri
+from LSP.plugin.core.views import entire_content
 from pathlib import Path
 from typing import Any
 from typing import Generator
@@ -18,148 +22,115 @@ def verify(testcase: TextDocumentTestCase, method: str, input_params: Any, expec
 
 class ApplyWorkspaceEditTests(TextDocumentTestCase):
 
-    def test_m_workspace_applyEdit(self) -> Generator:
-        old_change_count = self.insert_characters("hello\nworld\n")
-        edit = {
-            "newText": "there",
-            "range": {"start": {"line": 1, "character": 0}, "end": {"line": 1, "character": 5}}}
-        params = {"edit": {"changes": {filename_to_uri(self.view.file_name()): [edit]}}}
-        yield from verify(self, "workspace/applyEdit", params, {"applied": True})
-        yield lambda: self.view.change_count() > old_change_count
-        self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "hello\nthere\n")
-
-    def test_m_workspace_applyEdit_with_nontrivial_promises(self) -> Generator:
-        with tempfile.TemporaryDirectory() as dirpath:
-            initial_text = ["a b", "c d"]
-            file_paths = []
-            for i in range(2):
-                file_paths.append(os.path.join(dirpath, f"file{i}.txt"))
-                Path(file_paths[-1]).write_text(initial_text[i], encoding="utf-8")
-            yield from verify(
-                self,
-                "workspace/applyEdit",
-                {
-                    "edit": {
-                        "changes": {
-                            filename_to_uri(file_paths[0]):
-                            [
-                                {
-                                    "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}},
-                                    "newText": "hello"
-                                },
-                                {
-                                    "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}},
-                                    "newText": "there"
-                                }
-                            ],
-                            filename_to_uri(file_paths[1]):
-                            [
-                                {
-                                    "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}},
-                                    "newText": "general"
-                                },
-                                {
-                                    "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}},
-                                    "newText": "kenobi"
-                                }
-                            ]
-                        }
+    def test_changes(self) -> Generator:
+        old_change_count = self.insert_characters('hello\nworld\n')
+        uri = filename_to_uri(self.view.file_name())
+        workspace_edit: WorkspaceEdit = {
+            'changes': {
+                uri: [
+                    {
+                        'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 5}},
+                        'newText': 'there'
                     }
-                },
-                {"applied": True}
-            )
-            # Changes should have been applied
-            expected = ["hello there", "general kenobi"]
-            for i in range(2):
-                view = self.view.window().find_open_file(file_paths[i])
-                self.assertTrue(view)
-                view.set_scratch(True)
-                self.assertTrue(view.is_valid())
-                self.assertFalse(view.is_loading())
-                self.assertEqual(view.substr(sublime.Region(0, view.size())), expected[i])
-                view.close()
+                ]
+            }
+        }
+        params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+        expected_result: ApplyWorkspaceEditResult = {'applied': True}
+        yield from verify(self, 'workspace/applyEdit', params, expected_result)
+        # Changes should increase the document version
+        yield lambda: self.view.change_count() > old_change_count
+        # Changes should have been applied
+        self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), 'hello\nthere\n')
 
-    def test_m_workspace_applyEdit_with_wrong_uri(self) -> Generator:
-        uri = "file:///C:/wrong/uri.txt"
-        yield from verify(
-            self,
-            "workspace/applyEdit",
-            {
-                "edit": {
-                    "documentChanges": [
+    def test_changes_for_unopened_files(self) -> Generator:
+        with tempfile.TemporaryDirectory() as dirpath:
+            file1 = os.path.join(dirpath, 'file1.txt')
+            file2 = os.path.join(dirpath, 'file2.txt')
+            Path(file1).write_text('a b', encoding='utf-8')
+            Path(file2).write_text('c d', encoding='utf-8')
+            uri1 = filename_to_uri(file1)
+            uri2 = filename_to_uri(file2)
+            workspace_edit: WorkspaceEdit = {
+                'changes': {
+                    uri1: [
                         {
-                            "textDocument": {
-                                "uri": uri,
-                                "version": None
-                            },
-                            "edits": [
-                                {
-                                    "range": {
-                                        "start": {"line": 0, "character": 0},
-                                        "end": {"line": 0, "character": 1}
-                                    },
-                                    "newText": "hello"
-                                },
-                                {
-                                    "range": {
-                                        "start": {"line": 0, "character": 2},
-                                        "end": {"line": 0, "character": 3}
-                                    },
-                                    "newText": "there"
-                                }
-                            ]
+                            'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 1}},
+                            'newText': 'hello'
+                        },
+                        {
+                            'range': {'start': {'line': 0, 'character': 2}, 'end': {'line': 0, 'character': 3}},
+                            'newText': 'there'
+                        }
+                    ],
+                    uri2: [
+                        {
+                            'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 1}},
+                            'newText': 'general'
+                        },
+                        {
+                            'range': {'start': {'line': 0, 'character': 2}, 'end': {'line': 0, 'character': 3}},
+                            'newText': 'kenobi'
                         }
                     ]
                 }
-            },
-            {
-                "applied": False,
-                "failureReason": f"Failed to open URI {uri}",
-                "failedChange": 0
             }
-        )
+            params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+            expected_result: ApplyWorkspaceEditResult = {'applied': True}
+            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            # Changes should have been applied
+            window = self.view.window()
+            for file, expected_text in zip([file1, file2], ['hello there', 'general kenobi']):
+                view = window.find_open_file(file)
+                self.assertTrue(view)
+                self.assertEqual(entire_content(view), expected_text)
+                view.set_scratch(True)
+                view.close()
 
-    def test_m_workspace_applyEdit_with_wrong_document_version(self) -> Generator:
-        with tempfile.TemporaryDirectory() as dirpath:
-            file_name = os.path.join(dirpath, "file3.txt")
-            uri = filename_to_uri(file_name)
-            version = 123
-            Path(file_name).write_text("a b", encoding="utf-8")
-            yield from verify(
-                self,
-                "workspace/applyEdit",
+    def test_fails_on_wrong_uri(self) -> Generator:
+        uri = 'file:///C:/wrong/uri.txt'
+        workspace_edit: WorkspaceEdit = {
+            'documentChanges': [
                 {
-                    "edit": {
-                        "documentChanges": [
-                            {
-                                "textDocument": {
-                                    "uri": uri,
-                                    "version": version
-                                },
-                                "edits": [
-                                    {
-                                        "range": {
-                                            "start": {"line": 0, "character": 0},
-                                            "end": {"line": 0, "character": 1}
-                                        },
-                                        "newText": "hello"
-                                    },
-                                    {
-                                        "range": {
-                                            "start": {"line": 0, "character": 2},
-                                            "end": {"line": 0, "character": 3}
-                                        },
-                                        "newText": "there"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                },
-                {
-                    "applied": False,
-                    "failureReason": f"Document version for URI {uri} is 0, but required {version}",
-                    "failedChange": 0
+                    'textDocument': {'uri': uri, 'version': None},
+                    'edits': [
+                        {
+                            'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 1}},
+                            'newText': 'hello'
+                        }
+                    ]
                 }
-            )
+            ]
+        }
+        params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+        expected_result: ApplyWorkspaceEditResult = {
+            'applied': False,
+            'failureReason': f'Failed to open URI {uri}',
+            'failedChange': 0
+        }
+        yield from verify(self, 'workspace/applyEdit', params, expected_result)
 
+    def test_fails_on_wrong_document_version(self) -> Generator:
+        change_count = self.view.change_count()
+        uri = filename_to_uri(self.view.file_name())
+        version = change_count - 1
+        workspace_edit: WorkspaceEdit = {
+            'documentChanges': [
+                {
+                    'textDocument': {'uri': uri, 'version': version},
+                    'edits': [
+                        {
+                            'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 1}},
+                            'newText': 'hello'
+                        }
+                    ]
+                }
+            ]
+        }
+        params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+        expected_result: ApplyWorkspaceEditResult = {
+            'applied': False,
+            'failureReason': f'Document version for URI {uri} is {change_count}, but required {version}',
+            'failedChange': 0
+        }
+        yield from verify(self, 'workspace/applyEdit', params, expected_result)

@@ -158,7 +158,7 @@ class LspRenamePathCommand(LspWindowCommand):
     ) -> Promise[bool]:
         if accepted and (session := weak_session()):
             return session.apply_workspace_edit_async(response, label=label, is_refactoring=True) \
-                .then(lambda summary: show_summary_message(session.window, summary)) \
+                .then(lambda tup: show_summary_message(session.window, *tup)) \
                 .then(lambda _: accepted)
         return Promise.resolve(False)
 

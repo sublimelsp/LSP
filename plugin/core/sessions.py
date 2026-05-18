@@ -101,13 +101,10 @@ from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import SUPPORTED_DIAGNOSTIC_TAGS
-from .edit import apply_text_edits
 from .edit import is_create_file
 from .edit import is_delete_file
 from .edit import is_rename_file
 from .edit import is_text_document_edit
-from .edit import parse_workspace_edit
-from .edit import WorkspaceChanges
 from .edit import WorkspaceEditSummary
 from .file_watcher import DEFAULT_WATCH_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
@@ -118,6 +115,7 @@ from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
 from .logging import debug
 from .logging import exception_log
 from .logging import exceptions_log
+from .logging import printf
 from .open import center_selection
 from .open import open_externally
 from .open import open_file
@@ -189,7 +187,6 @@ import weakref
 if TYPE_CHECKING:
     from .active_request import ActiveRequest
     from .collections import DottedDict
-    from collections.abc import Awaitable
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
@@ -1814,6 +1811,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
         async def _continue(failure_reason: str | None) -> ApplyWorkspaceEditResult:
             if failure_reason:
+                printf(f'Error while applying WorkspaceEdit: {failure_reason}')
                 return {
                     'applied': False,
                     'failureReason': failure_reason,
@@ -1866,56 +1864,61 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     async def apply_workspace_edit(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
-    ) -> WorkspaceEditSummary:
+    ) -> tuple[ApplyWorkspaceEditResult, WorkspaceEditSummary]:
         """
         Apply a WorkspaceEdit.
 
-        Returns a summary of the changes in the WorkspaceEdit.
+        Returns the ApplyWorkspaceEditResult and a summary of the changes in the WorkspaceEdit.
         """
-        return await self.apply_parsed_workspace_edits(
-            parse_workspace_edit(edit, label), self._is_executing_refactoring_command or is_refactoring
+        document_changes = edit.get('documentChanges', [])
+        if not document_changes:
+            document_changes.extend([
+                cast('TextDocumentEdit', {'textDocument': {'uri': uri, 'version': None}, 'edits': edits})
+                for uri, edits in edit.get('changes', {}).items()
+            ])
+        change_annotations = edit.get('changeAnnotations', {})
+        summary: WorkspaceEditSummary = {
+            'total_changes': 0,
+            'edited_files': 0,
+            'created_files': 0,
+            'renamed_files': 0,
+            'deleted_files': 0
+        }
+        for document_change in document_changes:
+            if is_text_document_edit(document_change):
+                summary['total_changes'] += len(document_change['edits'])
+                summary['edited_files'] += 1
+            elif is_create_file(document_change):
+                summary['created_files'] += 1
+            elif is_rename_file(document_change):
+                summary['renamed_files'] += 1
+            elif is_delete_file(document_change):
+                summary['deleted_files'] += 1
+        return (
+            await self.apply_document_changes(
+                document_changes,
+                change_annotations,
+                label=label,
+                is_refactoring=is_refactoring or self._is_executing_refactoring_command
+            ),
+            summary
         )
 
     @deprecated("use Session.apply_workspace_edit instead")
     def apply_workspace_edit_async(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
-    ) -> Promise[WorkspaceEditSummary | BaseException]:
+    ) -> Promise[tuple[ApplyWorkspaceEditResult, WorkspaceEditSummary]]:
+
+        def ignore_exception(
+            x: tuple[ApplyWorkspaceEditResult, WorkspaceEditSummary] | BaseException,
+        ) -> tuple[ApplyWorkspaceEditResult, WorkspaceEditSummary]:
+            if isinstance(x, BaseException):
+                return cast('ApplyWorkspaceEditResult', {}), cast('WorkspaceEditSummary', {})
+            return x
+
         return Promise.wrap_task(
             self.create_task(self.apply_workspace_edit(edit, label=label, is_refactoring=is_refactoring))
-        )
-
-    async def apply_parsed_workspace_edits(
-        self, changes: WorkspaceChanges, is_refactoring: bool = False
-    ) -> WorkspaceEditSummary:
-        active_sheet = self.window.active_sheet()
-        selected_sheets = self.window.selected_sheets()
-        auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
-        summary: WorkspaceEditSummary = {
-            'total_changes': sum(len(value[0]) for value in changes.values()),
-            'edited_files': len(changes)
-        }
-        coros: list[Awaitable[None]] = []
-        for uri, (edits, label, view_version) in changes.items():
-            view_state_actions = self._get_view_state_actions(uri, auto_save)
-
-            async def handle_view(
-                edits: list[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
-                label: str | None,
-                view_version: int | None,
-                uri: str,
-                view_state_actions: ViewStateActions,
-            ) -> None:
-                view = await self.open_uri(uri)
-                if view is None:
-                    print(f'LSP: ignoring edits due to no view for uri: {uri}')
-                elif view := await apply_text_edits(view, edits, label=label, required_view_version=view_version):
-                    await self._set_view_state(view_state_actions, view)
-
-            coros.append(handle_view(edits, label, view_version, uri, view_state_actions))
-        await asyncio.gather(*coros)
-        self._set_selected_sheets(selected_sheets)
-        self._set_focused_sheet(active_sheet)
-        return summary
+        ).then(ignore_exception)
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
@@ -2106,15 +2109,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     @request_handler('workspace/applyEdit')
     async def on_workspace_apply_edit(self, params: ApplyWorkspaceEditParams) -> ApplyWorkspaceEditResult:
-        edit = params['edit']
-        label = params.get('label')
-        is_refactoring = metadata.get('isRefactoring', False) if (metadata := params.get('metadata')) else False
-        if document_changes := edit.get('documentChanges'):
-            change_annotations = edit.get('changeAnnotations', {})
-            return await self.apply_document_changes(
-                document_changes, change_annotations, label=label, is_refactoring=is_refactoring)
-        await self.apply_workspace_edit(edit, label=label, is_refactoring=is_refactoring)
-        return {'applied': True}
+        return (
+            await self.apply_workspace_edit(
+                params['edit'],
+                label=params.get('label'),
+                is_refactoring=metadata.get('isRefactoring', False) if (metadata := params.get('metadata')) else False,
+            )
+        )[0]
 
     @request_handler('workspace/codeLens/refresh')
     async def on_workspace_code_lens_refresh(self, _: None) -> None:
@@ -2633,7 +2634,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     self._plugin.on_server_notification_async(Notification(method, result))
                 elif self._plugin:
                     server_notification = cast('ServerNotification',
-                                               cast('object', {'method': method, 'result': result}))
+                                               cast('object', {'method': method, 'params': result}))
                     self._plugin.on_server_notification_async(server_notification)
                 return res
         elif "id" in payload:

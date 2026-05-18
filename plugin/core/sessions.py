@@ -1535,9 +1535,9 @@ class Session(APIHandler, TransportCallbacks):
         group: int,
     ) -> Promise[sublime.View | None] | None:
         # I cannot type-hint an unpacked tuple
-        pair: PackagedTask[tuple[str | None, str, str]] = Promise.packaged_task()
+        pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         # It'd be nice to have automatic tuple unpacking continuations
-        callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
+        callback = lambda a, b, c: pair[1]((a or 'Untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             result: PackagedTask[sublime.View | None] = Promise.packaged_task()
             pair[0].then(lambda tup: self.open_scratch_buffer(*tup, uri, r, flags, group)).then(result[1])
@@ -1546,21 +1546,18 @@ class Session(APIHandler, TransportCallbacks):
 
     def open_scratch_buffer(
         self,
-        title: str | None,
+        title: str,
         content: str,
         syntax: str,
         uri: DocumentUri,
         r: Range | None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1,
-    ) -> Promise[sublime.View | None]:
-        task: PackagedTask[sublime.View | None] = Promise.packaged_task()
+    ) -> Promise[sublime.View]:
+        task: PackagedTask[sublime.View] = Promise.packaged_task()
         promise, resolve = task
 
         def continue_on_main_thread() -> None:
-            if title is None:
-                resolve(None)
-                return
             if group > -1:
                 self.window.focus_group(group)
             view = self.window.new_file(syntax=syntax, flags=flags)
@@ -1570,7 +1567,7 @@ class Session(APIHandler, TransportCallbacks):
             view.set_name(title)
             view.run_command("append", {"characters": content})
             view.set_read_only(True)
-            self._on_sheet_opened(view.sheet(), uri, r).then(resolve)
+            self._on_sheet_opened(view.sheet(), uri, r).then(lambda _: resolve(view))
 
         sublime.set_timeout(continue_on_main_thread)
         return promise

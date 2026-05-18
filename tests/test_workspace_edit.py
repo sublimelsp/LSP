@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 from typing import Generator
 import os
-import sublime
 import tempfile
 
 
@@ -38,10 +37,34 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
         params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
         expected_result: ApplyWorkspaceEditResult = {'applied': True}
         yield from verify(self, 'workspace/applyEdit', params, expected_result)
-        # Changes should increase the document version
+        # `changes` should increase the document version
         yield lambda: self.view.change_count() > old_change_count
-        # Changes should have been applied
-        self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), 'hello\nthere\n')
+        # `changes` should have been applied
+        self.assertEqual(entire_content(self.view), 'hello\nthere\n')
+
+    def test_document_changes(self) -> Generator:
+        uri = filename_to_uri(self.view.file_name())
+        version = self.view.change_count()
+        workspace_edit: WorkspaceEdit = {
+            'documentChanges': [
+                {
+                    'textDocument': {'uri': uri, 'version': version},
+                    'edits': [
+                        {
+                            'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 5}},
+                            'newText': 'world'
+                        }
+                    ]
+                }
+            ]
+        }
+        params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
+        expected_result: ApplyWorkspaceEditResult = {'applied': True}
+        yield from verify(self, 'workspace/applyEdit', params, expected_result)
+        # `documentChanges` should increase the document version by exactly 1
+        yield lambda: self.view.change_count() == version + 1
+        # `documentChanges` should have been applied
+        self.assertEqual(entire_content(self.view), 'hello\nworld\n')
 
     def test_changes_for_unopened_files(self) -> Generator:
         with tempfile.TemporaryDirectory() as dirpath:

@@ -1703,8 +1703,6 @@ class Session(APIHandler, TransportCallbacks):
             return promise
 
         def create_file(path: str) -> Promise[str | None]:
-            # TODO: We cannot really distinguish whether the target path should be a file or a folder, because files
-            # don't necessarily have a file extension. Should we create a folder instead, if there is no file extension?
             try:
                 Path(path).open('x', encoding='utf-8').close()
             except FileExistsError as ex:

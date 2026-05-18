@@ -1730,7 +1730,7 @@ class Session(APIHandler, TransportCallbacks):
         def delete_file(path: str) -> Promise[None]:
             # The delete_file command moves the given files into the recycle bin
             self.window.run_command('delete_file', {'files': [path], 'prompt': False})
-            return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None)))
+            return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None), 100))
 
         def delete_folder(path: str) -> Promise[None]:
             # The delete_folder command moves the given folders into the recycle bin

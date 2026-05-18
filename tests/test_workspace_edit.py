@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from ..protocol import ApplyWorkspaceEditParams
-from ..protocol import ApplyWorkspaceEditResult
-from ..protocol import WorkspaceEdit
 from .setup import TextDocumentTestCase
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from pathlib import Path
 from typing import Any
 from typing import Generator
+from typing import TYPE_CHECKING
 import os
 import tempfile
+
+if TYPE_CHECKING:
+    from ..protocol import ApplyWorkspaceEditParams
+    from ..protocol import ApplyWorkspaceEditResult
+    from ..protocol import WorkspaceEdit
 
 
 def verify(testcase: TextDocumentTestCase, method: str, input_params: Any, expected_result: Any) -> Generator:

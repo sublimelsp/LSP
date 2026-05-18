@@ -1711,6 +1711,7 @@ class Session(APIHandler, TransportCallbacks):
                 return Promise.resolve(str(ex))
             if view:
                 view.retarget(new_path)
+                view.settings().set('lsp_uri', filename_to_uri(new_path))
             return Promise.resolve(None)
 
         def delete_file(path: str) -> Promise[None]:

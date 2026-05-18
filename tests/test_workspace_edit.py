@@ -47,7 +47,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
 
     def test_document_changes(self) -> Generator:
         uri = filename_to_uri(self.view.file_name())
-        version = self.view.change_count()
+        version = self.insert_characters('hello\nworld\n')
         workspace_edit: WorkspaceEdit = {
             'documentChanges': [
                 {
@@ -55,7 +55,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
                     'edits': [
                         {
                             'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 5}},
-                            'newText': 'world'
+                            'newText': 'there'
                         }
                     ]
                 }
@@ -67,7 +67,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
         # `documentChanges` should increase the document version by exactly 1
         yield lambda: self.view.change_count() == version + 1
         # `documentChanges` should have been applied
-        self.assertEqual(entire_content(self.view), 'hello\nworld\n')
+        self.assertEqual(entire_content(self.view), 'hello\nthere\n')
 
     def test_changes_for_unopened_files(self) -> Generator:
         with tempfile.TemporaryDirectory() as dirpath:

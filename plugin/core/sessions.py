@@ -1567,21 +1567,20 @@ class Session(APIHandler, TransportCallbacks):
             view.set_name(title)
             view.run_command("append", {"characters": content})
             view.set_read_only(True)
-            self._on_sheet_opened(view.sheet(), uri, r).then(lambda _: resolve(view))
+            self._on_sheet_opened(view.sheet(), uri, r)
+            resolve(view)
 
         sublime.set_timeout(continue_on_main_thread)
         return promise
 
-    def _on_sheet_opened(
-        self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
-    ) -> Promise[sublime.View | None]:
+    def _on_sheet_opened(self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None) -> sublime.View | None:
         if sheet and (view := sheet.view()):
             uri_no_fragment = urldefrag(uri).url
             view.settings().set('lsp_uri', uri_no_fragment)
             if r:
                 center_selection(view, r)
-            return Promise.resolve(view)
-        return Promise.resolve(None)
+            return view
+        return None
 
     def open_location_async(
         self,

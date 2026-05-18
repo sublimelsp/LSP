@@ -1120,20 +1120,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._maybe_end_task: asyncio.Task | None = None
         super().__init__()
 
-    def __getattr__(self, name: str) -> Any:
-        """If we don't have a request/notification handler, look up the request/notification handler in the plugin."""
-        if name.startswith('m_'):
-            if self._plugin:
-                # Handler added through decorator.
-                if handler_name := self._plugin.handler_attr_map.get(name):
-                    return getattr(self._plugin, handler_name)
-                # Handler added through 'm_*' method.
-                if isinstance(self._plugin, AbstractPlugin) and (plugin_handler := getattr(self._plugin, name, None)):
-                    return plugin_handler
-            if handler_name := self.handler_attr_map.get(name):
-                return getattr(self, handler_name)
-        raise AttributeError(name)
-
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
     def get_workspace_folders(self) -> list[WorkspaceFolder]:
         return self._workspace_folders
@@ -2709,4 +2695,15 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         return (error_handler, request.method, error, True)
 
     def _get_handler(self, method: str) -> Callable | None:
-        return getattr(self, method2attr(method), None)
+        """If we don't have a request/notification handler, look up the request/notification handler in the plugin."""
+        name = method2attr(method)
+        if self._plugin:
+            # Handler added through decorator.
+            if handler_name := self._plugin.handler_attr_map.get(name):
+                return getattr(self._plugin, handler_name)
+            # Handler added through 'm_*' method.
+            if isinstance(self._plugin, AbstractPlugin) and (plugin_handler := getattr(self._plugin, name, None)):
+                return plugin_handler
+        if handler_name := self.handler_attr_map.get(name):
+            return getattr(self, handler_name)
+        return None

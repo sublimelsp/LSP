@@ -9,7 +9,6 @@ from typing_extensions import override
 from unittesting import DeferrableTestCase
 import asyncio
 import inspect
-import traceback
 
 
 class FutureLike(Protocol):

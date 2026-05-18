@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from .setup import TextDocumentTestCase
+from LSP.plugin import Error
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
 from LSP.protocol import TextDocumentSyncKind
 from pathlib import Path
 from typing import Any
-from typing import Generator
 from typing import TYPE_CHECKING
+import asyncio
 import os
 import sublime
 import tempfile
@@ -26,15 +27,32 @@ def get_auto_complete_trigger(sb: SessionBufferProtocol) -> list[dict[str, str]]
     return None
 
 
-async def verify(testcase: TextDocumentTestCase, method: str, input_params: Any, expected_output_params: Any) -> None:
-    result = await testcase.make_server_do_fake_request(method, input_params)
-    testcase.assertEqual(result, expected_output_params)
+async def verify(
+    testcase: TextDocumentTestCase,
+    method: str,
+    input_params: Any,
+    expected_output_params: Any,
+    expected_error_code: ErrorCodes | None = None,
+) -> None:
+    try:
+        result = await testcase.make_server_do_fake_request(method, input_params)
+        testcase.assertEqual(result, expected_output_params)
+    except Error as error:
+        if expected_error_code is not None:
+            testcase.assertEqual(error.code, expected_error_code)
+        else:
+            testcase.fail(f"method {method} returned error {error}")
 
 
 class ServerRequests(TextDocumentTestCase):
-
     async def test_unknown_method(self) -> None:
-        await verify(self, "foobar/qux", {}, {"code": ErrorCodes.MethodNotFound, "message": "foobar/qux"})
+        await verify(
+            self,
+            "foobar/qux",
+            {},
+            {"code": ErrorCodes.MethodNotFound, "message": "foobar/qux"},
+            ErrorCodes.MethodNotFound,
+        )
 
     async def test_m_workspace_workspaceFolders(self) -> None:
         expected_output = [{"name": os.path.basename(f), "uri": filename_to_uri(f)}
@@ -63,7 +81,8 @@ class ServerRequests(TextDocumentTestCase):
             "range": {"start": {"line": 1, "character": 0}, "end": {"line": 1, "character": 5}}}
         params = {"edit": {"changes": {filename_to_uri(self.view.file_name()): [edit]}}}
         await verify(self, "workspace/applyEdit", params, {"applied": True})
-        yield lambda: self.view.change_count() > old_change_count
+        while self.view.change_count() <= old_change_count:  # noqa: ASYNC110
+            await asyncio.sleep(0.05)
         self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "hello\nthere\n")
 
     async def test_m_workspace_applyEdit_with_nontrivial_promises(self) -> None:
@@ -72,7 +91,7 @@ class ServerRequests(TextDocumentTestCase):
             file_paths = []
             for i in range(2):
                 file_paths.append(os.path.join(dirpath, f"file{i}.txt"))
-                Path(file_paths[-1]).write_text(initial_text[i], encoding="utf-8")
+                Path(file_paths[-1]).write_text(initial_text[i], encoding="utf-8")  # noqa: ASYNC240
             await verify(
                 self,
                 "workspace/applyEdit",
@@ -162,7 +181,7 @@ class ServerRequests(TextDocumentTestCase):
             file_name = os.path.join(dirpath, "file3.txt")
             uri = filename_to_uri(file_name)
             version = 123
-            Path(file_name).write_text("a b", encoding="utf-8")
+            Path(file_name).write_text("a b", encoding="utf-8")  # noqa: ASYNC240
             await verify(
                 self,
                 "workspace/applyEdit",

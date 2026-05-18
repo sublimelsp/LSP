@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .test_mocks import TEST_CONFIG
 from LSP.plugin.core.collections import DottedDict
-from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.sessions import get_initialize_params
 from LSP.plugin.core.sessions import Logger
 from LSP.plugin.core.sessions import Manager

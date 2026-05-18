@@ -11,7 +11,6 @@ from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.types import ClientStates
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
@@ -31,24 +30,6 @@ CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
 TIMEOUT_TIME = 10000 if CI else 2000
 text_config = ClientConfig(name="textls", selector="text.plain", command=[], tcp_port=None)
-
-
-class YieldPromise:
-    __slots__ = ("__done", "__result")
-
-    def __init__(self) -> None:
-        self.__done = False
-
-    def __call__(self) -> bool:
-        return self.__done
-
-    def fulfill(self, result: Any = None) -> None:
-        assert not self.__done
-        self.__result = result
-        self.__done = True
-
-    def result(self) -> Any:
-        return self.__result
 
 
 def make_stdio_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:

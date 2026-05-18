@@ -11,9 +11,8 @@ from LSP.protocol import CompletionItemLabelDetails
 from LSP.protocol import CompletionItemTag
 from LSP.protocol import InsertTextFormat
 from typing import Any
-from typing import Callable
-from typing import Generator
 from unittest import TestCase
+import asyncio
 import sublime
 
 additional_edits = {
@@ -37,11 +36,10 @@ additional_edits = {
 
 
 class CompletionsTestsBase(TextDocumentTestCase):
-    @classmethod
-    def init_view_settings(cls) -> None:
+    def init_view_settings(self) -> None:
         super().init_view_settings()
-        assert cls.view
-        cls.view.settings().set("auto_complete_selector", "text.plain")
+        assert self.view
+        self.view.settings().set("auto_complete_selector", "text.plain")
 
     def type(self, text: str) -> None:
         self.view.run_command('append', {'characters': text})
@@ -54,64 +52,58 @@ class CompletionsTestsBase(TextDocumentTestCase):
         s.clear()
         s.add(point)
 
-    def create_commit_completion_closure(
-        self, commit_completion_command: str = "commit_completion"
-    ) -> Callable[[], bool]:
-        committed = False
+    async def wait_until_auto_complete_is_visible(self) -> None:
+        while not self.view.is_auto_complete_visible():  # noqa: ASYNC110
+            await asyncio.sleep(0.05)
+
+    async def commit_completion(self, commit_completion_command: str = "commit_completion") -> None:
         current_change_count = self.view.change_count()
+        await self.wait_until_auto_complete_is_visible()
+        self.view.run_command(commit_completion_command)
+        while self.view.change_count() <= current_change_count:  # noqa: ASYNC110
+            await asyncio.sleep(0.05)
 
-        def commit_completion() -> bool:
-            if not self.view.is_auto_complete_visible():
-                return False
-            nonlocal committed, current_change_count
-            if not committed:
-                self.view.run_command(commit_completion_command)
-                committed = True
-            return self.view.change_count() > current_change_count
-
-        return commit_completion
-
-    def select_completion(self) -> Generator:
+    async def select_completion(self) -> None:
         self.view.run_command('auto_complete')
-        yield self.create_commit_completion_closure()
+        await self.commit_completion()
 
-    def shift_select_completion(self) -> Generator:
+    async def shift_select_completion(self) -> None:
         self.view.run_command('auto_complete')
-        yield self.create_commit_completion_closure("lsp_commit_completion_with_opposite_insert_mode")
+        await self.commit_completion("lsp_commit_completion_with_opposite_insert_mode")
 
     def read_file(self) -> str:
         return self.view.substr(sublime.Region(0, self.view.size()))
 
-    def verify(self, *, completion_items: list[dict[str, Any]], insert_text: str, expected_text: str) -> Generator:
+    async def verify(self, *, completion_items: list[dict[str, Any]], insert_text: str, expected_text: str) -> None:
         if insert_text:
             self.type(insert_text)
-        self.mock_response("textDocument/completion", completion_items)
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-        yield from self.await_message("textDocument/didChange")
+        await self.mock_response("textDocument/completion", completion_items)
+        await self.select_completion()
+        await self.await_message("textDocument/completion")
+        await self.await_message("textDocument/didChange")
         self.assertEqual(self.read_file(), expected_text)
 
 
 class QueryCompletionsTests(CompletionsTestsBase):
-    def test_none(self) -> Generator:
-        self.mock_response("textDocument/completion", None)
+    async def test_none(self) -> None:
+        await self.mock_response("textDocument/completion", None)
         self.view.run_command('auto_complete')
-        yield lambda: self.view.is_auto_complete_visible() is False
+        await self.wait_until_auto_complete_is_visible()
 
-    def test_simple_label(self) -> Generator:
-        yield from self.verify(
+    async def test_simple_label(self) -> None:
+        await self.verify(
             completion_items=[{'label': 'asdf'}, {'label': 'efcgh'}],
             insert_text='',
             expected_text='asdf')
 
-    def test_prefer_insert_text_over_label(self) -> Generator:
-        yield from self.verify(
+    async def test_prefer_insert_text_over_label(self) -> None:
+        await self.verify(
             completion_items=[{"label": "Label text", "insertText": "Insert text"}],
             insert_text='',
             expected_text='Insert text')
 
-    def test_prefer_text_edit_over_insert_text(self) -> Generator:
-        yield from self.verify(
+    async def test_prefer_text_edit_over_insert_text(self) -> None:
+        await self.verify(
             completion_items=[{
                 "label": "Label text",
                 "insertText": "Insert text",
@@ -132,22 +124,22 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text='',
             expected_text='Text edit')
 
-    def test_simple_insert_text(self) -> Generator:
-        yield from self.verify(
+    async def test_simple_insert_text(self) -> None:
+        await self.verify(
             completion_items=[{'label': 'asdf', 'insertText': 'asdf()'}],
             insert_text="a",
             expected_text='asdf()')
 
-    def test_var_prefix_using_label(self) -> Generator:
-        yield from self.verify(completion_items=[{'label': '$what'}], insert_text="$", expected_text="$what")
+    async def test_var_prefix_using_label(self) -> None:
+        await self.verify(completion_items=[{'label': '$what'}], insert_text="$", expected_text="$what")
 
-    def test_var_prefix_added_in_insertText(self) -> Generator:
+    async def test_var_prefix_added_in_insertText(self) -> None:
         """
         https://github.com/sublimelsp/LSP/issues/294.
 
         User types '$env:U', server replaces '$env:U' with '$env:USERPROFILE'
         """
-        yield from self.verify(
+        await self.verify(
             completion_items=[{
                 'filterText': '$env:USERPROFILE',
                 'insertText': '$env:USERPROFILE',
@@ -171,7 +163,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text="$env:U",
             expected_text="$env:USERPROFILE")
 
-    def test_pure_insertion_text_edit(self) -> Generator:
+    async def test_pure_insertion_text_edit(self) -> None:
         """
         https://github.com/sublimelsp/LSP/issues/368.
 
@@ -179,7 +171,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
         THIS TEST FAILS
         """
-        yield from self.verify(
+        await self.verify(
             completion_items=[{
                 'textEdit': {
                     'newText': 'meParam',
@@ -201,9 +193,9 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text="$so",
             expected_text="$someParam")
 
-    def test_space_added_in_label(self) -> Generator:
+    async def test_space_added_in_label(self) -> None:
         """Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)."""
-        yield from self.verify(
+        await self.verify(
             completion_items=[{
                 "label": " const",
                 "sortText": "3f400000const",
@@ -229,13 +221,13 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text=' co',
             expected_text=" const")  # NOT 'const'
 
-    def test_dash_missing_from_label(self) -> Generator:
+    async def test_dash_missing_from_label(self) -> None:
         """
         Powershell: label="UniqueId", trigger="-UniqueIdd, text to be inserted = "-UniqueId".
 
         (https://github.com/sublimelsp/LSP/issues/572)
         """
-        yield from self.verify(
+        await self.verify(
             completion_items=[{
                 "filterText": "-UniqueId",
                 "documentation": None,
@@ -261,9 +253,9 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text="u",
             expected_text="-UniqueId")
 
-    def test_edit_before_cursor(self) -> Generator:
+    async def test_edit_before_cursor(self) -> None:
         """https://github.com/sublimelsp/LSP/issues/536."""
-        yield from self.verify(
+        await self.verify(
             completion_items=[{
                 'insertTextFormat': 2,
                 'data': {
@@ -294,9 +286,9 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text='def myF',
             expected_text='override def myFunction(): Unit = ???')
 
-    def test_edit_after_nonword(self) -> Generator:
+    async def test_edit_after_nonword(self) -> None:
         """https://github.com/sublimelsp/LSP/issues/645."""
-        yield from self.verify(
+        await self.verify(
             completion_items=[{
                 "textEdit": {
                     "newText": "apply($0)",
@@ -325,7 +317,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text="List.",
             expected_text='List.apply()')
 
-    def test_filter_text_is_not_a_prefix_of_label(self) -> Generator:
+    async def test_filter_text_is_not_a_prefix_of_label(self) -> None:
         """
         Metals: "Implement all members".
 
@@ -341,7 +333,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
         https://github.com/sublimelsp/LSP/issues/771
         """
-        yield from self.verify(
+        await self.verify(
             completion_items=[{
                 "label": "Implement all members",
                 "kind": 12,
@@ -363,11 +355,11 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text='e',
             expected_text='def foo: Int \u003d ???\n   def boo: Int \u003d ???')
 
-    def test_additional_edits_if_session_has_the_resolve_capability(self) -> Generator:
+    async def test_additional_edits_if_session_has_the_resolve_capability(self) -> None:
         completion_item = {
             'label': 'asdf'
         }
-        self.mock_response("completionItem/resolve", {
+        await self.mock_response("completionItem/resolve", {
             'label': 'asdf',
             'additionalTextEdits': [
                 {
@@ -385,13 +377,13 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 }
             ]
         })
-        yield from self.verify(
+        await self.verify(
             completion_items=[completion_item],
             insert_text='',
             expected_text='import asdf;\nasdf')
 
-    def test_prefix_should_include_the_dollar_sign(self) -> Generator:
-        self.mock_response(
+    async def test_prefix_should_include_the_dollar_sign(self) -> None:
+        await self.mock_response(
             'textDocument/completion',
             {
                 "items":
@@ -415,13 +407,13 @@ class QueryCompletionsTests(CompletionsTestsBase):
         self.type('<?php\n$hello = "world";\n$he\n?>\n')
         # move cursor after `$he|`
         self.move_cursor(2, 3)
-        yield from self.select_completion()
-        yield from self.await_message('textDocument/completion')
+        await self.select_completion()
+        await self.await_message('textDocument/completion')
 
         self.assertEqual(self.read_file(), '<?php\n$hello = "world";\n$hello\n?>\n')
 
-    def test_fuzzy_match_plaintext_insert_text(self) -> Generator:
-        yield from self.verify(
+    async def test_fuzzy_match_plaintext_insert_text(self) -> None:
+        await self.verify(
             completion_items=[{
                 'insertTextFormat': 1,
                 'label': 'aaba',
@@ -430,8 +422,8 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text='aa',
             expected_text='aaca')
 
-    def test_fuzzy_match_plaintext_text_edit(self) -> Generator:
-        yield from self.verify(
+    async def test_fuzzy_match_plaintext_text_edit(self) -> None:
+        await self.verify(
             completion_items=[{
                 'insertTextFormat': 1,
                 'label': 'aaba',
@@ -442,8 +434,8 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text='aab',
             expected_text='aaca')
 
-    def test_fuzzy_match_snippet_insert_text(self) -> Generator:
-        yield from self.verify(
+    async def test_fuzzy_match_snippet_insert_text(self) -> None:
+        await self.verify(
             completion_items=[{
                 'insertTextFormat': 2,
                 'label': 'aaba',
@@ -452,8 +444,8 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text='aab',
             expected_text='aaca')
 
-    def test_fuzzy_match_snippet_text_edit(self) -> Generator:
-        yield from self.verify(
+    async def test_fuzzy_match_snippet_text_edit(self) -> None:
+        await self.verify(
             completion_items=[{
                 'insertTextFormat': 2,
                 'label': 'aaba',
@@ -464,7 +456,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text='aab',
             expected_text='aaca')
 
-    def verify_multi_cursor(self, completion: dict[str, Any]) -> Generator:
+    async def verify_multi_cursor(self, completion: dict[str, Any]) -> None:
         """
         Check whether `fd` gets replaced by `fmod` when the cursor is at `fd|`.
         Turning the `d` into an `m` is an important part of the test.
@@ -478,20 +470,20 @@ class QueryCompletionsTests(CompletionsTestsBase):
         self.assertEqual(len(selection), 3)
         for region in selection:
             self.assertEqual(self.view.substr(self.view.line(region)), "fd")
-        self.mock_response("textDocument/completion", [completion])
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
+        await self.mock_response("textDocument/completion", [completion])
+        await self.select_completion()
+        await self.await_message("textDocument/completion")
         self.assertEqual(self.read_file(), 'fmod()\nfmod()\nfmod()')
 
-    def test_multi_cursor_plaintext_insert_text(self) -> Generator:
-        yield from self.verify_multi_cursor({
+    async def test_multi_cursor_plaintext_insert_text(self) -> None:
+        await self.verify_multi_cursor({
             'insertTextFormat': 1,
             'label': 'fmod(a, b)',
             'insertText': 'fmod()'
         })
 
-    def test_multi_cursor_plaintext_text_edit(self) -> Generator:
-        yield from self.verify_multi_cursor({
+    async def test_multi_cursor_plaintext_text_edit(self) -> None:
+        await self.verify_multi_cursor({
             'insertTextFormat': 1,
             'label': 'fmod(a, b)',
             'textEdit': {
@@ -500,15 +492,15 @@ class QueryCompletionsTests(CompletionsTestsBase):
             }
         })
 
-    def test_multi_cursor_snippet_insert_text(self) -> Generator:
-        yield from self.verify_multi_cursor({
+    async def test_multi_cursor_snippet_insert_text(self) -> None:
+        await self.verify_multi_cursor({
             'insertTextFormat': 2,
             'label': 'fmod(a, b)',
             'insertText': 'fmod($0)'
         })
 
-    def test_multi_cursor_snippet_text_edit(self) -> Generator:
-        yield from self.verify_multi_cursor({
+    async def test_multi_cursor_snippet_text_edit(self) -> None:
+        await self.verify_multi_cursor({
             'insertTextFormat': 2,
             'label': 'fmod(a, b)',
             'textEdit': {
@@ -517,10 +509,10 @@ class QueryCompletionsTests(CompletionsTestsBase):
             }
         })
 
-    def test_nontrivial_text_edit_removal(self) -> Generator:
+    async def test_nontrivial_text_edit_removal(self) -> None:
         self.type('#include <u>')
         self.move_cursor(0, 11)  # Put the cursor inbetween 'u' and '>'
-        self.mock_response("textDocument/completion", [{
+        await self.mock_response("textDocument/completion", [{
             'filterText': 'uchar.h>',
             'label': ' uchar.h>',
             'textEdit': {
@@ -532,14 +524,14 @@ class QueryCompletionsTests(CompletionsTestsBase):
             'kind': 17,
             'insertTextFormat': 2
         }])
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
+        await self.select_completion()
+        await self.await_message("textDocument/completion")
         self.assertEqual(self.read_file(), '#include <uchar.h>')
 
-    def test_nontrivial_text_edit_removal_with_buffer_modifications_clangd(self) -> Generator:
+    async def test_nontrivial_text_edit_removal_with_buffer_modifications_clangd(self) -> None:
         self.type('#include <u>')
         self.move_cursor(0, 11)  # Put the cursor inbetween 'u' and '>'
-        self.mock_response("textDocument/completion", [{
+        await self.mock_response("textDocument/completion", [{
             'filterText': 'uchar.h>',
             'label': ' uchar.h>',
             'textEdit': {
@@ -552,23 +544,23 @@ class QueryCompletionsTests(CompletionsTestsBase):
             'insertTextFormat': 2
         }])
         self.view.run_command('auto_complete')  # show the AC widget
-        yield from self.await_message("textDocument/completion")
-        yield 100
+        await self.await_message("textDocument/completion")
+        await asyncio.sleep(0.1)
         self.view.run_command('insert', {'characters': 'c'})  # type characters
-        yield 100
+        await asyncio.sleep(0.1)
         self.view.run_command('insert', {'characters': 'h'})  # while the AC widget
-        yield 100
+        await asyncio.sleep(0.1)
         self.view.run_command('insert', {'characters': 'a'})  # is visible
-        yield 100
+        await asyncio.sleep(0.1)
         # Commit the completion. The buffer has been modified in the meantime, so the old text edit that says to
         # remove "u>" is invalid. The code in completion.py must be able to handle this.
-        yield self.create_commit_completion_closure()
+        await self.commit_completion()
         self.assertEqual(self.read_file(), '#include <uchar.h>')
 
-    def test_nontrivial_text_edit_removal_with_buffer_modifications_json(self) -> Generator:
+    async def test_nontrivial_text_edit_removal_with_buffer_modifications_json(self) -> None:
         self.type('{"k"}')
         self.move_cursor(0, 3)  # Put the cursor inbetween 'k' and '"'
-        self.mock_response("textDocument/completion", [{
+        await self.mock_response("textDocument/completion", [{
             'kind': 10,
             'documentation': 'Array of single or multiple keys',
             'insertTextFormat': 2,
@@ -582,21 +574,21 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "insertText": 'keys": [$1]'
         }])
         self.view.run_command('auto_complete')  # show the AC widget
-        yield from self.await_message("textDocument/completion")
-        yield 100
+        await self.await_message("textDocument/completion")
+        await asyncio.sleep(0.1)
         self.view.run_command('insert', {'characters': 'e'})  # type characters
-        yield 100
+        await asyncio.sleep(0.1)
         self.view.run_command('insert', {'characters': 'y'})  # while the AC widget is open
-        yield 100
+        await asyncio.sleep(0.1)
         # Commit the completion. The buffer has been modified in the meantime, so the old text edit that says to
         # remove '"k"' is invalid. The code in completion.py must be able to handle this.
-        yield self.create_commit_completion_closure()
+        await self.commit_completion()
         self.assertEqual(self.read_file(), '{"keys": []}')
 
-    def test_text_edit_plaintext_with_multiple_lines_indented(self) -> Generator[None, None, None]:
+    async def test_text_edit_plaintext_with_multiple_lines_indented(self) -> None[None, None, None]:
         self.type("\t\n\t")
         self.move_cursor(1, 2)
-        self.mock_response("textDocument/completion", [{
+        await self.mock_response("textDocument/completion", [{
             'label': 'a',
             'textEdit': {
                 'range': {'start': {'line': 1, 'character': 4}, 'end': {'line': 1, 'character': 4}},
@@ -604,15 +596,15 @@ class QueryCompletionsTests(CompletionsTestsBase):
             },
             'insertTextFormat': InsertTextFormat.PlainText
         }])
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
+        await self.select_completion()
+        await self.await_message("textDocument/completion")
         # the "b" should be intended one level deeper
         self.assertEqual(self.read_file(), '\t\n\ta\n\t\tb')
 
-    def test_insert_insert_mode(self) -> Generator:
+    async def test_insert_insert_mode(self) -> None:
         self.type('{{ title }}')
         self.move_cursor(0, 5)  # Put the cursor inbetween 'i' and 't'
-        self.mock_response("textDocument/completion", [{
+        await self.mock_response("textDocument/completion", [{
            'label': 'title',
            'textEdit': {
                 'newText': 'title',
@@ -620,14 +612,14 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 'replace': {'start': {'line': 0, 'character': 3}, 'end': {'line': 0, 'character': 8}}
             }
         }])
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
+        await self.select_completion()
+        await self.await_message("textDocument/completion")
         self.assertEqual(self.read_file(), '{{ titletle }}')
 
-    def test_replace_insert_mode(self) -> Generator:
+    async def test_replace_insert_mode(self) -> None:
         self.type('{{ title }}')
         self.move_cursor(0, 4)  # Put the cursor inbetween 't' and 'i'
-        self.mock_response("textDocument/completion", [{
+        await self.mock_response("textDocument/completion", [{
            'label': 'turtle',
            'textEdit': {
                 'newText': 'turtle',
@@ -635,8 +627,8 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 'replace': {'start': {'line': 0, 'character': 3}, 'end': {'line': 0, 'character': 8}}
             }
         }])
-        yield from self.shift_select_completion()  # commit the opposite insert mode
-        yield from self.await_message("textDocument/completion")
+        await self.shift_select_completion()  # commit the opposite insert mode
+        await self.await_message("textDocument/completion")
         self.assertEqual(self.read_file(), '{{ turtle }}')
 
     def test_show_deprecated_flag(self) -> None:
@@ -657,8 +649,8 @@ class QueryCompletionsTests(CompletionsTestsBase):
         formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
-    def test_strips_carriage_return_in_insert_text(self) -> Generator:
-        yield from self.verify(
+    async def test_strips_carriage_return_in_insert_text(self) -> None:
+        await self.verify(
             completion_items=[{
                 'label': 'greeting',
                 'insertText': 'hello\r\nworld'
@@ -666,8 +658,8 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text='',
             expected_text='hello\nworld')
 
-    def test_strips_carriage_return_in_text_edit(self) -> Generator:
-        yield from self.verify(
+    async def test_strips_carriage_return_in_text_edit(self) -> None:
+        await self.verify(
             completion_items=[{
                 'label': 'greeting',
                 'textEdit': {
@@ -776,7 +768,7 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
         capabilities['capabilities']['completionProvider']['resolveProvider'] = False
         return capabilities
 
-    def test_additional_edits_if_session_does_not_have_the_resolve_capability(self) -> Generator:
+    async def test_additional_edits_if_session_does_not_have_the_resolve_capability(self) -> None:
         completion_item = {
             'label': 'ghjk',
             'additionalTextEdits': [
@@ -795,7 +787,7 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
                 }
             ]
         }
-        yield from self.verify(
+        await self.verify(
             completion_items=[completion_item],
             insert_text='',
             expected_text='import ghjk;\nghjk')

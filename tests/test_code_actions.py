@@ -13,7 +13,6 @@ from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.core.views import kind_contains_other_kind
 from LSP.plugin.core.views import versioned_text_document_identifier
-from LSP.plugin.documents import DocumentSyncListener
 from typing import Any
 from typing import TYPE_CHECKING
 import asyncio
@@ -441,36 +440,36 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         capabilities['capabilities']['codeActionProvider'] = {}
         return capabilities
 
-    # async def test_requests_with_diagnostics(self) -> None:
-    #     initial_content = 'a\nb\nc'
-    #     self.insert_characters(initial_content)
-    #     await self.await_message('textDocument/didChange')
-    #     self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
-    #     while len(self.view.sel()) != 1 or self.view.sel()[0] != (0, 3):  # noqa: ASYNC110
-    #         await asyncio.sleep(0.05)
-    #     range_a = range_from_points(Point(0, 0), Point(0, 1))
-    #     range_b = range_from_points(Point(1, 0), Point(1, 1))
-    #     range_c = range_from_points(Point(2, 0), Point(2, 1))
-    #     code_action_a = create_test_code_action(self.view, self.view.change_count(), [("A", range_a)])
-    #     code_action_b = create_test_code_action(self.view, self.view.change_count(), [("B", range_b)])
-    #     await self.mock_response('textDocument/codeAction', [code_action_a, code_action_b])
-    #     await self.mock_client_notification(
-    #         "textDocument/publishDiagnostics",
-    #         create_test_diagnostics([('issue a', range_a), ('issue b', range_b), ('issue c', range_c)])
-    #     )
-    #     params = await self.await_message('textDocument/codeAction')
-    #     self.assertIsInstance(params, dict)
-    #     assert isinstance(params, dict)
-    #     print("got params:", params)
-    #     self.assertEqual(params['range']['start']['line'], 0)
-    #     self.assertEqual(params['range']['start']['character'], 0)
-    #     self.assertEqual(params['range']['end']['line'], 1)
-    #     self.assertEqual(params['range']['end']['character'], 1)
-    #     self.assertEqual(len(params['context']['diagnostics']), 2)
-    #     annotations_range = self.view.get_regions(RegionKey.CODE_ACTION)
-    #     self.assertEqual(len(annotations_range), 1)
-    #     self.assertEqual(annotations_range[0].a, 3)
-    #     self.assertEqual(annotations_range[0].b, 0)
+    async def test_requests_with_diagnostics(self) -> None:
+        initial_content = 'a\nb\nc'
+        self.insert_characters(initial_content)
+        await self.await_message('textDocument/didChange')
+        self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
+        while len(self.view.sel()) != 1 or self.view.sel()[0] != (0, 3):  # noqa: ASYNC110
+            await asyncio.sleep(0.05)
+        range_a = range_from_points(Point(0, 0), Point(0, 1))
+        range_b = range_from_points(Point(1, 0), Point(1, 1))
+        range_c = range_from_points(Point(2, 0), Point(2, 1))
+        code_action_a = create_test_code_action(self.view, self.view.change_count(), [("A", range_a)])
+        code_action_b = create_test_code_action(self.view, self.view.change_count(), [("B", range_b)])
+        await self.mock_response('textDocument/codeAction', [code_action_a, code_action_b])
+        await self.mock_client_notification(
+            "textDocument/publishDiagnostics",
+            create_test_diagnostics([('issue a', range_a), ('issue b', range_b), ('issue c', range_c)])
+        )
+        params = await self.await_message('textDocument/codeAction')
+        self.assertIsInstance(params, dict)
+        assert isinstance(params, dict)
+        print("got params:", params)
+        self.assertEqual(params['range']['start']['line'], 0)
+        self.assertEqual(params['range']['start']['character'], 0)
+        self.assertEqual(params['range']['end']['line'], 1)
+        self.assertEqual(params['range']['end']['character'], 1)
+        self.assertEqual(len(params['context']['diagnostics']), 2)
+        annotations_range = self.view.get_regions(RegionKey.CODE_ACTION)
+        self.assertEqual(len(annotations_range), 1)
+        self.assertEqual(annotations_range[0].a, 3)
+        self.assertEqual(annotations_range[0].b, 0)
 
     async def test_excludes_disabled_code_actions(self) -> None:
         initial_content = 'a\n'

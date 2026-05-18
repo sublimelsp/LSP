@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from .setup import TextDocumentTestCase
-from .setup import YieldPromise
 from copy import deepcopy
 from LSP.plugin import apply_text_edits
 from LSP.plugin import Request

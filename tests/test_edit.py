@@ -234,7 +234,7 @@ class SortByApplicationOrderTests(unittest.TestCase):
 
 class ApplyDocumentEditTestCase(TextDocumentTestCase):
 
-    def test_applies_text_edit(self) -> None:
+    async def test_applies_text_edit(self) -> None:
         self.insert_characters('abc')
         edits: list[TextEdit] = [{
             'newText': 'x$0y',
@@ -249,10 +249,10 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
                 }
             }
         }]
-        apply_text_edits(self.view, edits)
+        await apply_text_edits(self.view, edits)
         self.assertEqual(entire_content(self.view), 'ax$0yc')
 
-    def test_applies_text_edit_with_placeholder(self) -> None:
+    async def test_applies_text_edit_with_placeholder(self) -> None:
         self.insert_characters('abc')
         edits: list[TextEdit] = [{
             'newText': 'x$0y',
@@ -267,12 +267,12 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
                 }
             }
         }]
-        apply_text_edits(self.view, edits, process_placeholders=True)
+        await apply_text_edits(self.view, edits, process_placeholders=True)
         self.assertEqual(entire_content(self.view), 'axyc')
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0], sublime.Region(2, 2))
 
-    def test_applies_multiple_text_edits_with_placeholders(self) -> None:
+    async def test_applies_multiple_text_edits_with_placeholders(self) -> None:
         self.insert_characters('ab')
         newline_edit: TextEdit = {
             'newText': '\n$0',
@@ -288,7 +288,7 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
             }
         }
         edits: list[TextEdit] = [newline_edit, newline_edit]
-        apply_text_edits(self.view, edits, process_placeholders=True)
+        await apply_text_edits(self.view, edits, process_placeholders=True)
         self.assertEqual(entire_content(self.view), 'a\n\nb')
         self.assertEqual(len(self.view.sel()), 2)
         self.assertEqual(self.view.sel()[0], sublime.Region(2, 2))

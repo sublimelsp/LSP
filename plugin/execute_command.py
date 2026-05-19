@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from .core.aio import run_coroutine_threadsafe
 from .core.logging import debug
 from .core.protocol import Error
+from .core.protocol import LSPAny
 from .core.registry import LspTextCommand
 from .core.views import first_selection_region
 from .core.views import offset_to_point
@@ -16,6 +18,7 @@ import sublime
 
 if TYPE_CHECKING:
     from ..protocol import ExecuteCommandParams
+    from .core.sessions import Session
 
 
 class LspExecuteCommand(LspTextCommand):
@@ -32,15 +35,14 @@ class LspExecuteCommand(LspTextCommand):
             params: ExecuteCommandParams = {"command": command_name}
             if command_args:
                 params["arguments"] = self._expand_variables(command_args)
+            run_coroutine_threadsafe(self._run(session, command_name, params))
 
-            def handle_response(response: Any) -> None:
-                assert command_name
-                if isinstance(response, Error):
-                    self.handle_error_async(response, command_name)
-                    return
-                self.handle_success_async(response, command_name)
-
-            session.execute_command(params, progress=True, view=self.view).then(handle_response)
+    async def _run(self, session: Session, command_name: str, params: ExecuteCommandParams) -> None:
+        try:
+            result: LSPAny = await session.execute_command(params, progress=True, view=self.view)
+            self.handle_success_async(result, command_name)
+        except Error as error:
+            self.handle_error_async(error, command_name)
 
     def handle_success_async(self, result: Any, command_name: str) -> None:
         """

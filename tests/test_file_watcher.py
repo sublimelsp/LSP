@@ -13,8 +13,8 @@ from LSP.plugin.core.file_watcher import register_file_watcher_implementation
 from LSP.plugin.core.types import ClientConfig
 from LSP.protocol import WatchKind
 from os.path import join
-from typing import Generator
 from typing import TYPE_CHECKING
+from typing_extensions import override
 import sublime
 
 if TYPE_CHECKING:
@@ -86,29 +86,22 @@ class FileWatcherDocumentTestCase(TextDocumentTestCase):
     and the view happens before and after every test rather than per-testsuite.
     """
 
-    @classmethod
-    def setUpClass(cls) -> None:
+    @override
+    async def setUp(self) -> None:
         # Don't call the superclass.
-        register_file_watcher_implementation(TestFileWatcher)
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        # Don't call the superclass.
-        pass
-
-    def setUp(self) -> Generator:
-        self.assertEqual(len(TestFileWatcher.active_watchers), 0)
         # Watchers are only registered when there are workspace folders so add a folder.
         self.folder_root_path = setup_workspace_folder()
-        yield from super().setUpClass()
-        yield from super().setUp()
-
-    def tearDown(self) -> Generator:
-        yield from super().tearDownClass()
+        register_file_watcher_implementation(TestFileWatcher)
         self.assertEqual(len(TestFileWatcher.active_watchers), 0)
+        await super().setUp()
+
+    @override
+    async def tearDown(self) -> None:
         # Restore original project data.
         window = sublime.active_window()
         window.set_project_data({})
+        self.assertEqual(len(TestFileWatcher.active_watchers), 0)
+        await super().tearDown()
 
 
 class FileWatcherStaticTests(FileWatcherDocumentTestCase):
@@ -138,11 +131,12 @@ class FileWatcherStaticTests(FileWatcherDocumentTestCase):
         self.assertEqual(watcher.ignores, ['.git'])
         self.assertEqual(watcher.root_path, self.folder_root_path)
 
-    def test_handles_file_event(self) -> Generator:
+    async def test_handles_file_event(self) -> None:
         watcher = TestFileWatcher.active_watchers[0]
         filepath = join(self.folder_root_path, 'file.js')
         watcher.trigger_event([('change', filepath)])
-        sent_notification = yield from self.await_message('workspace/didChangeWatchedFiles')
+        sent_notification = await self.await_message('workspace/didChangeWatchedFiles')
+        assert isinstance(sent_notification, dict)
         self.assertIs(type(sent_notification['changes']), list)
         self.assertEqual(len(sent_notification['changes']), 1)
         change = sent_notification['changes'][0]
@@ -152,7 +146,7 @@ class FileWatcherStaticTests(FileWatcherDocumentTestCase):
 
 class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
 
-    def test_handles_dynamic_watcher_registration(self) -> Generator:
+    async def test_handles_dynamic_watcher_registration(self) -> None:
         registration_params = {
             'registrations': [
                 {
@@ -169,7 +163,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
                 }
             ]
         }
-        yield self.make_server_do_fake_request('client/registerCapability', registration_params)
+        await self.make_server_do_fake_request('client/registerCapability', registration_params)
         self.assertEqual(len(TestFileWatcher.active_watchers), 1)
         watcher = TestFileWatcher.active_watchers[0]
         self.assertEqual(watcher.patterns, ['*.py'])
@@ -178,7 +172,8 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         # Trigger the file event
         filepath = join(self.folder_root_path, 'file.py')
         watcher.trigger_event([('create', filepath), ('change', filepath)])
-        sent_notification = yield from self.await_message('workspace/didChangeWatchedFiles')
+        sent_notification = await self.await_message('workspace/didChangeWatchedFiles')
+        assert isinstance(sent_notification, dict)
         self.assertIs(type(sent_notification['changes']), list)
         self.assertEqual(len(sent_notification['changes']), 2)
         change1 = sent_notification['changes'][0]
@@ -188,7 +183,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         self.assertEqual(change2['type'], file_watcher_event_type_to_lsp_file_change_type('change'))
         self.assertTrue(change2['uri'].endswith('file.py'))
 
-    def test_aggregates_multiple_registrations_with_common_kind_and_base(self) -> Generator:
+    async def test_aggregates_multiple_registrations_with_common_kind_and_base(self) -> None:
         register_options: DidChangeWatchedFilesRegistrationOptions = {
             'watchers': [
                 {
@@ -229,7 +224,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
                 }
             ]
         }
-        yield self.make_server_do_fake_request('client/registerCapability', registration_params)
+        await self.make_server_do_fake_request('client/registerCapability', registration_params)
         self.assertEqual(len(TestFileWatcher.active_watchers), 2)
         watcher = TestFileWatcher.active_watchers[0]
         self.assertEqual(watcher.patterns, ['*.py', '*.json', '*.js'])
@@ -240,7 +235,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         self.assertEqual(watcher.events, ['create', 'delete'])
         self.assertEqual(watcher.root_path, self.folder_root_path)
 
-    def test_does_not_aggregate_non_matching_base(self) -> Generator:
+    async def test_does_not_aggregate_non_matching_base(self) -> None:
         base_uri_1 = filename_to_uri('/a/b')
         base_uri_2 = filename_to_uri('/a/c')
         register_options: DidChangeWatchedFilesRegistrationOptions = {
@@ -270,7 +265,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
                 }
             ]
         }
-        yield self.make_server_do_fake_request('client/registerCapability', registration_params)
+        await self.make_server_do_fake_request('client/registerCapability', registration_params)
         self.assertEqual(len(TestFileWatcher.active_watchers), 2)
         watcher = TestFileWatcher.active_watchers[0]
         self.assertEqual(watcher.patterns, ['*.py'])

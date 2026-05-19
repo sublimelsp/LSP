@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .core.aio import call_soon_threadsafe
 from .core.constants import CODE_LENS_ENABLED_KEY
 from .core.protocol import Error
 from .core.protocol import ResolvedCodeLens
@@ -7,7 +8,6 @@ from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.views import range_to_region
-from functools import partial
 from typing import cast
 from typing import TYPE_CHECKING
 from typing_extensions import TypeGuard
@@ -128,7 +128,7 @@ class LspToggleCodeLensesCommand(LspWindowCommand):
     def run(self) -> None:
         enable = not self.is_checked()
         self.window.settings().set(CODE_LENS_ENABLED_KEY, enable)
-        sublime.set_timeout_async(partial(self._update_views_async, enable))
+        call_soon_threadsafe(self._update_views_async, enable)
 
     def _update_views_async(self, enable: bool) -> None:
         window_manager = windows.lookup(self.window)

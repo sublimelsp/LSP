@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from ..protocol import ConfigurationItem
+from ..protocol import DocumentUri
+from ..protocol import ExecuteCommandParams
 from ..protocol import LSPAny
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
+from .core.protocol import Notification
+from .core.protocol import Request
 from .core.protocol import Response
 from .core.settings import client_configs
 from .core.types import method2attr
@@ -14,6 +19,7 @@ from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
 from typing import Any
+from typing import Awaitable
 from typing import Callable
 from typing import Final
 from typing import final
@@ -221,31 +227,33 @@ def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Ca
 
 def request_handler(
     method: str
-) -> Callable[[Callable[[Any, P], Promise[R]]], Callable[[Any, P, int], Promise[Response[R]]]]:
+) -> Callable[[Callable[[Any, P], Awaitable[R]]], Callable[[Any, P, int], Awaitable[Response[R]]]]:
     """
-    Decorator to mark a method as a handler for a specific LSP request.
+    Decorator to mark a coroutine method as a handler for a specific LSP request.
 
     Usage:
         ```py
         @request_handler('eslint/openDoc')
-        def on_open_doc(self, params: TextDocumentIdentifier) -> Promise[bool]:
+        async def on_open_doc(self, params: TextDocumentIdentifier) -> bool:
             ...
         ```
 
-    The decorated method will be called with the request parameters whenever the specified
-    request is received from the language server. The method must return a Promise that resolves
-    to the response value. The framework will automatically send it back to the server.
+    The decorated coroutine method will be called with the request parameters whenever the specified
+    request is received from the language server. The coroutine method must return a response value.
+    The framework will automatically send it back to the server.
+
+    An older, but backwards-compatible way to define a request handler is by defining a function that returns a Promise.
+    While that works, the advice is to define a coroutine function.
 
     :param      method:             The LSP request method name (e.g., 'eslint/openDoc').
-    :returns:   A decorator that registers the function as a request handler.
+    :returns:   A decorator that registers the coroutine function as a request handler.
     """
 
-    def decorator(func: Callable[[Any, P], Promise[R]]) -> Callable[[Any, P, int], Promise[Response[R]]]:
+    def decorator(func: Callable[[Any, P], Awaitable[R]]) -> Callable[[Any, P, int], Awaitable[Response[R]]]:
 
         @wraps(func)
-        def wrapper(self: Any, params: P, request_id: int) -> Promise[Response[Any]]:
-            promise = func(self, params)
-            return promise.then(lambda result: Response(request_id, result))
+        async def wrapper(self: Any, params: P, request_id: int) -> Response[Any]:
+            return Response(request_id, await func(self, params))
 
         setattr(wrapper, HANDLER_MARKER, method)
         return wrapper
@@ -390,6 +398,9 @@ class LspPlugin(APIHandler):
     Use this as your directory to install server files. Its path is `$DATA/Package Storage/<Package Name>`.
     """
 
+    use_asyncio: bool = False
+    """Set to `true` to make LSP use `async def` variants."""
+
     @classmethod
     @final
     def register(cls) -> None:
@@ -464,6 +475,19 @@ class LspPlugin(APIHandler):
         """
         pass
 
+    @classmethod
+    async def on_pre_start(cls, context: OnPreStartContext) -> None:
+        """
+        Async version of on_pre_start_async.
+
+        Attempt to use non-blocking functionality for downloading binaries and running subprocesses in order to not
+        block the asyncio thread.
+
+        :param      context:    The startup context. `context.configuration`, `context.variables` and
+                                `context.working_directory` can be mutated to influence how the server is launched.
+        """
+        pass
+
     def __init__(self, weaksession: ref[Session]) -> None:
         """
         Constructs a new instance.
@@ -489,6 +513,10 @@ class LspPlugin(APIHandler):
         Override to perform any post-initialization work, such as sending custom notifications or requests
         that depend on the server's capabilities reported in the `initialize` response.
         """
+        pass
+
+    async def on_initialized(self) -> None:
+        """Async version of `on_initialize_async`."""
         pass
 
     def on_pre_send_request_async(self, request: ClientRequest, view: sublime.View | None) -> None:

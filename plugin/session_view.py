@@ -84,7 +84,7 @@ class SessionView:
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
 
-    def on_before_remove(self) -> None:
+    async def on_before_remove(self) -> list[Exception]:
         settings: sublime.Settings = self.view.settings()
         self._clear_auto_complete_triggers(settings)
         self.clear_code_lenses_async()
@@ -96,7 +96,7 @@ class SessionView:
             for request_id, data in self._active_requests.items():
                 if data.request.view and not data.canceled:
                     self.session.cancel_request_async(request_id)
-            self.session.unregister_session_view_async(self)
+            await self.session.unregister_session_view(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(DIAGNOSTIC_STYLES.keys()):
             self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_icon")
@@ -104,9 +104,10 @@ class SessionView:
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_underline")
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
-        self.session_buffer.remove_session_view(self)
+        exceptions = await self.session_buffer.remove_session_view(self)
         if listener := self.listener():
             listener.on_diagnostics_updated_async(self.session_buffer, False)
+        return exceptions
 
     def on_initialized(self) -> None:
         self.session_buffer.on_session_view_initialized(self._view)
@@ -289,9 +290,10 @@ class SessionView:
     def has_capability_async(self, capability_path: str) -> bool:
         return self.session_buffer.has_capability(capability_path)
 
-    def shutdown_async(self) -> None:
+    async def shutdown(self) -> list[Exception]:
         if listener := self.listener():
-            listener.on_session_shutdown_async(self.session)
+            return await listener.on_session_shutdown(self.session)
+        return []
 
     def diagnostics_key(self, severity: DiagnosticSeverity, multiline: bool) -> str:
         return "lsp{}d{}{}".format(self.session.config.name, "m" if multiline else "s", severity)

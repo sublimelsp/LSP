@@ -10,8 +10,8 @@ from ...protocol import SnippetTextEdit
 from ...protocol import TextDocumentEdit
 from ...protocol import TextEdit
 from ...protocol import WorkspaceEdit
+from .aio import next_frame
 from .logging import debug
-from .promise import Promise
 from .protocol import UINT_MAX
 from typing import Dict
 from typing import List
@@ -89,22 +89,23 @@ def parse_lsp_position(position: Position) -> tuple[int, int]:
     return position['line'], min(UINT_MAX, position['character'])
 
 
-def apply_text_edits(
+async def apply_text_edits(
     view: sublime.View,
     edits: Sequence[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
     *,
     label: str | None = None,
     process_placeholders: bool = False,
     required_view_version: int | None = None
-) -> Promise[sublime.View | None]:
+) -> sublime.View | None:
     if not edits:
-        return Promise.resolve(view)
+        return view
     if not view.is_valid():
         print('LSP: ignoring edits due to view not being open')
-        return Promise.resolve(None)
+        return None
     if process_placeholders:
         # TODO: remove rust-analyzer specific handling for placeholders in TextEdit, because SnippetTextEdit is now part
         # of the LSP specs.
+        # TODO: Communicate results back.
         view.run_command(
             'lsp_apply_document_edit',
             {
@@ -115,16 +116,20 @@ def apply_text_edits(
             }
         )
     elif required_view_version is None or required_view_version == view.change_count():
+        # TODO: Communicate results back.
         view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': label})
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
     # thread, and that we've received view changes in the asynchronous thread.
-    return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(view if view.is_valid() else None)))
+    await next_frame()
+    return view if view.is_valid() else None
 
 
 def show_summary_message(
-    window: sublime.Window, result: ApplyWorkspaceEditResult, summary: WorkspaceEditSummary
+    window: sublime.Window, result: ApplyWorkspaceEditResult, summary: WorkspaceEditSummary | BaseException
 ) -> None:
-    if result['applied']:
+    if isinstance(summary, BaseException):
+        message = f"Error: {summary}"
+    elif result['applied']:
         message = f"Applied {summary['total_changes']} changes in {summary['edited_files']} files"
     else:
         message = "Error while applying WorkspaceEdit"

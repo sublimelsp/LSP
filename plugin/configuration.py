@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from .core.aio import call_soon_threadsafe
 from .core.registry import windows
 from .core.settings import client_configs
 from functools import partial
 from typing import TYPE_CHECKING
-import sublime
 import sublime_plugin
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if index == -1:
             return
         config_name = self._items[index]
-        sublime.set_timeout_async(lambda: wm.enable_config_async(config_name))
+        call_soon_threadsafe(wm.enable_config_async, config_name)
 
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
@@ -80,4 +80,4 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if index == -1:
             return
         config_name = self._items[index]
-        sublime.set_timeout_async(lambda: wm.disable_config_async(config_name))
+        call_soon_threadsafe(wm.disable_config_async, config_name)

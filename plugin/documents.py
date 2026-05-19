@@ -18,6 +18,10 @@ from ..protocol import SignatureHelpTriggerKind
 from .code_actions import filter_quickfix_actions
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
+from .core.aio import call_soon_threadsafe
+from .core.aio import gather_and_flatten_exceptions
+from .core.aio import run_coroutine_threadsafe
+from .core.aio import TaskContainer
 from .core.constants import ChangeEventAction
 from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
 from .core.constants import COMMAND_TO_CHANGE_EVENT_ACTION
@@ -32,6 +36,7 @@ from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
 from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
+from .core.logging import exceptions_log
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.panels import PanelName
@@ -72,20 +77,23 @@ from functools import wraps
 from os.path import basename
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Generator
 from typing import Iterable
 from typing import Literal
 from typing import overload
 from typing import Sequence
 from typing import TYPE_CHECKING
-from typing import TypeVar
 from typing_extensions import Concatenate
 from typing_extensions import override
 from typing_extensions import ParamSpec
 from weakref import WeakSet
 from weakref import WeakValueDictionary
+import asyncio
+import inspect
 import itertools
 import sublime
+import sublime_aio
 import sublime_plugin
 import weakref
 import webbrowser
@@ -93,24 +101,33 @@ import webbrowser
 if TYPE_CHECKING:
     from .core.windows import WindowManager
     from .session_buffer import SessionBuffer
+    from collections.abc import Coroutine
 
-P = ParamSpec('P')
-R = TypeVar('R')
+
+P = ParamSpec("P")
 
 
 def requires_session(
-    func: Callable[Concatenate[DocumentSyncListener, P], R]
-) -> Callable[Concatenate[DocumentSyncListener, P], R | None]:
-    """
-    A decorator for the `DocumentSyncListener` event handlers, which immediately returns `None` if there are no
-    `SessionView`s.
-    """
+    func: Callable[Concatenate[DocumentSyncListener, P], Any],
+) -> Callable[Concatenate[DocumentSyncListener, P], Any]:
+
+    if inspect.iscoroutinefunction(func):
+
+        @wraps(func)
+        async def async_wrapper(self: DocumentSyncListener, *args: P.args, **kwargs: P.kwargs) -> Any:
+            if not self.session_views_async():
+                return None
+            return await func(self, *args, **kwargs)
+
+        return cast("Callable[Concatenate[DocumentSyncListener, P], Coroutine[Any, Any, Any]]", async_wrapper)
+
     @wraps(func)
-    def wrapper(self: DocumentSyncListener, *args: P.args, **kwargs: P.kwargs) -> R | None:
+    def sync_wrapper(self: DocumentSyncListener, *args: P.args, **kwargs: P.kwargs) -> Any:
         if not self.session_views_async():
             return None
         return func(self, *args, **kwargs)
-    return wrapper
+
+    return cast("Callable[Concatenate[DocumentSyncListener, P], Any]", sync_wrapper)
 
 
 def is_regular_view(v: sublime.View) -> bool:
@@ -160,11 +177,12 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         change_count = view.change_count()
         frozen_listeners = WeakSet(self.view_listeners)
 
-        def notify(action: ChangeEventAction) -> None:
-            for listener in list(frozen_listeners):
-                listener.on_text_changed_async(change_count, changes, action)
+        async def notify(action: ChangeEventAction) -> None:
+            await asyncio.gather(
+                *[listener.on_text_changed(change_count, changes, action) for listener in list(frozen_listeners)]
+            )
 
-        sublime.set_timeout_async(partial(notify, self._last_edit_action))
+        run_coroutine_threadsafe(notify(self._last_edit_action))
         self._reset_last_edit_action()
 
     def on_reload_async(self) -> None:
@@ -188,7 +206,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         return f"TextChangeListener({self.buffer.buffer_id})"
 
 
-class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListener):
+class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, TaskContainer):
 
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     debounce_time = FEATURES_TIMEOUT
@@ -254,7 +272,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_selection = []
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
-        self._clear_session_views_async()
+        # run_coroutine_threadsafe(self._clear_session_views())
 
     def _reset(self) -> None:
         # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
@@ -262,8 +280,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._setup()
         for session in self.sessions_async():
             session.diagnostics.clear_identifiers_cache_for_view(self.view)
-        # But this has to run on the async thread again
-        sublime.set_timeout_async(self.on_activated_async)
+        # But this has to run on the asyncio thread again
+        run_coroutine_threadsafe(self._activated_impl())
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
@@ -310,15 +328,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                             sb.session.cancel_request_async(request_id)
                             sb.semantic_tokens.pending_response = None
 
-    def on_session_shutdown_async(self, session: Session) -> None:
+    async def on_session_shutdown(self, session: Session) -> list[Exception]:
         if removed_session := self._session_views.pop(session.config.name, None):
-            removed_session.on_before_remove()
+            result = await removed_session.on_before_remove()
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
                 self._registered = False
-        else:
-            # SessionView was likely not created for this config so remove status here.
-            session.config.erase_view_status(self.view)
+            return result
+        # SessionView was likely not created for this config so remove status here.
+        session.config.erase_view_status(self.view)
+        return []
 
     def _diagnostics_async(
         self, allow_stale: bool = False
@@ -380,7 +399,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return list(self._session_views.values())
 
     @requires_session
-    def on_text_changed_async(
+    async def on_text_changed(
         self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
     ) -> None:
         if self.view.is_primary():
@@ -412,28 +431,31 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
-    def on_load_async(self) -> None:
+    async def on_load(self) -> None:
         if not self._registered and is_regular_view(self.view):
-            self._register_async()
+            self._register()
             return
         if initially_folded_kinds := userprefs().initially_folded:
             if session := self.session_async('foldingRangeProvider'):
                 params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
-                session.send_request_async(
-                    Request.foldingRange(params, self.view),
-                    partial(self._on_initial_folding_ranges, initially_folded_kinds))
-        self.on_activated_async()
+                self._on_initial_folding_ranges(
+                    initially_folded_kinds, await session.request(Request.foldingRange(params, self.view))
+                )
+        await self._activated_impl()
 
-    def on_post_move_async(self) -> None:
+    async def on_post_move(self) -> None:
         if ST_VERSION < 4184:  # Already handled in boot.Listener.on_pre_move
             return
         self.on_post_move_window_async()
 
-    def on_activated_async(self) -> None:
+    async def on_activated(self) -> None:
+        await self._activated_impl()
+
+    async def _activated_impl(self) -> None:
         if self.view.is_loading() or not is_regular_view(self.view):
             return
         if not self._registered:
-            self._register_async()
+            self._register()
         session_views = self.session_views_async()
         if not session_views:
             return
@@ -454,8 +476,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
 
     @requires_session
-    def on_selection_modified_async(self) -> None:
-        first_region, _ = self._update_stored_selection_async()
+    async def on_selection_modified(self) -> None:
+        first_region, _ = self._update_stored_selection()
         if first_region is None:
             return
         if not self._is_in_higlighted_region(first_region.b):
@@ -463,11 +485,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_code_actions:
             self._code_actions_for_selection.clear()
             self._clear_code_actions_annotation()
-        self._when_selection_remains_stable_async(
-            self._on_selection_modified_debounced_async, first_region, after_ms=self.debounce_time)
+        self._when_selection_remains_stable(
+            self._on_selection_modified_debounced, first_region, after_ms=self.debounce_time)
         self._update_diagnostic_in_status_bar_async()
 
-    def _on_selection_modified_debounced_async(self) -> None:
+    def _on_selection_modified_debounced(self) -> None:
         if userprefs().document_highlight_style:
             self._do_highlights_async()
         if userprefs().show_code_actions:
@@ -479,7 +501,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if plugin := sv.session.plugin:
                 plugin.on_selection_modified_async(sv)
 
-    def on_post_save_async(self) -> None:
+    async def on_post_save(self) -> None:
         # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real
         # filesystem.
         uri = view_to_uri(self.view)
@@ -519,11 +541,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         elif has_relevant_diagnostcs:
             panel_manager.show_diagnostics_panel_async()
 
-    def on_close(self) -> None:
+    async def on_close(self) -> None:
         if self._registered and self._manager:
-            manager = self._manager
-            sublime.set_timeout_async(lambda: manager.unregister_listener_async(self))
-        self._clear_session_views_async()
+            self._manager.unregister_listener_async(self)
+        exceptions_log("Exception while closing document", await self._clear_session_views())
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool | None:
         # You can filter key bindings by the precense of a provider,
@@ -570,7 +591,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 if window.settings().get(HOVER_ENABLED_KEY, True):
                     self.view.run_command("lsp_hover", {"point": point})
             elif hover_zone == sublime.HoverZone.GUTTER:
-                sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
+                call_soon_threadsafe(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
         if userprefs().diagnostics_gutter_marker:
@@ -609,11 +630,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if scheme == CODE_ACTION_SCHEME:
             session_name, version, action = decode_code_action_uri(href)
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):
-                sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
+                self.create_task_threadsafe(session.run_code_action(action, progress=True, view=self.view))
                 self.view.hide_popup()
         elif scheme == 'file':
             if window := self.view.window():
-                open_file_uri(window, href)
+                self.create_task(open_file_uri(window, href))
         elif scheme.lower() in {"http", "https"} or (not scheme and href.startswith('www.')):
             open_in_browser(href)
 
@@ -650,7 +671,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in {"next_field", "prev_field"} and args is None:
-            sublime.set_timeout_async(lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange))
+            call_soon_threadsafe(
+                lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
+            )
         if not self.view.is_popup_visible():
             return
         if self._is_documenation_popup_open and command_name in {"move", "commit_completion", "delete_word",
@@ -662,7 +685,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         completion_list = sublime.CompletionList()
         triggered_manually = self._auto_complete_triggered_manually
         self._auto_complete_triggered_manually = False  # reset state for next completion popup
-        sublime.set_timeout_async(
+        call_soon_threadsafe(
             lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
         return completion_list
 
@@ -988,13 +1011,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- Private utility methods --------------------------------------------------------------------------------------
 
-    def _when_selection_remains_stable_async(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
-        debounced(f, after_ms, partial(self._is_selection_stable_async, r), async_thread=True)
+    def _when_selection_remains_stable(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
+        debounced(f, after_ms, partial(self._is_selection_stable_async, r))
 
     def _is_selection_stable_async(self, region: sublime.Region) -> bool:
         return bool(self._stored_selection and self._stored_selection[0] == region)
 
-    def _register_async(self) -> None:
+    def _register(self) -> None:
         buf = self.view.buffer()
         if not buf:
             debug("not tracking bufferless view", self.view.id())
@@ -1022,18 +1045,18 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             for listener in listeners:
                 if isinstance(listener, DocumentSyncListener):
                     debug("also registering", listener)
-                    listener.on_load_async()
+                    self.create_task(listener.on_load())
 
     def _on_view_updated_async(self) -> None:
         if self._should_format_on_paste:
             self._should_format_on_paste = False
             sublime.get_clipboard_async(self._format_on_paste_async)
-        first_region, _ = self._update_stored_selection_async()
+        first_region, _ = self._update_stored_selection()
         if first_region is None:
             return
         if userprefs().document_highlight_style:
             self._clear_highlight_regions()
-            self._when_selection_remains_stable_async(
+            self._when_selection_remains_stable(
                 self._do_highlights_async, first_region, after_ms=self.debounce_time)
         if userprefs().show_signature_help and (selection := self._stored_selection):
             if self._sighelp:
@@ -1050,7 +1073,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     if previous_char in triggers:
                         self.do_signature_help_async(SignatureHelpTriggerKind.TriggerCharacter, previous_char)
 
-    def _update_stored_selection_async(self) -> tuple[sublime.Region | None, bool]:
+    def _update_stored_selection(self) -> tuple[sublime.Region | None, bool]:
         """
         Stores the current selection in a variable.
         Note that due to this function (supposedly) running in the async worker thread of ST, it can happen that the
@@ -1105,16 +1128,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
         sublime.set_timeout(run_sync)
 
-    def _clear_session_views_async(self) -> None:
+    async def _clear_session_views(self) -> list[Exception]:
         session_views = self._session_views
-
-        def clear_async() -> None:
-            nonlocal session_views
-            for session_view in session_views.values():
-                session_view.on_before_remove()
-            session_views.clear()
-
-        sublime.set_timeout_async(clear_async)
+        exceptions = await gather_and_flatten_exceptions(*(s.on_before_remove() for s in session_views.values()))
+        session_views.clear()
+        return exceptions
 
     def on_userprefs_changed_async(self) -> None:
         if userprefs().document_highlight_style:

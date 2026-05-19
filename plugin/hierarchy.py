@@ -167,7 +167,7 @@ class LspHierarchyCommand(LspTextCommand, ABC):
         if position is None:
             return
         params = text_document_position_params(self.view, position)
-        session.send_request_async(
+        session.send_request(
             self.request(params, self.view), partial(self._handle_response_async, weakref.ref(session)))
 
     def _handle_response_async(

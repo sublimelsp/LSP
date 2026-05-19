@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+from .aio import executor_main
 from .constants import ST_PACKAGES_PATH
 from .constants import ST_PLATFORM
 from .constants import ST_VERSION
 from .logging import exception_log
-from .promise import Promise
-from .promise import ResolveFunc
 from .protocol import UINT_MAX
 from .url import parse_uri
 from .views import range_to_region
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
 from urllib.parse import urlparse
+import asyncio
 import os
 import re
 import sublime
@@ -23,8 +23,16 @@ if TYPE_CHECKING:
     from ...protocol import DocumentUri
     from ...protocol import Range
 
-g_opening_files: dict[str, tuple[Promise[sublime.View | None], ResolveFunc[sublime.View | None]]] = {}
+g_opening_files: dict[str, asyncio.Future[sublime.View | None]] = {}
+g_opening_files_lock: asyncio.Lock | None = None
 FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')
+
+
+def get_opening_files_lock() -> asyncio.Lock:
+    global g_opening_files_lock
+    if not g_opening_files_lock:
+        g_opening_files_lock = asyncio.Lock()
+    return g_opening_files_lock
 
 
 def lsp_range_from_uri_fragment(fragment: str) -> Range | None:
@@ -48,21 +56,16 @@ def lsp_range_from_uri_fragment(fragment: str) -> Range | None:
     return None
 
 
-def open_file_uri(
+async def open_file_uri(
     window: sublime.Window, uri: DocumentUri, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1
-) -> Promise[sublime.View | None]:
+) -> sublime.View | None:
     decoded_uri = unquote(uri)  # decode percent-encoded characters
-    open_promise = open_file(window, decoded_uri, flags, group)
-    if fragment := urlparse(decoded_uri).fragment:
-        if selection := lsp_range_from_uri_fragment(fragment):
-            return open_promise.then(lambda view: _select_and_center(view, selection))
-    return open_promise
-
-
-def _select_and_center(view: sublime.View | None, r: Range) -> sublime.View | None:
+    view = await open_file(window, decoded_uri, flags, group)
     if view:
-        return center_selection(view, r)
-    return None
+        if fragment := urlparse(decoded_uri).fragment:
+            if selection := lsp_range_from_uri_fragment(fragment):
+                center_selection(view, selection)
+    return view
 
 
 def _return_existing_view(flags: int, existing_view_group: int, active_group: int, specified_group: int) -> bool:
@@ -84,52 +87,62 @@ def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> subl
     return window.find_open_file(fname, group) if ST_VERSION >= 4136 else window.find_open_file(fname)
 
 
-def open_file(
+async def open_file(
     window: sublime.Window, uri: DocumentUri, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1
-) -> Promise[sublime.View | None]:
+) -> sublime.View | None:
     """
-    Open a file asynchronously.
-    It is only safe to call this function from the UI thread.
+    Open a file and wait for it to be done loading.
     The provided uri MUST be a file URI.
     """
+    future: asyncio.Future[sublime.View | None] | None = None
     file = parse_uri(uri)[1]
-    # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's supposed
-    # to open as a separate view).
-    view = _find_open_file(window, file)
-    if view and _return_existing_view(flags, window.get_view_index(view)[0], window.active_group(), group):
-        return Promise.resolve(view)
+    async with get_opening_files_lock():
+        # Is the view opening right now? Then return the associated unresolved future
+        for fn, fut in g_opening_files.items():
+            if fn == file or os.path.samefile(fn, file):  # noqa ASYNC240
+                # Return the unresolved future. A future on_load event will resolve the future.
+                future = fut
+                break
+        if future is None:
+            loop = asyncio.get_running_loop()
+            future = loop.create_future()
 
-    was_already_open = view is not None
-    if not was_already_open and not os.path.isfile(file):
-        # window.open_file creates a new view with empty content if the path from the given URI doesn't exist as a file
-        # on disk, but we don't want that here. If the language server wants to create a new file for a given URI, it
-        # must use the CreateFile resource operation in a WorkspaceEdit.
-        return Promise.resolve(None)
-    view = window.open_file(file, flags, group)
-    if not view.is_loading():
-        if was_already_open and (flags & sublime.NewFileFlags.SEMI_TRANSIENT):
-            # workaround bug https://github.com/sublimehq/sublime_text/issues/2411 where transient view might not get
-            # its view listeners initialized.
-            sublime_plugin.check_view_event_listeners(view)  # type: ignore
-        # It's already loaded. Possibly already open in a tab.
-        return Promise.resolve(view)
+            def resolve_right_now(view: sublime.View | None) -> None:
+                future.set_result(view)
 
-    # Is the view opening right now? Then return the associated unresolved promise
-    for fn, value in g_opening_files.items():
-        if fn == file or os.path.samefile(fn, file):
-            # Return the unresolved promise. A future on_load event will resolve the promise.
-            return value[0]
+            def resolve_later() -> None:
+                g_opening_files[file] = future
 
-    # Prepare a new promise to be resolved by a future on_load event (see the event listener in main.py)
-    def fullfill(resolve: ResolveFunc[sublime.View | None]) -> None:
-        # Save the promise in the first element of the tuple -- except we cannot yet do that here
-        g_opening_files[file] = (None, resolve)  # type: ignore
+            def on_main_thread() -> None:
 
-    promise = Promise(fullfill)
-    tup = g_opening_files[file]
-    # Save the promise in the first element of the tuple so that the for-loop above can return it
-    g_opening_files[file] = (promise, tup[1])
-    return promise
+                # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's
+                # supposed to open as a separate view).
+                view = _find_open_file(window, file)
+                if view and _return_existing_view(flags, window.get_view_index(view)[0], window.active_group(), group):
+                    loop.call_soon_threadsafe(lambda: resolve_right_now(view))
+                    return
+
+                was_already_open = view is not None
+                if not was_already_open and not os.path.isfile(file):
+                    # window.open_file creates a new view with empty content if the path from the given URI doesn't
+                    # exist as a file on disk, but we don't want that here. If the language server wants to create a new
+                    # file for a given URI, it must use the CreateFile resource operation in a WorkspaceEdit.
+                    loop.call_soon_threadsafe(lambda: resolve_right_now(view))
+                    return
+
+                view = window.open_file(file, flags, group)
+                if not view.is_loading():
+                    if was_already_open and (flags & sublime.NewFileFlags.SEMI_TRANSIENT):
+                        # workaround bug https://github.com/sublimehq/sublime_text/issues/2411 where transient view
+                        # might not get its view listeners initialized.
+                        sublime_plugin.check_view_event_listeners(view)  # type: ignore
+                    # It's already loaded. Possibly already open in a tab.
+                    loop.call_soon_threadsafe(lambda: resolve_right_now(view))
+
+                loop.call_soon_threadsafe(resolve_later)
+
+            await loop.run_in_executor(executor_main, on_main_thread)
+    return await future
 
 
 def open_resource(window: sublime.Window, uri: DocumentUri, group: int = -1) -> sublime.View | None:

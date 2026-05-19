@@ -5,6 +5,7 @@ from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentUri
 from ..protocol import Location
 from ..protocol import LocationLink
+from .core.aio import run_coroutine_threadsafe
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.input_handlers import PreselectedListInputHandler
 from .core.paths import simple_project_path
@@ -25,7 +26,7 @@ from .core.views import text_document_position_params
 from .core.views import to_encoded_filename
 from .core.views import uri_from_view
 from .locationpicker import LocationPicker
-from .locationpicker import open_location_async
+from .locationpicker import open_location
 from collections import Counter
 from functools import partial
 from os.path import basename
@@ -105,13 +106,13 @@ class LspGotoCommand(LspTextCommand):
     ) -> None:
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-            open_location_async(session, response, side_by_side, force_group, group)
+            run_coroutine_threadsafe(open_location(session, response, side_by_side, force_group, group))
         elif isinstance(response, list):
             if len(response) == 0:
                 self._handle_no_results(fallback, side_by_side)
             elif len(response) == 1:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-                open_location_async(session, response[0], side_by_side, force_group, group)
+                run_coroutine_threadsafe(open_location(session, response[0], side_by_side, force_group, group))
             else:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 placeholder = self.placeholder_text + " " + self.view.substr(self.view.word(position))
@@ -352,7 +353,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             self._open_file(value)
         elif session := self._session(value):
             location: Location = {'uri': self.uri, 'range': value['diagnostic']['range']}
-            sublime.set_timeout_async(partial(session.open_location_async, location))
+            run_coroutine_threadsafe(session.open_location(location))
 
     def _session(self, value: DiagnosticData) -> Session | None:
         session_name = value['session_name']

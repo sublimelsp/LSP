@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .code_actions import CodeActionsOnFormatOnSaveTask
 from .code_actions import CodeActionsOnSaveTask
+from .core.aio import call_soon_threadsafe
 from .formatting import FormatOnSaveTask
 from .formatting import WillSaveWaitTask
 from .lsp_task import LspTask
@@ -30,10 +31,10 @@ class LspSaveCommand(LspTextCommandWithTasks):
 
     @override
     def on_before_tasks(self) -> None:
-        sublime.set_timeout_async(self._trigger_on_pre_save_async)
+        call_soon_threadsafe(self._trigger_on_pre_save_async)
 
     @override
-    def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
+    async def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
         # Triggered from set_timeout to preserve original semantics of on_pre_save handling
         sublime.set_timeout(lambda: self.view.run_command('save', kwargs))
 

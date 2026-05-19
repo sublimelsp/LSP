@@ -1471,12 +1471,13 @@ class Session(APIHandler, TransportCallbacks):
             return Promise.resolve(view)
         if scheme in self.get_capability('workspace.textDocumentContent.schemes', []):
             return self.send_request_task(Request('workspace/textDocumentContent', {'uri': uri})) \
-                .then(partial(self._on_text_document_content_async, uri, r, flags, group))
+                .then(lambda response: self._on_text_document_content_async(response, uri, flags, group)) \
+                .then(lambda view: self._on_view_for_uri_opened(view, uri, r) if view else None)
         # There is no pre-existing session-buffer, so we have to go through the plugin's URI handler.
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
                 if handler := self._plugin.get_uri_handler(scheme):
-                    return handler(uri, flags).then(lambda sheet: self._on_sheet_opened(sheet, uri, r))
+                    return handler(uri, flags).then(lambda sheet: self._on_sheet_for_uri_opened(sheet, uri, r))
             else:
                 return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None
@@ -1540,7 +1541,7 @@ class Session(APIHandler, TransportCallbacks):
         callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             return promise.then(lambda tup: self.open_scratch_buffer(*tup, flags, group)) \
-                .then(lambda view: self._on_sheet_opened(view.sheet(), uri, r))
+                .then(lambda view: self._on_view_for_uri_opened(view, uri, r))
         # resolve unused promise
         resolve(('', '', ''))
         return None
@@ -1571,28 +1572,27 @@ class Session(APIHandler, TransportCallbacks):
         sublime.set_timeout(continue_on_main_thread)
         return promise
 
-    def _on_sheet_opened(self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None) -> sublime.View | None:
-        if sheet and (view := sheet.view()):
-            uri_no_fragment = urldefrag(uri).url
-            view.settings().set('lsp_uri', uri_no_fragment)
-            if r:
-                center_selection(view, r)
-            return view
-        return None
+    def _on_sheet_for_uri_opened(
+        self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
+    ) -> sublime.View | None:
+        return self._on_view_for_uri_opened(view, uri, r) if sheet and (view := sheet.view()) else None
+
+    def _on_view_for_uri_opened(self, view: sublime.View, uri: DocumentUri, r: Range | None) -> sublime.View:
+        uri_no_fragment = urldefrag(uri).url
+        view.settings().set('lsp_uri', uri_no_fragment)
+        if r:
+            center_selection(view, r)
+        return view
 
     def _on_text_document_content_async(
-        self,
-        uri: DocumentUri,
-        r: Range | None,
-        flags: sublime.NewFileFlags,
-        group: int,
-        response: TextDocumentContentResult | Error
+        self, response: TextDocumentContentResult | Error, uri: DocumentUri, flags: sublime.NewFileFlags, group: int
     ) -> Promise[sublime.View | None]:
         if isinstance(response, Error):
             return Promise.resolve(None)
         title = urlparse(uri).path.split('/')[-1]
         content = response['text'].replace('\r', '')
-        return self.open_scratch_buffer(title, content, '', uri, r, flags, group)
+        syntax = ''
+        return self.open_scratch_buffer(title, content, syntax, flags, group)  # pyright: ignore[reportReturnType]
 
     def _on_text_document_content_refreshed_async(
         self, view: sublime.View, response: TextDocumentContentResult

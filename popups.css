@@ -112,7 +112,8 @@ html.light .diagnostics code.highlight {
 .actions {
     background-color: color(var(--foreground) alpha(0.1));
 }
-.actions a {
+.actions a,
+kbd a {
     text-decoration: none;
 }
 .lightbulb {

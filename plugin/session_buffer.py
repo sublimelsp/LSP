@@ -229,7 +229,11 @@ class SessionBuffer(TaskContainer):
             if not language_id:
                 # we're closing
                 return
-            self.session.send_notification_async(did_open(view, language_id))
+            try:
+                self.session.send_notification_async(did_open(view, language_id))
+            except MissingUriError:
+                # Closed tab. Just forget about it.
+                return
             self.opened = True
             version = view.change_count()
             self._last_synced_version = version

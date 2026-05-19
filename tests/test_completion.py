@@ -53,15 +53,13 @@ class CompletionsTestsBase(TextDocumentTestCase):
         s.add(point)
 
     async def wait_until_auto_complete_is_visible(self) -> None:
-        while not self.view.is_auto_complete_visible():  # noqa: ASYNC110
-            await asyncio.sleep(0.05)
+        await self.wait_until_st_state(self.view.is_auto_complete_visible)
 
     async def commit_completion(self, commit_completion_command: str = "commit_completion") -> None:
         current_change_count = self.view.change_count()
         await self.wait_until_auto_complete_is_visible()
         self.view.run_command(commit_completion_command)
-        while self.view.change_count() <= current_change_count:  # noqa: ASYNC110
-            await asyncio.sleep(0.05)
+        await self.wait_until_st_state(lambda: self.view.change_count() > current_change_count)
 
     async def select_completion(self) -> None:
         self.view.run_command('auto_complete')
@@ -585,7 +583,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         await self.commit_completion()
         self.assertEqual(self.read_file(), '{"keys": []}')
 
-    async def test_text_edit_plaintext_with_multiple_lines_indented(self) -> None[None, None, None]:
+    async def test_text_edit_plaintext_with_multiple_lines_indented(self) -> None:
         self.type("\t\n\t")
         self.move_cursor(1, 2)
         await self.mock_response("textDocument/completion", [{

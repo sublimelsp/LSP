@@ -33,7 +33,7 @@ class AsyncTestCase(DeferrableTestCase):
             task = asyncio.create_task(coro)
             _, pending = await asyncio.wait({task}, timeout=self.timeout_ms / 1000, return_when=asyncio.FIRST_COMPLETED)
             if task in pending:
-                print("=== BEGIN: COROUTINE STACK BEFORE CANCELLATION ===")
+                print("\n=== BEGIN: COROUTINE STACK BEFORE CANCELLATION ===")
                 task.print_stack()
                 print("=== END:   COROUTINE STACK BEFORE CANCELLATION ===")
                 task.cancel()
@@ -41,7 +41,7 @@ class AsyncTestCase(DeferrableTestCase):
                     await task
                 except asyncio.CancelledError:
                     pass
-                raise asyncio.TimeoutError
+                raise TimeoutError
             await task
 
         future = self.run_coroutine(withTimeout())

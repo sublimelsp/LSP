@@ -34,7 +34,7 @@ class LspSaveCommand(LspTextCommandWithTasks):
         call_soon_threadsafe(self._trigger_on_pre_save_async)
 
     @override
-    def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
+    async def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
         # Triggered from set_timeout to preserve original semantics of on_pre_save handling
         sublime.set_timeout(lambda: self.view.run_command('save', kwargs))
 

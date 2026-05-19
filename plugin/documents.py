@@ -501,7 +501,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             if plugin := sv.session.plugin:
                 plugin.on_selection_modified_async(sv)
 
-    def on_post_save_async(self) -> None:
+    async def on_post_save(self) -> None:
         # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real
         # filesystem.
         uri = view_to_uri(self.view)
@@ -512,12 +512,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             # The URI scheme hasn't changed so the only thing we have to do is to inform the attached session views
             # about the new URI.
             if self.view.is_primary():
-
-                def on_post_save_session_views() -> None:
-                    for sv in self.session_views_async():
-                        sv.on_post_save_async(self._uri)
-
-                call_soon_threadsafe(on_post_save_session_views)
+                for sv in self.session_views_async():
+                    sv.on_post_save_async(self._uri)
         else:
             # The URI scheme has changed. This means we need to re-determine whether any language servers should
             # be attached to the view.

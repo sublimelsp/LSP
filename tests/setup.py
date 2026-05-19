@@ -3,6 +3,7 @@ from __future__ import annotations
 from .async_test_case import AsyncTestCase
 from .async_test_case import FutureLike
 from .test_mocks import basic_responses
+from LSP.plugin.core.aio import next_frame
 from LSP.plugin.core.aio import run_coroutine_threadsafe
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.open import open_file
@@ -17,12 +18,14 @@ from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
 from typing import Any
+from typing import Callable
 from typing import Coroutine
 from typing import TYPE_CHECKING
 import asyncio
 import sublime
 
 if TYPE_CHECKING:
+    from LSP.plugin.core.sessions import CancellableInflightRequest
     from LSP.protocol import CodeAction
     from LSP.protocol import LSPAny
 
@@ -153,7 +156,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
         #     self.__class__.view = window.open_file(filename)
         #     yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
         #     self.assertTrue(self.wm.get_config_manager().match_view(self.view, self.wm.workspace_folders))
-        # self.init_view_settings()
+        self.init_view_settings()
         # yield self.ensure_document_listener_created
         params = await self.await_message("textDocument/didOpen")
         self.assertIsInstance(params, dict)
@@ -179,7 +182,13 @@ class TextDocumentTestCase(SublimeAioTestCase):
         s("word_wrap", False)
         s("lsp_format_on_save", False)
 
-    async def await_message(self, method: str) -> LSPAny:
+    @staticmethod
+    async def wait_until_st_state(condition: Callable[[], bool]) -> None:
+        """Returns when the given state has been reached."""
+        while not condition():
+            await next_frame()
+
+    def await_message(self, method: str) -> CancellableInflightRequest[LSPAny]:
         """
         Awaits until server receives a request with a specified method.
 
@@ -193,12 +202,12 @@ class TextDocumentTestCase(SublimeAioTestCase):
         """
         # cls.assertIsNotNone(cls.session)
         assert self.session
-        return await self.session.request(Request("$test/getReceived", {"method": method}))
+        return self.session.request(Request("$test/getReceived", {"method": method}))
 
-    async def make_server_do_fake_request(self, method: str, params: LSPAny) -> LSPAny:
+    def make_server_do_fake_request(self, method: str, params: LSPAny) -> CancellableInflightRequest[LSPAny]:
         """Make the fake server do an arbitrary request."""
         assert self.session
-        return await self.session.request(Request("$test/fakeRequest", {"method": method, "params": params}))
+        return self.session.request(Request("$test/fakeRequest", {"method": method, "params": params}))
 
     async def await_run_code_action(self, code_action: CodeAction) -> LSPAny:
         assert self.session

@@ -190,7 +190,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if is_applicable and not session_view:
                     listener.on_session_initialized_async(session)
                 elif not is_applicable and session_view:
-                    session.shutdown_session_view_async(session_view)
+                    exceptions_log("Error", await session.shutdown_session_view(session_view))
             elif is_applicable:
                 await self.start(config, listener)
 
@@ -225,7 +225,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     # OK, this session is already initialized for this view.
                     self._listeners.add(listener)
                     session.config.set_view_status(listener.view, "")
-                    listener.on_session_initialized_async(session)
+                    # Do not let an exception in listener.on_session_initialized_async cause a failure in this method.
+                    asyncio.get_running_loop().call_soon(listener.on_session_initialized_async, session)
                     return session
 
             config = ClientConfig.from_config(config, {})
@@ -288,7 +289,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 await session.initialize(variables=variables, transport=transport, working_directory=cwd)
                 self._sessions.add(session)
                 self._listeners.add(listener)
-                listener.on_session_initialized_async(session)
+                # Do not let an exception in listener.on_session_initialized_async cause a failure in this method.
+                asyncio.get_running_loop().call_soon(listener.on_session_initialized_async, session)
                 config.set_view_status(listener.view, "")
             except Exception as e:
                 message = (

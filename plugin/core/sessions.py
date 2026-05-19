@@ -1523,7 +1523,7 @@ class Session(APIHandler, TransportCallbacks):
         # I cannot type-hint an unpacked tuple
         pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         # It'd be nice to have automatic tuple unpacking continuations
-        callback = lambda a, b, c: pair[1]((a or 'Untitled', b, c))  # noqa: E731
+        callback = lambda a, b, c: pair[1]((a or 'untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             result: PackagedTask[sublime.View | None] = Promise.packaged_task()
             pair[0].then(lambda tup: self.open_scratch_buffer(*tup, uri, r, flags, group)).then(result[1])

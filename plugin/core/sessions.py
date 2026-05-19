@@ -1528,6 +1528,8 @@ class Session(APIHandler, TransportCallbacks):
         if plugin.on_open_uri_async(uri, callback):
             return promise.then(lambda tup: self.open_scratch_buffer(*tup, flags, group)) \
                 .then(lambda view: self._on_sheet_opened(view.sheet(), uri, r))
+        # resolve unused promise
+        resolve(('', '', ''))
         return None
 
     def open_scratch_buffer(

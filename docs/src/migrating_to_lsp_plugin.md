@@ -435,7 +435,7 @@ from LSP.plugin import uri_handler
 def on_open_foo_uri(self, uri: DocumentUri, flags: sublime.NewFileFlags) -> Promise[sublime.Sheet | None]:
     title, content, syntax = render_foo_uri(uri)
     if session := self.weaksession():
-        return session.open_scratch_buffer(title, content, syntax, uri, None, flags).then(_: None)
+        return session.open_scratch_buffer(title, content, syntax, flags).then(lambda view: view.sheet())
     return Promise.resolve(None)
 ```
 

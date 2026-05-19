@@ -1522,12 +1522,12 @@ class Session(APIHandler, TransportCallbacks):
     ) -> Promise[sublime.View | None] | None:
         # I cannot type-hint an unpacked tuple
         pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
+        promise, resolve = pair
         # It'd be nice to have automatic tuple unpacking continuations
-        callback = lambda a, b, c: pair[1]((a or 'untitled', b, c))  # noqa: E731
+        callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
-            result: PackagedTask[sublime.View | None] = Promise.packaged_task()
-            pair[0].then(lambda tup: self.open_scratch_buffer(*tup, uri, r, flags, group)).then(result[1])
-            return result[0]
+            return promise.then(lambda tup: self.open_scratch_buffer(*tup, flags, group)) \
+                .then(lambda view: self._on_sheet_opened(view.sheet(), uri, r))
         return None
 
     def open_scratch_buffer(
@@ -1535,8 +1535,6 @@ class Session(APIHandler, TransportCallbacks):
         title: str,
         content: str,
         syntax: str,
-        uri: DocumentUri | None = None,
-        r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1,
     ) -> Promise[sublime.View]:
@@ -1553,19 +1551,15 @@ class Session(APIHandler, TransportCallbacks):
             view.set_name(title)
             view.run_command("append", {"characters": content})
             view.set_read_only(True)
-            self._on_sheet_opened(view.sheet(), uri, r)
             resolve(view)
 
         sublime.set_timeout(continue_on_main_thread)
         return promise
 
-    def _on_sheet_opened(
-        self, sheet: sublime.Sheet | None, uri: DocumentUri | None, r: Range | None
-    ) -> sublime.View | None:
+    def _on_sheet_opened(self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None) -> sublime.View | None:
         if sheet and (view := sheet.view()):
-            if uri:
-                uri_no_fragment = urldefrag(uri).url
-                view.settings().set('lsp_uri', uri_no_fragment)
+            uri_no_fragment = urldefrag(uri).url
+            view.settings().set('lsp_uri', uri_no_fragment)
             if r:
                 center_selection(view, r)
             return view

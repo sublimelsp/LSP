@@ -116,9 +116,9 @@ class CodeActionsTestCaseBase(TextDocumentTestCase):
         capabilities['capabilities']['codeActionProvider'] = {'codeActionKinds': ['quickfix', 'source.fixAll']}
         return capabilities
 
-    async def tearDown(self) -> None:
+    async def asyncDoCleanups(self) -> None:
         await self.await_clear_view_and_save()
-        await super().tearDown()
+        await super().asyncDoCleanups()
 
 
 class CodeActionsOnSaveTaskTestCase(TextDocumentTestCase):
@@ -148,6 +148,9 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
             [(';', range_from_points(Point(0, 11), Point(0, 11)))],
             code_action_kind
         )
+
+        await self.mock_response('textDocument/codeAction', [code_action])
+        await self.await_message('textDocument/codeAction')
         await self.mock_response('textDocument/codeAction', [code_action])
 
         # Save the file.
@@ -174,7 +177,11 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
             [(';', range_from_points(Point(0, 11), Point(0, 11)))],
             code_action_kind
         )
+
         await self.mock_response('textDocument/codeAction', [code_action])
+        await self.await_message('textDocument/codeAction')
+        await self.mock_response('textDocument/codeAction', [code_action])
+
         self.view.run_command('lsp_save', {'async': True})
         code_action_request = await self.await_message('textDocument/codeAction')
         self.assertIsInstance(code_action_request, dict)
@@ -443,7 +450,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
 
     async def tearDown(self) -> None:
         DocumentSyncListener.debounce_time = self.original_debounce_time
-        await super().tearDown()
+        super().tearDown()
 
     @classmethod
     def get_test_server_capabilities(cls) -> dict:

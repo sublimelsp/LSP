@@ -12,13 +12,26 @@ from LSP.plugin.core.open import open_file
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.url import filename_to_uri
+from LSP.plugin.documents import DocumentSyncListener
 from os.path import join
 from typing_extensions import override
 import asyncio
 import sublime
+from sublime_plugin import view_event_listeners
 
 
 class WindowDocumentHandlerTests(SublimeAioTestCase):
+
+    def ensure_document_listener_created(self) -> DocumentSyncListener | None:
+        assert self.view
+        # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
+        # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
+        # opening file (manager missing in DocumentSyncListener)
+        # Revisit this once we're on ST4.
+        for listener in view_event_listeners[self.view.id()]:
+            if isinstance(listener, DocumentSyncListener):
+                return listener
+        return None
 
     @override
     async def setUp(self) -> None:
@@ -60,7 +73,7 @@ class WindowDocumentHandlerTests(SublimeAioTestCase):
         assert self.view
         self.assertTrue(self.wm.get_config_manager().match_view(self.view, self.wm.workspace_folders))
         # self.init_view_settings()
-        listener = await self.ensure_document_listener_created()
+        listener = self.ensure_document_listener_created()
         self.assertIsNotNone(listener)
         assert listener
         self.session1 = await self.wm.start(self.config1, listener)

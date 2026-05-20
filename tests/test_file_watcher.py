@@ -14,7 +14,6 @@ from LSP.plugin.core.types import ClientConfig
 from LSP.protocol import WatchKind
 from os.path import join
 from typing import TYPE_CHECKING
-from typing_extensions import override
 import sublime
 
 if TYPE_CHECKING:
@@ -86,22 +85,29 @@ class FileWatcherDocumentTestCase(TextDocumentTestCase):
     and the view happens before and after every test rather than per-testsuite.
     """
 
-    @override
-    async def setUp(self) -> None:
+    @classmethod
+    async def asyncSetUpClass(cls) -> None:
         # Don't call the superclass.
+        register_file_watcher_implementation(TestFileWatcher)
+
+    @classmethod
+    async def asyncTearDownClass(cls) -> None:
+        # Don't call the superclass.
+        pass
+
+    async def setUp(self) -> None:
+        self.assertEqual(len(TestFileWatcher.active_watchers), 0)
         # Watchers are only registered when there are workspace folders so add a folder.
         self.folder_root_path = setup_workspace_folder()
-        register_file_watcher_implementation(TestFileWatcher)
-        self.assertEqual(len(TestFileWatcher.active_watchers), 0)
+        await super().asyncSetUpClass()
         await super().setUp()
 
-    @override
     async def tearDown(self) -> None:
+        await super().asyncTearDownClass()
+        self.assertEqual(len(TestFileWatcher.active_watchers), 0)
         # Restore original project data.
         window = sublime.active_window()
         window.set_project_data({})
-        self.assertEqual(len(TestFileWatcher.active_watchers), 0)
-        await super().tearDown()
 
 
 class FileWatcherStaticTests(FileWatcherDocumentTestCase):

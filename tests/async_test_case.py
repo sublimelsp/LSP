@@ -27,11 +27,12 @@ class AsyncTestCase(DeferrableTestCase):
         """Override this method and run the given coroutine (using sublime_aio.run_coroutine for instance)."""
         raise NotImplementedError
 
-    def _runCoro(self, coro: Coroutine[Any, Any, Any]) -> Generator:
+    @classmethod
+    def _runCoro(cls, coro: Coroutine[Any, Any, Any]) -> Generator:
 
         async def withTimeout() -> None:
             task = asyncio.create_task(coro)
-            _, pending = await asyncio.wait({task}, timeout=self.timeout_ms / 1000, return_when=asyncio.FIRST_COMPLETED)
+            _, pending = await asyncio.wait({task}, timeout=cls.timeout_ms / 1000, return_when=asyncio.FIRST_COMPLETED)
             if task in pending:
                 print("\n=== BEGIN: COROUTINE STACK BEFORE CANCELLATION ===")
                 task.print_stack()
@@ -44,7 +45,7 @@ class AsyncTestCase(DeferrableTestCase):
                 raise TimeoutError
             await task
 
-        future = self.run_coroutine(withTimeout())
+        future = cls.run_coroutine(withTimeout())
 
         class Signal:
             def __init__(self) -> None:
@@ -65,7 +66,34 @@ class AsyncTestCase(DeferrableTestCase):
                 signal.done = True
 
         future.add_done_callback(onDone)
-        yield {"condition": signal.check, "timeout": self.timeout_ms}
+        yield {"condition": signal.check, "timeout": cls.timeout_ms}
+
+    @classmethod
+    async def asyncSetUpClass(cls) -> None:
+        pass
+
+    @classmethod
+    async def asyncTearDownClass(cls) -> None:
+        pass
+
+    async def asyncDoCleanups(self) -> None:
+        pass
+
+    @override
+    @classmethod
+    def setUpClass(cls) -> Generator:
+        print("setUpClass was called")
+        yield from cls._runCoro(cls.asyncSetUpClass())
+
+    @override
+    @classmethod
+    def tearDownClass(cls) -> Generator:
+        print("tearDownClass was called")
+        yield from cls._runCoro(cls.asyncTearDownClass())
+
+    @override
+    def doCleanups(self) -> Generator:
+        yield from self._runCoro(self.asyncDoCleanups())
 
     @override
     def _callSetUp(self) -> Generator | None:

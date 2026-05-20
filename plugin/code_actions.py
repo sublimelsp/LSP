@@ -8,6 +8,7 @@ from ..protocol import Diagnostic
 from ..protocol import LSPAny
 from .core.aio import call_soon_threadsafe
 from .core.aio import run_coroutine_threadsafe
+from .core.logging import trace
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
@@ -206,6 +207,7 @@ class CodeActionsManager:
             sb: SessionBufferProtocol, response: Error | list[CodeActionOrCommand] | None
         ) -> CodeActionsByConfigName:
             actions = []
+            trace(sb=sb, response=response)
             if response and not isinstance(response, Error):
                 # Filter actions returned from the session so that only matching kinds are collected.
                 # Since older servers don't support the "context.only" property, those will return all
@@ -213,10 +215,12 @@ class CodeActionsManager:
                 session_kinds = get_session_kinds(sb)
                 matching_kinds = get_matching_kinds(code_actions, session_kinds)
                 actions = [a for a in response if a.get('kind') in matching_kinds and not a.get('disabled')]
+                trace(session_kinds=session_kinds, matching_kinds=matching_kinds, actions=actions)
             return (sb.session.config.name, actions)
 
         for sb in listener.session_buffers_async('codeActionProvider'):
             matching_kinds = get_matching_kinds(code_actions, get_session_kinds(sb))
+            trace(code_actions=code_actions, matching_kinds=matching_kinds)
             for kind in matching_kinds:
                 listener.purge_changes_async()
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
@@ -287,11 +291,13 @@ class CodeActionsTaskBase(LspTask):
     @override
     async def run(self) -> None:
         await super().run()
+        trace()
         view = self._text_command.view
         code_action_kinds = self.get_code_action_kinds(view)
-        tasks: list[Coroutine[None, None, LSPAny | BaseException]] = []
+        tasks: list[Coroutine[None, None, LSPAny]] = []
         for request in actions_manager.request_on_save_or_format_async(view, code_action_kinds):
             config_name, code_actions = await request
+            trace(code_actions=code_actions)
             if code_actions and (session := self._text_command.session_by_name(config_name, 'codeActionProvider')):
                 tasks.extend(
                     session.run_code_action(action, progress=False, view=self._text_command.view)

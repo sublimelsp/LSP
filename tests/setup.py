@@ -21,11 +21,14 @@ from typing import Any
 from typing import Callable
 from typing import Coroutine
 from typing import TYPE_CHECKING
+from typing_extensions import override
 import asyncio
 import sublime
 
 if TYPE_CHECKING:
     from LSP.plugin.core.sessions import CancellableInflightRequest
+    from LSP.plugin.core.sessions import Session
+    from LSP.plugin.core.windows import WindowManager
     from LSP.protocol import CodeAction
     from LSP.protocol import LSPAny
 
@@ -103,64 +106,67 @@ class SublimeAioTestCase(AsyncTestCase):
     def run_coroutine(cls, coro: Coroutine) -> FutureLike:
         return run_coroutine_threadsafe(coro)
 
-    async def ensure_document_listener_created(self) -> DocumentSyncListener | None:
-        assert self.view
-        # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
-        # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
-        # opening file (manager missing in DocumentSyncListener)
-        # Revisit this once we're on ST4.
-        for listener in view_event_listeners[self.view.id()]:
-            if isinstance(listener, DocumentSyncListener):
-                return listener
-        return None
-
 
 class TextDocumentTestCase(SublimeAioTestCase):
 
+    config: ClientConfig
+    wm: WindowManager
     view: sublime.View
+    session: Session
 
     @classmethod
     def get_stdio_test_config(cls) -> ClientConfig:
         return make_stdio_test_config("TEST")
 
-    async def setUp(self) -> None:
-        # BEGIN: TODO: Move to a setUpClass async method.
-        test_name = self.get_test_name()
-        server_capabilities = self.get_test_server_capabilities()
+    @override
+    @classmethod
+    async def asyncSetUpClass(cls) -> None:
+        print("asyncSetUpClass")
+        test_name = cls.get_test_name()
+        server_capabilities = cls.get_test_server_capabilities()
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", f"{test_name}.txt"), window)
-        open_view = window.find_open_file(filename)
-        await close_test_view(open_view)
-        self.config = self.get_stdio_test_config()
-        self.config.initialization_options.set("serverResponse", server_capabilities)
-        add_config(self.config)
-        self.wm = windows.lookup(window)
-        self.view = await open_file(window, filename_to_uri(filename))  # type: ignore
-        self.assertIsNotNone(self.view)
-        assert self.view
-        self.assertIsNotNone(self.wm)
-        assert self.wm
-        listener = await self.ensure_document_listener_created()
-        self.assertIsNotNone(listener)
-        assert listener
-        self.session = await self.wm.start(self.config, listener)
-        self.initialize_params = await self.await_message("initialize")
-        await self.await_message("initialized")
-        # await close_test_view(self.view)
-        # END: TODO: Move to a setUpClass async method.
+        await close_test_view(window.find_open_file(filename))
+        cls.config = cls.get_stdio_test_config()
+        cls.config.initialization_options.set("serverResponse", server_capabilities)
+        add_config(cls.config)
+        if wm := windows.lookup(window):
+            cls.wm = wm
+        else:
+            raise AssertionError("unable to find WindowManager")
+        if view := await open_file(window, filename_to_uri(filename)):
+            cls.view = view
+        else:
+            raise AssertionError(f"unable to open file {filename}")
+        if listener := cls.ensure_document_listener_created():
+            print("starting", cls.config)
+            if session := await cls.wm.start(cls.config, listener):
+                cls.session = session
+            else:
+                raise AssertionError("unable to start session")
+        else:
+            raise AssertionError(f"unable to find listener for view {cls.view.id()}")
+        print("awaiting initialize request")
+        cls.initialize_params = await cls.await_message("initialize")
+        print("awaiting initialized notification")
+        await cls.await_message("initialized")
 
-        # window = sublime.active_window()
-        # filename = expand(join("$packages", "LSP", "tests", f"{self.get_test_name()}.txt"), window)
-        # open_view = window.find_open_file(filename)
-        # if not open_view:
-        #     self.__class__.view = window.open_file(filename)
-        #     yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
-        #     self.assertTrue(self.wm.get_config_manager().match_view(self.view, self.wm.workspace_folders))
+    @override
+    async def setUp(self) -> None:
+        print("setUp")
+        window = sublime.active_window()
+        filename = expand(join("$packages", "LSP", "tests", f"{self.get_test_name()}.txt"), window)
+        if view := await open_file(sublime.active_window(), filename_to_uri(filename)):
+            self.__class__.view = view
+        else:
+            raise AssertionError(f"unable to open file {filename}")
         self.init_view_settings()
-        # yield self.ensure_document_listener_created
+        self.assertIsNotNone(self.ensure_document_listener_created())
         params = await self.await_message("textDocument/didOpen")
         self.assertIsInstance(params, dict)
         assert isinstance(params, dict)
+        self.assertIsInstance(params["textDocument"], dict)
+        assert isinstance(params["textDocument"], dict)
         self.assertEqual(params["textDocument"]["version"], 0)
 
     @classmethod
@@ -182,13 +188,26 @@ class TextDocumentTestCase(SublimeAioTestCase):
         s("word_wrap", False)
         s("lsp_format_on_save", False)
 
+    @classmethod
+    def ensure_document_listener_created(cls) -> DocumentSyncListener | None:
+        assert cls.view
+        # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
+        # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
+        # opening file (manager missing in DocumentSyncListener)
+        # Revisit this once we're on ST4.
+        for listener in view_event_listeners[cls.view.id()]:
+            if isinstance(listener, DocumentSyncListener):
+                return listener
+        return None
+
     @staticmethod
     async def wait_until_st_state(condition: Callable[[], bool]) -> None:
         """Returns when the given state has been reached."""
         while not condition():
             await next_frame()
 
-    def await_message(self, method: str) -> CancellableInflightRequest[LSPAny]:
+    @classmethod
+    def await_message(cls, method: str) -> CancellableInflightRequest[LSPAny]:
         """
         Awaits until server receives a request with a specified method.
 
@@ -201,17 +220,19 @@ class TextDocumentTestCase(SublimeAioTestCase):
         :returns:   resolved value.
         """
         # cls.assertIsNotNone(cls.session)
-        assert self.session
-        return self.session.request(Request("$test/getReceived", {"method": method}))
+        assert cls.session
+        return cls.session.request(Request("$test/getReceived", {"method": method}))
 
-    def make_server_do_fake_request(self, method: str, params: LSPAny) -> CancellableInflightRequest[LSPAny]:
+    @classmethod
+    def make_server_do_fake_request(cls, method: str, params: LSPAny) -> CancellableInflightRequest[LSPAny]:
         """Make the fake server do an arbitrary request."""
-        assert self.session
-        return self.session.request(Request("$test/fakeRequest", {"method": method, "params": params}))
+        assert cls.session
+        return cls.session.request(Request("$test/fakeRequest", {"method": method, "params": params}))
 
-    async def await_run_code_action(self, code_action: CodeAction) -> LSPAny:
-        assert self.session
-        return await self.session.run_code_action(code_action, progress=False, view=self.view)
+    @classmethod
+    async def await_run_code_action(cls, code_action: CodeAction) -> LSPAny:
+        assert cls.session
+        return await cls.session.run_code_action(code_action, progress=False, view=cls.view)
 
     async def mock_response(self, method: str, response: LSPAny) -> None:
         """Set up what the fake server should reply when it receives this method."""
@@ -243,27 +264,28 @@ class TextDocumentTestCase(SublimeAioTestCase):
 
     async def await_view_change(self, expected_change_count: int) -> None:
         assert isinstance(self.view, sublime.View)
-        v = self.view
-        while True:
-            if v.change_count() == expected_change_count:
-                return
-            await asyncio.sleep(0.05)
+        await self.wait_until_st_state(lambda: self.view.change_count() == expected_change_count)
 
     def insert_characters(self, characters: str) -> int:
         assert isinstance(self.view, sublime.View)
         self.view.run_command("insert", {"characters": characters})
         return self.view.change_count()
 
-    async def tearDown(self) -> None:
+    @override
+    @classmethod
+    async def asyncTearDownClass(cls) -> None:
         try:
-            await close_test_view(self.view)
-            if self.session:
-                await self.session.end()
-                self.session = None
-            if self.wm and self.view:
-                while self.wm.get_session(self.config.name, self.view.file_name()) is not None:  # noqa: ASYNC110
-                    await asyncio.sleep(0.05)
-                self.wm = None
+            if cls.session and cls.wm:
+                await cls.session.end()
         finally:
             # restore the user's configs
-            remove_config(self.config)
+            remove_config(cls.config)
+        await super().asyncTearDownClass()
+
+    @override
+    async def asyncDoCleanups(self) -> None:
+        try:
+            if self.view and self.view.is_valid():
+                await close_test_view(self.view)
+        except Exception:
+            pass

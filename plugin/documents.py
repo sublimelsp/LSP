@@ -432,6 +432,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
     async def on_load(self) -> None:
+        await self._on_load_impl()
+
+    async def _on_load_impl(self) -> None:
         if not self._registered and is_regular_view(self.view):
             self._register()
             return
@@ -1045,7 +1048,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             for listener in listeners:
                 if isinstance(listener, DocumentSyncListener):
                     debug("also registering", listener)
-                    self.create_task(listener.on_load())
+                    self.create_task(listener._on_load_impl())
 
     def _on_view_updated_async(self) -> None:
         if self._should_format_on_paste:

@@ -491,6 +491,22 @@ Follow installation instructions on [LSP-marksman](https://github.com/sublimelsp
 
 Follow installation instructions on [LSP-nimlangserver](https://github.com/sublimelsp/LSP-nimlangserver).
 
+## Nix
+
+1. Install [nixd](https://github.com/nix-community/nixd/blob/main/nixd/docs/editor-setup.md#installation---get-a-working-executable)
+2. Open `Preferences > Package Settings > LSP > Server Configurations` (or run "Preferences: LSP Server Configurations" in the command palette) and add the `"nixd"` configuration:
+
+
+    ```json
+    {
+      "nixd": {
+        "enabled": true,
+        "command": ["nixd"],
+        "selector": "source.nix"
+      }
+    }
+    ```
+
 ## OCaml/Reason
 
 1. Install the [Reason](https://packagecontrol.io/packages/Reason) package from Package Control for syntax highlighting.

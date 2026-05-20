@@ -494,7 +494,7 @@ Follow installation instructions on [LSP-nimlangserver](https://github.com/subli
 ## Nix
 
 1. Install [nixd](https://github.com/nix-community/nixd/blob/main/nixd/docs/editor-setup.md#installation---get-a-working-executable)
-2. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"nixd"` configuration:
+2. Open `Preferences > Package Settings > LSP > Server Configurations` (or run "Preferences: LSP Server Configurations" in the command palette) and add the `"nixd"` configuration:
 
 
     ```json
@@ -502,8 +502,8 @@ Follow installation instructions on [LSP-nimlangserver](https://github.com/subli
       "nixd": {
         "enabled": true,
         "command": ["nixd"],
-        "selector": "source.nix",
-      },
+        "selector": "source.nix"
+      }
     }
     ```
 

@@ -15,6 +15,7 @@ from LSP.plugin.core.views import kind_contains_other_kind
 from LSP.plugin.core.views import versioned_text_document_identifier
 from LSP.plugin.documents import DocumentSyncListener
 from typing import TYPE_CHECKING
+import asyncio
 import unittest
 
 if TYPE_CHECKING:
@@ -459,42 +460,22 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         return capabilities
 
     async def test_requests_with_diagnostics(self) -> None:
-        # Setup the mock.
         initial_content = 'a\nb\nc'
+        self.insert_characters(initial_content)
+        await self.await_message('textDocument/didChange')
         range_a = range_from_points(Point(0, 0), Point(0, 1))
         range_b = range_from_points(Point(1, 0), Point(1, 1))
         range_c = range_from_points(Point(2, 0), Point(2, 1))
-        code_action_a = create_test_code_action(self.view, self.view.change_count(), [("A", range_a)])
-        code_action_b = create_test_code_action(self.view, self.view.change_count(), [("B", range_b)])
-        await self.mock_response('textDocument/codeAction', [code_action_a, code_action_b])
-
-        # Insert:
-        # a
-        # b
-        # c
-        self.insert_characters(initial_content)
-        await self.await_message('textDocument/didChange')
-
-        # Select:
-        # a
-        # [b
-        # c
-        # ]
-        self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
-        await self.wait_until_st_state(
-            lambda: len(self.view.sel()) == 1 and self.view.sel()[0].a == 0 and self.view.sel()[0].b == 3
-        )
-
-        # Make fake server emit diagnostics.
         await self.mock_client_notification(
             "textDocument/publishDiagnostics",
             create_test_diagnostics([('issue a', range_a), ('issue b', range_b), ('issue c', range_c)])
         )
-
-        # The fake diagnostics should have triggered a code actions request.
+        code_action_a = create_test_code_action(self.view, self.view.change_count(), [("A", range_a)])
+        code_action_b = create_test_code_action(self.view, self.view.change_count(), [("B", range_b)])
+        await self.mock_response('textDocument/codeAction', [code_action_a, code_action_b])
+        self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
+        await asyncio.sleep(0.1)
         params = await self.await_message('textDocument/codeAction')
-
-        # Assert the parameters we set up in the mock response above.
         self.assertEqual(params['range']['start']['line'], 0)
         self.assertEqual(params['range']['start']['character'], 0)
         self.assertEqual(params['range']['end']['line'], 1)

@@ -159,7 +159,9 @@ class TcpClientTransportConfig(TransportConfig):
         while delta < TCP_CONNECT_TIMEOUT:
             time_left = TCP_CONNECT_TIMEOUT - delta
             try:
-                reader, writer = await asyncio.wait_for(asyncio.open_connection('localhost', port), timeout=time_left)
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(host='127.0.0.1', port=port), timeout=time_left
+                )
                 return TransportWrapper(
                     callback_object=callbacks,
                     transport=StreamTransport(encode_json, decode_json, reader, writer),
@@ -206,7 +208,6 @@ class TcpServerTransportConfig(TransportConfig):
         launch = TransportConfig.resolve_launch_config(command, env, variables)
 
         class ClientConnectedCallback:
-
             def __init__(self) -> None:
                 self.cv = asyncio.Condition()
                 self.wrapper: TransportWrapper | None = None
@@ -221,7 +222,7 @@ class TcpServerTransportConfig(TransportConfig):
 
         callback = ClientConnectedCallback()
         async with callback.cv:
-            server = await asyncio.start_server(callback, port=port)
+            server = await asyncio.start_server(callback, host='127.0.0.1', port=port, family=socket.AF_INET)
             try:
                 await server.start_serving()
                 process = await launch.start(
@@ -258,11 +259,7 @@ class TransportCallbacks:
 
 
 class Transport(ABC):
-    def __init__(
-        self,
-        encoder: Callable[[JSONRPCMessage], bytes],
-        decoder: Callable[[bytes], JSONRPCMessage]
-    ) -> None:
+    def __init__(self, encoder: Callable[[JSONRPCMessage], bytes], decoder: Callable[[bytes], JSONRPCMessage]) -> None:
         self._encoder = encoder
         self._decoder = decoder
 
@@ -460,6 +457,7 @@ class LaunchConfig:
 
 
 # --- Utils -------------------------------------------------------------------------------------------------------
+
 
 class ErrorReader:
     """

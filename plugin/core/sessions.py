@@ -176,6 +176,7 @@ from typing import TypeVar
 from typing_extensions import deprecated
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
+from urllib.parse import urldefrag
 from weakref import WeakSet
 import asyncio
 import itertools
@@ -1652,27 +1653,29 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         flags: sublime.NewFileFlags,
         group: int,
     ) -> sublime.View | bool | None:
-        pair: PackagedTask[tuple[str | None, str, str]] = Promise.packaged_task()
-        callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
+        # I cannot type-hint an unpacked tuple
+        pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
+        promise, resolve = pair
+        # It'd be nice to have automatic tuple unpacking continuations
+        callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
-            title, content, syntax = await pair[0]
-            return await self.open_scratch_buffer(title, content, syntax, uri, r, flags, group)
+            title, content, syntax = await promise
+            view = await self.open_scratch_buffer(title, content, syntax, flags, group)
+            self._on_sheet_opened(view.sheet(), uri, r)
+        # resolve unused promise
+        resolve(('', '', ''))
         return False
 
     async def open_scratch_buffer(
         self,
-        title: str | None,
+        title: str,
         content: str,
         syntax: str,
-        uri: DocumentUri,
-        r: Range | None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1,
-    ) -> sublime.View | None:
+    ) -> sublime.View:
 
-        def continue_on_main_thread() -> sublime.View | None:
-            if title is None:
-                return None
+        def continue_on_main_thread() -> None:
             if group > -1:
                 self.window.focus_group(group)
             view = self.window.new_file(syntax=syntax, flags=flags)
@@ -1682,13 +1685,14 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             view.set_name(title)
             view.run_command("append", {"characters": content})
             view.set_read_only(True)
-            return self._on_sheet_opened(view.sheet(), uri, r)
+            resolve(view)
 
         return await asyncio.get_running_loop().run_in_executor(executor_main, continue_on_main_thread)
 
     def _on_sheet_opened(self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None) -> sublime.View | None:
         if sheet and (view := sheet.view()):
-            view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
+            uri_no_fragment = urldefrag(uri).url
+            view.settings().set('lsp_uri', uri_no_fragment)
             if r:
                 center_selection(view, r)
             return view

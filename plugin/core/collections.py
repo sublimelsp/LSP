@@ -40,16 +40,15 @@ class DottedDict:
             result.update(deepcopy(override))
         return result
 
-    def get(self, path: str | None = None) -> Any:
+    def get(self, path: str | None = None, default: Any = None) -> Any:
         """
         Get a value from the dictionary.
 
         :param      path:  The path, e.g. foo.bar.baz, or None.
+        :param   default:  Fallback value if path is not contained in this DottedDict.
 
-        :returns:   The value stored at the path, or None if it doesn't exist.
-                    Note that this cannot distinguish between None values and
-                    paths that don't exist. If the path is None, returns the
-                    entire dictionary.
+        :returns:   The value stored at the path, or `default` if it doesn't exist.
+                    If the path is None, returns the entire dictionary.
         """
         if path is None:
             return self._d
@@ -59,7 +58,7 @@ class DottedDict:
             if isinstance(current, dict):
                 current = current.get(key)
             else:
-                return None
+                return default
         return current
 
     def walk(self, path: str) -> Generator[Any, None, None]:

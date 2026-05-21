@@ -64,6 +64,8 @@ from ...protocol import SnippetTextEdit
 from ...protocol import SymbolKind
 from ...protocol import SymbolTag
 from ...protocol import TextDocumentClientCapabilities
+from ...protocol import TextDocumentContentRefreshParams
+from ...protocol import TextDocumentContentResult
 from ...protocol import TextDocumentEdit
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextEdit
@@ -149,8 +151,12 @@ from .url import filename_to_uri
 from .url import normalize_uri
 from .url import parse_uri
 from .version import __version__
+from .views import entire_content_region
+from .views import first_selection_region
 from .views import get_uri_and_range_from_location
 from .views import kind_contains_other_kind
+from .views import MissingUriError
+from .views import mutable
 from .views import uri_from_view
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
@@ -173,6 +179,7 @@ from typing import Union
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
 from urllib.parse import urldefrag
+from urllib.parse import urlparse
 from weakref import WeakSet
 import itertools
 import mdpopups
@@ -591,6 +598,9 @@ def get_initialize_params(
         },
         "diagnostics": {
             "refreshSupport": True
+        },
+        "textDocumentContent": {
+            "dynamicRegistration": True
         }
     }
     window_capabilities: WindowClientCapabilities = {
@@ -1160,10 +1170,10 @@ class Session(APIHandler, TransportCallbacks):
             return any(sb.has_capability(capability) for sb in self.session_buffers_async())
         return False
 
-    def get_capability(self, capability: str) -> Any | None:
+    def get_capability(self, capability: str, default: Any = None) -> Any:
         if self.config.is_disabled_capability(capability):
-            return None
-        return self.capabilities.get(capability)
+            return default
+        return self.capabilities.get(capability, default)
 
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open()
@@ -1432,7 +1442,8 @@ class Session(APIHandler, TransportCallbacks):
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
     ) -> Promise[sublime.View | None] | None:
-        if uri.startswith("file:"):
+        scheme, _ = parse_uri(uri)
+        if scheme == 'file':
             return self._open_file_uri_async(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
         if sb := self.get_session_buffer_for_uri_async(uri):
@@ -1441,9 +1452,9 @@ class Session(APIHandler, TransportCallbacks):
             if r:
                 center_selection(view, r)
             return Promise.resolve(view)
-        if uri.startswith('res:'):
+        if scheme == 'res':
             return self._open_res_uri_async(uri, r, group)
-        if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
+        if scheme == 'untitled':  # VSCode specific URI scheme for unsaved buffers
             flags &= sublime.NewFileFlags.TRANSIENT | sublime.NewFileFlags.ADD_TO_SELECTION
             if name := uri[len('untitled:'):]:
                 # Check if there is a pre-existing unsaved buffer with the given name
@@ -1458,12 +1469,15 @@ class Session(APIHandler, TransportCallbacks):
             view = self.window.new_file(flags)
             view.set_scratch(True)
             return Promise.resolve(view)
+        if scheme in self.get_capability('workspace.textDocumentContent.schemes', []):
+            return self.send_request_task(Request('workspace/textDocumentContent', {'uri': uri})) \
+                .then(lambda response: self._on_text_document_content_async(response, uri, flags, group)) \
+                .then(lambda view: self._on_view_for_uri_opened(view, uri, r) if view else None)
         # There is no pre-existing session-buffer, so we have to go through the plugin's URI handler.
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
-                scheme, _ = parse_uri(uri)
                 if handler := self._plugin.get_uri_handler(scheme):
-                    return handler(uri, flags).then(lambda sheet: self._on_sheet_opened(sheet, uri, r))
+                    return handler(uri, flags).then(lambda sheet: self._on_sheet_for_uri_opened(sheet, uri, r))
             else:
                 return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None
@@ -1527,7 +1541,7 @@ class Session(APIHandler, TransportCallbacks):
         callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             return promise.then(lambda tup: self.open_scratch_buffer(*tup, flags, group)) \
-                .then(lambda view: self._on_sheet_opened(view.sheet(), uri, r))
+                .then(lambda view: self._on_view_for_uri_opened(view, uri, r))
         # resolve unused promise
         resolve(('', '', ''))
         return None
@@ -1558,14 +1572,45 @@ class Session(APIHandler, TransportCallbacks):
         sublime.set_timeout(continue_on_main_thread)
         return promise
 
-    def _on_sheet_opened(self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None) -> sublime.View | None:
-        if sheet and (view := sheet.view()):
-            uri_no_fragment = urldefrag(uri).url
-            view.settings().set('lsp_uri', uri_no_fragment)
-            if r:
-                center_selection(view, r)
-            return view
-        return None
+    def _on_sheet_for_uri_opened(
+        self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
+    ) -> sublime.View | None:
+        return self._on_view_for_uri_opened(view, uri, r) if sheet and (view := sheet.view()) else None
+
+    def _on_view_for_uri_opened(self, view: sublime.View, uri: DocumentUri, r: Range | None) -> sublime.View:
+        uri_no_fragment = urldefrag(uri).url
+        view.settings().set('lsp_uri', uri_no_fragment)
+        if r:
+            center_selection(view, r)
+        return view
+
+    def _on_text_document_content_async(
+        self, response: TextDocumentContentResult | Error, uri: DocumentUri, flags: sublime.NewFileFlags, group: int
+    ) -> Promise[sublime.View | None]:
+        if isinstance(response, Error):
+            return Promise.resolve(None)
+        title = urlparse(uri).path.split('/')[-1]
+        content = response['text'].replace('\r', '')
+        syntax = ''
+        return self.open_scratch_buffer(title, content, syntax, flags, group)  # pyright: ignore[reportReturnType]
+
+    def _on_text_document_content_refreshed_async(
+        self, view: sublime.View, response: TextDocumentContentResult
+    ) -> None:
+        if not view.is_valid():
+            return
+        new_content = response['text'].replace('\r', '')
+        content_region = entire_content_region(view)
+        if new_content == view.substr(content_region):
+            return
+        selection_region = first_selection_region(view)
+        selection = view.sel()
+        selection.add(content_region)
+        with mutable(view):
+            view.run_command('insert', {'characters': new_content})
+        if selection_region is not None and selection_region.begin() < view.size():
+            selection.clear()
+            selection.add(selection_region)
 
     def open_location_async(
         self,
@@ -2026,6 +2071,21 @@ class Session(APIHandler, TransportCallbacks):
             session_buffer.do_document_diagnostic_async(view, view.change_count(), forced_update=True)
         for session_buffer in not_visible_session_buffers:
             session_buffer.set_pending_refresh(RequestFlags.DIAGNOSTIC)
+
+    @request_handler('workspace/textDocumentContent/refresh')
+    def on_workspace_text_document_content_refresh(self, params: TextDocumentContentRefreshParams) -> Promise[None]:
+        sublime.set_timeout_async(lambda: self._refresh_text_document_content_async(params['uri']))
+        return Promise.resolve(None)
+
+    def _refresh_text_document_content_async(self, uri: DocumentUri) -> None:
+        for view in self.window.views():
+            try:
+                if uri_from_view(view) == uri:
+                    request = Request('workspace/textDocumentContent', {'uri': uri})
+                    self.send_request_async(request, partial(self._on_text_document_content_refreshed_async, view))
+                    break
+            except MissingUriError:
+                continue
 
     @notification_handler('textDocument/publishDiagnostics')
     def on_text_document_publish_diagnostics(self, params: PublishDiagnosticsParams) -> None:

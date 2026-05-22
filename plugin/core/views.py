@@ -49,8 +49,8 @@ from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
 from .css import css as lsp_css
 from .protocol import Notification
-from .protocol import Point
 from .protocol import Request
+from .protocol import TextPosition
 from .settings import userprefs
 from .url import encode_code_action_uri
 from .url import parse_uri
@@ -171,14 +171,14 @@ def extract_variables(window: sublime.Window) -> dict[str, str]:
     return variables
 
 
-def point_to_offset(point: Point, view: sublime.View) -> int:
+def point_to_offset(point: TextPosition, view: sublime.View) -> int:
     # @see https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#position
     # If the character value is greater than the line length it defaults back to the line length.
     return view.text_point_utf16(point.row, point.col, clamp_column=True)
 
 
-def offset_to_point(view: sublime.View, offset: int) -> Point:
-    return Point(*view.rowcol_utf16(offset))
+def offset_to_point(view: sublime.View, offset: int) -> TextPosition:
+    return TextPosition(*view.rowcol_utf16(offset))
 
 
 def offset_to_text_position(view: sublime.View, offset: int) -> Position:
@@ -191,7 +191,7 @@ def position(view: sublime.View, offset: int) -> Position:
 
 
 def position_to_offset(position: Position, view: sublime.View) -> int:
-    return point_to_offset(Point.from_lsp(position), view)
+    return point_to_offset(TextPosition.from_lsp(position), view)
 
 
 def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:

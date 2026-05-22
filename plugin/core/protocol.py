@@ -411,12 +411,12 @@ class TextPosition:
         return f"{self.row}:{self.col}"
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Point):
+        if not isinstance(other, self.__class__):
             return NotImplemented
         return self.row == other.row and self.col == other.col
 
     def __lt__(self, other: object) -> bool:
-        if not isinstance(other, Point):
+        if not isinstance(other, self.__class__):
             return NotImplemented
         return (self.row, self.col) < (other.row, other.col)
 
@@ -424,8 +424,8 @@ class TextPosition:
         return hash(self.__repr__())
 
     @classmethod
-    def from_lsp(cls, point: Position) -> Point:
-        return Point(point['line'], point['character'])
+    def from_lsp(cls, position: Position) -> TextPosition:
+        return TextPosition(position['line'], position['character'])
 
     def to_lsp(self) -> Position:
         return {

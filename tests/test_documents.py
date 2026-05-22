@@ -14,10 +14,10 @@ from LSP.plugin.core.registry import windows
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.documents import DocumentSyncListener
 from os.path import join
+from sublime_plugin import view_event_listeners
 from typing_extensions import override
 import asyncio
 import sublime
-from sublime_plugin import view_event_listeners
 
 
 class WindowDocumentHandlerTests(SublimeAioTestCase):

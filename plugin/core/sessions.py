@@ -1552,7 +1552,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1,
-    ) -> sublime.View | bool | None:
+    ) -> sublime.View | Literal[False] | None:
         """
         Try to open an URI.
 
@@ -1600,7 +1600,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 scheme, _ = parse_uri(uri)
                 if handler := self._plugin.get_uri_handler(scheme):
                     sheet = await handler(uri, flags)
-                    await loop.run_in_executor(executor_main, self._on_sheet_opened, sheet, uri, r)
+                    return self._on_sheet_opened(sheet, uri, r)
             else:
                 return await self._open_uri_with_plugin(self._plugin, uri, r, flags, group)
         return False
@@ -1614,8 +1614,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> sublime.View | None:
         """Open a URI. If the URI can't be opened, raises RuntimeError."""
         result = await self.try_open_uri(uri, r, flags, group)
-        if isinstance(result, bool):
-            raise RuntimeError(f"unable to open URI {uri}")  # noqa: TRY004
+        if result is False:
+            raise RuntimeError(f"unable to open URI {uri}")
         return result
 
     async def _open_file_uri(
@@ -1652,7 +1652,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         r: Range | None,
         flags: sublime.NewFileFlags,
         group: int,
-    ) -> sublime.View | bool | None:
+    ) -> sublime.View | Literal[False] | None:
         # I cannot type-hint an unpacked tuple
         pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         promise, resolve = pair
@@ -1660,8 +1660,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             title, content, syntax = await promise
-            view = await self.open_scratch_buffer(title, content, syntax, flags, group)
-            self._on_sheet_opened(view.sheet(), uri, r)
+            if view := await self.open_scratch_buffer(title, content, syntax, flags, group):
+                return self._on_sheet_opened(view.sheet(), uri, r)
+            return None
         # resolve unused promise
         resolve(('', '', ''))
         return False
@@ -1673,9 +1674,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         syntax: str,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1,
-    ) -> sublime.View:
+    ) -> sublime.View | None:
 
-        def continue_on_main_thread() -> None:
+        def continue_on_main_thread() -> sublime.View | None:
             if group > -1:
                 self.window.focus_group(group)
             view = self.window.new_file(syntax=syntax, flags=flags)
@@ -1685,7 +1686,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             view.set_name(title)
             view.run_command("append", {"characters": content})
             view.set_read_only(True)
-            resolve(view)
+            return view
 
         return await asyncio.get_running_loop().run_in_executor(executor_main, continue_on_main_thread)
 

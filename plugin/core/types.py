@@ -852,14 +852,23 @@ class ClientConfig:
         self.diagnostics_mode = diagnostics_mode
         # Transformed mapping that uses tuples instead of lists for mdpopups.
         self.resolved_markdown_language_map: MarkdownLangMap | None = None
-        self.all_settings = all_settings or {}
-        # Exclude 'settings' because it shouldn't be considered when ClientConfig is checked for equality
-        if 'settings' in self.all_settings:
-            del self.all_settings['settings']
         self._markdown_language_map = markdown_language_map
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._settings_registration = settings_registration
+        if isinstance(all_settings, dict):
+            self._all_settings = all_settings
+            # Exclude 'settings' because it shouldn't be considered when ClientConfig is checked for equality
+            if 'settings' in self._all_settings:
+                del self._all_settings['settings']
+        else:
+            self._all_settings = {}
         self._view_status_handler = default_status_view_handler
+
+    def __getattr__(self, name: str, /) -> Any:
+        """Get property through attribute access (`.foo`) for properties that don't exist natively."""
+        if name in self._all_settings:
+            return self._all_settings[name]
+        raise AttributeError(name)
 
     @property
     @deprecated('Use initialization_options instead')
@@ -1003,7 +1012,7 @@ class ClientConfig:
 
         Values present in `override` take precedence over those in `src_config`. Structured
         values (`initialization_options`, `settings`) are deep-merged rather than replaced wholesale. The raw
-        `all_settings` dict is shallow-merged.
+        `_all_settings` dict is shallow-merged.
 
         :param src_config: The base configuration to start from.
         :param override: Dictionary of values to override.
@@ -1036,7 +1045,7 @@ class ClientConfig:
             markdown_language_map=deepcopy(override.get("markdown_language_map", src_config.markdown_language_map)),
             path_maps=PathMap.parse(override.get("path_maps")) or deepcopy(src_config.path_maps),
             settings_registration=src_config._settings_registration,
-            all_settings=deepcopy({**src_config.all_settings, **override})
+            all_settings=deepcopy({**src_config._all_settings, **override})
         )
 
     def create_transport_config(self) -> TransportConfig:
@@ -1176,7 +1185,7 @@ class ClientConfig:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClientConfig):
             return False
-        return self.name == other.name and self.all_settings == other.all_settings
+        return self.name == other.name and self._all_settings == other._all_settings
 
     def __hash__(self) -> int:
         return hash(self.__repr__())

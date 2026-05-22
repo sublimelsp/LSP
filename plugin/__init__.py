@@ -28,7 +28,6 @@ from .core.protocol import ClientRequest
 from .core.protocol import ClientResponse
 from .core.protocol import Error
 from .core.protocol import Notification
-from .core.protocol import Point
 from .core.protocol import Request
 from .core.protocol import Response
 from .core.protocol import ServerNotification
@@ -47,11 +46,8 @@ from .core.url import filename_to_uri
 from .core.url import parse_uri
 from .core.url import uri_to_filename  # deprecated
 from .core.version import __version__
-from .core.views import point_to_offset
 from .core.views import uri_from_view
 from .core.workspace import WorkspaceFolder
-from .execute_command import LspExecuteCommand
-from .locationpicker import LocationPicker
 
 # This is the public API for LSP-* packages
 __all__ = [
@@ -69,8 +65,6 @@ __all__ = [
     'FileWatcherEventType',
     'FileWatcherProtocol',
     'IsApplicableContext',
-    'LocationPicker',
-    'LspExecuteCommand',
     'LspPlugin',
     'LspTextCommand',
     'LspWindowCommand',
@@ -79,7 +73,6 @@ __all__ = [
     'OnPreStartContext',
     'PackagedTask',
     'PluginStartError',
-    'Point',
     'Promise',
     'Request',
     'Response',
@@ -99,7 +92,6 @@ __all__ = [
     'matches_pattern',
     'notification_handler',
     'parse_uri',
-    'point_to_offset',
     'register_file_watcher_implementation',
     'register_plugin',
     'request_handler',

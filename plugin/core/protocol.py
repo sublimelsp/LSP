@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ...protocol import *  # For backward compatibility with LSP packages.  # noqa: F403
-from functools import total_ordering
+from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import Generic
@@ -401,31 +401,17 @@ class Notification(Generic[P]):
         return payload
 
 
-@total_ordering
+@dataclass(frozen=True, order=True)
 class TextPosition:
-    def __init__(self, row: int, col: int) -> None:
-        self.row = int(row)
-        self.col = int(col)  # in UTF-16
+    row: int
+    col: int  # in UTF-16
 
     def __repr__(self) -> str:
         return f"{self.row}:{self.col}"
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return self.row == other.row and self.col == other.col
-
-    def __lt__(self, other: object) -> bool:
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return (self.row, self.col) < (other.row, other.col)
-
-    def __hash__(self) -> int:
-        return hash(self.__repr__())
-
     @classmethod
     def from_lsp(cls, position: Position) -> TextPosition:
-        return TextPosition(position['line'], position['character'])
+        return cls(position['line'], position['character'])
 
     def to_lsp(self) -> Position:
         return {

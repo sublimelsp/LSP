@@ -871,6 +871,10 @@ class ClientConfig:
         raise AttributeError(name)
 
     @property
+    def root_settings(self) -> Any:
+        return self._all_settings
+
+    @property
     @deprecated('Use initialization_options instead')
     def init_options(self) -> DottedDict:
         return self.initialization_options

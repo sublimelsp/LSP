@@ -51,7 +51,6 @@ def lsp_range_from_uri_fragment(fragment: str) -> Range | None:
 def open_file_uri(
     window: sublime.Window, uri: DocumentUri, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1
 ) -> Promise[sublime.View | None]:
-
     decoded_uri = unquote(uri)  # decode percent-encoded characters
     open_promise = open_file(window, decoded_uri, flags, group)
     if fragment := urlparse(decoded_uri).fragment:

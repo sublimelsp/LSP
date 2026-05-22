@@ -551,6 +551,7 @@ _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
 }
 
 
+@deprecated('Remove once lsp_utils drops it from the code')
 def method2attr(method: str) -> str:
     # window/messageRequest -> m_window_messageRequest
     # $/progress -> m___progress

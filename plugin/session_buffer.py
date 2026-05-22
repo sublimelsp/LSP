@@ -29,6 +29,7 @@ from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
 from ..protocol import TextEdit
 from ..protocol import UnchangedDocumentDiagnosticReport
+from .api import AbstractPlugin
 from .api import LspPlugin
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
@@ -388,8 +389,10 @@ class SessionBuffer:
             purge = True
         if purge:
             self._cancel_pending_requests_async()
-            if userprefs().format_on_type and \
-                    (params := self._get_on_type_formatting_params_async(view, action, last_change.str)):
+            if (
+                userprefs().format_on_type and last_change.len_utf16 == 0
+                and (params := self._get_on_type_formatting_params_async(view, action, last_change.str))
+            ):
                 self.purge_changes_async(view)
                 self.session.send_request_task(Request.onTypeFormatting(params, view)) \
                     .then(partial(self._on_type_formatting_result_async, view, change_count))
@@ -1041,9 +1044,15 @@ class SessionBuffer:
         Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async())
 
     def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
+        code_lenses_with_command = self._code_lenses.code_lenses_with_command()
+        if isinstance(self.session.plugin, AbstractPlugin):
+            # We can't filter out any commands, because we don't know which commands are handled by the
+            # AbstractPlugin.on_pre_server_command API method. Code lenses which are not handled by that method or by
+            # the server will be shown, but are not functional.
+            return code_lenses_with_command
         supported_code_lenses: list[ResolvedCodeLens] = []
         # Filter out CodeLenses with commands that are not handled by the language server or plugin
-        for code_lens in self._code_lenses.code_lenses_with_command():
+        for code_lens in code_lenses_with_command:
             command_name = code_lens['command']['command']
             if command_name in self._supported_commands:
                 supported_code_lenses.append(code_lens)

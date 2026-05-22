@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
+from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import TypeAlias
 
@@ -401,7 +402,7 @@ class Notification(Generic[P]):
 
 
 @total_ordering
-class Point:
+class TextPosition:
     def __init__(self, row: int, col: int) -> None:
         self.row = int(row)
         self.col = int(col)  # in UTF-16
@@ -431,6 +432,11 @@ class Point:
             "line": self.row,
             "character": self.col
         }
+
+
+@deprecated('Use TextPosition instead')
+class Point(TextPosition):
+    pass
 
 
 class ResponseError(TypedDict):

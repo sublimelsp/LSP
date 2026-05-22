@@ -871,7 +871,7 @@ class ClientConfig:
         raise AttributeError(name)
 
     @property
-    def root_settings(self) -> Any:
+    def root_settings(self) -> dict[str, Any]:
         return self._all_settings
 
     @property

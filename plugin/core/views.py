@@ -66,6 +66,7 @@ from typing import cast
 from typing import Iterable
 from typing import Sequence
 from typing import TYPE_CHECKING
+from typing_extensions import deprecated
 import html
 import itertools
 import linecache
@@ -180,8 +181,13 @@ def offset_to_point(view: sublime.View, offset: int) -> Point:
     return Point(*view.rowcol_utf16(offset))
 
 
-def position(view: sublime.View, offset: int) -> Position:
+def offset_to_text_position(view: sublime.View, offset: int) -> Position:
     return offset_to_point(view, offset).to_lsp()
+
+
+@deprecated('Use offset_to_text_position() instead')
+def position(view: sublime.View, offset: int) -> Position:
+    return offset_to_text_position(view, offset)
 
 
 def position_to_offset(position: Position, view: sublime.View) -> int:
@@ -306,7 +312,7 @@ def versioned_text_document_identifier(view: sublime.View, version: int) -> Vers
 
 
 def text_document_position_params(view: sublime.View, location: int) -> TextDocumentPositionParams:
-    return {"textDocument": text_document_identifier(view), "position": position(view, location)}
+    return {"textDocument": text_document_identifier(view), "position": offset_to_text_position(view, location)}
 
 
 def did_open_text_document_params(view: sublime.View, language_id: str) -> DidOpenTextDocumentParams:
@@ -439,7 +445,7 @@ def text_document_ranges_formatting(
 def selection_range_params(view: sublime.View) -> SelectionRangeParams:
     return {
         "textDocument": text_document_identifier(view),
-        "positions": [position(view, r.b) for r in view.sel()]
+        "positions": [offset_to_text_position(view, r.b) for r in view.sel()]
     }
 
 

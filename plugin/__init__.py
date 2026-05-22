@@ -48,8 +48,8 @@ from .core.url import parse_uri
 from .core.url import uri_to_filename  # deprecated
 from .core.version import __version__
 from .core.views import first_selection_region
+from .core.views import offset_to_text_position
 from .core.views import point_to_offset
-from .core.views import position
 from .core.views import position_to_offset
 from .core.views import region_to_range
 from .core.views import text_document_identifier
@@ -105,9 +105,9 @@ __all__ = [
     'first_selection_region',
     'matches_pattern',
     'notification_handler',
+    'offset_to_text_position',
     'parse_uri',
     'point_to_offset',
-    'position',
     'position_to_offset',
     'region_to_range',
     'register_file_watcher_implementation',

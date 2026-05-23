@@ -1698,13 +1698,7 @@ class Session(APIHandler, TransportCallbacks):
             view = self.window.find_open_file(old_path) if os.path.isfile(old_path) else None
             try:
                 Path(old_path).rename(new_path)
-            except FileExistsError as ex:
-                return Promise.resolve(str(ex))
-            except IsADirectoryError as ex:
-                return Promise.resolve(str(ex))
-            except NotADirectoryError as ex:
-                return Promise.resolve(str(ex))
-            except OSError as ex:
+            except (FileExistsError, IsADirectoryError, NotADirectoryError, OSError) as ex:
                 return Promise.resolve(str(ex))
             if view:
                 view.retarget(new_path)

@@ -151,6 +151,7 @@ from .url import filename_to_uri
 from .url import normalize_uri
 from .url import parse_uri
 from .version import __version__
+from .views import entire_content
 from .views import entire_content_region
 from .views import first_selection_region
 from .views import get_uri_and_range_from_location
@@ -1594,23 +1595,27 @@ class Session(APIHandler, TransportCallbacks):
         syntax = ''
         return self.open_scratch_buffer(title, content, syntax, flags, group)  # pyright: ignore[reportReturnType]
 
+    def _on_text_document_content_refreshed(self, view: sublime.View, new_content: str) -> None:
+        content_region = entire_content_region(view)
+        selection_region = first_selection_region(view)
+        selection = view.sel()
+        selection.add(content_region)
+        with mutable(view):
+            view.run_command('insert', {'characters': new_content})
+        # Try to restore original selection if possible
+        if selection_region is not None and selection_region.begin() < view.size():
+            selection.clear()
+            selection.add(selection_region)
+
     def _on_text_document_content_refreshed_async(
         self, view: sublime.View, response: TextDocumentContentResult
     ) -> None:
         if not view.is_valid():
             return
         new_content = response['text'].replace('\r', '')
-        content_region = entire_content_region(view)
-        if new_content == view.substr(content_region):
+        if new_content == entire_content(view):
             return
-        selection_region = first_selection_region(view)
-        selection = view.sel()
-        selection.add(content_region)
-        with mutable(view):
-            view.run_command('insert', {'characters': new_content})
-        if selection_region is not None and selection_region.begin() < view.size():
-            selection.clear()
-            selection.add(selection_region)
+        sublime.set_timeout(lambda: self._on_text_document_content_refreshed(view, new_content))
 
     def open_location_async(
         self,

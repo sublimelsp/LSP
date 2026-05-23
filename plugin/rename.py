@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine_threadsafe
 from .core.edit import show_summary_message
 from .core.protocol import Request
 from .core.registry import get_position
@@ -100,21 +99,11 @@ class LspSymbolRenameCommand(LspTextCommand):
         placeholder: str = "",
         session_name: str | None = None,
         event: dict | None = None,
-        point: int | None = None,
-    ) -> None:
-        run_coroutine_threadsafe(
-            self._run(new_name, placeholder, session_name, point, get_position(self.view, event, point))
-        )
-
-    async def _run(self,
-        new_name: str = "",
-        placeholder: str = "",
-        session_name: str | None = None,
-        point: int | None = None,
-        location: int | None = None
+        point: int | None = None
     ) -> None:
         if listener := self.get_listener():
             listener.purge_changes_async()
+        location = get_position(self.view, event, point)
         session = self._get_prepare_rename_session(point, session_name)
         if new_name or placeholder or not session:
             if location is not None and new_name:
@@ -128,7 +117,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             **text_document_position_params(self.view, location)
         }
         request = Request.prepareRename(params, self.view, progress=True)
-        session.send_request_async(
+        session.send_request(
             request, partial(self._on_prepare_result, location, session.config.name), self._on_prepare_error)
 
     def _get_prepare_rename_session(self, point: int | None, session_name: str | None) -> Session | None:

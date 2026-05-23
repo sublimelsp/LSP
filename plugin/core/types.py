@@ -852,7 +852,7 @@ class ClientConfig:
         self.diagnostics_mode = diagnostics_mode
         # Transformed mapping that uses tuples instead of lists for mdpopups.
         self.resolved_markdown_language_map: MarkdownLangMap | None = None
-        self._markdown_language_map = markdown_language_map
+        self.markdown_language_map = markdown_language_map  # use the setter to populate resolved_markdown_language_map
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._settings_registration = settings_registration
         if isinstance(all_settings, dict):
@@ -896,10 +896,8 @@ class ClientConfig:
     @markdown_language_map.setter
     def markdown_language_map(self, lang_map: MarkdownLangMapJson | None) -> None:
         self._markdown_language_map = lang_map
-        self.resolved_markdown_language_map = None
-        if resolved := self._resolve_markdown_language_map(lang_map):
-            self.resolved_markdown_language_map = resolved
-        else:
+        self.resolved_markdown_language_map = self._resolve_markdown_language_map(lang_map)
+        if lang_map is not None and self.resolved_markdown_language_map is None:
             debug(f'Invalid markdown_language_map setting ignored:\n{lang_map}')
 
     def _resolve_markdown_language_map(self, lang_map: MarkdownLangMapJson | None) -> MarkdownLangMap | None:

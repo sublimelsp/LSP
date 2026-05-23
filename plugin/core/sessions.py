@@ -1688,9 +1688,7 @@ class Session(APIHandler, TransportCallbacks):
         def create_file(path: str) -> Promise[str | None]:
             try:
                 Path(path).open('x', encoding='utf-8').close()
-            except FileExistsError as ex:
-                return Promise.resolve(str(ex))
-            except OSError as ex:
+            except (FileExistsError, OSError) as ex:
                 return Promise.resolve(str(ex))
             return Promise.resolve(None)
 

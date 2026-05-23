@@ -82,13 +82,11 @@ class AsyncTestCase(DeferrableTestCase):
     @override
     @classmethod
     def setUpClass(cls) -> Generator:
-        print("setUpClass was called")
         yield from cls._runCoro(cls.asyncSetUpClass())
 
     @override
     @classmethod
     def tearDownClass(cls) -> Generator:
-        print("tearDownClass was called")
         yield from cls._runCoro(cls.asyncTearDownClass())
 
     @override

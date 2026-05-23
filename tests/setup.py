@@ -121,7 +121,6 @@ class TextDocumentTestCase(SublimeAioTestCase):
     @override
     @classmethod
     async def asyncSetUpClass(cls) -> None:
-        print("asyncSetUpClass")
         test_name = cls.get_test_name()
         server_capabilities = cls.get_test_server_capabilities()
         window = sublime.active_window()
@@ -139,21 +138,17 @@ class TextDocumentTestCase(SublimeAioTestCase):
         else:
             raise AssertionError(f"unable to open file {filename}")
         if listener := cls.ensure_document_listener_created():
-            print("starting", cls.config)
             if session := await cls.wm.start(cls.config, listener):
                 cls.session = session
             else:
                 raise AssertionError("unable to start session")
         else:
             raise AssertionError(f"unable to find listener for view {cls.view.id()}")
-        print("awaiting initialize request")
         cls.initialize_params = await cls.await_message("initialize")
-        print("awaiting initialized notification")
         await cls.await_message("initialized")
 
     @override
     async def setUp(self) -> None:
-        print("setUp")
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", f"{self.get_test_name()}.txt"), window)
         if view := await open_file(sublime.active_window(), filename_to_uri(filename)):

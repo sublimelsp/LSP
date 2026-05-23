@@ -96,7 +96,7 @@
             },
             "ClientAutoCompleteSelector": {
               "type": "string",
-              "markdownDescription": "When specified, this [selector](https://www.sublimetext.com/docs/3/selectors.html) is used as the `\"selector\"` key in an entry of the `\"auto_complete_triggers\"` of the view applicable to this configuration. You don't have to necessarily provide this value. Because your language server registers so-called trigger characters in any case. However, this selector allows you to fine-tune the auto-complete behavior if the registered trigger characters of the language server result in an unpleasent auto-complete experience. Note that the behavior of this selector will depend on the .sublime-syntax in use.\n\nThis value is _not_ applied to the **global** `\"auto_complete_selector\"` setting of the view."
+              "markdownDescription": "When specified, this [selector](https://www.sublimetext.com/docs/selectors.html) is used as the `\"selector\"` key in an entry of the `\"auto_complete_triggers\"` of the view applicable to this configuration. You don't have to necessarily provide this value. Because your language server registers so-called trigger characters in any case. However, this selector allows you to fine-tune the auto-complete behavior if the registered trigger characters of the language server result in an unpleasent auto-complete experience. Note that the behavior of this selector will depend on the .sublime-syntax in use.\n\nThis value is _not_ applied to the **global** `\"auto_complete_selector\"` setting of the view."
             },
             "ClientIgnoreServerTriggerChars": {
               "type": "boolean",
@@ -287,7 +287,7 @@
             },
             "ClientSelector": {
               // \u00A0 is used as a workaround for https://github.com/sublimehq/sublime_text/issues/3373
-              "markdownDescription": "A [selector](https://www.sublimetext.com/docs/3/selectors.html) that defines to which views this language server should be attached, in the same way that a selector for a [Build\u00A0System](https://www.sublimetext.com/docs/3/build_systems.html) is used to filter the Build System to particular views. The selector is matched against the base scope of the syntax of the view. If the selector matches with the base scope of the the file, the associated language server is started. To determine the base scope of your view, click on Tools > Developer > Show Scope Name. The first line in the popup is the base scope.",
+              "markdownDescription": "A [selector](https://www.sublimetext.com/docs/selectors.html) that defines to which views this language server should be attached, in the same way that a selector for a [Build\u00A0System](https://www.sublimetext.com/docs/build_systems.html) is used to filter the Build System to particular views. The selector is matched against the base scope of the syntax of the view. If the selector matches with the base scope of the the file, the associated language server is started. To determine the base scope of your view, click on Tools > Developer > Show Scope Name. The first line in the popup is the base scope.",
               "type": "string",
             },
             "ClientSchemes": {
@@ -621,7 +621,7 @@
                 ""
               ],
               "default": "underline",
-              "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor.\n\nSee https://lsp.sublimetext.io/customization/#document-highlights for how to customize the color."
+              "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor.\n\nSee https://lsp.sublimetext.io/features/#highlights for how to customize the color."
             },
             "show_multiline_document_highlights": {
               "type": "boolean",
@@ -637,7 +637,7 @@
                 ""
               ],
               "default": "",
-              "markdownDescription": "Highlight style of the word or range for which a hover popup is shown.\n\nSee https://lsp.sublimetext.io/customization/#hover-highlights for how to customize the color."
+              "markdownDescription": "Highlight style of the word or range for which a hover popup is shown.\n\nSee https://lsp.sublimetext.io/features/#hover for how to customize the color."
             },
             "diagnostics_gutter_marker": {
               "enum": [

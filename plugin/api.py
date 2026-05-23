@@ -1,13 +1,8 @@
 from __future__ import annotations
 
-from ..protocol import ConfigurationItem
-from ..protocol import DocumentUri
-from ..protocol import ExecuteCommandParams
 from ..protocol import LSPAny
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
-from .core.protocol import Notification
-from .core.protocol import Request
 from .core.protocol import Response
 from .core.settings import client_configs
 from .core.types import method2attr

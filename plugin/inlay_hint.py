@@ -40,6 +40,9 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
         return False
 
     def run(self, enable: bool | None = None) -> None:
+        run_coroutine(self._run(enable))
+
+    async def _run(self, enable: bool | None) -> None:
         window_settings = self.window.settings()
         if not isinstance(enable, bool):
             enable = not bool(window_settings.get('lsp_show_inlay_hints'))

@@ -18,9 +18,9 @@ from ..protocol import SignatureHelpTriggerKind
 from .code_actions import filter_quickfix_actions
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
-from .core.aio import call_soon_threadsafe
 from .core.aio import gather_and_flatten_exceptions
 from .core.aio import run_coroutine
+from .core.aio import run_in_asyncio_thread
 from .core.aio import TaskContainer
 from .core.constants import ChangeEventAction
 from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
@@ -594,7 +594,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 if window.settings().get(HOVER_ENABLED_KEY, True):
                     self.view.run_command("lsp_hover", {"point": point})
             elif hover_zone == sublime.HoverZone.GUTTER:
-                call_soon_threadsafe(partial(self._on_hover_gutter_async, point))
+                run_in_asyncio_thread(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
         if userprefs().diagnostics_gutter_marker:
@@ -674,7 +674,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in {"next_field", "prev_field"} and args is None:
-            call_soon_threadsafe(
+            run_in_asyncio_thread(
                 lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
             )
         if not self.view.is_popup_visible():
@@ -688,7 +688,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         completion_list = sublime.CompletionList()
         triggered_manually = self._auto_complete_triggered_manually
         self._auto_complete_triggered_manually = False  # reset state for next completion popup
-        call_soon_threadsafe(
+        run_in_asyncio_thread(
             lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
         return completion_list
 

@@ -91,8 +91,8 @@ from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import aclosing
-from .aio import call_soon_threadsafe
 from .aio import gather_and_flatten_exceptions
+from .aio import run_in_asyncio_thread
 from .aio import run_in_main_thread
 from .aio import TaskContainer
 from .constants import ChangeEventAction
@@ -2528,7 +2528,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in the asyncio thread."""
-        call_soon_threadsafe(lambda: self.send_request_async(request, on_result, on_error))
+        run_in_asyncio_thread(lambda: self.send_request_async(request, on_result, on_error))
 
     @deprecated("use Session.request or Session.stream instead")
     def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from ...protocol import SignatureHelp
 from ...protocol import SignatureHelpTriggerKind
 from ...protocol import SignatureInformation
-from .aio import call_soon_threadsafe
+from .aio import run_in_asyncio_thread
 from .logging import debug
 from .registry import LspTextCommand
 from .views import FORMAT_MARKUP_CONTENT
@@ -46,7 +46,7 @@ class LspSignatureHelpShowCommand(LspTextCommand):
 
     def run(self, _: sublime.Edit) -> None:
         if listener := self.get_listener():
-            call_soon_threadsafe(listener.do_signature_help_async, SignatureHelpTriggerKind.Invoked)
+            run_in_asyncio_thread(listener.do_signature_help_async, SignatureHelpTriggerKind.Invoked)
 
 
 class SigHelp:

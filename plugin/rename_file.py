@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .core.aio import call_soon_threadsafe
 from .core.aio import run_coroutine
+from .core.aio import run_in_asyncio_thread
 from .core.edit import show_summary_message
 from .core.logging import debug
 from .core.open import open_file_uri
@@ -109,7 +109,7 @@ class LspRenamePathCommand(LspWindowCommand):
             }
             label = f"Rename {Path(old_path).name} -> {new_name}"
 
-            call_soon_threadsafe(self.prompt_rename_async, file_rename, label, rename_command_args)
+            run_in_asyncio_thread(self.prompt_rename_async, file_rename, label, rename_command_args)
             return
 
         async def run() -> None:

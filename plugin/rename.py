@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.aio import call_soon_threadsafe
+from .core.aio import run_in_asyncio_thread
 from .core.edit import show_summary_message
 from .core.protocol import Request
 from .core.registry import get_position
@@ -103,7 +103,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         point: int | None = None
     ) -> None:
         if listener := self.get_listener():
-            call_soon_threadsafe(listener.purge_changes_async)
+            run_in_asyncio_thread(listener.purge_changes_async)
         location = get_position(self.view, event, point)
         session = self._get_prepare_rename_session(point, session_name)
         if new_name or placeholder or not session:
@@ -149,7 +149,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         self, weak_session: weakref.ref[Session], response: WorkspaceEdit, accepted: bool
     ) -> None:
         if accepted and (session := weak_session()):
-            call_soon_threadsafe(
+            run_in_asyncio_thread(
                 lambda: session.apply_workspace_edit_async(response, is_refactoring=True).then(
                     lambda tup: show_summary_message(session.window, *tup)
                 )

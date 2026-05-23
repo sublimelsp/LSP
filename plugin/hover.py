@@ -9,8 +9,8 @@ from ..protocol import Hover
 from ..protocol import Position
 from ..protocol import Range
 from .code_actions import filter_quickfix_actions
-from .core.aio import call_soon_threadsafe
 from .core.aio import run_coroutine
+from .core.aio import run_in_asyncio_thread
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import MarkdownLangMap
 from .core.constants import RegionKey
@@ -140,7 +140,7 @@ class LspHoverCommand(LspTextCommand):
                 ]
                 Promise.all(code_action_promises).then(partial(self._handle_code_actions, listener, hover_point))
 
-        call_soon_threadsafe(run_async)
+        run_in_asyncio_thread(run_async)
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises: list[Promise[ResolvedHover]] = []
@@ -370,7 +370,7 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         enable = not self.is_checked()
         self.window.settings().set(HOVER_ENABLED_KEY, enable)
-        call_soon_threadsafe(self._update_views_async, enable)
+        run_in_asyncio_thread(self._update_views_async, enable)
 
     def _has_hover_provider(self, view: sublime.View) -> bool:
         listener = windows.listener_for_view(view)

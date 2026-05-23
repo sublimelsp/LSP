@@ -6,8 +6,8 @@ from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import LSPAny
-from .core.aio import call_soon_threadsafe
 from .core.aio import run_coroutine
+from .core.aio import run_in_asyncio_thread
 from .core.logging import trace
 from .core.promise import Promise
 from .core.protocol import Error
@@ -457,7 +457,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
     def is_visible(self, index: int, event: dict | None = None) -> bool:
         if index == -1:
             if self._has_session(event):
-                call_soon_threadsafe(partial(self._request_menu_actions_async, event))
+                run_in_asyncio_thread(partial(self._request_menu_actions_async, event))
             return False
         return index < len(self.actions_cache) and self._is_cache_valid(event)
 

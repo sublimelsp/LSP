@@ -5,7 +5,6 @@ from ..protocol import CodeActionKind
 from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
-from ..protocol import LSPAny
 from .core.aio import run_coroutine
 from .core.aio import run_in_asyncio_thread
 from .core.promise import Promise
@@ -26,7 +25,6 @@ from abc import abstractmethod
 from functools import partial
 from typing import Any
 from typing import cast
-from typing import Coroutine
 from typing import final
 from typing import List
 from typing import Tuple
@@ -289,15 +287,13 @@ class CodeActionsTaskBase(LspTask):
         await super().run()
         view = self._text_command.view
         code_action_kinds = self.get_code_action_kinds(view)
-        tasks: list[Coroutine[None, None, LSPAny]] = []
         for request in actions_manager.request_on_save_or_format_async(view, code_action_kinds):
             config_name, code_actions = await request
             if code_actions and (session := self._text_command.session_by_name(config_name, 'codeActionProvider')):
-                tasks.extend(
+                await asyncio.gather(
                     session.run_code_action(action, progress=False, view=self._text_command.view)
                     for action in code_actions
                 )
-        await asyncio.gather(*tasks)
 
 
 @final

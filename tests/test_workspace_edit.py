@@ -41,7 +41,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
         expected_result: ApplyWorkspaceEditResult = {'applied': True}
         yield from verify(self, 'workspace/applyEdit', params, expected_result)
         # `changes` should increase the document version
-        yield lambda: self.view.change_count() > old_change_count
+        self.assertTrue(self.view.change_count() > old_change_count)
         # `changes` should have been applied
         self.assertEqual(entire_content(self.view), 'hello\nthere\n')
 
@@ -65,7 +65,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
         expected_result: ApplyWorkspaceEditResult = {'applied': True}
         yield from verify(self, 'workspace/applyEdit', params, expected_result)
         # `documentChanges` should increase the document version by exactly 1
-        yield lambda: self.view.change_count() == version + 1
+        self.assertEqual(self.view.change_count(), version + 1)
         # `documentChanges` should have been applied
         self.assertEqual(entire_content(self.view), 'hello\nthere\n')
 

@@ -85,6 +85,8 @@ _baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTL
 _multilineflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO
 
 
+# region diagnostics
+
 @dataclass
 class DiagnosticStyle:
     kind: str
@@ -141,10 +143,260 @@ class DiagnosticSeverityData:
         self.annotations: list[str] = []
 
 
+def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
+    return diagnostic.get("severity", DiagnosticSeverity.Error)
+
+
+def diagnostic_icon(severity: DiagnosticSeverity) -> str:
+    if userprefs().diagnostics_gutter_marker == "sign":
+        return DIAGNOSTIC_STYLES[severity].icon_resource
+    return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
+
+
+def diagnostic_source_and_code(diagnostic: Diagnostic) -> tuple[str, str | None, str | None]:
+    formatted = diagnostic.get("source", "")
+    href = None
+    code = diagnostic.get("code")
+    if code is not None:
+        code = str(code)
+        if code_description := diagnostic.get("codeDescription"):
+            href = code_description["href"]
+        else:
+            formatted += f"({code})"
+    return formatted, code, href
+
+
+def _format_diagnostic_message(view: sublime.View, message: str | MarkupContent) -> str:
+    return minihtml(view, message, FORMAT_MARKUP_CONTENT) if isinstance(message, dict) else text2html(message)
+
+
+def _format_diagnostic_related_info(
+    config: ClientConfig,
+    info: DiagnosticRelatedInformation,
+    base_dir: str | None = None
+) -> str:
+    location = info["location"]
+    return '<a href="{}">{}</a>: {}'.format(
+        location_to_href(config, location),
+        text2html(location_to_human_readable(config, base_dir, location)),
+        text2html(info["message"])
+    )
+
+
+def format_diagnostics_for_annotation(view: sublime.View, diagnostics: list[Diagnostic], css_class: str) -> list[str]:
+    annotations = []
+    for diagnostic in diagnostics:
+        message = _format_diagnostic_message(view, diagnostic['message'])
+        source = diagnostic.get('source')
+        line = f'{message} <span class="color-muted">{text2html(source)}</span>' if source else message
+        content = (f'<body id="lsp-annotation" class="{ST_PLATFORM}"><style>{lsp_css().annotations}</style>'
+                   f'<div class="{css_class}">{line}</div></body>')
+        annotations.append(content)
+    return annotations
+
+
+def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None, str | None, str | None]:
+    """
+    Turn an LSP diagnostic into a string suitable for an output panel.
+
+    :param      diagnostic:  The diagnostic
+    :returns:   Tuple of (content, optional offset, optional code, optional href)
+                When the last three elements are optional, don't show an inline phantom
+                When the last three elements are not optional, show an inline phantom
+                using the information given.
+    """
+    formatted, code, href = diagnostic_source_and_code(diagnostic)
+    message = diagnostic['message']
+    lines = (message['value'] if isinstance(message, dict) else message).splitlines() or [""]
+    result = " {:>4}:{:<4}{:<8}{}".format(
+        diagnostic["range"]["start"]["line"] + 1,
+        diagnostic["range"]["start"]["character"] + 1,
+        DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].kind,
+        lines[0]
+    )
+    if formatted or code is not None:
+        # \u200B is the zero-width space
+        result += f" \u200b{formatted}"
+    offset = len(result) if href else None
+    for line in itertools.islice(lines, 1, None):
+        result += "\n" + 18 * " " + line
+    return result, offset, code, href
+
+
+def format_diagnostics_for_html(
+    view: sublime.View,
+    diagnostics_by_config: Sequence[tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
+    code_actions_by_config: dict[str, list[Command | CodeAction]],
+    lightbulb_color: str,
+    base_dir: str | None = None
+) -> str:
+    diagnostics_html: list[tuple[DiagnosticSeverity, str]] = []
+    for sb, diagnostics in diagnostics_by_config:
+        actions_for_config = code_actions_by_config.get(sb.session.config.name, [])
+        single_diagnostic = len(diagnostics) == 1
+        for diagnostic in diagnostics:
+            code_actions = actions_for_config if single_diagnostic else [
+                action for action in actions_for_config if diagnostic in action.get('diagnostics', [])
+            ]
+            diagnostic_html = format_diagnostic_for_html(
+                view, sb.session.config, diagnostic, code_actions, lightbulb_color, base_dir)
+            diagnostics_html.append((diagnostic_severity(diagnostic), diagnostic_html))
+    return f'<div class="diagnostics">{"".join(d[1] for d in sorted(diagnostics_html, key=itemgetter(0)))}</div>' if \
+        diagnostics_html else ''
+
+
+def format_diagnostic_for_html(
+    view: sublime.View,
+    config: ClientConfig,
+    diagnostic: Diagnostic,
+    code_actions: list[Command | CodeAction],
+    lightbulb_color: str,
+    base_dir: str | None = None
+) -> str:
+    message = diagnostic['message']
+    raw_message = message['value'] if isinstance(message, dict) else message
+    content = _format_diagnostic_message(view, message)
+    code = diagnostic.get("code")
+    source = diagnostic.get("source")
+    copy_text = raw_message.replace(' ', ' ')
+    if source or code is not None:
+        meta_info = ""
+        if source:
+            meta_info += text2html(source)
+            copy_text += f' ({source})' if code is None else f' ({source}[{code}])'
+        if code is not None:
+            if code_description := diagnostic.get("codeDescription"):
+                href = code_description["href"]
+                meta_info += f'({make_link(href, str(code), tooltip=html.escape(href))})'
+            else:
+                meta_info += f'({text2html(str(code))})'
+        content += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
+    content += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
+        'lsp_copy_text', {'text': copy_text}
+    )}'>⧉</a>"""
+    if related_infos := diagnostic.get("relatedInformation"):
+        info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
+        content += '<hr>' + _html_element("div", info, escape=False)
+    if code_actions:
+        version = view.change_count()
+        for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
+            icon = lightbulb_html(lightbulb_color, code_action.get('isPreferred', False))
+            code_action_uri = encode_code_action_uri(config.name, version, code_action)
+            content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
+    severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
+    return html_wrapper(content, class_name=severity_class)
+
+
+def document_highlight_key(kind: DocumentHighlightKind, *, multiline: bool) -> str:
+    return "lsp_highlight_{}{}".format(kind, "m" if multiline else "s")
+
+# endregion diagnostics
+
+
+# region uri
+
 class InvalidUriSchemeError(Exception):
     def __init__(self, uri: str) -> None:
         super().__init__(f"invalid URI scheme: {uri}")
 
+
+class MissingUriError(Exception):
+
+    def __init__(self, view_id: int) -> None:
+        super().__init__(f"View {view_id} has no URI")
+        self.view_id = view_id
+
+
+def uri_from_view(view: sublime.View) -> DocumentUri:
+    uri = view.settings().get("lsp_uri")
+    if isinstance(uri, DocumentUri):
+        return uri
+    raise MissingUriError(view.id())
+
+
+def to_encoded_filename(path: str, position: Position) -> str:
+    # WARNING: Cannot possibly do UTF-16 conversion :) Oh well.
+    return '{}:{}:{}'.format(path, position['line'] + 1, position['character'] + 1)
+
+
+def get_uri_and_range_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Range]:
+    if "targetUri" in location:
+        location = cast('LocationLink', location)
+        uri = location["targetUri"]
+        r = location["targetSelectionRange"]
+    else:
+        location = cast('Location', location)
+        uri = location["uri"]
+        r = location["range"]
+    return uri, r
+
+
+def get_uri_and_position_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Position]:
+    if "targetUri" in location:
+        location = cast('LocationLink', location)
+        uri = location["targetUri"]
+        position = location["targetSelectionRange"]["start"]
+    else:
+        location = cast('Location', location)
+        uri = location["uri"]
+        position = location["range"]["start"]
+    return uri, position
+
+
+def location_to_encoded_filename(location: Location | LocationLink) -> str:
+    """DEPRECATED."""
+    uri, position = get_uri_and_position_from_location(location)
+    scheme, parsed = parse_uri(uri)
+    if scheme == "file":
+        return to_encoded_filename(parsed, position)
+    raise InvalidUriSchemeError(uri)
+
+
+def location_to_human_readable(
+    config: ClientConfig,
+    base_dir: str | None,
+    location: Location | LocationLink
+) -> str:
+    """Format an LSP Location (or LocationLink) into a string suitable for a human to read."""
+    uri, position = get_uri_and_position_from_location(location)
+    scheme, _ = parse_uri(uri)
+    if scheme == "file":
+        fmt = "{}:{}"
+        pathname = config.map_server_uri_to_client_path(uri)
+        if base_dir and is_subpath_of(pathname, base_dir):
+            pathname = pathname[len(commonpath((pathname, base_dir))) + 1:]
+    elif scheme == "res":
+        fmt = "{}:{}"
+        pathname = uri
+    else:
+        # https://tools.ietf.org/html/rfc5147
+        fmt = "{}#line={}"
+        pathname = uri
+    return fmt.format(pathname, position["line"] + 1)
+
+
+def location_to_href(config: ClientConfig, location: Location | LocationLink) -> str:
+    """Encode an LSP Location (or LocationLink) into a string suitable as a hyperlink in minihtml."""
+    uri, position = get_uri_and_position_from_location(location)
+    return "location:{}@{}#{},{}".format(config.name, uri, position["line"], position["character"])
+
+
+def unpack_href_location(href: str) -> tuple[str, str, int, int]:
+    """Return the session name, URI, row, and col_utf16 from an encoded href."""
+    session_name, uri_with_fragment = href[len("location:"):].split("@")
+    uri, fragment = uri_with_fragment.split("#")
+    row, col_utf16 = map(int, fragment.split(","))
+    return session_name, uri, row, col_utf16
+
+
+def is_location_href(href: str) -> bool:
+    """Check whether this href is an encoded location."""
+    return href.startswith("location:")
+
+# endregion uri
+
+
+# region buffer
 
 def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
     """
@@ -170,6 +422,34 @@ def extract_variables(window: sublime.Window) -> dict[str, str]:
     variables["home"] = expanduser('~')
     return variables
 
+
+def first_selection_region(view: sublime.View) -> sublime.Region | None:
+    try:
+        return view.sel()[0]
+    except IndexError:
+        return None
+
+
+def has_single_nonempty_selection(view: sublime.View) -> bool:
+    selections = view.sel()
+    return len(selections) == 1 and not selections[0].empty()
+
+
+def entire_content_region(view: sublime.View) -> sublime.Region:
+    return sublime.Region(0, view.size())
+
+
+def entire_content(view: sublime.View) -> str:
+    return view.substr(entire_content_region(view))
+
+
+def entire_content_range(view: sublime.View) -> Range:
+    return region_to_range(view, entire_content_region(view))
+
+# endregion buffer
+
+
+# region coordinates
 
 def point_to_offset(point: TextPosition, view: sublime.View) -> int:
     # @see https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#position
@@ -215,86 +495,18 @@ def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
         'end': offset_to_point(view, region.end()).to_lsp(),
     }
 
-
-def to_encoded_filename(path: str, position: Position) -> str:
-    # WARNING: Cannot possibly do UTF-16 conversion :) Oh well.
-    return '{}:{}:{}'.format(path, position['line'] + 1, position['character'] + 1)
+# endregion coordinates
 
 
-def get_uri_and_range_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Range]:
-    if "targetUri" in location:
-        location = cast('LocationLink', location)
-        uri = location["targetUri"]
-        r = location["targetSelectionRange"]
-    else:
-        location = cast('Location', location)
-        uri = location["uri"]
-        r = location["range"]
-    return uri, r
-
-
-def get_uri_and_position_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Position]:
-    if "targetUri" in location:
-        location = cast('LocationLink', location)
-        uri = location["targetUri"]
-        position = location["targetSelectionRange"]["start"]
-    else:
-        location = cast('Location', location)
-        uri = location["uri"]
-        position = location["range"]["start"]
-    return uri, position
-
-
-def location_to_encoded_filename(location: Location | LocationLink) -> str:
-    """DEPRECATED."""
-    uri, position = get_uri_and_position_from_location(location)
-    scheme, parsed = parse_uri(uri)
-    if scheme == "file":
-        return to_encoded_filename(parsed, position)
-    raise InvalidUriSchemeError(uri)
-
-
-class MissingUriError(Exception):
-
-    def __init__(self, view_id: int) -> None:
-        super().__init__(f"View {view_id} has no URI")
-        self.view_id = view_id
-
-
-def uri_from_view(view: sublime.View) -> DocumentUri:
-    uri = view.settings().get("lsp_uri")
-    if isinstance(uri, DocumentUri):
-        return uri
-    raise MissingUriError(view.id())
-
+# region protocol
 
 def text_document_identifier(view_or_uri: DocumentUri | sublime.View) -> TextDocumentIdentifier:
     uri = view_or_uri if isinstance(view_or_uri, DocumentUri) else uri_from_view(view_or_uri)
     return {"uri": uri}
 
 
-def first_selection_region(view: sublime.View) -> sublime.Region | None:
-    try:
-        return view.sel()[0]
-    except IndexError:
-        return None
-
-
-def has_single_nonempty_selection(view: sublime.View) -> bool:
-    selections = view.sel()
-    return len(selections) == 1 and not selections[0].empty()
-
-
-def entire_content_region(view: sublime.View) -> sublime.Region:
-    return sublime.Region(0, view.size())
-
-
-def entire_content(view: sublime.View) -> str:
-    return view.substr(entire_content_region(view))
-
-
-def entire_content_range(view: sublime.View) -> Range:
-    return region_to_range(view, entire_content_region(view))
+def versioned_text_document_identifier(view: sublime.View, version: int) -> VersionedTextDocumentIdentifier:
+    return {"uri": uri_from_view(view), "version": version}
 
 
 def text_document_item(view: sublime.View, language_id: str) -> TextDocumentItem:
@@ -305,10 +517,6 @@ def text_document_item(view: sublime.View, language_id: str) -> TextDocumentItem
         "version": view.change_count(),
         "text": entire_content(view)
     }
-
-
-def versioned_text_document_identifier(view: sublime.View, version: int) -> VersionedTextDocumentIdentifier:
-    return {"uri": uri_from_view(view), "version": version}
 
 
 def text_document_position_params(view: sublime.View, location: int) -> TextDocumentPositionParams:
@@ -469,6 +677,14 @@ def text_document_code_action_params(
         "context": context
     }
 
+
+def document_color_params(view: sublime.View) -> DocumentColorParams:
+    return {"textDocument": text_document_identifier(view)}
+
+# endregion protocol
+
+
+# region html
 
 def show_lsp_popup(
     view: sublime.View,
@@ -686,6 +902,42 @@ class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
             view.run_command(command, args)
 
 
+def _html_element(tag: str, content: str, *, class_name: str | None = None, escape: bool = True) -> str:
+    return '<{0}{2}>{1}</{0}>'.format(
+        tag,
+        text2html(content) if escape else content,
+        f' class="{text2html(class_name)}"' if class_name else ''
+    )
+
+
+def html_wrapper(content: str, *, class_name: str | None = None) -> str:
+    """
+    Wrap content in a container with default pading applied.
+
+    Automatically inserted spacer element acts as a bottom padding to workaround minihtml's margin collapsing bug.
+    Otherwise if the last element had bottom margin (for example a paragraph), it would render a double margin.
+    The `content` is NOT escaped.
+    """
+    extra_class = f' {class_name}' if class_name else ''
+    return _html_element(
+        'div', f'{content}<div class="wrapper--spacer"></div>', class_name=f'wrapper{extra_class}', escape=False)
+
+
+@lru_cache
+def lightbulb_html(color: str, star: bool) -> str:
+    if star:
+        img = 'Packages/LSP/icons/lightbulb-star-32.png'
+        tooltip = 'Preferred Quick Fix'
+    else:
+        img = 'Packages/LSP/icons/lightbulb-32.png'
+        tooltip = 'Quick Fix'
+    return f'<span class="lightbulb" title="{tooltip}">{mdpopups.tint(img, color)}</span>'
+
+# endregion html
+
+
+# region color
+
 COLOR_BOX_HTML = """
 <style>
     html {{
@@ -726,227 +978,22 @@ def lsp_color_to_phantom(view: sublime.View, color_info: ColorInformation) -> su
     region = range_to_region(color_info['range'], view)
     return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.PhantomLayout.INLINE)
 
-
-def document_color_params(view: sublime.View) -> DocumentColorParams:
-    return {"textDocument": text_document_identifier(view)}
+# endregion color
 
 
-def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
-    return diagnostic.get("severity", DiagnosticSeverity.Error)
+# region code_actions
 
-
-def diagnostic_icon(severity: DiagnosticSeverity) -> str:
-    if userprefs().diagnostics_gutter_marker == "sign":
-        return DIAGNOSTIC_STYLES[severity].icon_resource
-    return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
-
-
-def format_diagnostics_for_annotation(view: sublime.View, diagnostics: list[Diagnostic], css_class: str) -> list[str]:
-    annotations = []
-    for diagnostic in diagnostics:
-        message = _format_diagnostic_message(view, diagnostic['message'])
-        source = diagnostic.get('source')
-        line = f'{message} <span class="color-muted">{text2html(source)}</span>' if source else message
-        content = (f'<body id="lsp-annotation" class="{ST_PLATFORM}"><style>{lsp_css().annotations}</style>'
-                   f'<div class="{css_class}">{line}</div></body>')
-        annotations.append(content)
-    return annotations
-
-
-def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None, str | None, str | None]:
+def kind_contains_other_kind(kind: str, other_kind: str) -> bool:
     """
-    Turn an LSP diagnostic into a string suitable for an output panel.
+    Check if `other_kind` is a sub-kind of `kind`.
 
-    :param      diagnostic:  The diagnostic
-    :returns:   Tuple of (content, optional offset, optional code, optional href)
-                When the last three elements are optional, don't show an inline phantom
-                When the last three elements are not optional, show an inline phantom
-                using the information given.
+    The kind `"refactor.extract"` for example contains `"refactor.extract"` and `"refactor.extract.function"`,
+    but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `"refactor"`.
     """
-    formatted, code, href = diagnostic_source_and_code(diagnostic)
-    message = diagnostic['message']
-    lines = (message['value'] if isinstance(message, dict) else message).splitlines() or [""]
-    result = " {:>4}:{:<4}{:<8}{}".format(
-        diagnostic["range"]["start"]["line"] + 1,
-        diagnostic["range"]["start"]["character"] + 1,
-        DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].kind,
-        lines[0]
-    )
-    if formatted or code is not None:
-        # \u200B is the zero-width space
-        result += f" \u200B{formatted}"
-    offset = len(result) if href else None
-    for line in itertools.islice(lines, 1, None):
-        result += "\n" + 18 * " " + line
-    return result, offset, code, href
-
-
-def diagnostic_source_and_code(diagnostic: Diagnostic) -> tuple[str, str | None, str | None]:
-    formatted = diagnostic.get("source", "")
-    href = None
-    code = diagnostic.get("code")
-    if code is not None:
-        code = str(code)
-        if code_description := diagnostic.get("codeDescription"):
-            href = code_description["href"]
-        else:
-            formatted += f"({code})"
-    return formatted, code, href
-
-
-def location_to_human_readable(
-    config: ClientConfig,
-    base_dir: str | None,
-    location: Location | LocationLink
-) -> str:
-    """Format an LSP Location (or LocationLink) into a string suitable for a human to read."""
-    uri, position = get_uri_and_position_from_location(location)
-    scheme, _ = parse_uri(uri)
-    if scheme == "file":
-        fmt = "{}:{}"
-        pathname = config.map_server_uri_to_client_path(uri)
-        if base_dir and is_subpath_of(pathname, base_dir):
-            pathname = pathname[len(commonpath((pathname, base_dir))) + 1:]
-    elif scheme == "res":
-        fmt = "{}:{}"
-        pathname = uri
-    else:
-        # https://tools.ietf.org/html/rfc5147
-        fmt = "{}#line={}"
-        pathname = uri
-    return fmt.format(pathname, position["line"] + 1)
-
-
-def location_to_href(config: ClientConfig, location: Location | LocationLink) -> str:
-    """Encode an LSP Location (or LocationLink) into a string suitable as a hyperlink in minihtml."""
-    uri, position = get_uri_and_position_from_location(location)
-    return "location:{}@{}#{},{}".format(config.name, uri, position["line"], position["character"])
-
-
-def unpack_href_location(href: str) -> tuple[str, str, int, int]:
-    """Return the session name, URI, row, and col_utf16 from an encoded href."""
-    session_name, uri_with_fragment = href[len("location:"):].split("@")
-    uri, fragment = uri_with_fragment.split("#")
-    row, col_utf16 = map(int, fragment.split(","))
-    return session_name, uri, row, col_utf16
-
-
-def is_location_href(href: str) -> bool:
-    """Check whether this href is an encoded location."""
-    return href.startswith("location:")
-
-
-def _format_diagnostic_message(view: sublime.View, message: str | MarkupContent) -> str:
-    return minihtml(view, message, FORMAT_MARKUP_CONTENT) if isinstance(message, dict) else text2html(message)
-
-
-def _format_diagnostic_related_info(
-    config: ClientConfig,
-    info: DiagnosticRelatedInformation,
-    base_dir: str | None = None
-) -> str:
-    location = info["location"]
-    return '<a href="{}">{}</a>: {}'.format(
-        location_to_href(config, location),
-        text2html(location_to_human_readable(config, base_dir, location)),
-        text2html(info["message"])
-    )
-
-
-def html_wrapper(content: str, *, class_name: str | None = None) -> str:
-    """
-    Wrap content in a container with default pading applied.
-
-    Automatically inserted spacer element acts as a bottom padding to workaround minihtml's margin collapsing bug.
-    Otherwise if the last element had bottom margin (for example a paragraph), it would render a double margin.
-    The `content` is NOT escaped.
-    """
-    extra_class = f' {class_name}' if class_name else ''
-    return _html_element(
-        'div', f'{content}<div class="wrapper--spacer"></div>', class_name=f'wrapper{extra_class}', escape=False)
-
-
-def _html_element(tag: str, content: str, *, class_name: str | None = None, escape: bool = True) -> str:
-    return '<{0}{2}>{1}</{0}>'.format(
-        tag,
-        text2html(content) if escape else content,
-        f' class="{text2html(class_name)}"' if class_name else ''
-    )
-
-
-@lru_cache
-def lightbulb_html(color: str, star: bool) -> str:
-    if star:
-        img = 'Packages/LSP/icons/lightbulb-star-32.png'
-        tooltip = 'Preferred Quick Fix'
-    else:
-        img = 'Packages/LSP/icons/lightbulb-32.png'
-        tooltip = 'Quick Fix'
-    return f'<span class="lightbulb" title="{tooltip}">{mdpopups.tint(img, color)}</span>'
-
-
-def format_diagnostics_for_html(
-    view: sublime.View,
-    diagnostics_by_config: Sequence[tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
-    code_actions_by_config: dict[str, list[Command | CodeAction]],
-    lightbulb_color: str,
-    base_dir: str | None = None
-) -> str:
-    diagnostics_html: list[tuple[DiagnosticSeverity, str]] = []
-    for sb, diagnostics in diagnostics_by_config:
-        actions_for_config = code_actions_by_config.get(sb.session.config.name, [])
-        single_diagnostic = len(diagnostics) == 1
-        for diagnostic in diagnostics:
-            code_actions = actions_for_config if single_diagnostic else [
-                action for action in actions_for_config if diagnostic in action.get('diagnostics', [])
-            ]
-            diagnostic_html = format_diagnostic_for_html(
-                view, sb.session.config, diagnostic, code_actions, lightbulb_color, base_dir)
-            diagnostics_html.append((diagnostic_severity(diagnostic), diagnostic_html))
-    return f'<div class="diagnostics">{"".join(d[1] for d in sorted(diagnostics_html, key=itemgetter(0)))}</div>' if \
-        diagnostics_html else ''
-
-
-def format_diagnostic_for_html(
-    view: sublime.View,
-    config: ClientConfig,
-    diagnostic: Diagnostic,
-    code_actions: list[Command | CodeAction],
-    lightbulb_color: str,
-    base_dir: str | None = None
-) -> str:
-    message = diagnostic['message']
-    raw_message = message['value'] if isinstance(message, dict) else message
-    content = _format_diagnostic_message(view, message)
-    code = diagnostic.get("code")
-    source = diagnostic.get("source")
-    copy_text = raw_message.replace(' ', ' ')
-    if source or code is not None:
-        meta_info = ""
-        if source:
-            meta_info += text2html(source)
-            copy_text += f' ({source})' if code is None else f' ({source}[{code}])'
-        if code is not None:
-            if code_description := diagnostic.get("codeDescription"):
-                href = code_description["href"]
-                meta_info += f'({make_link(href, str(code), tooltip=html.escape(href))})'
-            else:
-                meta_info += f'({text2html(str(code))})'
-        content += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
-    content += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
-        'lsp_copy_text', {'text': copy_text}
-    )}'>⧉</a>"""
-    if related_infos := diagnostic.get("relatedInformation"):
-        info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
-        content += '<hr>' + _html_element("div", info, escape=False)
-    if code_actions:
-        version = view.change_count()
-        for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
-            icon = lightbulb_html(lightbulb_color, code_action.get('isPreferred', False))
-            code_action_uri = encode_code_action_uri(config.name, version, code_action)
-            content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
-    severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
-    return html_wrapper(content, class_name=severity_class)
+    if kind == other_kind:
+        return True
+    kind_len = len(kind)
+    return len(other_kind) > kind_len and other_kind.startswith(kind + '.')
 
 
 def format_code_actions_for_quick_panel(
@@ -963,19 +1010,4 @@ def format_code_actions_for_quick_panel(
             selected_index = idx
     return items, selected_index
 
-
-def kind_contains_other_kind(kind: str, other_kind: str) -> bool:
-    """
-    Check if `other_kind` is a sub-kind of `kind`.
-
-    The kind `"refactor.extract"` for example contains `"refactor.extract"` and `"refactor.extract.function"`,
-    but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `"refactor"`.
-    """
-    if kind == other_kind:
-        return True
-    kind_len = len(kind)
-    return len(other_kind) > kind_len and other_kind.startswith(kind + '.')
-
-
-def document_highlight_key(kind: DocumentHighlightKind, *, multiline: bool) -> str:
-    return "lsp_highlight_{}{}".format(kind, "m" if multiline else "s")
+# endregion code_actions

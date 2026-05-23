@@ -12,15 +12,14 @@ from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypeVar
 import asyncio
-import concurrent.futures
 import contextlib
 import sublime
 import sublime_aio
 import sys
-import threading
 
 if TYPE_CHECKING:
     from contextvars import Context
+    import concurrent.futures
 
 
 class SupportsAclose(Protocol):
@@ -53,15 +52,13 @@ def run_coroutine_threadsafe(coroutine: Coroutine[object, object, T]) -> concurr
     """
     Start the execution of a coroutine in the asyncio thread, from any thread.
 
-    When you are certain you are already in the asyncio thread, then there are better ways to start a coroutine from a
-    "blocking" ("non-async") function. One way is to use
-    [asyncio.create_task](https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.create_task). However,
-    asyncio.create_task has the caveat that the returned [Task](https://docs.python.org/3/library/asyncio-task.html#asyncio.Task)
-    object must be kept alive somewhere. If you don't care about keeping tasks associated to coroutines alive, then
-    inherit from the `TaskContainer` mixin class and use its `create_task` method.
+    When you are certain you are already in the asyncio thread, then use one of:
 
-    A big caveat: coroutines started this way do not print their exceptions when an exception occurs in the coroutine.
-    To handle this, call `.add_done_callback` on the returned `Future` object.
+    * [asyncio.create_task](https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.create_task). The
+    caveat for asyncio.create_task is that the returned [Task](https://docs.python.org/3/library/asyncio-task.html#asyncio.Task)
+    object must be kept alive manually. The event loop only keeps a weak reference to the Task object.
+    * `TaskContainer.create_task`: restricts the lifetime of the task to the lifetime of the `TaskContainer`. Unlike
+      `asyncio.create_task`, keeps a (strong) reference to the Task object.
     """
     future: concurrent.futures.Future[T] = sublime_aio.run_coroutine(coroutine)  # type: ignore
 
@@ -80,87 +77,47 @@ def call_soon_threadsafe(f: Callable[..., Any], *args: Any, context: Context | N
     return sublime_aio.call_soon_threadsafe(f, *args, context=context)
 
 
-class _Executor(concurrent.futures.Executor):
+def _run_in_st_thread(
+    dispatch_func: Callable[[Callable[[], None]], None], f: Callable[..., T], *args: Any, **kwargs: Any
+) -> asyncio.Future[T]:
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
+
+    def wrap() -> None:
+        try:
+            loop.call_soon_threadsafe(future.set_result, f(*args, **kwargs))
+        except BaseException as ex:
+            loop.call_soon_threadsafe(future.set_exception, ex)
+
+    dispatch_func(wrap)
+    return future
+
+
+def run_in_main_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
     """
-    An Executor that wraps sublime.set_timeout(_async).
+    Run a function in Sublime's main (UI) thread.
 
-    Use in combination with an asyncio loop:
-
-    ```python
-    from LSP.core.aio import executor_main, executor_async
-
-
-    def some_blocking_function_that_interacts_with_gui() -> int:
-        window = sublime.current_window()
-        return 42
-
-
-    async def foo() -> int:
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(executor_main, some_blocking_function_that_interacts_with_gui)
-        return result
-
-
-    def some_cpu_heavy_function() -> int:
-        time.sleep(1)
-        return 42
-
-
-    async def bar() -> int:
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(executor_async, some_cpu_heavy_function)
-        return result
-    ```
+    Must be called from the asyncio thread. You must await the returned future.
     """
-
-    def __init__(self, dispatch_func: Callable[[Callable[..., Any]], Any]) -> None:
-        self._dispatch_func = dispatch_func
-        self._running = 0
-        self._shuttingdown = False
-        self._lock = threading.Lock()
-        self._cv = threading.Condition(self._lock)
-
-    def submit(self, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> concurrent.futures.Future:
-        if self._shuttingdown:
-            raise RuntimeError("Executor is shutting down")
-        future: concurrent.futures.Future = concurrent.futures.Future()
-        with self._cv:
-            self._running += 1
-
-        def run() -> None:
-            try:
-                future.set_result(fn(*args, **kwargs))
-            except BaseException as ex:
-                future.set_exception(ex)
-            with self._cv:
-                self._running -= 1
-                if self._running == 0:
-                    self._cv.notify()
-
-        self._dispatch_func(run)
-        return future
-
-    def shutdown(self, wait: bool = True, *, cancel_futures: bool = False) -> None:
-        self._shuttingdown = True
-        if wait:
-            with self._cv:
-                self._cv.wait_for(lambda: self._running == 0)
+    return _run_in_st_thread(sublime.set_timeout, f, *args, **kwargs)
 
 
-executor_main = _Executor(sublime.set_timeout)
-"""Executor instance that runs functions on the Sublime Text main (GUI) thread."""
+def run_in_async_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
+    """
+    Run a function in Sublime's async, or worker, thread.
 
-executor_async = _Executor(sublime.set_timeout_async)
-"""Executor instance that runs functions on the Sublime Text "async" thread."""
+    Must be called from the asyncio thread. You must await the returned future.
+    """
+    return _run_in_st_thread(sublime.set_timeout_async, f, *args, **kwargs)
 
 
-async def next_frame() -> None:
+def next_frame() -> asyncio.Future[None]:
     """Wait until (at least one) UI frame has passed."""
 
     def noop() -> None:
         pass
 
-    await asyncio.get_running_loop().run_in_executor(executor_main, noop)
+    return run_in_main_thread(noop)
 
 
 async def gather_and_flatten_exceptions(*coros: Coroutine[Any, Any, list[Exception]]) -> list[Exception]:
@@ -198,18 +155,26 @@ class TaskContainer:
             debug("WARNING: TaskContainer is destroyed but there are still tasks running!")
 
     async def cancel_all_tasks(self) -> list[Exception]:
+        """Cancel all running tasks."""
+        tasks = list(self._tasks)
+        for task in tasks:
+            task.cancel()
         return [x for x in await asyncio.gather(*self._tasks, return_exceptions=True) if isinstance(x, Exception)]
 
-    def create_task(self, coro: Coroutine[object, object, object], /, **kwargs: Any) -> asyncio.Task:
+    def create_task(self, coro: Coroutine[object, object, object], name: str | None = None) -> asyncio.Task:
         """
         Spawn a new coroutine, to be run in the background. Not thread-safe. Must be invoked from the asyncio thread.
 
-        First argument is the coroutine object, the named arguments are exactly the ones from asyncio.create_task.
-
         This method saves a strong reference to the spawned task, unlike asyncio.
         Moreover, this method will print any exception that occured during the exception of the coroutine, if any.
+
+        :param coro: The coroutine object to schedule.
+        :param name: An optional name to give to the task. If no name has been explicitly assigned to the Task, the
+        default asyncio Task implementation generates a default name during instantiation.
+        :return: the newly created [Task](https://docs.python.org/3/library/asyncio-task.html#task-object) object.
+
         """
-        task = asyncio.create_task(coro, **kwargs)
+        task = asyncio.create_task(coro, name=name)
         tasks = self._tasks
         tasks.add(task)
 
@@ -223,13 +188,10 @@ class TaskContainer:
         task.add_done_callback(on_done)
         return task
 
-    def create_task_threadsafe(self, coro: Coroutine[object, object, object], /, **kwargs: Any) -> None:
+    def create_task_threadsafe(self, coro: Coroutine[object, object, object], name: str | None = None) -> None:
         """
         Spawn a new coroutine, to be run in the background. Thread-safe.
 
-        First argument is the coroutine object, the named arguments are exactly the ones from asyncio.create_task.
-
-        This method saves a strong reference to the spawned task, unlike asyncio.
-        Moreover, this method will print any exception that occured during the exception of the coroutine, if any.
+        The parameters and behavior of this method are exactly the same as :py:meth`create_task`.
         """
-        call_soon_threadsafe(lambda: self.create_task(coro, **kwargs))
+        call_soon_threadsafe(lambda: self.create_task(coro, name=name))

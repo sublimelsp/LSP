@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .aio import run_in_async_thread
 from .constants import ST_PLATFORM
 from .logging import debug
 from .logging import exception_log
@@ -311,6 +312,7 @@ class StreamTransport(Transport):
         super().__init__(encoder, decoder)
         self._reader = reader
         self._writer = writer
+        self._writer_lock = asyncio.Lock()
 
     @override
     async def read(self) -> JSONRPCMessage:
@@ -319,20 +321,21 @@ class StreamTransport(Transport):
             raise StopLoopError
         body = await self._reader.readexactly(content_length)
         try:
-            return self._decoder(body)
+            return await run_in_async_thread(self._decoder, body)
         except Exception as ex:
             raise Exception(f"JSON decode error: {ex}") from ex
 
     @override
     async def write(self, payload: JSONRPCMessage) -> None:
-        body = self._encoder(payload)
-        self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
-        try:
-            await self._writer.drain()
-        except ConnectionResetError:
-            # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
-            # there's other logic that will make the transport shut down.
-            pass
+        async with self._writer_lock:
+            body = await run_in_async_thread(self._encoder, payload)
+            self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
+            try:
+                await self._writer.drain()
+            except ConnectionResetError:
+                # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
+                # there's other logic that will make the transport shut down.
+                pass
 
     @override
     async def write_bytes(self, payload: bytes) -> None:

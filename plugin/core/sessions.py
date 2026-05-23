@@ -92,8 +92,8 @@ from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import aclosing
 from .aio import call_soon_threadsafe
-from .aio import executor_main
 from .aio import gather_and_flatten_exceptions
+from .aio import run_in_main_thread
 from .aio import TaskContainer
 from .constants import ChangeEventAction
 from .constants import MarkdownLangMap
@@ -1574,7 +1574,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return view
         if uri.startswith('res:'):
             return await self._open_res_uri(uri, r, group)
-        loop = asyncio.get_running_loop()
         if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
 
             def open_untitled_buffer(flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE) -> sublime.View:
@@ -1593,7 +1592,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 view.set_scratch(True)
                 return view
 
-            return await loop.run_in_executor(executor_main, open_untitled_buffer, flags)
+            return await run_in_main_thread(open_untitled_buffer, flags)
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
@@ -1643,7 +1642,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 sublime.set_timeout(partial(center_selection, view, r))
             return view
 
-        return await asyncio.get_running_loop().run_in_executor(executor_main, continue_on_main_thread)
+        return await run_in_main_thread(continue_on_main_thread)
 
     async def _open_uri_with_plugin(
         self,
@@ -1687,7 +1686,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             view.set_read_only(True)
             return view
 
-        return await asyncio.get_running_loop().run_in_executor(executor_main, continue_on_main_thread)
+        return await run_in_main_thread(continue_on_main_thread)
 
     def _on_sheet_opened(self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None) -> sublime.View | None:
         if sheet and (view := sheet.view()):

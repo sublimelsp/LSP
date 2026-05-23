@@ -62,7 +62,10 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
     async def _run(self, **kwargs: dict[str, Any]) -> None:
         if self._tasks_runner:
             if self._tasks_runner.cancel():
-                await self._tasks_runner
+                try:
+                    await self._tasks_runner
+                except asyncio.CancelledError:
+                    pass
                 self._tasks_runner = None
         self.on_before_tasks()
         self._tasks_runner = asyncio.create_task(run_tasks(self, self.tasks))

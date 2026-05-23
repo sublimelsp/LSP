@@ -60,7 +60,7 @@ def run_coroutine(coroutine: Coroutine[object, object, T]) -> concurrent.futures
     * `TaskContainer.create_task`: restricts the lifetime of the task to the lifetime of the `TaskContainer`. Unlike
       `asyncio.create_task`, keeps a (strong) reference to the Task object.
     """
-    future: concurrent.futures.Future[T] = sublime_aio.run_coroutine(coroutine)  # type: ignore
+    future = sublime_aio.run_coroutine(coroutine)
 
     def on_done(fut: concurrent.futures.Future[T]) -> None:
         _futures.discard(fut)

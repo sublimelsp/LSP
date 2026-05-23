@@ -14,7 +14,7 @@ from ..protocol import MarkupContent
 from ..protocol import MarkupKind
 from ..protocol import Range
 from ..protocol import TextEdit
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.constants import COMPLETION_KINDS
 from .core.constants import MarkdownLangMap
 from .core.edit import apply_text_edits
@@ -292,7 +292,7 @@ class QueryCompletionsTask:
 class LspResolveDocsCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, index: int, session_name: str, event: dict | None = None) -> None:
-        run_coroutine_threadsafe(self._run(index, session_name, event))
+        run_coroutine(self._run(index, session_name, event))
 
     async def _run(self, index: int, session_name: str, event: dict | None = None) -> None:
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
@@ -384,7 +384,7 @@ class LspSelectCompletionCommand(LspTextCommand):
             self.view.run_command("insert_snippet", {"contents": new_text})
         else:
             self.view.run_command("insert", {"characters": new_text})
-        run_coroutine_threadsafe(self._run(session_name, item))
+        run_coroutine(self._run(session_name, item))
 
     async def _run(self, session_name: str, item: CompletionItem) -> None:
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')

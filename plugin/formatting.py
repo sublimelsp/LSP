@@ -3,7 +3,7 @@ from __future__ import annotations
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextEdit
 from .code_actions import CodeActionsOnFormatTask
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
 from .core.protocol import Error
@@ -183,7 +183,7 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
                             await session.request(text_document_formatting(self.view)), label=self.label
                         )
 
-            run_coroutine_threadsafe(do_format())
+            run_coroutine(do_format())
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
@@ -201,7 +201,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         return False
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
-        run_coroutine_threadsafe(self._run())
+        run_coroutine(self._run())
 
     async def _run(self) -> None:
         if listener := self.get_listener():

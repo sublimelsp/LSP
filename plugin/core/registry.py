@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .aio import run_coroutine_threadsafe
+from .aio import run_coroutine
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
@@ -198,7 +198,7 @@ class LspOpenLocationCommand(LspWindowCommand):
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
                 elif 'shift' in modifier_keys:
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
-        run_coroutine_threadsafe(self._run(location, session_name, flags, group))
+        run_coroutine(self._run(location, session_name, flags, group))
 
     def want_event(self) -> bool:
         return True
@@ -234,13 +234,13 @@ class LspRestartServerCommand(LspTextCommand):
         if index == -1:
             return
         # TODO: handle exception list?
-        run_coroutine_threadsafe(wm.restart_sessions([self._config_names[index]]))
+        run_coroutine(wm.restart_sessions([self._config_names[index]]))
 
 
 class LspCheckApplicableCommand(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit, session_name: str) -> None:
-        run_coroutine_threadsafe(self._run(session_name))
+        run_coroutine(self._run(session_name))
 
     async def _run(self, session_name: str) -> None:
         if wm := windows.lookup(self.view.window()):

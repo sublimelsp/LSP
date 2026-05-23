@@ -4,7 +4,7 @@ from .api import get_plugin
 from .api import LspPlugin
 from .api import OnPreStartContext
 from .api import PluginStartError
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
@@ -334,7 +334,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
             config, self.window, active_view,
             lambda resolved_command, output, exit_code: self.update_sheet(
                 config, active_view, output_sheet, resolved_command, output, exit_code))
-        run_coroutine_threadsafe(self.test_runner.run())
+        run_coroutine(self.test_runner.run())
 
     def update_sheet(self, config: ClientConfig, active_view: sublime.View | None, output_sheet: sublime.HtmlSheet,
                      resolved_command: list[str] | None, server_output: str, exit_code: int) -> None:

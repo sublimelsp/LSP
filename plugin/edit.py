@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.constants import ChangeEventAction
 from .core.edit import is_snippet_text_edit
 from .core.edit import parse_lsp_position
@@ -93,7 +93,7 @@ class LspApplyWorkspaceEditCommand(LspWindowCommand):
     def run(
         self, session_name: str, edit: WorkspaceEdit, label: str | None = None, is_refactoring: bool = False
     ) -> None:
-        run_coroutine_threadsafe(self._run(session_name, edit, label, is_refactoring))
+        run_coroutine(self._run(session_name, edit, label, is_refactoring))
 
     async def _run(
         self, session_name: str, edit: WorkspaceEdit, label: str | None = None, is_refactoring: bool = False

@@ -7,7 +7,7 @@ from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import LSPAny
 from .core.aio import call_soon_threadsafe
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.logging import trace
 from .core.promise import Promise
 from .core.protocol import Error
@@ -380,7 +380,7 @@ class LspCodeActionsCommand(LspTextCommand):
         if code_actions_by_config:
             self._handle_code_actions(code_actions_by_config, run_first=True)
             return
-        run_coroutine_threadsafe(self._run(only_kinds))
+        run_coroutine(self._run(only_kinds))
 
     async def _run(self, only_kinds: list[str | CodeActionKind] | None = None) -> None:
         view = self.view
@@ -427,7 +427,7 @@ class LspCodeActionsCommand(LspTextCommand):
                 response = await session.run_code_action(action, progress=True, view=self.view)
                 self._handle_response_async(config_name, response)
 
-        run_coroutine_threadsafe(run())
+        run_coroutine(run())
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
@@ -482,7 +482,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
         return True
 
     def run(self, index: int, event: dict | None = None) -> None:
-        run_coroutine_threadsafe(self._run(index, event))
+        run_coroutine(self._run(index, event))
 
     async def _run(self, index: int, event: dict | None) -> None:
         if self._is_cache_valid(event):

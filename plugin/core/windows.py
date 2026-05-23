@@ -16,7 +16,7 @@ from ..api import OnPreStartContext
 from ..api import PluginStartError
 from .aio import call_soon_threadsafe
 from .aio import gather_and_flatten_exceptions
-from .aio import run_coroutine_threadsafe
+from .aio import run_coroutine
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -162,11 +162,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if issubclass(plugin, LspPlugin):
                     context = IsApplicableContext(config, listener.view, workspace_folders)
                     if plugin.is_applicable_async(context):
-                        run_coroutine_threadsafe(self.start(config, listener))
+                        run_coroutine(self.start(config, listener))
                 elif plugin.is_applicable(listener.view, config):
-                    run_coroutine_threadsafe(self.start(config, listener))
+                    run_coroutine(self.start(config, listener))
             else:
-                run_coroutine_threadsafe(self.start(config, listener))
+                run_coroutine(self.start(config, listener))
 
     def unregister_listener_async(self, listener: AbstractViewListener) -> None:
         self._listeners.discard(listener)
@@ -528,7 +528,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:
         config_names = [config.name for config in configs]
         # TODO: handle exception list?
-        run_coroutine_threadsafe(self.restart_sessions(config_names))
+        run_coroutine(self.restart_sessions(config_names))
 
     # --- Implements ViewStatusHandler ---------------------------------------------------------------------------------
 
@@ -587,7 +587,7 @@ class WindowRegistry(LspSettingsChangeListener):
 
     def discard(self, window: sublime.Window) -> None:
         if wm := self._windows.pop(window.id(), None):
-            run_coroutine_threadsafe(wm.destroy())
+            run_coroutine(wm.destroy())
 
     # --- Implements LspSettingsChangeListener -------------------------------------------------------------------------
 

@@ -5,7 +5,7 @@ from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentUri
 from ..protocol import Location
 from ..protocol import LocationLink
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.input_handlers import PreselectedListInputHandler
 from .core.paths import simple_project_path
@@ -106,13 +106,13 @@ class LspGotoCommand(LspTextCommand):
     ) -> None:
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-            run_coroutine_threadsafe(open_location(session, response, side_by_side, force_group, group))
+            run_coroutine(open_location(session, response, side_by_side, force_group, group))
         elif isinstance(response, list):
             if len(response) == 0:
                 self._handle_no_results(fallback, side_by_side)
             elif len(response) == 1:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-                run_coroutine_threadsafe(open_location(session, response[0], side_by_side, force_group, group))
+                run_coroutine(open_location(session, response[0], side_by_side, force_group, group))
             else:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 placeholder = self.placeholder_text + " " + self.view.substr(self.view.word(position))
@@ -353,7 +353,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             self._open_file(value)
         elif session := self._session(value):
             location: Location = {'uri': self.uri, 'range': value['diagnostic']['range']}
-            run_coroutine_threadsafe(session.open_location(location))
+            run_coroutine(session.open_location(location))
 
     def _session(self, value: DiagnosticData) -> Session | None:
         session_name = value['session_name']

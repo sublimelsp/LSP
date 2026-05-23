@@ -48,7 +48,7 @@ else:
 _futures: set[concurrent.futures.Future] = set()
 
 
-def run_coroutine_threadsafe(coroutine: Coroutine[object, object, T]) -> concurrent.futures.Future[T]:
+def run_coroutine(coroutine: Coroutine[object, object, T]) -> concurrent.futures.Future[T]:
     """
     Start the execution of a coroutine in the asyncio thread, from any thread.
 

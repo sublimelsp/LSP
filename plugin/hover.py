@@ -10,7 +10,7 @@ from ..protocol import Position
 from ..protocol import Range
 from .code_actions import filter_quickfix_actions
 from .core.aio import call_soon_threadsafe
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import MarkdownLangMap
 from .core.constants import RegionKey
@@ -319,11 +319,11 @@ class LspHoverCommand(LspTextCommand):
             pass
         elif scheme == 'file':
             if window := self.view.window():
-                run_coroutine_threadsafe(open_file_uri(window, uri))
+                run_coroutine(open_file_uri(window, uri))
         elif scheme == CODE_ACTION_SCHEME:
             session_name, version, action = decode_code_action_uri(uri)
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):
-                run_coroutine_threadsafe(session.run_code_action(action, progress=True, view=self.view))
+                run_coroutine(session.run_code_action(action, progress=True, view=self.view))
                 self.view.hide_popup()
         elif uri == "quick-panel:DocumentLink":
             if window := self.view.window():
@@ -340,11 +340,11 @@ class LspHoverCommand(LspTextCommand):
             if session := self.session_by_name(session_name):
                 position: Position = {"line": row, "character": col_utf16}
                 r: Range = {"start": position, "end": position}
-                run_coroutine_threadsafe(session.open_uri(uri, r))
+                run_coroutine(session.open_uri(uri, r))
         elif scheme.lower() in {"http", "https"} or (not scheme and uri.startswith('www.')):
             open_in_browser(uri)
         elif scheme:
-            run_coroutine_threadsafe(self.try_open_custom_uri(uri))
+            run_coroutine(self.try_open_custom_uri(uri))
 
     async def try_open_custom_uri(self, uri: str) -> None:
         uri_parts = urlsplit(uri)

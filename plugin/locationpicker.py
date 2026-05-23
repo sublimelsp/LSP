@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.constants import ST_PACKAGES_PATH
 from .core.constants import SublimeKind
 from .core.logging import debug
@@ -125,7 +125,7 @@ class LocationPicker:
                     if not open_basic_file(session, uri, position, flags):
                         self._window.status_message(f"Unable to open {uri}")
             else:
-                run_coroutine_threadsafe(
+                run_coroutine(
                     open_location(session, location, self._side_by_side, self._force_group, self._group)
                 )
         else:

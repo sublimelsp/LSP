@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.constants import RequestFlags
 from .core.constants import ST_VERSION
 from .core.css import css
@@ -62,7 +62,7 @@ class LspInlayHintClickCommand(LspTextCommand):
 
     def run(self, _edit: sublime.Edit, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
             event: dict | None = None, label_part: InlayHintLabelPart | None = None) -> None:
-        run_coroutine_threadsafe(self._run(session_name, inlay_hint, phantom_uuid, label_part))
+        run_coroutine(self._run(session_name, inlay_hint, phantom_uuid, label_part))
 
     async def _run(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
             label_part: InlayHintLabelPart | None = None) -> None:

@@ -6,7 +6,7 @@ from .test_mocks import basic_responses
 from functools import partial
 from LSP.plugin.core.aio import call_soon_threadsafe
 from LSP.plugin.core.aio import next_frame
-from LSP.plugin.core.aio import run_coroutine_threadsafe
+from LSP.plugin.core.aio import run_coroutine
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.open import open_file
 from LSP.plugin.core.protocol import Notification
@@ -108,7 +108,7 @@ class SublimeAioTestCase(AsyncTestCase):
 
     @classmethod
     def run_coroutine(cls, coro: Coroutine) -> FutureLike:
-        return run_coroutine_threadsafe(coro)
+        return run_coroutine(coro)
 
 
 class TextDocumentTestCase(SublimeAioTestCase):

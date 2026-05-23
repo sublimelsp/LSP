@@ -17,7 +17,7 @@ from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
-from .plugin.core.aio import run_coroutine_threadsafe
+from .plugin.core.aio import run_coroutine
 from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
 from .plugin.core.open import g_opening_files
@@ -229,7 +229,7 @@ def plugin_loaded() -> None:
 
 def plugin_unloaded() -> None:
     _unregister_all_plugins()
-    run_coroutine_threadsafe(windows.disable())
+    run_coroutine(windows.disable())
     unload_settings()
 
 

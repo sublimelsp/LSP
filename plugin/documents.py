@@ -20,7 +20,7 @@ from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.aio import call_soon_threadsafe
 from .core.aio import gather_and_flatten_exceptions
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.aio import TaskContainer
 from .core.constants import ChangeEventAction
 from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
@@ -182,7 +182,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
                 *[listener.on_text_changed(change_count, changes, action) for listener in list(frozen_listeners)]
             )
 
-        run_coroutine_threadsafe(notify(self._last_edit_action))
+        run_coroutine(notify(self._last_edit_action))
         self._reset_last_edit_action()
 
     def on_reload_async(self) -> None:
@@ -281,7 +281,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         for session in self.sessions_async():
             session.diagnostics.clear_identifiers_cache_for_view(self.view)
         # But this has to run on the asyncio thread again
-        run_coroutine_threadsafe(self._activated_impl())
+        run_coroutine(self._activated_impl())
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 

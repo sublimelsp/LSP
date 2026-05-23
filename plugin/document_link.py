@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.logging import debug
 from .core.open import open_file_uri
 from .core.open import open_in_browser
@@ -28,7 +28,7 @@ class LspOpenLinkCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
         if position := get_position(self.view, event):
-            run_coroutine_threadsafe(self._run(position))
+            run_coroutine(self._run(position))
 
     async def _run(self, position: int) -> None:
         if not (session := self.best_session(self.capability, position)):

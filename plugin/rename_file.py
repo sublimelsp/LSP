@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .core.aio import call_soon_threadsafe
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.edit import show_summary_message
 from .core.logging import debug
 from .core.open import open_file_uri
@@ -115,7 +115,7 @@ class LspRenamePathCommand(LspWindowCommand):
         async def run() -> None:
             self.on_rename_path(await self.rename_path(old_path, new_name), file_rename)
 
-        run_coroutine_threadsafe(run())
+        run_coroutine(run())
 
     def on_rename_path(self, success: bool, file_rename: FileRename) -> None:
         if success:

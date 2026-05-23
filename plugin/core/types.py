@@ -8,7 +8,7 @@ from ...protocol import ServerCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextDocumentSyncOptions
 from ...protocol import URI
-from .aio import run_coroutine_threadsafe
+from .aio import run_coroutine
 from .aio import TaskContainer
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
@@ -180,7 +180,7 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
         if condition():
             f()
 
-    run_coroutine_threadsafe(run())
+    run_coroutine(run())
 
 
 class SettingsRegistration:

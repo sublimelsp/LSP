@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine_threadsafe
+from .core.aio import run_coroutine
 from .core.registry import LspTextCommand
 from abc import ABC
 from abc import abstractmethod
@@ -56,7 +56,7 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
 
     @override
     def run(self, edit: sublime.Edit, **kwargs: dict[str, Any]) -> None:
-        run_coroutine_threadsafe(self._run(**kwargs))
+        run_coroutine(self._run(**kwargs))
 
     async def _run(self, **kwargs: dict[str, Any]) -> None:
         if self._tasks_runner:

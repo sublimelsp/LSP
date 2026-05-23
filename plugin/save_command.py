@@ -3,7 +3,6 @@ from __future__ import annotations
 from .code_actions import CodeActionsOnFormatOnSaveTask
 from .code_actions import CodeActionsOnSaveTask
 from .core.aio import run_in_asyncio_thread
-from .core.logging import trace
 from .formatting import FormatOnSaveTask
 from .formatting import WillSaveWaitTask
 from .lsp_task import LspTask
@@ -37,7 +36,6 @@ class LspSaveCommand(LspTextCommandWithTasks):
     @override
     async def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
         # Triggered from set_timeout to preserve original semantics of on_pre_save handling
-        trace()
         sublime.set_timeout(lambda: self.view.run_command('save', kwargs))
 
     def _trigger_on_pre_save_async(self) -> None:

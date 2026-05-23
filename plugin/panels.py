@@ -3,18 +3,10 @@ from __future__ import annotations
 from .core.panels import LOG_LINES_LIMIT_SETTING_NAME
 from .core.panels import PanelName
 from .core.registry import windows
-from contextlib import contextmanager
+from .core.views import mutable
 from sublime_plugin import WindowCommand
-from typing import Generator
 import sublime
 import sublime_plugin
-
-
-@contextmanager
-def mutable(view: sublime.View) -> Generator:
-    view.set_read_only(False)
-    yield
-    view.set_read_only(True)
 
 
 def clear_undo_stack(view: sublime.View) -> None:

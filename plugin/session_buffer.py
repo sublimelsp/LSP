@@ -1006,6 +1006,7 @@ class SessionBuffer(TaskContainer):
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
+    @deprecated("use SessionBuffer.request_code_actions instead")
     def request_code_actions_async(
         self,
         view: sublime.View,

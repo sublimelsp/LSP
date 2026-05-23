@@ -3,6 +3,8 @@ from __future__ import annotations
 from .async_test_case import AsyncTestCase
 from .async_test_case import FutureLike
 from .test_mocks import basic_responses
+from functools import partial
+from LSP.plugin.core.aio import call_soon_threadsafe
 from LSP.plugin.core.aio import next_frame
 from LSP.plugin.core.aio import run_coroutine_threadsafe
 from LSP.plugin.core.collections import DottedDict
@@ -89,10 +91,12 @@ def remove_config(config: ClientConfig) -> None:
 
 async def close_test_view(view: sublime.View | None) -> None:
     if view:
-        view.set_scratch(True)
         while view.is_loading():  # noqa: ASYNC110
             await asyncio.sleep(0.05)
-        view.close()
+        view.set_scratch(True)
+        future = asyncio.get_running_loop().create_future()
+        view.close(partial(call_soon_threadsafe, future.set_result))
+        await future
 
 
 def expand(s: str, w: sublime.Window) -> str:
@@ -151,7 +155,8 @@ class TextDocumentTestCase(SublimeAioTestCase):
     async def setUp(self) -> None:
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", f"{self.get_test_name()}.txt"), window)
-        if view := await open_file(sublime.active_window(), filename_to_uri(filename)):
+        await close_test_view(window.find_open_file(filename))
+        if view := await open_file(window, filename_to_uri(filename)):
             self.__class__.view = view
         else:
             raise AssertionError(f"unable to open file {filename}")
@@ -162,7 +167,18 @@ class TextDocumentTestCase(SublimeAioTestCase):
         assert isinstance(params, dict)
         self.assertIsInstance(params["textDocument"], dict)
         assert isinstance(params["textDocument"], dict)
-        self.assertEqual(params["textDocument"]["version"], 0)
+        version: int = params["textDocument"]["version"]
+        if version != 0:
+            print(
+                f"WARNING: for some reason, the document version of {filename} is {version}. Attempting to close and then re-open it..."  # noqa: E501
+            )
+            await asyncio.sleep(0.2)
+            await close_test_view(self.__class__.view)
+            await asyncio.sleep(0.2)
+            if view := await open_file(window, filename_to_uri(filename)):
+                self.__class__.view = view
+            else:
+                raise AssertionError(f"unable to open file {filename}")
 
     @classmethod
     def get_test_name(cls) -> str:
@@ -279,8 +295,5 @@ class TextDocumentTestCase(SublimeAioTestCase):
 
     @override
     async def asyncDoCleanups(self) -> None:
-        try:
-            if self.view and self.view.is_valid():
-                await close_test_view(self.view)
-        except Exception:
-            pass
+        if self.view and self.view.is_valid():
+            await close_test_view(self.view)

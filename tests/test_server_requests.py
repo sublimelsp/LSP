@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from .setup import close_test_view
 from .setup import TextDocumentTestCase
 from LSP.plugin import Error
+from LSP.plugin.core.aio import next_frame
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
@@ -134,7 +136,7 @@ class ServerRequests(TextDocumentTestCase):
                 self.assertTrue(view.is_valid())
                 self.assertFalse(view.is_loading())
                 self.assertEqual(view.substr(sublime.Region(0, view.size())), expected[i])
-                view.close()
+                await close_test_view(view)
 
     async def test_m_workspace_applyEdit_with_wrong_uri(self) -> None:
         uri = "file:///C:/wrong/uri.txt"
@@ -177,48 +179,47 @@ class ServerRequests(TextDocumentTestCase):
         )
 
     async def test_m_workspace_applyEdit_with_wrong_document_version(self) -> None:
-        with tempfile.TemporaryDirectory() as dirpath:
-            file_name = os.path.join(dirpath, "file3.txt")
-            uri = filename_to_uri(file_name)
-            version = 123
-            Path(file_name).write_text("a b", encoding="utf-8")  # noqa: ASYNC240
-            await verify(
-                self,
-                "workspace/applyEdit",
-                {
-                    "edit": {
-                        "documentChanges": [
-                            {
-                                "textDocument": {
-                                    "uri": uri,
-                                    "version": version
-                                },
-                                "edits": [
-                                    {
-                                        "range": {
-                                            "start": {"line": 0, "character": 0},
-                                            "end": {"line": 0, "character": 1}
-                                        },
-                                        "newText": "hello"
+        file_name = self.view.file_name()
+        uri = filename_to_uri(self.view.file_name())
+        version = 123
+        self.insert_characters("a b")
+        await verify(
+            self,
+            "workspace/applyEdit",
+            {
+                "edit": {
+                    "documentChanges": [
+                        {
+                            "textDocument": {
+                                "uri": uri,
+                                "version": version
+                            },
+                            "edits": [
+                                {
+                                    "range": {
+                                        "start": {"line": 0, "character": 0},
+                                        "end": {"line": 0, "character": 1}
                                     },
-                                    {
-                                        "range": {
-                                            "start": {"line": 0, "character": 2},
-                                            "end": {"line": 0, "character": 3}
-                                        },
-                                        "newText": "there"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                },
-                {
-                    "applied": False,
-                    "failureReason": f"Document version for URI {uri} is 0, but required {version}",
-                    "failedChange": 0
+                                    "newText": "hello"
+                                },
+                                {
+                                    "range": {
+                                        "start": {"line": 0, "character": 2},
+                                        "end": {"line": 0, "character": 3}
+                                    },
+                                    "newText": "there"
+                                }
+                            ]
+                        }
+                    ]
                 }
-            )
+            },
+            {
+                "applied": False,
+                "failureReason": f"Document version for URI {uri} is {self.view.change_count()}, but required {version}",
+                "failedChange": 0
+            }
+        )
 
     async def test_m_client_registerCapability(self) -> None:
         await verify(
@@ -254,8 +255,9 @@ class ServerRequests(TextDocumentTestCase):
 
         # willSaveWaitUntil is *only* registered on the buffer
         self.assertFalse(self.session.capabilities.get("textDocumentSync.willSaveWaitUntil"))
+        await self.wait_until_st_state(lambda: len(list(self.session.session_buffers_async())) > 0)
         sb = next(self.session.session_buffers_async())
-        self.assertEqual(sb.capabilities.text_sync_kind(), TextDocumentSyncKind.Full)
+        await self.wait_until_st_state(lambda: sb.capabilities.text_sync_kind() == TextDocumentSyncKind.Full)
         self.assertEqual(sb.capabilities.get("textDocumentSync.willSaveWaitUntil"), {"id": "2"})
         self.assertEqual(self.session.capabilities.text_sync_kind(), TextDocumentSyncKind.Incremental)
 
@@ -263,8 +265,8 @@ class ServerRequests(TextDocumentTestCase):
         # characters for each view were updated
         self.assertEqual(sb.capabilities.get("completionProvider.id"), "myCompletionRegistrationId")
         self.assertEqual(sb.capabilities.get("completionProvider.triggerCharacters"), ["!", "@", "#"])
+        await self.wait_until_st_state(lambda: get_auto_complete_trigger(sb) is not None)
         trigger = get_auto_complete_trigger(sb)
-        self.assertTrue(trigger)
         self.assertEqual(trigger.get("characters"), "!@#")
 
     async def test_m_client_unregisterCapability(self) -> None:

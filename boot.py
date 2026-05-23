@@ -21,7 +21,6 @@ from .plugin.core.aio import run_coroutine
 from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
 from .plugin.core.open import g_opening_files
-from .plugin.core.open import get_opening_files_lock
 from .plugin.core.panels import PanelName
 from .plugin.core.registry import LspCheckApplicableCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
@@ -269,22 +268,21 @@ class Listener(sublime_aio.EventListener):
         file_name = view.file_name()
         if not file_name:
             return
-        if future := await self._find_opening_file_future(file_name):
+        if future := self._find_opening_file_future(file_name):
             future.set_result(view)
 
     async def on_pre_close(self, view: sublime.View) -> None:
         file_name = view.file_name()
         if not file_name:
             return
-        if future := await self._find_opening_file_future(file_name):
+        if future := self._find_opening_file_future(file_name):
             # The view got closed before it finished loading. This can happen.
             future.set_result(None)
 
-    async def _find_opening_file_future(self, file_name: str) -> asyncio.Future[sublime.View | None] | None:
-        async with get_opening_files_lock():
-            for fn in g_opening_files:
-                if fn == file_name or os.path.samefile(fn, file_name):  # noqa: ASYNC240
-                    return g_opening_files.pop(fn, None)
+    def _find_opening_file_future(self, file_name: str) -> asyncio.Future[sublime.View | None] | None:
+        for fn in g_opening_files:
+            if fn == file_name or os.path.samefile(fn, file_name):
+                return g_opening_files.pop(fn, None)
         return None
 
     def on_post_window_command(self, window: sublime.Window, command_name: str, args: dict[str, Any] | None) -> None:

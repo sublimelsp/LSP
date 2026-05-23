@@ -28,7 +28,7 @@ g_opening_files_lock: asyncio.Lock | None = None
 FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')
 
 
-def get_opening_files_lock() -> asyncio.Lock:
+def _get_opening_files_lock() -> asyncio.Lock:
     global g_opening_files_lock
     if not g_opening_files_lock:
         g_opening_files_lock = asyncio.Lock()
@@ -96,7 +96,7 @@ async def open_file(
     """
     future: asyncio.Future[sublime.View | None] | None = None
     file = parse_uri(uri)[1]
-    async with get_opening_files_lock():
+    async with _get_opening_files_lock():
         # Is the view opening right now? Then return the associated unresolved future
         for fn, fut in g_opening_files.items():
             if fn == file or os.path.samefile(fn, file):  # noqa ASYNC240

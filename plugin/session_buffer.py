@@ -404,6 +404,7 @@ class SessionBuffer:
         for identifier, pending_request in self._document_diagnostic_pending_requests.items():
             if pending_request:
                 self.session.cancel_request_async(pending_request.request_id)
+                print(' [cancel diag] - _cancel_pending_requests_async')
                 self._document_diagnostic_pending_requests[identifier] = None
         if self.semantic_tokens.pending_response:
             self.session.cancel_request_async(self.semantic_tokens.pending_response)
@@ -647,6 +648,7 @@ class SessionBuffer:
         if pending_request := self._document_diagnostic_pending_requests.get(identifier):
             if pending_request.version == version and not forced_update:
                 return
+            print(' [cancel diag] _do_document_disagnostic_async')
             self.session.cancel_request_async(pending_request.request_id)
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
         if identifier:

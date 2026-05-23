@@ -2016,10 +2016,12 @@ class Session(APIHandler, TransportCallbacks):
 
     @request_handler('workspace/diagnostic/refresh')
     def on_workspace_diagnostic_refresh(self, _: None) -> Promise[None]:
+        print(' [refresh diagnostics ORIGINAL]')
         sublime.set_timeout_async(self._refresh_diagnostics)
         return Promise.resolve(None)
 
     def _refresh_diagnostics(self) -> None:
+        print(' [refresh diagnostics AFTER TIMEOUT]')
         visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
         for session_buffer, session_view in visible_session_buffers:
             view = session_view.view
@@ -2317,6 +2319,7 @@ class Session(APIHandler, TransportCallbacks):
             request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
         on_error = on_error or (lambda _: None)
         self._response_handlers[request_id] = (request, on_result, on_error)
+        print(f' ＋ {request.method} ({request_id}) ({len(self._response_handlers)} active)')
         self._invoke_views(request, "on_request_started_async", request_id, request)
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, request)
@@ -2356,6 +2359,7 @@ class Session(APIHandler, TransportCallbacks):
             error_handler({"code": LSPErrorCodes.RequestCancelled, "message": "Request canceled by client"})
             self._invoke_views(request, "on_request_canceled_async", request_id)
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
+            print(f' 🗑 {request.method} ({request_id}) ({len(self._response_handlers) - 1} active)')
 
     def send_notification(self, notification: Notification[P]) -> None:
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
@@ -2476,6 +2480,7 @@ class Session(APIHandler, TransportCallbacks):
             error = {"code": ErrorCodes.InvalidParams, "message": f"unknown response ID {response_id}"}
             return (print_to_status_bar, None, error, True)
         request, handler, error_handler = matching_handler
+        print(f' 🏁 {request.method} ({response_id}) ({len(self._response_handlers)} active)')
         self._invoke_views(request, "on_request_finished_async", response_id)
         if "result" in response and "error" not in response:
             return (handler, request.method, response["result"], False)

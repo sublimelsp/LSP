@@ -155,10 +155,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         # Update workspace folders in case the user have changed those since window was created.
         # There is no currently no notification in ST that would notify about folder changes.
         self.update_workspace_folders_async()
-        for config in self._config_manager.match_view(listener.view, self._workspace.get_workspace_folders()):
+        workspace_folders = self._workspace.get_workspace_folders()
+        self._listeners.add(listener)
+        for config in self._config_manager.match_view(listener.view, workspace_folders):
             if plugin := get_plugin(config.name):
                 if issubclass(plugin, LspPlugin):
-                    context = IsApplicableContext(config, listener.view, self._workspace.get_workspace_folders())
+                    context = IsApplicableContext(config, listener.view, workspace_folders)
                     if plugin.is_applicable_async(context):
                         run_coroutine_threadsafe(self.start(config, listener))
                 elif plugin.is_applicable(listener.view, config):
@@ -223,7 +225,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             for session in list(self._sessions):
                 if session.config.name == config.name and session.handles_path(file_path, inside):
                     # OK, this session is already initialized for this view.
-                    self._listeners.add(listener)
                     session.config.set_view_status(listener.view, "")
                     # Do not let an exception in listener.on_session_initialized_async cause a failure in this method.
                     asyncio.get_running_loop().call_soon(listener.on_session_initialized_async, session)
@@ -288,7 +289,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 config.set_view_status(listener.view, "initializing...")
                 await session.initialize(variables=variables, transport=transport, working_directory=cwd)
                 self._sessions.add(session)
-                self._listeners.add(listener)
                 # Do not let an exception in listener.on_session_initialized_async cause a failure in this method.
                 asyncio.get_running_loop().call_soon(listener.on_session_initialized_async, session)
                 config.set_view_status(listener.view, "")

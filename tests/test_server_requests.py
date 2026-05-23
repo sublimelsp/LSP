@@ -3,7 +3,6 @@ from __future__ import annotations
 from .setup import close_test_view
 from .setup import TextDocumentTestCase
 from LSP.plugin import Error
-from LSP.plugin.core.aio import next_frame
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
@@ -179,7 +178,6 @@ class ServerRequests(TextDocumentTestCase):
         )
 
     async def test_m_workspace_applyEdit_with_wrong_document_version(self) -> None:
-        file_name = self.view.file_name()
         uri = filename_to_uri(self.view.file_name())
         version = 123
         self.insert_characters("a b")
@@ -216,7 +214,7 @@ class ServerRequests(TextDocumentTestCase):
             },
             {
                 "applied": False,
-                "failureReason": f"Document version for URI {uri} is {self.view.change_count()}, but required {version}",
+                "failureReason": f"Document version for URI {uri} is {self.view.change_count()}, but required {version}",  # noqa: E501
                 "failedChange": 0
             }
         )

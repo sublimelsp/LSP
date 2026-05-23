@@ -1660,9 +1660,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             title, content, syntax = await promise
-            if view := await self.open_scratch_buffer(title, content, syntax, flags, group):
-                return self._on_sheet_opened(view.sheet(), uri, r)
-            return None
+            view = await self.open_scratch_buffer(title, content, syntax, flags, group)
+            return self._on_sheet_opened(view.sheet(), uri, r)
         # resolve unused promise
         resolve(('', '', ''))
         return False
@@ -1674,9 +1673,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         syntax: str,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1,
-    ) -> sublime.View | None:
+    ) -> sublime.View:
 
-        def continue_on_main_thread() -> sublime.View | None:
+        def continue_on_main_thread() -> sublime.View:
             if group > -1:
                 self.window.focus_group(group)
             view = self.window.new_file(syntax=syntax, flags=flags)
@@ -2292,20 +2291,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     @request_handler('window/showDocument')
     async def on_window_show_document(self, params: ShowDocumentParams) -> ShowDocumentResult:
         uri = params.get("uri")
-
-        def success(b: bool | sublime.View | None) -> ShowDocumentResult:
-            if isinstance(b, bool):
-                pass
-            elif isinstance(b, sublime.View):
-                b = b.is_valid()
-            else:
-                b = False
-            return ({"success": b})
-
         if params.get("external"):
-            return success(open_externally(uri))
+            return {"success": open_externally(uri)}
         # TODO: ST API does not allow us to say "do not focus this new view"
-        return success(await self.try_open_uri(uri, params.get("selection")))
+        result = await self.try_open_uri(uri, params.get("selection"))
+        return {"success": False if result is False or result is None else result.is_valid()}
 
     @request_handler('window/workDoneProgress/create')
     async def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> None:

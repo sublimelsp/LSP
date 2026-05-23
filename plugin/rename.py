@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .core.aio import call_soon_threadsafe
 from .core.edit import show_summary_message
 from .core.protocol import Request
 from .core.registry import get_position
@@ -102,7 +103,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         point: int | None = None
     ) -> None:
         if listener := self.get_listener():
-            listener.purge_changes_async()
+            call_soon_threadsafe(listener.purge_changes_async)
         location = get_position(self.view, event, point)
         session = self._get_prepare_rename_session(point, session_name)
         if new_name or placeholder or not session:

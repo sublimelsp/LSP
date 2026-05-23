@@ -1613,9 +1613,8 @@ class Session(APIHandler, TransportCallbacks):
         if not view.is_valid():
             return
         new_content = response['text'].replace('\r', '')
-        if new_content == entire_content(view):
-            return
-        sublime.set_timeout(lambda: self._on_text_document_content_refreshed(view, new_content))
+        if new_content != entire_content(view):
+            sublime.set_timeout(lambda: self._on_text_document_content_refreshed(view, new_content))
 
     def open_location_async(
         self,

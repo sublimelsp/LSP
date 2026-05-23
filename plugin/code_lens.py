@@ -169,10 +169,9 @@ class LspCodeLensCommand(LspTextCommand):
         return False
 
     def on_select(self, commands: list[tuple[str, Command]], index: int) -> None:
-        try:
-            session_name, command = commands[index]
-        except IndexError:
+        if index == -1:
             return
+        session_name, command = commands[index]
         args = {
             "session_name": session_name,
             "command_name": command["command"],

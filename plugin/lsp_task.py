@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .core.aio import run_coroutine
 from .core.registry import LspTextCommand
+from .core.settings import userprefs
 from abc import ABC
 from abc import abstractmethod
 from typing import Any
@@ -66,7 +67,7 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
         self.on_before_tasks()
         self._tasks_runner = asyncio.create_task(run_tasks(self, self.tasks))
         try:
-            await asyncio.wait_for(self._tasks_runner, timeout=1)
+            await asyncio.wait_for(self._tasks_runner, timeout=userprefs().on_save_task_timeout_ms / 1000)
         except asyncio.exceptions.TimeoutError:
             sublime.status_message('Running "on save" tasks took too long!')
         await self.on_tasks_completed(**kwargs)

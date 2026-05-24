@@ -118,7 +118,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.view.run_command('insert', {"characters": "Hello Wrld"})
         self.assertFalse(self.view.is_popup_visible())
         self.view.run_command('lsp_hover', {'point': 3})
-        await self.wait_until_st_state(self.view.is_popup_visible)
+        await self.wait_until(self.view.is_popup_visible)
 
     async def test_remove_line_and_then_insert_at_that_line_at_end(self) -> None:
         original = (
@@ -234,7 +234,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                 return False
             return s[0].begin() > 0
 
-        await self.wait_until_st_state(condition)
+        await self.wait_until(condition)
         first = self.view.sel()[0].begin()
         self.assertEqual(self.view.substr(sublime.Region(first, first + 1)), "F")
 
@@ -282,7 +282,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
             await self.mock_response("textDocument/selectionRange", response)
             self.view.run_command("lsp_expand_selection")
             await self.await_message("textDocument/selectionRange")
-            await self.wait_until_st_state(lambda: self.view.sel()[0] == sublime.Region(a, b))
+            await self.wait_until(lambda: self.view.sel()[0] == sublime.Region(a, b))
 
         await expand_and_check(2, 3)
         await expand_and_check(1, 3)

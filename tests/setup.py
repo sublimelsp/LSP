@@ -212,7 +212,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
         return None
 
     @staticmethod
-    async def wait_until_st_state(condition: Callable[[], bool]) -> None:
+    async def wait_until(condition: Callable[[], bool]) -> None:
         """Returns when the given state has been reached."""
         while not condition():
             await next_frame()
@@ -275,7 +275,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
 
     async def await_view_change(self, expected_change_count: int) -> None:
         assert isinstance(self.view, sublime.View)
-        await self.wait_until_st_state(lambda: self.view.change_count() == expected_change_count)
+        await self.wait_until(lambda: self.view.change_count() == expected_change_count)
 
     def insert_characters(self, characters: str) -> int:
         assert isinstance(self.view, sublime.View)

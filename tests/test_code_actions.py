@@ -208,7 +208,7 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
         ])
         self.view.run_command('lsp_save', {'async': True})
         # Wait for the view to be saved
-        await self.wait_until_st_state(lambda: not self.view.is_dirty())
+        await self.wait_until(lambda: not self.view.is_dirty())
         self.assertEqual(entire_content(self.view), 'const x = 1;')
 
     async def test_applies_immediately_after_text_change(self) -> None:

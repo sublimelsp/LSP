@@ -53,13 +53,13 @@ class CompletionsTestsBase(TextDocumentTestCase):
         s.add(point)
 
     async def wait_until_auto_complete_is_visible(self) -> None:
-        await self.wait_until_st_state(self.view.is_auto_complete_visible)
+        await self.wait_until(self.view.is_auto_complete_visible)
 
     async def commit_completion(self, commit_completion_command: str = "commit_completion") -> None:
         current_change_count = self.view.change_count()
         await self.wait_until_auto_complete_is_visible()
         self.view.run_command(commit_completion_command)
-        await self.wait_until_st_state(lambda: self.view.change_count() > current_change_count)
+        await self.wait_until(lambda: self.view.change_count() > current_change_count)
 
     async def select_completion(self) -> None:
         self.view.run_command('auto_complete')

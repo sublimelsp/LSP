@@ -253,9 +253,9 @@ class ServerRequests(TextDocumentTestCase):
 
         # willSaveWaitUntil is *only* registered on the buffer
         self.assertFalse(self.session.capabilities.get("textDocumentSync.willSaveWaitUntil"))
-        await self.wait_until_st_state(lambda: len(list(self.session.session_buffers_async())) > 0)
+        await self.wait_until(lambda: len(list(self.session.session_buffers_async())) > 0)
         sb = next(self.session.session_buffers_async())
-        await self.wait_until_st_state(lambda: sb.capabilities.text_sync_kind() == TextDocumentSyncKind.Full)
+        await self.wait_until(lambda: sb.capabilities.text_sync_kind() == TextDocumentSyncKind.Full)
         self.assertEqual(sb.capabilities.get("textDocumentSync.willSaveWaitUntil"), {"id": "2"})
         self.assertEqual(self.session.capabilities.text_sync_kind(), TextDocumentSyncKind.Incremental)
 
@@ -263,7 +263,7 @@ class ServerRequests(TextDocumentTestCase):
         # characters for each view were updated
         self.assertEqual(sb.capabilities.get("completionProvider.id"), "myCompletionRegistrationId")
         self.assertEqual(sb.capabilities.get("completionProvider.triggerCharacters"), ["!", "@", "#"])
-        await self.wait_until_st_state(lambda: get_auto_complete_trigger(sb) is not None)
+        await self.wait_until(lambda: get_auto_complete_trigger(sb) is not None)
         trigger = get_auto_complete_trigger(sb)
         self.assertEqual(trigger.get("characters"), "!@#")
 

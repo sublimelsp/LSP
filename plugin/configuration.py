@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.aio import run_in_asyncio_thread
+from .core.aio import run_on_asyncio_thread
 from .core.registry import windows
 from .core.settings import client_configs
 from functools import partial
@@ -42,7 +42,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if index == -1:
             return
         config_name = self._items[index]
-        run_in_asyncio_thread(wm.enable_config_async, config_name)
+        run_on_asyncio_thread(wm.enable_config_async, config_name)
 
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
@@ -80,4 +80,4 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if index == -1:
             return
         config_name = self._items[index]
-        run_in_asyncio_thread(wm.disable_config_async, config_name)
+        run_on_asyncio_thread(wm.disable_config_async, config_name)

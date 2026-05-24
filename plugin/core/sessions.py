@@ -95,7 +95,7 @@ from ..locationpicker import LocationPicker
 from .aio import aclosing
 from .aio import gather_and_flatten_exceptions
 from .aio import next_frame
-from .aio import run_in_asyncio_thread
+from .aio import run_on_asyncio_thread
 from .aio import run_in_main_thread
 from .aio import TaskContainer
 from .constants import ChangeEventAction
@@ -1982,7 +1982,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             await next_frame()
         if should_close and not view.is_dirty():
             future = asyncio.get_running_loop().create_future()
-            view.close(partial(run_in_asyncio_thread, future.set_result))  # type: ignore
+            view.close(partial(run_on_asyncio_thread, future.set_result))  # type: ignore
             await future
 
     def _set_selected_sheets(self, sheets: list[sublime.Sheet]) -> None:
@@ -2592,7 +2592,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in the asyncio thread."""
-        run_in_asyncio_thread(lambda: self.send_request_async(request, on_result, on_error))
+        run_on_asyncio_thread(lambda: self.send_request_async(request, on_result, on_error))
 
     @deprecated("use Session.request or Session.stream instead")
     def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:

@@ -6,7 +6,7 @@ from .test_mocks import basic_responses
 from functools import partial
 from LSP.plugin.core.aio import next_frame
 from LSP.plugin.core.aio import run_coroutine
-from LSP.plugin.core.aio import run_in_asyncio_thread
+from LSP.plugin.core.aio import run_on_asyncio_thread
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.open import open_file
 from LSP.plugin.core.protocol import Notification
@@ -95,7 +95,7 @@ async def close_test_view(view: sublime.View | None) -> None:
             await asyncio.sleep(0.05)
         view.set_scratch(True)
         future = asyncio.get_running_loop().create_future()
-        view.close(partial(run_in_asyncio_thread, future.set_result))
+        view.close(partial(run_on_asyncio_thread, future.set_result))
         await future
 
 

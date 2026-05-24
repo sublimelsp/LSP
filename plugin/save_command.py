@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .code_actions import CodeActionsOnFormatOnSaveTask
 from .code_actions import CodeActionsOnSaveTask
-from .core.aio import run_in_asyncio_thread
+from .core.aio import run_on_asyncio_thread
 from .formatting import FormatOnSaveTask
 from .formatting import WillSaveWaitTask
 from .lsp_task import LspTask
@@ -31,7 +31,7 @@ class LspSaveCommand(LspTextCommandWithTasks):
 
     @override
     def on_before_tasks(self) -> None:
-        run_in_asyncio_thread(self._trigger_on_pre_save_async)
+        run_on_asyncio_thread(self._trigger_on_pre_save_async)
 
     @override
     async def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:

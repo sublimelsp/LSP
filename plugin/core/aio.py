@@ -72,7 +72,7 @@ def run_coroutine(coroutine: Coroutine[object, object, T]) -> concurrent.futures
     return future
 
 
-def run_in_asyncio_thread(f: Callable[..., Any], *args: Any, context: Context | None = None) -> asyncio.Handle:
+def run_on_asyncio_thread(f: Callable[..., Any], *args: Any, context: Context | None = None) -> asyncio.Handle:
     """Invoke a function in the asyncio thread, from any thread."""
     return sublime_aio.call_soon_threadsafe(f, *args, context=context)
 
@@ -194,4 +194,4 @@ class TaskContainer:
 
         The parameters and behavior of this method are exactly the same as :py:meth`create_task`.
         """
-        run_in_asyncio_thread(lambda: self.create_task(coro, name=name))
+        run_on_asyncio_thread(lambda: self.create_task(coro, name=name))

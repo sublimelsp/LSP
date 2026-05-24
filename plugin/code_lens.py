@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.aio import run_in_asyncio_thread
+from .core.aio import run_on_asyncio_thread
 from .core.constants import CODE_LENS_ENABLED_KEY
 from .core.protocol import Error
 from .core.protocol import ResolvedCodeLens
@@ -128,7 +128,7 @@ class LspToggleCodeLensesCommand(LspWindowCommand):
     def run(self) -> None:
         enable = not self.is_checked()
         self.window.settings().set(CODE_LENS_ENABLED_KEY, enable)
-        run_in_asyncio_thread(self._update_views_async, enable)
+        run_on_asyncio_thread(self._update_views_async, enable)
 
     def _update_views_async(self, enable: bool) -> None:
         window_manager = windows.lookup(self.window)

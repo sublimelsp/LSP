@@ -16,7 +16,7 @@ from ..api import OnPreStartContext
 from ..api import PluginStartError
 from .aio import gather_and_flatten_exceptions
 from .aio import run_coroutine
-from .aio import run_in_asyncio_thread
+from .aio import run_on_asyncio_thread
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -604,9 +604,9 @@ class WindowRegistry(LspSettingsChangeListener):
         for wm in self._windows.values():
             wm.on_diagnostics_updated()
             for session in wm.get_sessions():
-                run_in_asyncio_thread(session.on_userprefs_changed_async)
+                run_on_asyncio_thread(session.on_userprefs_changed_async)
             for listener in wm.listeners():
-                run_in_asyncio_thread(listener.on_userprefs_changed_async)
+                run_on_asyncio_thread(listener.on_userprefs_changed_async)
 
 
 class RequestTimeTracker:

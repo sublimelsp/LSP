@@ -493,7 +493,7 @@ Follow installation instructions on [LSP-nimlangserver](https://github.com/subli
 
 ## Nix
 
-Follow installation instructions on [nixd](https://github.com/nix-community/nixd).
+Follow installation instructions on [nixd](https://github.com/nix-community/nixd/blob/main/nixd/docs/editor-setup.md).
 
 ## OCaml/Reason
 

@@ -493,19 +493,7 @@ Follow installation instructions on [LSP-nimlangserver](https://github.com/subli
 
 ## Nix
 
-1. Install [nixd](https://github.com/nix-community/nixd/blob/main/nixd/docs/editor-setup.md#installation---get-a-working-executable)
-2. Open `Preferences > Package Settings > LSP > Server Configurations` (or run "Preferences: LSP Server Configurations" in the command palette) and add the `"nixd"` configuration:
-
-
-    ```json
-    {
-      "nixd": {
-        "enabled": true,
-        "command": ["nixd"],
-        "selector": "source.nix"
-      }
-    }
-    ```
+Follow installation instructions on [nixd](https://github.com/nix-community/nixd).
 
 ## OCaml/Reason
 

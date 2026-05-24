@@ -18,8 +18,10 @@ from typing import Awaitable
 from typing import Callable
 from typing import Final
 from typing import final
+from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import TypeVar
+from typing import Union
 from typing_extensions import deprecated
 import inspect
 import sublime
@@ -59,6 +61,8 @@ UriHandler = Callable[['DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sh
 # Decorator needs a dedicated type with `Any` as the first parameter representing `Self` to make its
 # implementation happy. I couldn't find a better way (Concatenate and ParamSpec don't seem to help here).
 UriHandlerForDecorator = Callable[[Any, 'DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
+PostResponseCallback = Callable[[], None]
+RequestHandlerResponse = Union[R, Tuple[R, PostResponseCallback]]
 
 
 g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
@@ -222,7 +226,7 @@ def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Ca
 
 def request_handler(
     method: str
-) -> Callable[[Callable[[Any, P], Awaitable[R]]], Callable[[Any, P, int], Awaitable[Response[R]]]]:
+) -> Callable[[Callable[[Any, P], Awaitable[RequestHandlerResponse]]], Callable[[Any, P, int], Awaitable[Response[R]]]]:
     """
     Decorator to mark a coroutine method as a handler for a specific LSP request.
 
@@ -244,11 +248,19 @@ def request_handler(
     :returns:   A decorator that registers the coroutine function as a request handler.
     """
 
-    def decorator(func: Callable[[Any, P], Awaitable[R]]) -> Callable[[Any, P, int], Awaitable[Response[R]]]:
+    def decorator(
+        func: Callable[[Any, P], Awaitable[RequestHandlerResponse]]
+    ) -> Callable[[Any, P, int], Awaitable[Response[R]]]:
 
         @wraps(func)
         async def wrapper(self: Any, params: P, request_id: int) -> Response[Any]:
-            return Response(request_id, await func(self, params))
+            response = await func(self, params)
+            if isinstance(response, tuple):
+                result, post_request_callback = response
+            else:
+                result = response
+                post_request_callback = None
+            return Response(request_id, result, post_request_callback)
 
         setattr(wrapper, HANDLER_MARKER, method)
         return wrapper

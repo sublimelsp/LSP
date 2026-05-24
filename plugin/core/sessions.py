@@ -87,6 +87,7 @@ from ..api import AbstractPlugin
 from ..api import APIHandler
 from ..api import LspPlugin
 from ..api import notification_handler
+from ..api import PostResponseCallback
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
@@ -2134,7 +2135,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         )[0]
 
     @request_handler('workspace/codeLens/refresh')
-    async def on_workspace_code_lens_refresh(self, _: None) -> None:
+    async def on_workspace_code_lens_refresh(self, _: None) -> tuple[None, PostResponseCallback]:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -2143,10 +2144,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.CODE_LENS)
 
-        asyncio.get_running_loop().call_soon(continue_after_response)
+        return (None, continue_after_response)
 
     @request_handler('workspace/semanticTokens/refresh')
-    async def on_workspace_semantic_tokens_refresh(self, _: None) -> None:
+    async def on_workspace_semantic_tokens_refresh(self, _: None) -> tuple[None, PostResponseCallback]:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -2158,10 +2159,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
 
-        asyncio.get_running_loop().call_soon(continue_after_response)
+        return (None, continue_after_response)
 
     @request_handler('workspace/inlayHint/refresh')
-    async def on_workspace_inlay_hint_refresh(self, _: None) -> None:
+    async def on_workspace_inlay_hint_refresh(self, _: None) -> tuple[None, PostResponseCallback]:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -2173,11 +2174,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.INLAY_HINT)
 
-        asyncio.get_running_loop().call_soon(continue_after_response)
+        return (None, continue_after_response)
 
     @request_handler('workspace/diagnostic/refresh')
-    async def on_workspace_diagnostic_refresh(self, _: None) -> None:
-        self._refresh_diagnostics()
+    async def on_workspace_diagnostic_refresh(self, _: None) -> tuple[None, PostResponseCallback]:
+        return (None, self._refresh_diagnostics)
 
     def _refresh_diagnostics(self) -> None:
         visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -2249,10 +2250,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if mgr := self.manager():
             mgr.on_diagnostics_updated()
 
-    # Keep this request handler as backwards-compatible method that returns a Promise, to ensure Promises keep working
-    # for now.
     @request_handler('client/registerCapability')
-    def on_client_register_capability(self, params: RegistrationParams) -> Promise[None]:
+    async def on_client_register_capability(self, params: RegistrationParams) -> tuple[None, PostResponseCallback]:
         new_diagnostics_provider = False
         new_workspace_diagnostics_provider = False
         for registration in params["registrations"]:
@@ -2298,8 +2297,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if new_workspace_diagnostics_provider:
                 self.do_workspace_diagnostics_async()
 
-        asyncio.get_running_loop().call_soon(continue_after_response)
-        return Promise.resolve(None)
+        return (None, continue_after_response)
 
     @request_handler('client/unregisterCapability')
     async def on_client_unregister_capability(self, params: UnregistrationParams) -> None:
@@ -2639,6 +2637,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     async def send_response(self, response: Response[P]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)
         await self.send_payload(response.to_payload())
+        if response.post_response_callback:
+            response.post_response_callback()
 
     async def send_error_response(self, request_id: int | str, error: Error) -> None:
         self._logger.outgoing_error_response(request_id, error)

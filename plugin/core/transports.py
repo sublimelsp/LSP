@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .aio import run_in_async_thread
+from .aio import run_on_async_thread
 from .constants import ST_PLATFORM
 from .logging import debug
 from .logging import exception_log
@@ -321,14 +321,14 @@ class StreamTransport(Transport):
             raise StopLoopError
         body = await self._reader.readexactly(content_length)
         try:
-            return await run_in_async_thread(self._decoder, body)
+            return await run_on_async_thread(self._decoder, body)
         except Exception as ex:
             raise Exception(f"JSON decode error: {ex}") from ex
 
     @override
     async def write(self, payload: JSONRPCMessage) -> None:
         async with self._writer_lock:
-            body = await run_in_async_thread(self._encoder, payload)
+            body = await run_on_async_thread(self._encoder, payload)
             self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
             try:
                 await self._writer.drain()

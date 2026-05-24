@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..protocol import LSPAny
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
+from .core.promise import Promise
 from .core.protocol import Response
 from .core.settings import client_configs
 from .core.types import method2attr
@@ -17,8 +18,10 @@ from typing import Any
 from typing import Callable
 from typing import Final
 from typing import final
+from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import TypeVar
+from typing import Union
 from typing_extensions import deprecated
 import inspect
 import sublime
@@ -29,7 +32,6 @@ if TYPE_CHECKING:
     from ..protocol import ExecuteCommandParams
     from .core.collections import DottedDict
     from .core.constants import MarkdownLangMap
-    from .core.promise import Promise
     from .core.protocol import ClientNotification
     from .core.protocol import ClientRequest
     from .core.protocol import ClientResponse
@@ -58,6 +60,8 @@ UriHandler = Callable[['DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sh
 # Decorator needs a dedicated type with `Any` as the first parameter representing `Self` to make its
 # implementation happy. I couldn't find a better way (Concatenate and ParamSpec don't seem to help here).
 UriHandlerForDecorator = Callable[[Any, 'DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
+PostResponseCallback = Callable[[], None]
+RequestHandlerResponse = Union[Promise[R], Tuple[Promise[R], PostResponseCallback]]
 
 
 g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
@@ -221,7 +225,7 @@ def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Ca
 
 def request_handler(
     method: str
-) -> Callable[[Callable[[Any, P], Promise[R]]], Callable[[Any, P, int], Promise[Response[R]]]]:
+) -> Callable[[Callable[[Any, P], RequestHandlerResponse]], Callable[[Any, P, int], Promise[Response[R]]]]:
     """
     Decorator to mark a method as a handler for a specific LSP request.
 
@@ -240,12 +244,17 @@ def request_handler(
     :returns:   A decorator that registers the function as a request handler.
     """
 
-    def decorator(func: Callable[[Any, P], Promise[R]]) -> Callable[[Any, P, int], Promise[Response[R]]]:
+    def decorator(func: Callable[[Any, P], RequestHandlerResponse]) -> Callable[[Any, P, int], Promise[Response[R]]]:
 
         @wraps(func)
         def wrapper(self: Any, params: P, request_id: int) -> Promise[Response[Any]]:
-            promise = func(self, params)
-            return promise.then(lambda result: Response(request_id, result))
+            promise_or_tuple = func(self, params)
+            if isinstance(promise_or_tuple, tuple):
+                promise, post_request_callback = promise_or_tuple
+            else:
+                promise = promise_or_tuple
+                post_request_callback = None
+            return promise.then(lambda result: Response(request_id, result, post_request_callback))
 
         setattr(wrapper, HANDLER_MARKER, method)
         return wrapper

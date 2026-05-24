@@ -88,6 +88,7 @@ from ..api import AbstractPlugin
 from ..api import APIHandler
 from ..api import LspPlugin
 from ..api import notification_handler
+from ..api import PostResponseCallback
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
@@ -2019,7 +2020,7 @@ class Session(APIHandler, TransportCallbacks):
         ).then(itemgetter(0))
 
     @request_handler('workspace/codeLens/refresh')
-    def on_workspace_code_lens_refresh(self, _: None) -> Promise[None]:
+    def on_workspace_code_lens_refresh(self, _: None) -> tuple[Promise[None], PostResponseCallback]:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -2028,11 +2029,10 @@ class Session(APIHandler, TransportCallbacks):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.CODE_LENS)
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        return (Promise.resolve(None), continue_after_response)
 
     @request_handler('workspace/semanticTokens/refresh')
-    def on_workspace_semantic_tokens_refresh(self, _: None) -> Promise[None]:
+    def on_workspace_semantic_tokens_refresh(self, _: None) -> tuple[Promise[None], PostResponseCallback]:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -2044,11 +2044,10 @@ class Session(APIHandler, TransportCallbacks):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        return (Promise.resolve(None), continue_after_response)
 
     @request_handler('workspace/inlayHint/refresh')
-    def on_workspace_inlay_hint_refresh(self, _: None) -> Promise[None]:
+    def on_workspace_inlay_hint_refresh(self, _: None) -> tuple[Promise[None], PostResponseCallback]:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -2060,13 +2059,11 @@ class Session(APIHandler, TransportCallbacks):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.INLAY_HINT)
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        return (Promise.resolve(None), continue_after_response)
 
     @request_handler('workspace/diagnostic/refresh')
-    def on_workspace_diagnostic_refresh(self, _: None) -> Promise[None]:
-        sublime.set_timeout_async(self._refresh_diagnostics)
-        return Promise.resolve(None)
+    def on_workspace_diagnostic_refresh(self, _: None) -> tuple[Promise[None], PostResponseCallback]:
+        return (Promise.resolve(None), self._refresh_diagnostics)
 
     def _refresh_diagnostics(self) -> None:
         visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -2117,7 +2114,7 @@ class Session(APIHandler, TransportCallbacks):
             mgr.on_diagnostics_updated()
 
     @request_handler('client/registerCapability')
-    def on_client_register_capability(self, params: RegistrationParams) -> Promise[None]:
+    def on_client_register_capability(self, params: RegistrationParams) -> tuple[Promise[None], PostResponseCallback]:
         new_diagnostics_provider = False
         new_workspace_diagnostics_provider = False
         for registration in params["registrations"]:
@@ -2163,8 +2160,7 @@ class Session(APIHandler, TransportCallbacks):
             if new_workspace_diagnostics_provider:
                 self.do_workspace_diagnostics_async()
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        return (Promise.resolve(None), continue_after_response)
 
     @request_handler('client/unregisterCapability')
     def on_client_unregister_capability(self, params: UnregistrationParams) -> Promise[None]:
@@ -2435,6 +2431,8 @@ class Session(APIHandler, TransportCallbacks):
     def send_response(self, response: Response[P]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)
         self.send_payload(response.to_payload())
+        if response.post_response_callback:
+            response.post_response_callback()
 
     def send_error_response(self, request_id: int | str, error: Error) -> None:
         self._logger.outgoing_error_response(request_id, error)

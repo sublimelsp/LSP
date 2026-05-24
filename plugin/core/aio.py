@@ -93,7 +93,7 @@ def _run_on_st_thread(
     return future
 
 
-def run_in_main_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
+def run_on_main_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
     """
     Run a function in Sublime's main (UI) thread.
 
@@ -117,7 +117,7 @@ def next_frame() -> asyncio.Future[None]:
     def noop() -> None:
         pass
 
-    return run_in_main_thread(noop)
+    return run_on_main_thread(noop)
 
 
 async def gather_and_flatten_exceptions(*coros: Coroutine[Any, Any, list[Exception]]) -> list[Exception]:

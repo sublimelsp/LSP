@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .aio import run_in_main_thread
+from .aio import run_on_main_thread
 from .constants import ST_PACKAGES_PATH
 from .constants import ST_PLATFORM
 from .constants import ST_VERSION
@@ -141,7 +141,7 @@ async def open_file(
 
                 loop.call_soon_threadsafe(resolve_later)
 
-            await run_in_main_thread(on_main_thread)
+            await run_on_main_thread(on_main_thread)
     return await future
 
 

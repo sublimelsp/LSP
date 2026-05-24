@@ -96,7 +96,7 @@ from .aio import aclosing
 from .aio import gather_and_flatten_exceptions
 from .aio import next_frame
 from .aio import run_on_asyncio_thread
-from .aio import run_in_main_thread
+from .aio import run_on_main_thread
 from .aio import TaskContainer
 from .constants import ChangeEventAction
 from .constants import MarkdownLangMap
@@ -1607,7 +1607,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 view.set_scratch(True)
                 return view
 
-            return await run_in_main_thread(open_untitled_buffer, flags)
+            return await run_on_main_thread(open_untitled_buffer, flags)
 
         if scheme in self.get_capability('workspace.textDocumentContent.schemes', []):
             title = urlparse(uri).path.split('/')[-1]
@@ -1669,7 +1669,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 sublime.set_timeout(partial(center_selection, view, r))
             return view
 
-        return await run_in_main_thread(continue_on_main_thread)
+        return await run_on_main_thread(continue_on_main_thread)
 
     async def _open_uri_with_plugin(
         self,
@@ -1713,7 +1713,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             view.set_read_only(True)
             return view
 
-        return await run_in_main_thread(continue_on_main_thread)
+        return await run_on_main_thread(continue_on_main_thread)
 
     def _on_sheet_for_uri_opened(
         self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
@@ -2216,7 +2216,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                                 selection.clear()
                                 selection.add(selection_region)
 
-                        await run_in_main_thread(partial(continue_on_main_thread, view, new_content))
+                        await run_on_main_thread(partial(continue_on_main_thread, view, new_content))
                         break
             except MissingUriError:
                 continue

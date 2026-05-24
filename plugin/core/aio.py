@@ -77,7 +77,7 @@ def run_on_asyncio_thread(f: Callable[..., Any], *args: Any, context: Context | 
     return sublime_aio.call_soon_threadsafe(f, *args, context=context)
 
 
-def _run_in_st_thread(
+def _run_on_st_thread(
     dispatch_func: Callable[[Callable[[], None]], None], f: Callable[..., T], *args: Any, **kwargs: Any
 ) -> asyncio.Future[T]:
     loop = asyncio.get_running_loop()
@@ -99,7 +99,7 @@ def run_in_main_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asynci
 
     Must be called from the asyncio thread. You must await the returned future.
     """
-    return _run_in_st_thread(sublime.set_timeout, f, *args, **kwargs)
+    return _run_on_st_thread(sublime.set_timeout, f, *args, **kwargs)
 
 
 def run_in_async_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
@@ -108,7 +108,7 @@ def run_in_async_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> async
 
     Must be called from the asyncio thread. You must await the returned future.
     """
-    return _run_in_st_thread(sublime.set_timeout_async, f, *args, **kwargs)
+    return _run_on_st_thread(sublime.set_timeout_async, f, *args, **kwargs)
 
 
 def next_frame() -> asyncio.Future[None]:

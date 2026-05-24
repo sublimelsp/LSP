@@ -291,8 +291,10 @@ class CodeActionsTaskBase(LspTask):
             config_name, code_actions = await request
             if code_actions and (session := self._text_command.session_by_name(config_name, 'codeActionProvider')):
                 await asyncio.gather(
-                    session.run_code_action(action, progress=False, view=self._text_command.view)
-                    for action in code_actions
+                    *(
+                        session.run_code_action(action, progress=False, view=self._text_command.view)
+                        for action in code_actions
+                    )
                 )
 
 

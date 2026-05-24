@@ -139,8 +139,6 @@ class CodeActionsOnSaveTaskTestCase(TextDocumentTestCase):
 
 class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
     async def test_applies_matching_kind(self) -> None:
-
-        # Set up the mock.
         await self._setup_document_with_missing_semicolon()
         code_action_kind = 'source.fixAll'
         code_action = create_test_code_action(
@@ -149,25 +147,12 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
             [(';', range_from_points(Point(0, 11), Point(0, 11)))],
             code_action_kind
         )
-
         await self.mock_response('textDocument/codeAction', [code_action])
-        await self.await_message('textDocument/codeAction')
-        await self.mock_response('textDocument/codeAction', [code_action])
-
-        # Save the file.
         self.view.run_command('lsp_save', {'async': True})
-
-        # The save should have caused a request for code actions.
         await self.await_message('textDocument/codeAction')
-
-        # And it should have caused a didSave notification.
         await self.await_message('textDocument/didSave')
-
-        # After the didSave, the view should not be dirty (clean?)
-        self.assertEqual(self.view.is_dirty(), False)
-
-        # The mocked code action should have been applied.
         self.assertEqual(entire_content(self.view), 'const x = 1;')
+        self.assertEqual(self.view.is_dirty(), False)
 
     async def test_requests_with_diagnostics(self) -> None:
         await self._setup_document_with_missing_semicolon()
@@ -178,15 +163,9 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
             [(';', range_from_points(Point(0, 11), Point(0, 11)))],
             code_action_kind
         )
-
         await self.mock_response('textDocument/codeAction', [code_action])
-        await self.await_message('textDocument/codeAction')
-        await self.mock_response('textDocument/codeAction', [code_action])
-
         self.view.run_command('lsp_save', {'async': True})
         code_action_request = await self.await_message('textDocument/codeAction')
-        self.assertIsInstance(code_action_request, dict)
-        assert isinstance(code_action_request, dict)
         self.assertEqual(len(code_action_request['context']['diagnostics']), 1)
         self.assertEqual(code_action_request['context']['diagnostics'][0]['message'], 'Missing semicolon')
         await self.await_message('textDocument/didSave')

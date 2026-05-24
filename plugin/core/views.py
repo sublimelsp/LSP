@@ -55,6 +55,7 @@ from .settings import userprefs
 from .url import encode_code_action_uri
 from .url import parse_uri
 from .workspace import is_subpath_of
+from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import lru_cache
 from operator import itemgetter
@@ -63,6 +64,7 @@ from os.path import expanduser
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import Generator
 from typing import Iterable
 from typing import Sequence
 from typing import TYPE_CHECKING
@@ -143,6 +145,13 @@ class DiagnosticSeverityData:
 class InvalidUriSchemeError(Exception):
     def __init__(self, uri: str) -> None:
         super().__init__(f"invalid URI scheme: {uri}")
+
+
+@contextmanager
+def mutable(view: sublime.View) -> Generator:
+    view.set_read_only(False)
+    yield
+    view.set_read_only(True)
 
 
 def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:

@@ -64,6 +64,8 @@ from ...protocol import SnippetTextEdit
 from ...protocol import SymbolKind
 from ...protocol import SymbolTag
 from ...protocol import TextDocumentClientCapabilities
+from ...protocol import TextDocumentContentRefreshParams
+from ...protocol import TextDocumentContentResult
 from ...protocol import TextDocumentEdit
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextEdit
@@ -92,6 +94,7 @@ from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import aclosing
 from .aio import gather_and_flatten_exceptions
+from .aio import next_frame
 from .aio import run_in_asyncio_thread
 from .aio import run_in_main_thread
 from .aio import TaskContainer
@@ -153,8 +156,13 @@ from .url import filename_to_uri
 from .url import normalize_uri
 from .url import parse_uri
 from .version import __version__
+from .views import entire_content
+from .views import entire_content_region
+from .views import first_selection_region
 from .views import get_uri_and_range_from_location
 from .views import kind_contains_other_kind
+from .views import MissingUriError
+from .views import mutable
 from .views import uri_from_view
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
@@ -177,6 +185,7 @@ from typing_extensions import deprecated
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
 from urllib.parse import urldefrag
+from urllib.parse import urlparse
 from weakref import WeakSet
 import asyncio
 import itertools
@@ -593,6 +602,9 @@ def get_initialize_params(
         },
         "diagnostics": {
             "refreshSupport": True
+        },
+        "textDocumentContent": {
+            "dynamicRegistration": True
         }
     }
     window_capabilities: WindowClientCapabilities = {
@@ -1272,10 +1284,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return any(sb.has_capability(capability) for sb in self.session_buffers_async())
         return False
 
-    def get_capability(self, capability: str) -> Any | None:
+    def get_capability(self, capability: str, default: Any = None) -> Any:
         if self.config.is_disabled_capability(capability):
-            return None
-        return self.capabilities.get(capability)
+            return default
+        return self.capabilities.get(capability, default)
 
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open()
@@ -1551,7 +1563,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         uri: DocumentUri,
         r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
-        group: int = -1,
+        group: int = -1
     ) -> sublime.View | Literal[False] | None:
         """
         Try to open an URI.
@@ -1563,8 +1575,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         If the plugin does not handle the URI scheme, returns the constant boolean False.
         If the URI can be opened, returns an optional sublime.View.
         """
-        if uri.startswith("file:"):
+        scheme, _ = parse_uri(uri)
+        if scheme == 'file':
             return await self._open_file_uri(uri, r, flags, group)
+
         # Try to find a pre-existing session-buffer
         if sb := self.get_session_buffer_for_uri_async(uri):
             view = sb.get_view_in_group(group)
@@ -1572,13 +1586,14 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if r:
                 center_selection(view, r)
             return view
-        if uri.startswith('res:'):
+        if scheme == 'res':
             return await self._open_res_uri(uri, r, group)
-        if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
 
-            def open_untitled_buffer(flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE) -> sublime.View:
+        if scheme == 'untitled':  # VSCode specific URI scheme for unsaved buffers
+
+            def open_untitled_buffer(flags: sublime.NewFileFlags) -> sublime.View:
                 flags &= sublime.NewFileFlags.TRANSIENT | sublime.NewFileFlags.ADD_TO_SELECTION
-                if name := uri[len('untitled:') :]:
+                if name := uri[len('untitled:'):]:
                     # Check if there is a pre-existing unsaved buffer with the given name
                     for view in self.window.views():
                         if view.file_name() is None and view.name() == name:
@@ -1593,15 +1608,27 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return view
 
             return await run_in_main_thread(open_untitled_buffer, flags)
-        # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
+
+        if scheme in self.get_capability('workspace.textDocumentContent.schemes', []):
+            title = urlparse(uri).path.split('/')[-1]
+            response: TextDocumentContentResult = await self.request(
+                Request('workspace/textDocumentContent', {'uri': uri})
+            )
+            content = response['text'].replace('\r', '')
+            syntax = ''
+            return self._on_view_for_uri_opened(
+                await self.open_scratch_buffer(title, content, syntax, flags, group), uri, r
+            )
+
+        # There is no pre-existing session-buffer, so we have to go through the plugin's URI handler.
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
-                scheme, _ = parse_uri(uri)
                 if handler := self._plugin.get_uri_handler(scheme):
                     sheet = await handler(uri, flags)
-                    return self._on_sheet_opened(sheet, uri, r)
+                    return self._on_sheet_for_uri_opened(sheet, uri, r)
             else:
                 return await self._open_uri_with_plugin(self._plugin, uri, r, flags, group)
+
         return False
 
     async def open_uri(
@@ -1660,7 +1687,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if plugin.on_open_uri_async(uri, callback):
             title, content, syntax = await promise
             view = await self.open_scratch_buffer(title, content, syntax, flags, group)
-            return self._on_sheet_opened(view.sheet(), uri, r)
+            return self._on_view_for_uri_opened(view, uri, r)
         # resolve unused promise
         resolve(('', '', ''))
         return False
@@ -1688,14 +1715,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
         return await run_in_main_thread(continue_on_main_thread)
 
-    def _on_sheet_opened(self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None) -> sublime.View | None:
-        if sheet and (view := sheet.view()):
-            uri_no_fragment = urldefrag(uri).url
-            view.settings().set('lsp_uri', uri_no_fragment)
-            if r:
-                center_selection(view, r)
-            return view
-        return None
+    def _on_sheet_for_uri_opened(
+        self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
+    ) -> sublime.View | None:
+        return self._on_view_for_uri_opened(view, uri, r) if sheet and (view := sheet.view()) else None
+
+    def _on_view_for_uri_opened(self, view: sublime.View, uri: DocumentUri, r: Range | None) -> sublime.View:
+        uri_no_fragment = urldefrag(uri).url
+        view.settings().set('lsp_uri', uri_no_fragment)
+        if r:
+            center_selection(view, r)
+        return view
 
     async def open_location(
         self,
@@ -1942,21 +1972,18 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 actions |= ViewStateActions.SAVE
         return actions
 
-    def _set_view_state(self, actions: ViewStateActions, view: sublime.View) -> Promise[None]:
-        promise = Promise.resolve(None)
+    async def _set_view_state(self, actions: ViewStateActions, view: sublime.View) -> None:
         should_save = bool(actions & ViewStateActions.SAVE)
         should_close = bool(actions & ViewStateActions.CLOSE)
         if should_save and view.is_dirty():
             # The save operation must be blocking in case the tab should be closed afterwards
             view.run_command('save', {'async': not should_close, 'quiet': True})
             # Allow async thread to process save notifications before closing the file or the method returns.
-            promise = Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None)))
-
-        def handle_close() -> None:
-            if should_close and not view.is_dirty():
-                view.close()
-
-        return promise.then(lambda _: handle_close())
+            await next_frame()
+        if should_close and not view.is_dirty():
+            future = asyncio.get_running_loop().create_future()
+            view.close(partial(run_in_asyncio_thread, future.set_result))  # type: ignore
+            await future
 
     def _set_selected_sheets(self, sheets: list[sublime.Sheet]) -> None:
         if len(sheets) > 1 and len(self.window.selected_sheets()) != len(sheets):
@@ -2159,6 +2186,43 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             session_buffer.do_document_diagnostic_async(view, view.change_count(), forced_update=True)
         for session_buffer in not_visible_session_buffers:
             session_buffer.set_pending_refresh(RequestFlags.DIAGNOSTIC)
+
+    @request_handler('workspace/textDocumentContent/refresh')
+    async def on_workspace_text_document_content_refresh(self, params: TextDocumentContentRefreshParams) -> None:
+        # TODO: Run *after* response? How?
+        self.create_task(self._refresh_text_document_content(params['uri']))
+
+    async def _refresh_text_document_content(self, uri: DocumentUri) -> None:
+        for view in self.window.views():
+            try:
+                if uri_from_view(view) == uri:
+                    response: TextDocumentContentResult = await self.request(
+                        Request('workspace/textDocumentContent', {'uri': uri})
+                    )
+                    new_content = response['text'].replace('\r', '')
+                    if new_content != entire_content(view):
+
+                        def continue_on_main_thread(view: sublime.View, new_content: str) -> None:
+                            if not view.is_valid():
+                                return
+                            content_region = entire_content_region(view)
+                            selection_region = first_selection_region(view)
+                            selection = view.sel()
+                            selection.add(content_region)
+                            with mutable(view):
+                                view.run_command('insert', {'characters': new_content})
+                            # Try to restore original selection if possible
+                            if selection_region is not None and selection_region.begin() < view.size():
+                                selection.clear()
+                                selection.add(selection_region)
+
+                        await run_in_main_thread(partial(continue_on_main_thread, view, new_content))
+                        break
+            except MissingUriError:
+                continue
+            except Error as error:
+                sublime.status_message(f"Error getting content: {error}")
+                continue
 
     @notification_handler('textDocument/publishDiagnostics')
     def on_text_document_publish_diagnostics(self, params: PublishDiagnosticsParams) -> None:

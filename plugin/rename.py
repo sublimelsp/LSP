@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .core.aio import run_coroutine
 from .core.aio import run_in_asyncio_thread
 from .core.edit import show_summary_message
 from .core.protocol import Request
@@ -149,11 +150,8 @@ class LspSymbolRenameCommand(LspTextCommand):
         self, weak_session: weakref.ref[Session], response: WorkspaceEdit, accepted: bool
     ) -> None:
         if accepted and (session := weak_session()):
-            run_in_asyncio_thread(
-                lambda: session.apply_workspace_edit_async(response, is_refactoring=True).then(
-                    lambda tup: show_summary_message(session.window, *tup)
-                )
-            )
+            future = run_coroutine(session.apply_workspace_edit(response, is_refactoring=True))
+            future.add_done_callback(lambda f: show_summary_message(session.window, *f.result()))
 
     def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:

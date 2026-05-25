@@ -14,7 +14,9 @@ from ...protocol import CompletionItemKind
 from ...protocol import CompletionItemTag
 from ...protocol import ConfigurationParams
 from ...protocol import CreateFile
+from ...protocol import CreateFilesParams
 from ...protocol import DeleteFile
+from ...protocol import DeleteFilesParams
 from ...protocol import Diagnostic
 from ...protocol import DiagnosticOptions
 from ...protocol import DiagnosticServerCancellationData
@@ -28,7 +30,10 @@ from ...protocol import DocumentUri
 from ...protocol import ErrorCodes
 from ...protocol import ExecuteCommandParams
 from ...protocol import FailureHandlingKind
+from ...protocol import FileCreate
+from ...protocol import FileDelete
 from ...protocol import FileEvent
+from ...protocol import FileRename
 from ...protocol import FileSystemWatcher
 from ...protocol import FoldingRangeKind
 from ...protocol import GeneralClientCapabilities
@@ -53,6 +58,7 @@ from ...protocol import PublishDiagnosticsParams
 from ...protocol import Range
 from ...protocol import RegistrationParams
 from ...protocol import RenameFile
+from ...protocol import RenameFilesParams
 from ...protocol import ResourceOperationKind
 from ...protocol import SemanticTokenModifiers
 from ...protocol import SemanticTokenTypes
@@ -323,6 +329,18 @@ class Manager(ABC):
 
     @abstractmethod
     def handle_stderr_log(self, config_name: str, message: str) -> None:
+        ...
+
+    @abstractmethod
+    def notify_did_create_files(self, params: CreateFilesParams) -> None:
+        ...
+
+    @abstractmethod
+    def notify_did_rename_files(self, params: RenameFilesParams) -> None:
+        ...
+
+    @abstractmethod
+    def notify_did_delete_files(self, params: DeleteFilesParams) -> None:
         ...
 
 
@@ -1690,21 +1708,28 @@ class Session(APIHandler, TransportCallbacks):
         label: str | None = None,
         is_refactoring: bool = False
     ) -> Promise[ApplyWorkspaceEditResult]:
+        created_files: list[FileCreate] = []
+        renamed_files: list[FileRename] = []
+        deleted_files: list[FileDelete] = []
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
         index = 0  # Assuming 0-based indexing for the ApplyWorkspaceEditResult.faildedChange value
         promise = self._apply_document_changes_recursive_async(
-            document_changes, change_annotations, index, label, auto_save)
+            document_changes, change_annotations, created_files, renamed_files, deleted_files, index, label, auto_save)
         promise \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
-            .then(lambda _: self._set_focused_sheet(active_sheet))
+            .then(lambda _: self._set_focused_sheet(active_sheet)) \
+            .then(lambda _: self._notify_after_resource_operations(created_files, renamed_files, deleted_files))
         return promise
 
     def _apply_document_changes_recursive_async(
         self,
         document_changes: list[TextDocumentEdit | CreateFile | RenameFile | DeleteFile],
         change_annotations: dict[ChangeAnnotationIdentifier, ChangeAnnotation],
+        created_files: list[FileCreate],
+        renamed_files: list[FileRename],
+        deleted_files: list[FileDelete],
         index: int,
         label: str | None,
         auto_save: str
@@ -1739,6 +1764,7 @@ class Session(APIHandler, TransportCallbacks):
                 Path(path).open('x', encoding='utf-8').close()
             except (FileExistsError, OSError) as ex:
                 return Promise.resolve(str(ex))
+            created_files.append({'uri': filename_to_uri(path)})
             return Promise.resolve(None)
 
         def rename_file(old_path: str, new_path: str) -> Promise[str | None]:
@@ -1747,9 +1773,12 @@ class Session(APIHandler, TransportCallbacks):
                 Path(old_path).rename(new_path)
             except (FileExistsError, IsADirectoryError, NotADirectoryError, OSError) as ex:
                 return Promise.resolve(str(ex))
+            old_uri = filename_to_uri(old_path)
+            new_uri = filename_to_uri(new_path)
             if view:
                 view.retarget(new_path)
-                view.settings().set('lsp_uri', filename_to_uri(new_path))
+                view.settings().set('lsp_uri', new_uri)
+            renamed_files.append({'oldUri': old_uri, 'newUri': new_uri})
             return Promise.resolve(None)
 
         def delete_file(path: str) -> Promise[None]:
@@ -1771,7 +1800,15 @@ class Session(APIHandler, TransportCallbacks):
                     'failedChange': index
                 })
             return self._apply_document_changes_recursive_async(
-                document_changes, change_annotations, index + 1, label, auto_save)
+                document_changes,
+                change_annotations,
+                created_files,
+                renamed_files,
+                deleted_files,
+                index + 1,
+                label,
+                auto_save
+            )
 
         try:
             document_change = document_changes.pop(0)
@@ -1831,10 +1868,12 @@ class Session(APIHandler, TransportCallbacks):
             if scheme != 'file':
                 return _continue(f'DeleteFile not supported for URI {uri}')
             if os.path.isfile(path):
+                deleted_files.append({'uri': uri})
                 return delete_file(path).then(_continue)
             if os.path.isdir(path):
                 if os.listdir() and not options.get('recursive'):
                     return _continue(f'DeleteFile failed because folder {uri} is not empty')
+                deleted_files.append({'uri': uri})
                 return delete_folder(path).then(_continue)
             if options.get('ignoreIfNotExists'):
                 return _continue(None)
@@ -1937,6 +1976,17 @@ class Session(APIHandler, TransportCallbacks):
     def _set_focused_sheet(self, sheet: sublime.Sheet | None) -> None:
         if sheet and sheet != self.window.active_sheet():
             self.window.focus_sheet(sheet)
+
+    def _notify_after_resource_operations(
+        self, created_files: list[FileCreate], renamed_files: list[FileRename], deleted_files: list[FileDelete]
+    ) -> None:
+        if mgr := self.manager():
+            if created_files:
+                mgr.notify_did_create_files({'files': created_files})
+            if renamed_files:
+                mgr.notify_did_rename_files({'files': renamed_files})
+            if deleted_files:
+                mgr.notify_did_delete_files({'files': deleted_files})
 
     def decode_semantic_token(
         self,

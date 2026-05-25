@@ -366,8 +366,16 @@ class Notification(Generic[P]):
         return Notification("textDocument/didClose", params)
 
     @classmethod
+    def didCreateFiles(cls, params: CreateFilesParams) -> Notification[CreateFilesParams]:
+        return Notification("workspace/didCreateFiles", params)
+
+    @classmethod
     def didRenameFiles(cls, params: RenameFilesParams) -> Notification[RenameFilesParams]:
         return Notification("workspace/didRenameFiles", params)
+
+    @classmethod
+    def didDeleteFiles(cls, params: DeleteFilesParams) -> Notification[DeleteFilesParams]:
+        return Notification("workspace/didDeleteFiles", params)
 
     @classmethod
     def didChangeConfiguration(cls, params: DidChangeConfigurationParams) -> Notification[DidChangeConfigurationParams]:

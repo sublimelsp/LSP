@@ -246,11 +246,19 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                         if plugin_class.use_asyncio:
                             await plugin_class.on_pre_start(context)
                         else:
+                            # Historically these methods tended to run relatively slow.
+                            # We don't want to use Sublime's worker thread for this any longer.
+                            # Utilize the default thread pool instead.
+                            # https://docs.python.org/3/library/asyncio-dev.html#running-blocking-code
                             await loop.run_in_executor(None, plugin_class.on_pre_start_async, context)
                         cwd = context.working_directory
                     else:
                         if plugin_class.needs_update_or_installation():
                             config.set_view_status(listener.view, "installing...")
+                            # Historically these methods tended to run relatively slow.
+                            # We don't want to use Sublime's worker thread for this any longer.
+                            # Utilize the default thread pool instead.
+                            # https://docs.python.org/3/library/asyncio-dev.html#running-blocking-code
                             await loop.run_in_executor(None, plugin_class.install_or_update)
                         additional_variables = plugin_class.additional_variables()
                         if isinstance(additional_variables, dict):

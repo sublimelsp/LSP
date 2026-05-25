@@ -189,6 +189,7 @@ from urllib.parse import urldefrag
 from urllib.parse import urlparse
 from weakref import WeakSet
 import asyncio
+import inspect
 import itertools
 import mdpopups
 import os
@@ -2189,9 +2190,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             session_buffer.set_pending_refresh(RequestFlags.DIAGNOSTIC)
 
     @request_handler('workspace/textDocumentContent/refresh')
-    async def on_workspace_text_document_content_refresh(self, params: TextDocumentContentRefreshParams) -> None:
-        # TODO: Run *after* response? How?
-        self.create_task(self._refresh_text_document_content(params['uri']))
+    async def on_workspace_text_document_content_refresh(
+        self, params: TextDocumentContentRefreshParams
+    ) -> tuple[None, PostResponseCallback]:
+        return (None, self._refresh_text_document_content(params['uri']))
 
     async def _refresh_text_document_content(self, uri: DocumentUri) -> None:
         for view in self.window.views():
@@ -2638,7 +2640,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._logger.outgoing_response(response.request_id, response.result)
         await self.send_payload(response.to_payload())
         if response.post_response_callback:
-            response.post_response_callback()
+            if inspect.iscoroutine(response.post_response_callback):
+                self.create_task(response.post_response_callback)
+            elif callable(response.post_response_callback):
+                response.post_response_callback()
 
     async def send_error_response(self, request_id: int | str, error: Error) -> None:
         self._logger.outgoing_error_response(request_id, error)

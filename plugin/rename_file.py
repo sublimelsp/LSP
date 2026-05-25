@@ -111,7 +111,7 @@ class LspRenamePathCommand(LspWindowCommand):
 
     def on_rename_path(self, success: bool, file_rename: FileRename) -> None:
         if success and (mgr := self.manager()):
-            mgr.notify_did_rename_files({'files': [file_rename]})
+            mgr.notify_did_rename_files([file_rename])
 
     def prompt_rename_async(self, file_rename: FileRename, label: str, rename_command_args: dict[str, Any]) -> None:
         Promise.all(list(self.create_will_rename_requests_async(file_rename))) \

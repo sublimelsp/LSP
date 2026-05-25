@@ -14,9 +14,7 @@ from ...protocol import CompletionItemKind
 from ...protocol import CompletionItemTag
 from ...protocol import ConfigurationParams
 from ...protocol import CreateFile
-from ...protocol import CreateFilesParams
 from ...protocol import DeleteFile
-from ...protocol import DeleteFilesParams
 from ...protocol import Diagnostic
 from ...protocol import DiagnosticOptions
 from ...protocol import DiagnosticServerCancellationData
@@ -58,7 +56,6 @@ from ...protocol import PublishDiagnosticsParams
 from ...protocol import Range
 from ...protocol import RegistrationParams
 from ...protocol import RenameFile
-from ...protocol import RenameFilesParams
 from ...protocol import ResourceOperationKind
 from ...protocol import SemanticTokenModifiers
 from ...protocol import SemanticTokenTypes
@@ -332,15 +329,15 @@ class Manager(ABC):
         ...
 
     @abstractmethod
-    def notify_did_create_files(self, params: CreateFilesParams) -> None:
+    def notify_did_create_files(self, created_files: list[FileCreate]) -> None:
         ...
 
     @abstractmethod
-    def notify_did_rename_files(self, params: RenameFilesParams) -> None:
+    def notify_did_rename_files(self, renamed_files: list[FileRename]) -> None:
         ...
 
     @abstractmethod
-    def notify_did_delete_files(self, params: DeleteFilesParams) -> None:
+    def notify_did_delete_files(self, deleted_files: list[FileDelete]) -> None:
         ...
 
 
@@ -1982,11 +1979,11 @@ class Session(APIHandler, TransportCallbacks):
     ) -> None:
         if mgr := self.manager():
             if created_files:
-                mgr.notify_did_create_files({'files': created_files})
+                mgr.notify_did_create_files(created_files)
             if renamed_files:
-                mgr.notify_did_rename_files({'files': renamed_files})
+                mgr.notify_did_rename_files(renamed_files)
             if deleted_files:
-                mgr.notify_did_delete_files({'files': deleted_files})
+                mgr.notify_did_delete_files(deleted_files)
 
     def decode_semantic_token(
         self,

@@ -2189,9 +2189,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             session_buffer.set_pending_refresh(RequestFlags.DIAGNOSTIC)
 
     @request_handler('workspace/textDocumentContent/refresh')
-    async def on_workspace_text_document_content_refresh(self, params: TextDocumentContentRefreshParams) -> None:
-        # TODO: Run *after* response? How?
-        self.create_task(self._refresh_text_document_content(params['uri']))
+    async def on_workspace_text_document_content_refresh(self, params: TextDocumentContentRefreshParams
+    ) -> tuple[None, PostResponseCallback]:
+
+        def continue_after_response(uri: DocumentUri) -> None:
+            self.create_task(self._refresh_text_document_content(uri))
+
+        return (None, partial(continue_after_response, params['uri']))
 
     async def _refresh_text_document_content(self, uri: DocumentUri) -> None:
         for view in self.window.views():

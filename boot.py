@@ -98,6 +98,23 @@ import sublime_plugin
 if TYPE_CHECKING:
     import asyncio
 
+
+import asyncio
+import sys
+import traceback
+
+
+def tracer(frame, event, arg):  # noqa: ANN001, ANN202
+    if event == "exception":
+        exc_type, _exc, _tb = arg
+        if exc_type is asyncio.InvalidStateError:
+            print("\n=== InvalidStateError ===")
+            traceback.print_stack(frame)
+    return tracer
+
+
+sys.settrace(tracer)
+
 # Uncomment to see all invocations that are marked @deprecated in the Console.
 # warnings.simplefilter('always', DeprecationWarning)
 

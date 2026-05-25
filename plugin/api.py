@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any
 from typing import Awaitable
 from typing import Callable
-from typing import Coroutine
 from typing import Final
 from typing import final
 from typing import Tuple
@@ -53,7 +52,6 @@ HANDLER_MARKER = '__HANDLER_MARKER'
 COMMAND_HANDLER_MARKER = '__COMMAND_HANDLER_MARKER'
 URI_HANDLER_MARKER = '__URI_HANDLER_MARKER'
 
-T = TypeVar('T')
 # P represents the parameters *after* the 'self' argument
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
@@ -63,7 +61,7 @@ UriHandler = Callable[['DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sh
 # Decorator needs a dedicated type with `Any` as the first parameter representing `Self` to make its
 # implementation happy. I couldn't find a better way (Concatenate and ParamSpec don't seem to help here).
 UriHandlerForDecorator = Callable[[Any, 'DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
-PostResponseCallback = Union[Callable[[], None], Coroutine[Any, Any, None]]
+PostResponseCallback = Callable[[], None]
 RequestHandlerResponse = Union[R, Tuple[R, PostResponseCallback]]
 
 
@@ -227,11 +225,8 @@ def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Ca
 
 
 def request_handler(
-    method: str,
-) -> Callable[
-    [Callable[[T, P], Awaitable[RequestHandlerResponse]]],
-    Callable[[T, P, int], Awaitable[Response[LSPAny]]],
-]:
+    method: str
+) -> Callable[[Callable[[Any, P], Awaitable[RequestHandlerResponse]]], Callable[[Any, P, int], Awaitable[Response[R]]]]:
     """
     Decorator to mark a coroutine method as a handler for a specific LSP request.
 
@@ -254,11 +249,11 @@ def request_handler(
     """
 
     def decorator(
-        func: Callable[[T, P], Awaitable[RequestHandlerResponse]],
-    ) -> Callable[[T, P, int], Awaitable[Response[LSPAny]]]:
+        func: Callable[[Any, P], Awaitable[RequestHandlerResponse]]
+    ) -> Callable[[Any, P, int], Awaitable[Response[R]]]:
 
         @wraps(func)
-        async def wrapper(self: T, params: P, request_id: int) -> Response[LSPAny]:
+        async def wrapper(self: Any, params: P, request_id: int) -> Response[Any]:
             response = await func(self, params)
             if isinstance(response, tuple):
                 result, post_request_callback = response

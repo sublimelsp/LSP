@@ -491,6 +491,10 @@ Follow installation instructions on [LSP-marksman](https://github.com/sublimelsp
 
 Follow installation instructions on [LSP-nimlangserver](https://github.com/sublimelsp/LSP-nimlangserver).
 
+## Nix
+
+Follow [installation instructions on nixd](https://github.com/nix-community/nixd/blob/main/nixd/docs/editor-setup.md).
+
 ## OCaml/Reason
 
 1. Install the [Reason](https://packagecontrol.io/packages/Reason) package from Package Control for syntax highlighting.

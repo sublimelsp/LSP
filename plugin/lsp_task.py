@@ -61,22 +61,24 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
 
     async def _run(self, **kwargs: dict[str, Any]) -> None:
         if self._tasks_runner:
+            # Request to cancel the task.
             if self._tasks_runner.cancel():
                 try:
+                    # Wait for the task to actually finish.
                     await self._tasks_runner
                 except asyncio.CancelledError:
+                    # It's going to throw this exception so catch it.
                     pass
                 self._tasks_runner = None
         self.on_before_tasks()
-        self._tasks_runner = asyncio.create_task(run_tasks(self, self.tasks))
+        self._tasks_runner = asyncio.create_task(self._run_tasks())
         try:
             await asyncio.wait_for(self._tasks_runner, timeout=userprefs().on_save_task_timeout_ms / 1000)
         except asyncio.exceptions.TimeoutError:
             sublime.status_message('Running "on save" tasks took too long!')
         await self.on_tasks_completed(**kwargs)
 
-
-async def run_tasks(text_command: LspTextCommandWithTasks, tasks: list[type[LspTask]]) -> None:
-    for task in tasks:
-        if task.is_applicable(text_command.view):
-            await task(text_command).run()
+    async def _run_tasks(self) -> None:
+        for task in self.tasks:
+            if task.is_applicable(self.view):
+                await task(self).run()

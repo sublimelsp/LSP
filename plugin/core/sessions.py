@@ -2198,34 +2198,38 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     async def _refresh_text_document_content(self, uri: DocumentUri) -> None:
         for view in self.window.views():
             try:
-                if uri_from_view(view) == uri:
-                    response: TextDocumentContentResult = await self.request(
-                        Request('workspace/textDocumentContent', {'uri': uri})
-                    )
-                    new_content = response['text'].replace('\r', '')
-                    if new_content != entire_content(view):
-
-                        def continue_on_main_thread(view: sublime.View, new_content: str) -> None:
-                            if not view.is_valid():
-                                return
-                            content_region = entire_content_region(view)
-                            selection_region = first_selection_region(view)
-                            selection = view.sel()
-                            selection.add(content_region)
-                            with mutable(view):
-                                view.run_command('insert', {'characters': new_content})
-                            # Try to restore original selection if possible
-                            if selection_region is not None and selection_region.begin() < view.size():
-                                selection.clear()
-                                selection.add(selection_region)
-
-                        await run_on_main_thread(partial(continue_on_main_thread, view, new_content))
-                        break
+                candidate_uri = uri_from_view(view)
             except MissingUriError:
                 continue
+            if candidate_uri != uri:
+                continue
+            try:
+                response: TextDocumentContentResult = await self.request(
+                    Request('workspace/textDocumentContent', {'uri': uri})
+                )
             except Error as error:
                 sublime.status_message(f"Error getting content: {error}")
-                continue
+                break
+            new_content = response['text'].replace('\r', '')
+            if new_content == entire_content(view):
+                break
+
+            def continue_on_main_thread(view: sublime.View, new_content: str) -> None:
+                if not view.is_valid():
+                    return
+                content_region = entire_content_region(view)
+                selection_region = first_selection_region(view)
+                selection = view.sel()
+                selection.add(content_region)
+                with mutable(view):
+                    view.run_command('insert', {'characters': new_content})
+                # Try to restore original selection if possible
+                if selection_region is not None and selection_region.begin() < view.size():
+                    selection.clear()
+                    selection.add(selection_region)
+
+            await run_on_main_thread(partial(continue_on_main_thread, view, new_content))
+            break
 
     @notification_handler('textDocument/publishDiagnostics')
     def on_text_document_publish_diagnostics(self, params: PublishDiagnosticsParams) -> None:

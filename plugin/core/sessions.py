@@ -2516,7 +2516,18 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             r.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         if r.on_partial_result and isinstance(r.params, dict):
             r.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
-        self._response_handlers[request_id] = (r, future.set_result, lambda x: future.set_exception(Error.from_lsp(x)))
+
+        def on_result(result: R) -> None:
+            # Future may have been cancelled.
+            if not future.done():
+                future.set_result(result)
+
+        def on_error(error: ResponseError) -> None:
+            # Future may have been cancelled.
+            if not future.done():
+                future.set_exception(Error.from_lsp(error))
+
+        self._response_handlers[request_id] = (r, on_result, on_error)
         self._invoke_views(r, "on_request_started_async", request_id, r)
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, r)

@@ -248,8 +248,14 @@ class Promise(Generic[T]):
             else:
 
                 def resolve_callback(resolve_value: T) -> None:
+
+                    def set_result(resolve_value: T) -> None:
+                        # Future may have been cancelled.
+                        if not future.done():
+                            future.set_result(resolve_value)
+
                     # We don't know from which thread we are resolving, so use call_soon_threadsafe.
-                    loop.call_soon_threadsafe(functools.partial(future.set_result, resolve_value))
+                    loop.call_soon_threadsafe(functools.partial(set_result, resolve_value))
 
                 self.callbacks.append(resolve_callback)
         return future.__await__()

@@ -272,7 +272,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self._stored_selection = []
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
-        # run_coroutine_threadsafe(self._clear_session_views())
+        run_coroutine(self._clear_session_views())
 
     def _reset(self) -> None:
         # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too

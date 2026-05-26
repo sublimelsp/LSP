@@ -60,6 +60,10 @@ Follow installation instructions on [LSP-clangd](https://github.com/sublimelsp/L
 
 Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimelsp/LSP-OmniSharp).
 
+## Civet
+
+Follow installation instructions in the [Civet Sublime Text package](https://github.com/DanielXMoore/Civet/tree/main/lsp/sublime).
+
 ## Clojure
 
 1. Download [clojure-lsp](https://clojure-lsp.io/installation/).

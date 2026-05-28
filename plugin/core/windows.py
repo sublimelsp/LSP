@@ -65,7 +65,6 @@ import sublime
 import threading
 
 if TYPE_CHECKING:
-    from .collections import DottedDict
     from .tree_view import TreeViewSheet
 
 
@@ -560,6 +559,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         config_names = [config.name for config in configs]
         sublime.set_timeout_async(lambda: self.restart_sessions_async(config_names))
 
+    def on_server_settings_changed(self, configs: list[ClientConfig]) -> None:
+        for config in configs:
+            if session := self.get_session(config.name):
+                session.on_server_settings_changed(config.settings)
+
     # --- Implements ViewStatusHandler ---------------------------------------------------------------------------------
 
     @override
@@ -627,11 +631,6 @@ class WindowRegistry(LspSettingsChangeListener):
     def on_client_config_updated(self, config_name: str | None = None) -> None:
         for wm in self._windows.values():
             wm.get_config_manager().update(config_name)
-
-    def on_server_settings_changed(self, config_name: str, settings: DottedDict) -> None:
-        for wm in self._windows.values():
-            if session := wm.get_session(config_name):
-                session.on_server_settings_changed(settings)
 
     def on_userprefs_updated(self) -> None:
         for wm in self._windows.values():

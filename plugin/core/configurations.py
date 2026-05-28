@@ -30,6 +30,10 @@ class WindowConfigChangeListener(ABC):
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:
         raise NotImplementedError
 
+    @abstractmethod
+    def on_server_settings_changed(self, configs: list[ClientConfig]) -> None:
+        raise NotImplementedError
+
 
 class WindowConfigManager:
     def __init__(self, window: sublime.Window, global_configs: dict[str, ClientConfig]) -> None:
@@ -75,7 +79,8 @@ class WindowConfigManager:
     def _reload_configs(self, updated_config_name: str | None = None, notify_listeners: bool = False) -> None:
         project_data = self._window.project_data()
         project_settings = project_data.get("settings", {}).get("LSP", {}) if isinstance(project_data, dict) else {}
-        updated_configs: list[ClientConfig] = []
+        configs_with_changed_settings: list[ClientConfig] = []
+        configs_recreated: list[ClientConfig] = []
         if updated_config_name is None:
             self.all.clear()
         for name, config in self._global_configs.items():
@@ -88,9 +93,15 @@ class WindowConfigManager:
                 overrides = {}
             if name in self._disabled_for_session:
                 overrides["enabled"] = False
+            stored_config = self.all.get(name)
             updated_config = ClientConfig.from_config(config, overrides)
-            self.all[name] = updated_config
-            updated_configs.append(updated_config)
+            if not stored_config or stored_config != updated_config:
+                self.all[name] = updated_config
+                configs_recreated.append(updated_config)
+            elif stored_config.settings != updated_config.settings:
+                stored_config.settings = updated_config.settings
+                configs_with_changed_settings.append(updated_config)
+        # project_settings no longer contains config_names that were handled above.
         for name, config in project_settings.items():
             if updated_config_name and updated_config_name != name:
                 continue
@@ -99,13 +110,24 @@ class WindowConfigManager:
                 config["enabled"] = False
             try:
                 updated_config = ClientConfig.from_dict(name, config)
-                self.all[name] = updated_config
-                updated_configs.append(updated_config)
             except Exception as ex:
+                updated_config = None
                 exception_log(f"failed to load project-only configuration {name}", ex)
+            if updated_config:
+                stored_config = self.all.get(name)
+                if not stored_config or stored_config != updated_config:
+                    self.all[name] = updated_config
+                    configs_recreated.append(updated_config)
+                elif stored_config.settings != updated_config.settings:
+                    stored_config.settings = updated_config.settings
+                    configs_with_changed_settings.append(updated_config)
         if notify_listeners:
-            for listener in self._change_listeners:
-                listener.on_configs_changed(updated_configs)
+            if configs_with_changed_settings:
+                for listener in self._change_listeners:
+                    listener.on_server_settings_changed(configs_with_changed_settings)
+            if configs_recreated:
+                for listener in self._change_listeners:
+                    listener.on_configs_changed(configs_recreated)
 
     def enable_config(self, config_name: str) -> None:
         if not self._reenable_disabled_for_session(config_name):

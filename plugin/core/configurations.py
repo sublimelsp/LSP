@@ -99,6 +99,7 @@ class WindowConfigManager:
                 self.all[name] = updated_config
                 configs_recreated.append(updated_config)
             elif stored_config.settings != updated_config.settings:
+                stored_config.settings = updated_config.settings
                 configs_with_changed_settings.append(updated_config)
         # project_settings no longer contains config_names that were handled above.
         for name, config in project_settings.items():
@@ -118,6 +119,7 @@ class WindowConfigManager:
                     self.all[name] = updated_config
                     configs_recreated.append(updated_config)
                 elif stored_config.settings != updated_config.settings:
+                    stored_config.settings = updated_config.settings
                     configs_with_changed_settings.append(updated_config)
         if notify_listeners:
             if configs_with_changed_settings:

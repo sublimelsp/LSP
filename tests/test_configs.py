@@ -76,12 +76,12 @@ class ConfigParsingTests(DeferrableTestCase):
         config2 = ClientConfig.from_config(TEST_CONFIG, {})
         self.assertEqual(config1, config2)
 
-    def test_are_with_different_settings1(self) -> None:
+    def test_are_with_different_settings(self) -> None:
         config1 = ClientConfig.from_config(TEST_CONFIG, {})
         config2 = ClientConfig.from_config(TEST_CONFIG, {'settings': {'foo': 'bar'}})
         self.assertEqual(config1, config2)
 
-    def test_are_with_different_settings2(self) -> None:
+    def test_are_with_different_settings_after_create(self) -> None:
         config1 = ClientConfig.from_config(TEST_CONFIG, {})
         config2 = ClientConfig.from_config(TEST_CONFIG, {})
         config2.settings.set('foo', 'bar')
@@ -92,7 +92,7 @@ class ConfigParsingTests(DeferrableTestCase):
         config2 = ClientConfig.from_config(TEST_CONFIG, {'selector': 'other'})
         self.assertNotEqual(config1, config2)
 
-    def test_are_not_equal_initialization_options(self) -> None:
+    def test_are_not_equal_initialization_options_after_create(self) -> None:
         config1 = ClientConfig.from_config(TEST_CONFIG, {})
         config2 = ClientConfig.from_config(TEST_CONFIG, {})
         config2.initialization_options.set('foo', 'bar')

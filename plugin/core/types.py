@@ -1185,9 +1185,13 @@ class ClientConfig:
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, ClientConfig):
+        if not isinstance(other, ClientConfig) or self.name != other.name or self._all_settings != other._all_settings:
             return False
-        return self.name == other.name and self._all_settings == other._all_settings
+        for k, v in self.__dict__.items():
+            # "settings" are not considered when checking for equality
+            if not k.startswith("_") and k != 'settings' and v != getattr(other, k):
+                return False
+        return True
 
     def __hash__(self) -> int:
         return hash(self.__repr__())

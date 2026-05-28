@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .test_mocks import TEST_CONFIG
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.transports import TransportConfig
 from LSP.plugin.core.types import ClientConfig
@@ -69,6 +70,33 @@ class ConfigParsingTests(DeferrableTestCase):
         original_path = environ.copy()['PATH']
         resolved_path = launch_config.env['PATH']
         self.assertEqual(resolved_path, f'/a/b/{pathsep}{original_path}')
+
+    def test_are_equal(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {})
+        self.assertEqual(config1, config2)
+
+    def test_are_with_different_settings1(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {'settings': {'foo': 'bar'}})
+        self.assertEqual(config1, config2)
+
+    def test_are_with_different_settings2(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2.settings.set('foo', 'bar')
+        self.assertEqual(config1, config2)
+
+    def test_are_not_equal_selector(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {'selector': 'other'})
+        self.assertNotEqual(config1, config2)
+
+    def test_are_not_equal_initialization_options(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2.initialization_options.set('foo', 'bar')
+        self.assertNotEqual(config1, config2)
 
     def test_disabled_capabilities(self) -> None:
         settings = {

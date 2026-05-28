@@ -20,11 +20,13 @@ import sys
 if TYPE_CHECKING:
     from ...protocol import CodeAction
     from ...protocol import Command
+    from ...protocol import DocumentLink
     from ...protocol import DocumentUri
     from ...protocol import URI
     import sublime
 
 CODE_ACTION_SCHEME = 'code-action'
+DOCUMENT_LINK_SCHEME = 'document-link'
 
 
 def normalize_uri(uri: DocumentUri) -> DocumentUri:
@@ -121,3 +123,16 @@ def decode_code_action_uri(uri: URI) -> tuple[str, int, Command | CodeAction]:
     session_name, version, data = uri[len(CODE_ACTION_SCHEME) + 1:].split('/')
     action = cast('Command | CodeAction', json.loads(urlsafe_b64decode(data.encode()).decode()))
     return session_name, int(version), action
+
+
+def encode_document_link_uri(session_name: str, version: int, link: DocumentLink) -> URI:
+    return f'{DOCUMENT_LINK_SCHEME}:{session_name}/{version}/{urlsafe_b64encode(json.dumps(link).encode()).decode()}'
+
+
+def decode_document_link_uri(uri: URI) -> tuple[str, int, DocumentLink]:
+    scheme = parse_uri(uri)[0]
+    if scheme != DOCUMENT_LINK_SCHEME:
+        raise ValueError(f'Unsupported URI scheme: {scheme}')
+    session_name, version, data = uri[len(DOCUMENT_LINK_SCHEME) + 1:].split('/')
+    link = cast('DocumentLink', json.loads(urlsafe_b64decode(data.encode()).decode()))
+    return session_name, int(version), link

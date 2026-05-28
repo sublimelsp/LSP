@@ -225,7 +225,7 @@ def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Ca
 
 def request_handler(
     method: str
-) -> Callable[[Callable[[Any, P], RequestHandlerResponse]], Callable[[Any, P, int], Promise[Response[R]]]]:
+) -> Callable[[Callable[[Any, P], RequestHandlerResponse]], Callable[[Any, P, int], Promise[Response[R]]]]:  # pyright: ignore[reportInvalidTypeVarUse]
     """
     Decorator to mark a method as a handler for a specific LSP request.
 

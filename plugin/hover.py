@@ -25,6 +25,9 @@ from .core.registry import windows
 from .core.settings import userprefs
 from .core.url import CODE_ACTION_SCHEME
 from .core.url import decode_code_action_uri
+from .core.url import decode_document_link_uri
+from .core.url import DOCUMENT_LINK_SCHEME
+from .core.url import encode_document_link_uri
 from .core.url import parse_uri
 from .core.views import format_diagnostics_for_html
 from .core.views import FORMAT_MARKED_STRING
@@ -35,6 +38,7 @@ from .core.views import make_command_link
 from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
+from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
@@ -92,6 +96,7 @@ class LspHoverCommand(LspTextCommand):
         super().__init__(view)
         self._base_dir: str | None = None
         self._image_resolver = None
+        self._document_link_cache: tuple[str, int, list[DocumentLink]] = ('', -1, [])
 
     def run(
         self,
@@ -108,7 +113,7 @@ class LspHoverCommand(LspTextCommand):
             return
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses: list[tuple[Hover, MarkdownLangMap | None]] = []
-        self._document_links: list[DocumentLink] = []
+        self._document_link: tuple[str, int, DocumentLink] | None = None
         self._actions_by_config: dict[str, list[Command | CodeAction]] = {}
         self._diagnostics_by_config: Sequence[tuple[SessionBufferProtocol, Sequence[Diagnostic]]] = []
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
@@ -119,9 +124,8 @@ class LspHoverCommand(LspTextCommand):
             if not listener:
                 return
             if not only_diagnostics:
+                self.request_document_link_async(listener, hover_point)
                 self.request_symbol_hover_async(listener, hover_point)
-                if userprefs().link_highlight_style in {"underline", "none"}:
-                    self.request_document_link_async(listener, hover_point)
             self._diagnostics_by_config = listener.get_diagnostics_async(
                 hover_point, userprefs().show_diagnostics_severity_level)
             if self._diagnostics_by_config:
@@ -143,10 +147,9 @@ class LspHoverCommand(LspTextCommand):
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises: list[Promise[ResolvedHover]] = []
         language_maps: list[MarkdownLangMap | None] = []
+        request = Request('textDocument/hover', text_document_position_params(self.view, point), self.view)
         for session in listener.sessions_async('hoverProvider'):
-            hover_promises.append(session.send_request_task(
-                Request("textDocument/hover", text_document_position_params(self.view, point), self.view)
-            ))
+            hover_promises.append(session.send_request_task(request))
             language_maps.append(session.markdown_language_id_to_st_syntax_map())
         Promise.all(hover_promises).then(partial(self._on_all_settled, listener, point, language_maps))
 
@@ -172,36 +175,46 @@ class LspHoverCommand(LspTextCommand):
         self.show_hover(listener, point, only_diagnostics=False)
 
     def request_document_link_async(self, listener: AbstractViewListener, point: int) -> None:
-        link_promises: list[Promise[DocumentLink | None]] = []
-        for sv in listener.session_views_async():
-            if not sv.has_capability_async("documentLinkProvider"):
-                continue
-            link = sv.session_buffer.get_document_link_at_point(sv.view, point)
-            if link is None:
-                continue
-            if link.get("target"):
-                link_promises.append(Promise.resolve(link))
-            elif sv.has_capability_async("documentLinkProvider.resolveProvider"):
-                link_promises.append(
-                    sv.session.send_request_task(Request.resolveDocumentLink(link, sv.view))
-                    .then(partial(self._on_resolved_link, sv.session_buffer)))
-        if link_promises:
-            Promise.all(link_promises).then(partial(self._on_all_document_links_resolved, listener, point))
+        if session := self.best_session('documentLinkProvider', point):
+            if sv := session.session_view_for_view_async(self.view):
+                session_name = session.config.name
+                version = self.view.change_count()
+                if userprefs().link_highlight_style == 'underline':
+                    # If underline for links is enabled, textDocument/documentLink is requested after each buffer change
+                    if link := sv.session_buffer.get_document_link_at_point(self.view, point):
+                        self._document_link = (session_name, version, link)
+                elif self._document_link_cache[0] == session_name and self._document_link_cache[1] == version:
+                    # Use cache from previous hover if the result is not outdated
+                    self._process_cached_document_links_async(point)
+                else:
+                    session.send_request_async(
+                        Request.documentLink({'textDocument': text_document_identifier(self.view)}, self.view),
+                        partial(self._on_document_link_response_async, listener, point, version, session_name)
+                    )
 
-    def _on_resolved_link(
-        self, session_buffer: SessionBufferProtocol, link: DocumentLink | Error
-    ) -> DocumentLink | None:
-        if isinstance(link, Error):
-            return None
-        session_buffer.update_document_link(link)
-        return link
-
-    def _on_all_document_links_resolved(
-        self, listener: AbstractViewListener, point: int, links: list[DocumentLink | None]
+    def _on_document_link_response_async(
+        self,
+        listener: AbstractViewListener,
+        point: int,
+        version: int,
+        session_name: str,
+        response: list[DocumentLink] | None
     ) -> None:
-        if document_links := list(filter(None, links)):
-            self._document_links = document_links
-            self.show_hover(listener, point, only_diagnostics=False)
+        self._document_link_cache = (session_name, version, response or [])
+        self._process_cached_document_links_async(point)
+        self.show_hover(listener, point, only_diagnostics=False)
+
+    def _process_cached_document_links_async(self, point: int) -> None:
+        for link in self._document_link_cache[2]:
+            if range_to_region(link['range'], self.view).contains(point):
+                session_name = self._document_link_cache[0]
+                version = self._document_link_cache[1]
+                self._document_link = (session_name, version, link)
+                return
+
+    def _on_link_resolved_async(self, link: DocumentLink) -> None:
+        if uri := link.get('target'):
+            self._on_navigate(uri)
 
     def _handle_code_actions(
         self,
@@ -221,22 +234,19 @@ class LspHoverCommand(LspTextCommand):
         return " | ".join(actions) if actions else ""
 
     def link_content_and_range(self) -> tuple[str, sublime.Region | None]:
-        if len(self._document_links) > 1:
-            combined_region = range_to_region(self._document_links[0]["range"], self.view)
-            for link in self._document_links[1:]:
-                combined_region = combined_region.cover(range_to_region(link["range"], self.view))
-            if all(link.get("target") for link in self._document_links):
-                return '<a href="quick-panel:DocumentLink">Follow Link…</a>', combined_region
-            return "Follow Link…", combined_region
-        if len(self._document_links) == 1:
-            link = self._document_links[0]
-            target = link.get("target")
-            label = "Open in Browser" if target and target.startswith(("http:", "https:")) else "Open Link"
-            title = link.get("tooltip")
-            tooltip = f' title="{html.escape(title)}"' if title else ""
-            region = range_to_region(link["range"], self.view)
-            return f'<a href="{html.escape(target)}"{tooltip}>{label}</a>' if target else label, region
-        return "", None
+        if self._document_link is None:
+            return "", None
+        session_name, version, link = self._document_link
+        region = range_to_region(link['range'], self.view)
+        title = link.get('tooltip')
+        tooltip = f' title="{html.escape(title)}"' if title else ""
+        if (uri := link.get('target')) is not None:
+            label = "Open in Browser" if uri.startswith(('http:', 'https:')) else "Open Link"
+            uri = html.escape(uri)
+        else:
+            label = "Open Link"
+            uri = encode_document_link_uri(session_name, version, link)
+        return f'<a href="{uri}"{tooltip}>{label}</a>', region
 
     def hover_content(self) -> str:
         contents: list[str] = []
@@ -323,16 +333,12 @@ class LspHoverCommand(LspTextCommand):
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):
                 sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
                 self.view.hide_popup()
-        elif uri == "quick-panel:DocumentLink":
-            if window := self.view.window():
-                targets = [link["target"] for link in self._document_links]  # pyright: ignore
-
-                def on_select(targets: list[str], idx: int) -> None:
-                    if idx > -1:
-                        self._on_navigate(targets[idx])
-
-                window.show_quick_panel(
-                    [parse_uri(target)[1] for target in targets], partial(on_select, targets), placeholder="Open Link")
+        elif scheme == DOCUMENT_LINK_SCHEME:
+            session_name, version, link = decode_document_link_uri(uri)
+            if version == self.view.change_count() and (session := self.session_by_name(session_name)) and \
+                    session.has_capability('documentLinkProvider.resolveProvider'):
+                request = Request.resolveDocumentLink(link, self.view)
+                sublime.set_timeout_async(lambda: session.send_request_async(request, self._on_link_resolved_async))
         elif is_location_href(uri):
             session_name, uri, row, col_utf16 = unpack_href_location(uri)
             if session := self.session_by_name(session_name):
@@ -384,6 +390,7 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
 
 
 class LspCopyTextCommand(sublime_plugin.WindowCommand):
+
     def run(self, text: str) -> None:
         sublime.set_clipboard(text)
         text_length = len(text)

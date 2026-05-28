@@ -653,11 +653,12 @@
             "link_highlight_style": {
               "enum": [
                 "underline",
-                "none",
-                "disabled"
+                "none", // For backwards-compatibility, same as ""
+                "disabled", // For backwards-compatibility, same as ""
+                ""
               ],
-              "default": "underline",
-              "markdownDescription": "Highlight style of links to internal or external resources, like another text document or a web site."
+              "default": "",
+              "markdownDescription": "Highlight style of links to internal or external resources, for example another file or a website."
             },
             "semantic_highlighting": {
               "type": "boolean",

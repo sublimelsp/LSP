@@ -485,7 +485,11 @@ class SessionBuffer:
         self.session.do_workspace_diagnostics_async()
 
     def on_userprefs_changed_async(self) -> None:
-        self._redraw_document_links_async()
+        if userprefs().link_highlight_style == 'underline':
+            if view := self.some_view():
+                self._do_document_link_async(view, view.change_count())
+        else:
+            self._redraw_document_links_async()
         if userprefs().semantic_highlighting:
             self.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
         else:

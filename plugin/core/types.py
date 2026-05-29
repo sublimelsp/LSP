@@ -781,7 +781,7 @@ class ClientConfig:
         'settings',
         'tcp_port',
     }
-    """Server configuration keys that we have dedicated handling for."""
+    """All server configuration keys that we recognize and have handling for."""
 
     def __init__(
         self,

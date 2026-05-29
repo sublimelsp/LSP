@@ -12,7 +12,6 @@ from abc import abstractmethod
 from collections import deque
 from datetime import datetime
 from datetime import timedelta
-from typing import Any
 from typing import Generator
 from typing import Literal
 from typing import TYPE_CHECKING
@@ -89,41 +88,33 @@ class WindowConfigManager:
             for name, config in self._global_configs.items():
                 if updated_config_name and updated_config_name != name:
                     continue
-                yield resolve_global_config(name, config)
+                overrides = project_settings.pop(name, None)
+                if not isinstance(overrides, dict):
+                    overrides = {}
+                if name in self._disabled_for_session:
+                    overrides["enabled"] = False
+                stored_config = self.all.get(name)
+                updated_config = ClientConfig.from_config(config, overrides)
                 seen_config_names.add(name)
+                yield compare_configs(stored_config, updated_config)
             for name, config in project_settings.items():
                 if updated_config_name and updated_config_name != name:
                     continue
-                if new_config := resolve_project_config(name, config):
-                    yield new_config
-                    seen_config_names.add(name)
+                if name in self._disabled_for_session:
+                    config["enabled"] = False
+                try:
+                    updated_config = ClientConfig.from_dict(name, config)
+                except Exception as ex:
+                    updated_config = None
+                    exception_log(f"failed to load project-only configuration {name}", ex)
+                if updated_config:
+                    stored_config = self.all.get(name)
+                    yield compare_configs(stored_config, updated_config)
+                seen_config_names.add(name)
             # Configs in "all" that were not seen are gone.
             removed_names = self.all.keys() - seen_config_names
             for name in removed_names:
                 yield ('removed', self.all[name])
-
-        def resolve_global_config(name: str, config: ClientConfig) -> tuple[ChangeType, ClientConfig]:
-            overrides = project_settings.pop(name, None)
-            if not isinstance(overrides, dict):
-                overrides = {}
-            if name in self._disabled_for_session:
-                overrides["enabled"] = False
-            stored_config = self.all.get(name)
-            updated_config = ClientConfig.from_config(config, overrides)
-            return compare_configs(stored_config, updated_config)
-
-        def resolve_project_config(name: str, config: dict[str, Any]) -> tuple[ChangeType, ClientConfig] | None:
-            if name in self._disabled_for_session:
-                config["enabled"] = False
-            try:
-                updated_config = ClientConfig.from_dict(name, config)
-            except Exception as ex:
-                updated_config = None
-                exception_log(f"failed to load project-only configuration {name}", ex)
-            if updated_config:
-                stored_config = self.all.get(name)
-                return compare_configs(stored_config, updated_config)
-            return None
 
         def compare_configs(
             old_config: ClientConfig | None, new_config: ClientConfig

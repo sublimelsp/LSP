@@ -768,15 +768,18 @@ class ClientConfig:
     """
 
     CONFIG_KEYS: Final[set[str]] = {
+        'auto_complete_selector',
         'command',
         'diagnostics_mode',
         'disabled_capabilities',
         'enabled',
         'env',
         'experimental_capabilities',
+        'file_watcher',
         'initialization_options',
         'markdown_language_map',
         'priority_selector',
+        'semantic_tokens',
         'selector',
         'settings',
         'tcp_port',

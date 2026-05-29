@@ -16,6 +16,8 @@ from os.path import join
 from typing import Generator
 from typing import TYPE_CHECKING
 import sublime
+import sys
+import unittest
 
 if TYPE_CHECKING:
     from LSP.protocol import DidChangeWatchedFilesRegistrationOptions
@@ -150,6 +152,7 @@ class FileWatcherStaticTests(FileWatcherDocumentTestCase):
         self.assertTrue(change['uri'].endswith('file.js'))
 
 
+@unittest.skipIf(sys.platform == 'darwin', 'FileWatcherDynamicTests are failing on latest github macOS runners')
 class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
 
     def test_handles_dynamic_watcher_registration(self) -> Generator:

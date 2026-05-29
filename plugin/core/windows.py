@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from ...protocol import Diagnostic
 from ...protocol import DocumentUri
+from ...protocol import FileCreate
+from ...protocol import FileDelete
+from ...protocol import FileRename
 from ...protocol import LogMessageParams
 from ...protocol import MessageActionItem
 from ...protocol import MessageType
@@ -29,6 +32,7 @@ from .panels import PanelManager
 from .panels import PanelName
 from .promise import Promise
 from .protocol import Error
+from .protocol import Notification
 from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Logger
@@ -38,6 +42,7 @@ from .settings import client_configs
 from .settings import LspSettingsChangeListener
 from .settings import userprefs
 from .types import ClientConfig
+from .types import match_file_operation_filters
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .types import ViewStatusHandler
@@ -552,6 +557,33 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             region = sublime.Region(point, point)
             phantoms.append(sublime.Phantom(region, f"({make_link(href, code)})", sublime.PhantomLayout.INLINE))
         self._panel_code_phantoms.update(phantoms)
+
+    def notify_did_create_files(self, created_files: list[FileCreate]) -> None:
+        for session in self.get_sessions():
+            if filters := session.get_capability('workspace.fileOperations.didCreate.filters', []):
+                if files := [
+                    file_create for file_create in created_files
+                    if match_file_operation_filters(filters, file_create['uri'])
+                ]:
+                    session.send_notification(Notification.didCreateFiles({'files': files}))
+
+    def notify_did_rename_files(self, renamed_files: list[FileRename]) -> None:
+        for session in self.get_sessions():
+            if filters := session.get_capability('workspace.fileOperations.didRename.filters', []):
+                if files := [
+                    file_rename for file_rename in renamed_files
+                    if match_file_operation_filters(filters, file_rename['oldUri'])
+                ]:
+                    session.send_notification(Notification.didRenameFiles({'files': files}))
+
+    def notify_did_delete_files(self, deleted_files: list[FileDelete]) -> None:
+        for session in self.get_sessions():
+            if filters := session.get_capability('workspace.fileOperations.didDelete.filters', []):
+                if files := [
+                    file_delete for file_delete in deleted_files
+                    if match_file_operation_filters(filters, file_delete['uri'])
+                ]:
+                    session.send_notification(Notification.didDeleteFiles({'files': files}))
 
     # --- Implements WindowConfigChangeListener ------------------------------------------------------------------------
 

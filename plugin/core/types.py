@@ -889,7 +889,7 @@ class ClientConfig:
 
     @property
     def root_settings(self) -> dict[str, Any]:
-        """Provides access to configuration keys that are not explicitly exposed on ClientConfig."""
+        """Provides access to server configuration keys that are not explicitly exposed on ClientConfig."""
         return self._all_settings
 
     @property

@@ -15,6 +15,7 @@
 - Fix code lenses handled via AbstractPlugin.on_pre_server_command (#2919) (jwortmann)
 - Fix on_sheet_opened called twice from uri_handler (#2914) (Rafał Chłodnicki)
 - Fix params name in ServerNotification (#2908) (Rafał Chłodnicki)
+- Fix ClientConfig equality check (#2936)
 
 # Enhancements
 

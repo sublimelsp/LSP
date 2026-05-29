@@ -1208,9 +1208,9 @@ class ClientConfig:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClientConfig) or self._all_settings != other._all_settings:
             return False
-        for k, v in self.__dict__.items():
+        for k in self.CONFIG_KEYS:
             # "settings" are not considered when checking for equality
-            if not k.startswith("_") and k != 'settings' and v != getattr(other, k):
+            if k != 'settings' and getattr(self, k) != getattr(other, k):
                 return False
         return True
 

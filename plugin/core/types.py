@@ -1185,7 +1185,7 @@ class ClientConfig:
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, ClientConfig) or self.name != other.name or self._all_settings != other._all_settings:
+        if not isinstance(other, ClientConfig) or self._all_settings != other._all_settings:
             return False
         for k, v in self.__dict__.items():
             # "settings" are not considered when checking for equality

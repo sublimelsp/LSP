@@ -24,10 +24,6 @@ class LspSettingsChangeListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def on_server_settings_changed(self, config_name: str, settings: DottedDict) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
     def on_userprefs_updated(self) -> None:
         raise NotImplementedError
 
@@ -94,13 +90,7 @@ class ClientConfigs:
             # handle this
             return
         self.external[name] = config
-        if stored_config := self.all.get(name):
-            if stored_config != config:
-                self.update_config(name, config)
-            elif stored_config.settings != config.settings:
-                self.on_server_settings_changed(name, config.settings)
-        else:
-            self.update_config(name, config)
+        self.update_config(name, config)
 
     def update_configs(self) -> None:
         if _settings_registration is None:
@@ -125,11 +115,6 @@ class ClientConfigs:
     def update_config(self, name: str, config: ClientConfig) -> None:
         self.all[name] = config
         self._notify_clients_listener(name)
-
-    def on_server_settings_changed(self, name: str, settings: DottedDict) -> None:
-        self.all[name].settings = settings
-        if self._listener:
-            self._listener.on_server_settings_changed(name, settings)
 
     def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
         from ..api import get_plugin
@@ -181,15 +166,7 @@ def _on_server_configs_changed(settings_registration: SettingsRegistration) -> N
     if _configs_registration is None:
         return
     for name, config_dict in settings_registration.settings.to_dict().items():
-        if not isinstance(config_dict, dict):
-            continue
-        if stored_config := client_configs.all.get(name):
-            config = ClientConfig.from_dict(name, config_dict)
-            if stored_config != config:
-                client_configs.update_config(name, config)
-            elif stored_config.settings != config.settings:
-                client_configs.on_server_settings_changed(name, config.settings)
-        else:
+        if isinstance(config_dict, dict):
             client_configs.update_config(name, ClientConfig.from_dict(name, config_dict))
 
 

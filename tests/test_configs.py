@@ -76,6 +76,11 @@ class ConfigParsingTests(DeferrableTestCase):
         config2 = ClientConfig.from_config(TEST_CONFIG, {})
         self.assertEqual(config1, config2)
 
+    def test_are_with_different_enabled(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {'enabled': True})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {'enabled': False})
+        self.assertNotEqual(config1, config2)
+
     def test_are_with_different_settings(self) -> None:
         config1 = ClientConfig.from_config(TEST_CONFIG, {})
         config2 = ClientConfig.from_config(TEST_CONFIG, {'settings': {'foo': 'bar'}})

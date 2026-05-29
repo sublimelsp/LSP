@@ -27,6 +27,7 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Dict
+from typing import Final
 from typing import Generator
 from typing import Iterable
 from typing import List
@@ -766,6 +767,25 @@ class ClientConfig:
     file) are accessible through attribute access (`.foo`).
     """
 
+    CONFIG_KEYS: Final[set[str]] = {
+        'auto_complete_selector',
+        'command',
+        'diagnostics_mode',
+        'disabled_capabilities',
+        'enabled',
+        'env',
+        'experimental_capabilities',
+        'file_watcher',
+        'initialization_options',
+        'markdown_language_map',
+        'priority_selector',
+        'semantic_tokens',
+        'selector',
+        'settings',
+        'tcp_port',
+    }
+    """All server configuration keys that we recognize and have handling for."""
+
     def __init__(
         self,
         *,
@@ -853,13 +873,13 @@ class ClientConfig:
         # Transformed mapping that uses tuples instead of lists for mdpopups.
         self.resolved_markdown_language_map: MarkdownLangMap | None = None
         self.markdown_language_map = markdown_language_map  # use the setter to populate resolved_markdown_language_map
-        # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._settings_registration = settings_registration
         if isinstance(all_settings, dict):
             self._all_settings = all_settings
-            # Exclude 'settings' because it shouldn't be considered when ClientConfig is checked for equality
-            if 'settings' in self._all_settings:
-                del self._all_settings['settings']
+            # Only retain server configuration keys that we don't have dedicated properties for.
+            for key in self.CONFIG_KEYS:
+                if key in self._all_settings:
+                    del self._all_settings[key]
         else:
             self._all_settings = {}
         self._view_status_handler = default_status_view_handler
@@ -872,6 +892,7 @@ class ClientConfig:
 
     @property
     def root_settings(self) -> dict[str, Any]:
+        """Provides access to server configuration keys that are not explicitly exposed on ClientConfig."""
         return self._all_settings
 
     @property
@@ -1185,9 +1206,13 @@ class ClientConfig:
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, ClientConfig):
+        if not isinstance(other, ClientConfig) or self._all_settings != other._all_settings:
             return False
-        return self.name == other.name and self._all_settings == other._all_settings
+        for k, v in self.__dict__.items():
+            # "settings" are not considered when checking for equality
+            if not k.startswith("_") and k != 'settings' and v != getattr(other, k):
+                return False
+        return True
 
     def __hash__(self) -> int:
         return hash(self.__repr__())

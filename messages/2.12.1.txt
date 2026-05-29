@@ -1,0 +1,6 @@
+=> 2.12.1
+
+# Fixes
+
+- Fix config equality check not considering "enabled" (#2940) (Rafał Chłodnicki)
+- Notify correctly on config changes in projects (#2937) (Rafał Chłodnicki)

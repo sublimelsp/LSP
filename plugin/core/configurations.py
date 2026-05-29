@@ -24,7 +24,7 @@ RETRY_MAX_COUNT = 5
 RETRY_COUNT_TIMEDELTA = timedelta(minutes=3)
 
 
-ChangeType = Literal['added', 'removed', 'root_changed', 'settings_changed', 'unchanged']
+ConfigChangeType = Literal['added', 'removed', 'root_changed', 'settings_changed', 'unchanged']
 
 
 class WindowConfigChangeListener(ABC):
@@ -83,7 +83,7 @@ class WindowConfigManager:
         project_data = self._window.project_data()
         project_settings = project_data.get("settings", {}).get("LSP", {}) if isinstance(project_data, dict) else {}
 
-        def resolve_configs(updated_config_name: str | None = None) -> Generator[tuple[ChangeType, ClientConfig]]:
+        def resolve_configs(updated_config_name: str | None = None) -> Generator[tuple[ConfigChangeType, ClientConfig]]:
             seen_config_names: set[str] = set()
             for name, config in self._global_configs.items():
                 if updated_config_name and updated_config_name != name:
@@ -118,7 +118,7 @@ class WindowConfigManager:
 
         def compare_configs(
             old_config: ClientConfig | None, new_config: ClientConfig
-        ) -> tuple[ChangeType, ClientConfig]:
+        ) -> tuple[ConfigChangeType, ClientConfig]:
             if old_config:
                 if old_config != new_config:
                     return ('root_changed', new_config)
@@ -127,7 +127,7 @@ class WindowConfigManager:
                 return ('unchanged', old_config)
             return ('added', new_config)
 
-        changes: dict[ChangeType, list[ClientConfig]] = {
+        changes: dict[ConfigChangeType, list[ClientConfig]] = {
             'added': [],
             'removed': [],
             'root_changed': [],

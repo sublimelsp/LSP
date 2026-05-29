@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .logging import debug
 from .logging import exception_log
 from .logging import printf
 from .types import ClientConfig
@@ -14,6 +13,7 @@ from collections import deque
 from datetime import datetime
 from datetime import timedelta
 from typing import Generator
+from typing import Literal
 from typing import TYPE_CHECKING
 from weakref import WeakSet
 
@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 
 RETRY_MAX_COUNT = 5
 RETRY_COUNT_TIMEDELTA = timedelta(minutes=3)
+
+
+ConfigChangeType = Literal['added', 'removed', 'root_changed', 'settings_changed', 'unchanged']
 
 
 class WindowConfigChangeListener(ABC):
@@ -79,55 +82,80 @@ class WindowConfigManager:
     def _reload_configs(self, updated_config_name: str | None = None, notify_listeners: bool = False) -> None:
         project_data = self._window.project_data()
         project_settings = project_data.get("settings", {}).get("LSP", {}) if isinstance(project_data, dict) else {}
-        configs_with_changed_settings: list[ClientConfig] = []
-        configs_recreated: list[ClientConfig] = []
-        if updated_config_name is None:
-            self.all.clear()
-        for name, config in self._global_configs.items():
-            if updated_config_name and updated_config_name != name:
-                continue
-            overrides = project_settings.pop(name, None)
-            if isinstance(overrides, dict):
-                debug("applying .sublime-project override for", name)
-            else:
-                overrides = {}
-            if name in self._disabled_for_session:
-                overrides["enabled"] = False
-            stored_config = self.all.get(name)
-            updated_config = ClientConfig.from_config(config, overrides)
-            if not stored_config or stored_config != updated_config:
-                self.all[name] = updated_config
-                configs_recreated.append(updated_config)
-            elif stored_config.settings != updated_config.settings:
-                stored_config.settings = updated_config.settings
-                configs_with_changed_settings.append(updated_config)
-        # project_settings no longer contains config_names that were handled above.
-        for name, config in project_settings.items():
-            if updated_config_name and updated_config_name != name:
-                continue
-            debug("loading project-only configuration", name)
-            if name in self._disabled_for_session:
-                config["enabled"] = False
-            try:
-                updated_config = ClientConfig.from_dict(name, config)
-            except Exception as ex:
-                updated_config = None
-                exception_log(f"failed to load project-only configuration {name}", ex)
-            if updated_config:
+
+        def resolve_configs(updated_config_name: str | None = None) -> Generator[tuple[ConfigChangeType, ClientConfig]]:
+            seen_config_names: set[str] = set()
+            for name, config in self._global_configs.items():
+                if updated_config_name and updated_config_name != name:
+                    continue
+                overrides = project_settings.pop(name, None)
+                if not isinstance(overrides, dict):
+                    overrides = {}
+                if name in self._disabled_for_session:
+                    overrides["enabled"] = False
                 stored_config = self.all.get(name)
-                if not stored_config or stored_config != updated_config:
-                    self.all[name] = updated_config
-                    configs_recreated.append(updated_config)
-                elif stored_config.settings != updated_config.settings:
-                    stored_config.settings = updated_config.settings
-                    configs_with_changed_settings.append(updated_config)
+                updated_config = ClientConfig.from_config(config, overrides)
+                seen_config_names.add(name)
+                yield compare_configs(stored_config, updated_config)
+            for name, config in project_settings.items():
+                if updated_config_name and updated_config_name != name:
+                    continue
+                if name in self._disabled_for_session:
+                    config["enabled"] = False
+                try:
+                    updated_config = ClientConfig.from_dict(name, config)
+                except Exception as ex:
+                    updated_config = None
+                    exception_log(f"failed to load project-only configuration {name}", ex)
+                if updated_config:
+                    stored_config = self.all.get(name)
+                    yield compare_configs(stored_config, updated_config)
+                seen_config_names.add(name)
+            # Configs in "all" that were not seen are gone.
+            removed_names = self.all.keys() - seen_config_names
+            for name in removed_names:
+                yield ('removed', self.all[name])
+
+        def compare_configs(
+            old_config: ClientConfig | None, new_config: ClientConfig
+        ) -> tuple[ConfigChangeType, ClientConfig]:
+            if old_config:
+                if old_config != new_config:
+                    return ('root_changed', new_config)
+                if old_config.settings != new_config.settings:
+                    return ('settings_changed', new_config)
+                return ('unchanged', old_config)
+            return ('added', new_config)
+
+        changes: dict[ConfigChangeType, list[ClientConfig]] = {
+            'added': [],
+            'removed': [],
+            'root_changed': [],
+            'settings_changed': [],
+            'unchanged': []
+        }
+        if updated_config_name:
+            if result := next(resolve_configs(updated_config_name), None):
+                change_type, config = result
+                changes[change_type].append(config)
+                self.all[config.name] = config
+        else:
+            for result in resolve_configs():
+                change_type, config = result
+                changes[change_type].append(config)
+            self.all = {
+                **{c.name: c for c in changes['root_changed']},
+                **{c.name: c for c in changes['settings_changed']},
+                **{c.name: c for c in changes['unchanged']},
+                **{c.name: c for c in changes['added']},
+            }
         if notify_listeners:
-            if configs_with_changed_settings:
+            if changed := changes['settings_changed']:
                 for listener in self._change_listeners:
-                    listener.on_server_settings_changed(configs_with_changed_settings)
-            if configs_recreated:
+                    listener.on_server_settings_changed(changed)
+            if changed := changes['root_changed'] + changes['removed']:
                 for listener in self._change_listeners:
-                    listener.on_configs_changed(configs_recreated)
+                    listener.on_configs_changed(changed)
 
     def enable_config(self, config_name: str) -> None:
         if not self._reenable_disabled_for_session(config_name):

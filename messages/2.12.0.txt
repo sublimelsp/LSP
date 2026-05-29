@@ -1,0 +1,37 @@
+=> 2.12.0
+
+# Features
+
+- Add support for resource operations in WorkspaceEdit (#2907)  (jwortmann)
+- Add support to open URI schemes with server-provided content (#2890) (jwortmann)
+
+# Fixes
+
+- Fix lsp_code_lens command executing last code lens on cancel (#2925) (jwortmann)
+- Fix project overrides getting lost on saving global configs (#2932) (Rafał Chłodnicki)
+- Remove incorrect workaround for old markdown parser (#2930) (Rafał Chłodnicki)
+- Run handlers after responding instead of from set_timeout_async (#2927) (Rafał Chłodnicki)
+- Fix markdown_language_map setting not working (#2924) (Jack Cherng)
+- Fix code lenses handled via AbstractPlugin.on_pre_server_command (#2919) (jwortmann)
+- Fix on_sheet_opened called twice from uri_handler (#2914) (Rafał Chłodnicki)
+- Fix params name in ServerNotification (#2908) (Rafał Chłodnicki)
+- Fix ClientConfig equality check (#2936)
+
+# Enhancements
+
+- Allow setting root ClientConfig settings (#2906) (Rafał Chłodnicki)
+- Show "Follow link" in hover popup for unknown links (#2913) (Rafał Chłodnicki)
+- Only attempt on-type-formatting when replace length is 0 (#2911) (Rafał Chłodnicki)
+- Remove text decoration on link within kbd in popups (#2909) (Rafał Chłodnicki)
+- Focus view on open file URI from hover (#2934) (jwortmann)
+
+# Refactors
+
+- Remove Session.__getattr__ (#2912) (Rafał Chłodnicki)
+- Refactor workspace edit handling (#2905) (jwortmann)
+
+# Documentation
+
+- Add link to Civet LSP (#2929) (Erik Demaine)
+- Add instructions to install nixd for Nix (#2920) (Max Smolin)
+- Fix a few outdated links in settings descriptions (#2922) (jwortmann)

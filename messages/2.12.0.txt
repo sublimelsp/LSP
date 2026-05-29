@@ -2,11 +2,12 @@
 
 # Features
 
+- Add support for resource operations in WorkspaceEdit (#2907)  (jwortmann)
 - Add support to open URI schemes with server-provided content (#2890) (jwortmann)
-- Fix lsp_code_lens command executing last code lens on cancel (#2925) (jwortmann)
 
 # Fixes
 
+- Fix lsp_code_lens command executing last code lens on cancel (#2925) (jwortmann)
 - Fix project overrides getting lost on saving global configs (#2932) (Rafał Chłodnicki)
 - Remove incorrect workaround for old markdown parser (#2930) (Rafał Chłodnicki)
 - Run handlers after responding instead of from set_timeout_async (#2927) (Rafał Chłodnicki)
@@ -21,6 +22,7 @@
 - Show "Follow link" in hover popup for unknown links (#2913) (Rafał Chłodnicki)
 - Only attempt on-type-formatting when replace length is 0 (#2911) (Rafał Chłodnicki)
 - Remove text decoration on link within kbd in popups (#2909) (Rafał Chłodnicki)
+- Focus view on open file URI from hover (#2934) (jwortmann)
 
 # Refactors
 

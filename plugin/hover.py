@@ -317,7 +317,7 @@ class LspHoverCommand(LspTextCommand):
             pass
         elif scheme == 'file':
             if window := self.view.window():
-                open_file_uri(window, uri)
+                open_file_uri(window, uri).then(lambda view: window.focus_view(view) if view else None)
         elif scheme == CODE_ACTION_SCHEME:
             session_name, version, action = decode_code_action_uri(uri)
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):

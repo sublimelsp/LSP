@@ -1425,6 +1425,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         loop = asyncio.get_running_loop()
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
+            if (reader := transport.reader) and (writer := transport.writer):
+                await self._plugin.on_transport_ready(reader, writer)
+            else:
+                raise RuntimeError("transport has already stopped")
         self.transport = transport
         self.working_directory = working_directory
         params = get_initialize_params(variables, self._workspace_folders, self.config)

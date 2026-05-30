@@ -1407,8 +1407,14 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> InitializeResult | Error:
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
+            await asyncio.wait_for(self._plugin.on_transport_ready(transport.reader, transport.writer), timeout=5)
+        if self.exiting:
+            # this may happen when the server process crashes, or the TCP connection is severed for whatever reason,
+            # while awaiting the result of self._plugin.on_transport_ready. In that case, on_transport_close was
+            # invoked, which sets the self.exiting boolean to true.
+            return Error(ErrorCodes.InternalError, "server stopped prematurely")
         self.transport = transport
-        self.transport.start()
+        self.transport.start()  # start the JSON-RPC message loop
         self.working_directory = working_directory
         self._variables = variables
         params = get_initialize_params(variables, self._workspace_folders, self.config)

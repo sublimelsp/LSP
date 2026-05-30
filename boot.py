@@ -17,9 +17,11 @@ from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
+from .plugin.core.aio import gather_and_flatten_exceptions
 from .plugin.core.aio import run_coroutine
 from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
+from .plugin.core.logging import exceptions_log
 from .plugin.core.open import g_opening_files
 from .plugin.core.panels import PanelName
 from .plugin.core.registry import LspCheckApplicableCommand
@@ -235,6 +237,10 @@ def plugin_unloaded() -> None:
 class Listener(sublime_aio.EventListener):
 
     async def on_exit(self) -> None:
+        exceptions_log(
+            "Error while closing sessions",
+            await gather_and_flatten_exceptions(*(wm._end_sessions() for wm in windows._windows.values())),
+        )
         await kill_all_subprocesses()
 
     def on_load_project_async(self, window: sublime.Window) -> None:

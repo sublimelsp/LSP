@@ -999,7 +999,7 @@ class Logger(ABC):
 class CancellableRequest(Generic[R]):
     """A request that is cancellable."""
 
-    _id: int
+    _id: int | None
     _weaksession: weakref.ref[Session]
 
     def __init__(self, req_id: int, session: Session) -> None:
@@ -1008,15 +1008,17 @@ class CancellableRequest(Generic[R]):
 
     def cancel(self) -> None:
         """Cancel this request."""
-        if self._id != 0:
+        if self._id is not None:
             if session := self._weaksession():
                 session.cancel_request_async(self._id)
-                self._id = 0
+                self._id = None
 
     @property
     def id(self) -> int:
-        """Get the request ID."""
-        return self._id
+        """Get the request ID. If the request was cancelled, raises asyncio.CancelledError."""
+        if self._id is not None:
+            return self._id
+        raise asyncio.CancelledError
 
 
 class CancellableInflightRequest(CancellableRequest[R]):

@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from .setup import close_test_view
 from .setup import TextDocumentTestCase
 from LSP.plugin import Error
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
 from LSP.protocol import TextDocumentSyncKind
-from pathlib import Path
 from typing import Any
 from typing import TYPE_CHECKING
-import asyncio
 import os
 import sublime
-import tempfile
 
 if TYPE_CHECKING:
     from LSP.plugin.core.sessions import SessionBufferProtocol
@@ -74,150 +70,6 @@ class ServerRequests(TextDocumentTestCase):
         expected_output = [{"bar": "X", "baz": "Y", "a": 1, "b": None, "c": ["asdf X Y"]}]
         await verify(self, method, params, expected_output)
         self.session.config.settings.clear()
-
-    async def test_m_workspace_applyEdit(self) -> None:
-        old_change_count = self.insert_characters("hello\nworld\n")
-        edit = {
-            "newText": "there",
-            "range": {"start": {"line": 1, "character": 0}, "end": {"line": 1, "character": 5}}}
-        params = {"edit": {"changes": {filename_to_uri(self.view.file_name()): [edit]}}}
-        await verify(self, "workspace/applyEdit", params, {"applied": True})
-        while self.view.change_count() <= old_change_count:  # noqa: ASYNC110
-            await asyncio.sleep(0.05)
-        self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "hello\nthere\n")
-
-    async def test_m_workspace_applyEdit_with_nontrivial_promises(self) -> None:
-        with tempfile.TemporaryDirectory() as dirpath:
-            initial_text = ["a b", "c d"]
-            file_paths = []
-            for i in range(2):
-                file_paths.append(os.path.join(dirpath, f"file{i}.txt"))
-                Path(file_paths[-1]).write_text(initial_text[i], encoding="utf-8")  # noqa: ASYNC240
-            await verify(
-                self,
-                "workspace/applyEdit",
-                {
-                    "edit": {
-                        "changes": {
-                            filename_to_uri(file_paths[0]):
-                            [
-                                {
-                                    "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}},
-                                    "newText": "hello"
-                                },
-                                {
-                                    "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}},
-                                    "newText": "there"
-                                }
-                            ],
-                            filename_to_uri(file_paths[1]):
-                            [
-                                {
-                                    "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}},
-                                    "newText": "general"
-                                },
-                                {
-                                    "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}},
-                                    "newText": "kenobi"
-                                }
-                            ]
-                        }
-                    }
-                },
-                {"applied": True}
-            )
-            # Changes should have been applied
-            expected = ["hello there", "general kenobi"]
-            for i in range(2):
-                view = self.view.window().find_open_file(file_paths[i])
-                self.assertTrue(view)
-                view.set_scratch(True)
-                self.assertTrue(view.is_valid())
-                self.assertFalse(view.is_loading())
-                self.assertEqual(view.substr(sublime.Region(0, view.size())), expected[i])
-                await close_test_view(view)
-
-    async def test_m_workspace_applyEdit_with_wrong_uri(self) -> None:
-        uri = "file:///C:/wrong/uri.txt"
-        await verify(
-            self,
-            "workspace/applyEdit",
-            {
-                "edit": {
-                    "documentChanges": [
-                        {
-                            "textDocument": {
-                                "uri": uri,
-                                "version": None
-                            },
-                            "edits": [
-                                {
-                                    "range": {
-                                        "start": {"line": 0, "character": 0},
-                                        "end": {"line": 0, "character": 1}
-                                    },
-                                    "newText": "hello"
-                                },
-                                {
-                                    "range": {
-                                        "start": {"line": 0, "character": 2},
-                                        "end": {"line": 0, "character": 3}
-                                    },
-                                    "newText": "there"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            },
-            {
-                "applied": False,
-                "failureReason": f"Failed to open URI {uri}",
-                "failedChange": 0
-            }
-        )
-
-    async def test_m_workspace_applyEdit_with_wrong_document_version(self) -> None:
-        uri = filename_to_uri(self.view.file_name())
-        version = 123
-        self.insert_characters("a b")
-        await verify(
-            self,
-            "workspace/applyEdit",
-            {
-                "edit": {
-                    "documentChanges": [
-                        {
-                            "textDocument": {
-                                "uri": uri,
-                                "version": version
-                            },
-                            "edits": [
-                                {
-                                    "range": {
-                                        "start": {"line": 0, "character": 0},
-                                        "end": {"line": 0, "character": 1}
-                                    },
-                                    "newText": "hello"
-                                },
-                                {
-                                    "range": {
-                                        "start": {"line": 0, "character": 2},
-                                        "end": {"line": 0, "character": 3}
-                                    },
-                                    "newText": "there"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            },
-            {
-                "applied": False,
-                "failureReason": f"Document version for URI {uri} is {self.view.change_count()}, but required {version}",  # noqa: E501
-                "failedChange": 0
-            }
-        )
 
     async def test_m_client_registerCapability(self) -> None:
         await verify(

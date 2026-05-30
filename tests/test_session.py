@@ -10,6 +10,9 @@ from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.workspace import WorkspaceFolder
 from LSP.protocol import Diagnostic
 from LSP.protocol import DocumentUri
+from LSP.protocol import FileCreate
+from LSP.protocol import FileDelete
+from LSP.protocol import FileRename
 from LSP.protocol import LogMessageParams
 from LSP.protocol import MessageActionItem
 from LSP.protocol import ShowMessageParams
@@ -68,6 +71,15 @@ class MockManager(Manager):
 
     def handle_stderr_log(self, config_name: str, message: str) -> None:
         ...
+
+    def notify_did_create_files(self, created_files: list[FileCreate]) -> None:
+        pass
+
+    def notify_did_rename_files(self, renamed_files: list[FileRename]) -> None:
+        pass
+
+    def notify_did_delete_files(self, deleted_files: list[FileDelete]) -> None:
+        pass
 
 
 class MockLogger(Logger):

@@ -77,7 +77,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         return self.session() is not None
 
     def session(self) -> Session | None:
-        wm = windows.lookup(self.window)
+        wm = self.manager()
         if not wm:
             return None
         for session in wm.get_sessions():
@@ -89,7 +89,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         return None
 
     def sessions(self) -> Generator[Session]:
-        wm = windows.lookup(self.window)
+        wm = self.manager()
         if not wm:
             return
         for session in wm.get_sessions():
@@ -100,7 +100,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             yield session
 
     def session_by_name(self, session_name: str) -> Session | None:
-        wm = windows.lookup(self.window)
+        wm = self.manager()
         if not wm:
             return None
         for session in wm.get_sessions():
@@ -109,6 +109,9 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             if session.config.name == session_name:
                 return session
         return None
+
+    def manager(self) -> WindowManager | None:
+        return windows.lookup(self.window)
 
 
 class LspTextCommand(sublime_plugin.TextCommand):

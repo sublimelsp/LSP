@@ -29,6 +29,7 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Dict
+from typing import Final
 from typing import Generator
 from typing import Iterable
 from typing import List
@@ -769,6 +770,25 @@ class ClientConfig:
     file) are accessible through attribute access (`.foo`).
     """
 
+    CONFIG_KEYS: Final[set[str]] = {
+        'auto_complete_selector',
+        'command',
+        'diagnostics_mode',
+        'disabled_capabilities',
+        'enabled',
+        'env',
+        'experimental_capabilities',
+        'file_watcher',
+        'initialization_options',
+        'markdown_language_map',
+        'priority_selector',
+        'semantic_tokens',
+        'selector',
+        'settings',
+        'tcp_port',
+    }
+    """All server configuration keys that we recognize and have handling for."""
+
     def __init__(
         self,
         *,
@@ -791,7 +811,7 @@ class ClientConfig:
         markdown_language_map: MarkdownLangMapJson | None = None,
         path_maps: list[PathMap] | None = None,
         settings_registration: SettingsRegistration | None = None,
-        all_settings: dict[str, Any] | None = None
+        custom_config_keys: dict[str, Any] | None = None
     ) -> None:
         """
         :param name: Unique identifier for this language server.
@@ -830,7 +850,7 @@ class ClientConfig:
             server (e.g. inside a container).
         :param settings_registration: The `SettingsRegistration` instance holding resource path and `Settings` instance
             for the plugin settings. Present only for `ClientConfig`s created through `from_sublime_settings()`.
-        :param all_settings: The complete raw settings dictionary. Used as a fallback for attribute/key access for
+        :param custom_config_keys: The complete raw settings dictionary. Used as a fallback for attribute/key access for
             settings not explicitly modelled above.
         """
         self.name = name
@@ -856,26 +876,27 @@ class ClientConfig:
         # Transformed mapping that uses tuples instead of lists for mdpopups.
         self.resolved_markdown_language_map: MarkdownLangMap | None = None
         self.markdown_language_map = markdown_language_map  # use the setter to populate resolved_markdown_language_map
-        # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._settings_registration = settings_registration
-        if isinstance(all_settings, dict):
-            self._all_settings = all_settings
-            # Exclude 'settings' because it shouldn't be considered when ClientConfig is checked for equality
-            if 'settings' in self._all_settings:
-                del self._all_settings['settings']
+        if isinstance(custom_config_keys, dict):
+            self._custom_config_keys = custom_config_keys
+            # Only retain server configuration keys that we don't have dedicated properties for.
+            for key in self.CONFIG_KEYS:
+                if key in self._custom_config_keys:
+                    del self._custom_config_keys[key]
         else:
-            self._all_settings = {}
+            self._custom_config_keys = {}
         self._view_status_handler = default_status_view_handler
 
     def __getattr__(self, name: str, /) -> Any:
         """Get property through attribute access (`.foo`) for properties that don't exist natively."""
-        if name in self._all_settings:
-            return self._all_settings[name]
+        if name in self._custom_config_keys:
+            return self._custom_config_keys[name]
         raise AttributeError(name)
 
     @property
     def root_settings(self) -> dict[str, Any]:
-        return self._all_settings
+        """Provides access to server configuration keys that are not explicitly exposed on ClientConfig."""
+        return self._custom_config_keys
 
     @property
     @deprecated('Use initialization_options instead')
@@ -971,7 +992,7 @@ class ClientConfig:
             markdown_language_map=deepcopy(s.get("markdown_language_map")),
             path_maps=PathMap.parse(s.get("path_maps")),
             settings_registration=settings_registration,
-            all_settings=deepcopy(s.to_dict())
+            custom_config_keys=deepcopy(s.to_dict())
         )
 
     @classmethod
@@ -1007,7 +1028,7 @@ class ClientConfig:
             diagnostics_mode=deepcopy(d.get("diagnostics_mode", "all_files")),
             markdown_language_map=deepcopy(d.get("markdown_language_map")),
             path_maps=PathMap.parse(d.get("path_maps")),
-            all_settings=deepcopy(d)
+            custom_config_keys=deepcopy(d)
         )
 
     @classmethod
@@ -1017,7 +1038,7 @@ class ClientConfig:
 
         Values present in `override` take precedence over those in `src_config`. Structured
         values (`initialization_options`, `settings`) are deep-merged rather than replaced wholesale. The raw
-        `_all_settings` dict is shallow-merged.
+        `_custom_config_keys` dict is shallow-merged.
 
         :param src_config: The base configuration to start from.
         :param override: Dictionary of values to override.
@@ -1050,7 +1071,7 @@ class ClientConfig:
             markdown_language_map=deepcopy(override.get("markdown_language_map", src_config.markdown_language_map)),
             path_maps=PathMap.parse(override.get("path_maps")) or deepcopy(src_config.path_maps),
             settings_registration=src_config._settings_registration,
-            all_settings=deepcopy({**src_config._all_settings, **override})
+            custom_config_keys=deepcopy({**src_config._custom_config_keys, **override})
         )
 
     def create_transport_config(self) -> TransportConfig:
@@ -1188,9 +1209,12 @@ class ClientConfig:
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, ClientConfig):
-            return False
-        return self.name == other.name and self._all_settings == other._all_settings
+        return (
+            isinstance(other, ClientConfig)
+            and self._custom_config_keys == other._custom_config_keys
+            # "settings" are not considered when checking for equality
+            and all(k == 'settings' or getattr(self, k) == getattr(other, k) for k in self.CONFIG_KEYS)
+        )
 
     def __hash__(self) -> int:
         return hash(self.__repr__())

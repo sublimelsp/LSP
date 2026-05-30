@@ -7,7 +7,6 @@ from .core.logging import debug
 from .core.open import open_file_uri
 from .core.promise import Promise
 from .core.protocol import Error
-from .core.protocol import Notification
 from .core.protocol import Request
 from .core.registry import LspWindowCommand
 from .core.types import match_file_operation_filters
@@ -118,8 +117,8 @@ class LspRenamePathCommand(LspWindowCommand):
         run_coroutine(run())
 
     def on_rename_path(self, success: bool, file_rename: FileRename) -> None:
-        if success:
-            self.notify_did_rename(file_rename)
+        if success and (mgr := self.manager()):
+            mgr.notify_did_rename_files([file_rename])
 
     def prompt_rename_async(self, file_rename: FileRename, label: str, rename_command_args: dict[str, Any]) -> None:
         Promise.all(list(self.create_will_rename_requests_async(file_rename))) \
@@ -188,12 +187,6 @@ class LspRenamePathCommand(LspWindowCommand):
             self.restore_view(selection, group, await open_file_uri(self.window, file_name, group=group[0]))
         self.focus_view(last_active_view)
         return True
-
-    def notify_did_rename(self, file_rename: FileRename) -> None:
-        for session in self.sessions():
-            filters = session.get_capability('workspace.fileOperations.didRename.filters') or []
-            if filters and match_file_operation_filters(filters, file_rename['oldUri']):
-                session.send_notification(Notification.didRenameFiles({'files': [file_rename]}))
 
     def restore_view(self, selection: list[sublime.Region], group: tuple[int, int], view: sublime.View | None) -> None:
         if not view:

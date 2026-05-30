@@ -28,7 +28,10 @@ from ...protocol import DocumentUri
 from ...protocol import ErrorCodes
 from ...protocol import ExecuteCommandParams
 from ...protocol import FailureHandlingKind
+from ...protocol import FileCreate
+from ...protocol import FileDelete
 from ...protocol import FileEvent
+from ...protocol import FileRename
 from ...protocol import FileSystemWatcher
 from ...protocol import FoldingRangeKind
 from ...protocol import GeneralClientCapabilities
@@ -53,6 +56,7 @@ from ...protocol import PublishDiagnosticsParams
 from ...protocol import Range
 from ...protocol import RegistrationParams
 from ...protocol import RenameFile
+from ...protocol import ResourceOperationKind
 from ...protocol import SemanticTokenModifiers
 from ...protocol import SemanticTokenTypes
 from ...protocol import ShowDocumentParams
@@ -172,6 +176,7 @@ from abc import abstractmethod
 from enum import IntFlag
 from functools import lru_cache
 from functools import partial
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -325,6 +330,18 @@ class Manager(ABC):
 
     @abstractmethod
     def handle_stderr_log(self, config_name: str, message: str) -> None:
+        ...
+
+    @abstractmethod
+    def notify_did_create_files(self, created_files: list[FileCreate]) -> None:
+        ...
+
+    @abstractmethod
+    def notify_did_rename_files(self, renamed_files: list[FileRename]) -> None:
+        ...
+
+    @abstractmethod
+    def notify_did_delete_files(self, deleted_files: list[FileDelete]) -> None:
         ...
 
 
@@ -559,6 +576,11 @@ def get_initialize_params(
         "applyEdit": True,
         "workspaceEdit": {
             "documentChanges": True,
+            "resourceOperations": [
+                ResourceOperationKind.Create,
+                ResourceOperationKind.Rename,
+                ResourceOperationKind.Delete
+            ],
             "failureHandling": FailureHandlingKind.Abort,
             "normalizesLineEndings": True,
             "changeAnnotationSupport": {
@@ -1796,22 +1818,30 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         change_annotations: dict[ChangeAnnotationIdentifier, ChangeAnnotation],
         *,
         label: str | None = None,
-        is_refactoring: bool = False
+        is_refactoring: bool = False,
     ) -> ApplyWorkspaceEditResult:
+        created_files: list[FileCreate] = []
+        renamed_files: list[FileRename] = []
+        deleted_files: list[FileDelete] = []
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
         index = 0  # Assuming 0-based indexing for the ApplyWorkspaceEditResult.faildedChange value
         result = await self._apply_document_changes_recursive(
-            document_changes, change_annotations, index, label, auto_save)
+            document_changes, change_annotations, created_files, renamed_files, deleted_files, index, label, auto_save
+        )
         self._set_selected_sheets(selected_sheets)
         self._set_focused_sheet(active_sheet)
+        self._notify_after_resource_operations(created_files, renamed_files, deleted_files)
         return result
 
     async def _apply_document_changes_recursive(
         self,
         document_changes: list[TextDocumentEdit | CreateFile | RenameFile | DeleteFile],
         change_annotations: dict[ChangeAnnotationIdentifier, ChangeAnnotation],
+        created_files: list[FileCreate],
+        renamed_files: list[FileRename],
+        deleted_files: list[FileDelete],
         index: int,
         label: str | None,
         auto_save: str
@@ -1840,6 +1870,40 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 await self._set_view_state(view_state_actions, view)
             return None
 
+        def create_file(path: str) -> str | None:
+            try:
+                Path(path).open('x', encoding='utf-8').close()
+            except (FileExistsError, OSError) as ex:
+                return str(ex)
+            created_files.append({'uri': filename_to_uri(path)})
+            return None
+
+        def rename_file(old_path: str, new_path: str) -> str | None:
+            view = self.window.find_open_file(old_path) if os.path.isfile(old_path) else None
+            try:
+                Path(old_path).rename(new_path)
+            except (FileExistsError, IsADirectoryError, NotADirectoryError, OSError) as ex:
+                return str(ex)
+            old_uri = filename_to_uri(old_path)
+            new_uri = filename_to_uri(new_path)
+            if view:
+                view.retarget(new_path)
+                view.settings().set('lsp_uri', new_uri)
+            renamed_files.append({'oldUri': old_uri, 'newUri': new_uri})
+            return None
+
+        async def delete_file(path: str) -> None:
+            # The delete_file command moves the given files into the recycle bin
+            self.window.run_command('delete_file', {'files': [path], 'prompt': False})
+            # TODO: How to wait for the deletion? This may be fragile...
+            await asyncio.sleep(0.1)
+
+        async def delete_folder(path: str) -> None:
+            # The delete_folder command moves the given folders into the recycle bin
+            self.window.run_command('delete_folder', {'dirs': [path], 'prompt': False})
+            # TODO: How to wait for the deletion? This may be fragile...
+            await asyncio.sleep(0.1)
+
         async def _continue(failure_reason: str | None) -> ApplyWorkspaceEditResult:
             if failure_reason:
                 printf(f'Error while applying WorkspaceEdit: {failure_reason}')
@@ -1849,7 +1913,15 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     'failedChange': index
                 }
             return await self._apply_document_changes_recursive(
-                document_changes, change_annotations, index + 1, label, auto_save)
+                document_changes,
+                change_annotations,
+                created_files,
+                renamed_files,
+                deleted_files,
+                index + 1,
+                label,
+                auto_save
+            )
 
         try:
             document_change = document_changes.pop(0)
@@ -1866,32 +1938,64 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 view, uri, document_change['edits'], version, view_state_actions)
             return await _continue(failure_reason)
         if is_create_file(document_change):
-            # TODO: add support for ResourceOperationKind.Create
-            return {
-                'applied': False,
-                'failureReason': 'CreateFile not yet supported by client',
-                'failedChange': index
-            }
+            uri = document_change['uri']
+            options = document_change.get('options', {})
+            scheme, path = parse_uri(uri)
+            if scheme != 'file':
+                return await _continue(f'CreateFile not supported for URI {uri}')
+            if os.path.isfile(path):  # noqa: ASYNC240
+                if options.get('overwrite'):
+                    await delete_file(path)
+                    return await _continue(create_file(path))
+                if options.get('ignoreIfExists'):
+                    return await _continue(None)
+                return await _continue(f'CreateFile failed because a file already exists at target {uri}')
+            if os.path.isdir(path):  # noqa: ASYNC240
+                # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
+                return await _continue(f'CreateFile failed because a folder already exists at target {uri}')
+            return await _continue(create_file(path))
         if is_rename_file(document_change):
-            # TODO: add support for ResourceOperationKind.Rename
-            return {
-                'applied': False,
-                'failureReason': 'RenameFile not yet supported by client',
-                'failedChange': index
-            }
+            old_uri = document_change['oldUri']
+            new_uri = document_change['newUri']
+            options = document_change.get('options', {})
+            old_scheme, old_path = parse_uri(old_uri)
+            if old_scheme != 'file':
+                return await _continue(f'RenameFile not supported for URI {old_uri}')
+            if not os.path.exists(old_path):  # noqa: ASYNC240
+                return await _continue(f'RenameFile failed because {old_uri} does not exist')
+            new_scheme, new_path = parse_uri(new_uri)
+            if new_scheme != 'file':
+                return await _continue(f'RenameFile not supported for URI {new_uri}')
+            if os.path.isfile(new_path):  # noqa: ASYNC240
+                if options.get('overwrite') and os.path.isfile(old_path):  # noqa: ASYNC240
+                    await delete_file(new_path)
+                    await _continue(rename_file(old_path, new_path))
+                if options.get('ignoreIfExists'):
+                    return await _continue(None)
+                return await _continue(f'RenameFile failed because target {new_uri} already exists')
+            if os.path.isdir(new_path):  # noqa: ASYNC240
+                # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
+                return await _continue(f'RenameFile failed because target {new_uri} already exists')
+            return await _continue(rename_file(old_path, new_path))
         if is_delete_file(document_change):
-            # TODO: add support for ResourceOperationKind.Delete
-            return {
-                'applied': False,
-                'failureReason': 'DeleteFile not yet supported by client',
-                'failedChange': index
-            }
+            uri = document_change['uri']
+            options = document_change.get('options', {})
+            scheme, path = parse_uri(uri)
+            if scheme != 'file':
+                return await _continue(f'DeleteFile not supported for URI {uri}')
+            if os.path.isfile(path):  # noqa: ASYNC240
+                deleted_files.append({'uri': uri})
+                return await _continue(await delete_file(path))
+            if os.path.isdir(path):  # noqa: ASYNC240
+                if os.listdir() and not options.get('recursive'):
+                    return await _continue(f'DeleteFile failed because folder {uri} is not empty')
+                deleted_files.append({'uri': uri})
+                return await _continue(await delete_folder(path))
+            if options.get('ignoreIfNotExists'):
+                return await _continue(None)
+            return await _continue(f'DeleteFile failed because {uri} does not exist')
         # Should be unreachable, but must return value on all code paths to satisfy type checker
-        return {
-            'applied': False,
-            'failureReason': 'Unknown document change type',
-            'failedChange': index
-        }
+        return await _continue('Unknown document change type')
 
     async def apply_workspace_edit(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
@@ -2004,6 +2108,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     def _set_focused_sheet(self, sheet: sublime.Sheet | None) -> None:
         if sheet and sheet != self.window.active_sheet():
             self.window.focus_sheet(sheet)
+
+    def _notify_after_resource_operations(
+        self, created_files: list[FileCreate], renamed_files: list[FileRename], deleted_files: list[FileDelete]
+    ) -> None:
+        if mgr := self.manager():
+            if created_files:
+                mgr.notify_did_create_files(created_files)
+            if renamed_files:
+                mgr.notify_did_rename_files(renamed_files)
+            if deleted_files:
+                mgr.notify_did_delete_files(deleted_files)
 
     def decode_semantic_token(
         self,

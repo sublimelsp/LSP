@@ -319,7 +319,12 @@ class LspHoverCommand(LspTextCommand):
             pass
         elif scheme == 'file':
             if window := self.view.window():
-                run_coroutine(open_file_uri(window, uri))
+
+                async def open_file() -> None:
+                    if view := await open_file_uri(window, uri):
+                        window.focus_view(view)
+
+                run_coroutine(open_file())
         elif scheme == CODE_ACTION_SCHEME:
             session_name, version, action = decode_code_action_uri(uri)
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):

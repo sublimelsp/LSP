@@ -5,6 +5,7 @@ from .core.open import open_in_browser
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
+from .core.settings import userprefs
 from .core.url import parse_uri
 from .core.views import range_to_region
 from .core.views import text_document_identifier
@@ -22,11 +23,22 @@ class LspOpenLinkCommand(LspTextCommand):
 
     capability = 'documentLinkProvider'
 
-    def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
-        sublime.set_timeout_async(lambda: self._run_async(event))
+    def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
+        if not super().is_enabled(event, point):
+            return False
+        if userprefs().link_highlight_style == 'underline':
+            if (position := get_position(self.view, event, point)) is not None:
+                if session := self.best_session(self.capability, position):
+                    if sv := session.session_view_for_view_async(self.view):
+                        return sv.session_buffer.get_document_link_at_point(self.view, position) is not None
+            return False
+        return True
 
-    def _run_async(self, event: dict | None) -> None:
-        if (position := get_position(self.view, event)) is not None:
+    def run(self, edit: sublime.Edit, event: dict | None = None, point: int | None = None) -> None:
+        sublime.set_timeout_async(lambda: self._run_async(event, point))
+
+    def _run_async(self, event: dict | None, point: int | None) -> None:
+        if (position := get_position(self.view, event, point)) is not None:
             if session := self.best_session(self.capability, position):
                 session.send_request_async(
                     Request.documentLink({'textDocument': text_document_identifier(self.view)}, self.view),
@@ -34,9 +46,7 @@ class LspOpenLinkCommand(LspTextCommand):
                 )
 
     def _on_response_async(self, session: Session, point: int, response: list[DocumentLink] | None) -> None:
-        if not response:
-            return
-        for link in response:
+        for link in response or []:
             if range_to_region(link['range'], self.view).contains(point):
                 if (uri := link.get('target')) is not None:
                     self._open_uri_async(session, uri)
@@ -44,6 +54,8 @@ class LspOpenLinkCommand(LspTextCommand):
                     request = Request.resolveDocumentLink(link, self.view)
                     session.send_request_async(request, partial(self._on_resolved_async, session))
                 return
+        if window := self.view.window():
+            window.status_message('No link available')
 
     def _on_resolved_async(self, session: Session, response: DocumentLink) -> None:
         if uri := response.get('target'):

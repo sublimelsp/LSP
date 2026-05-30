@@ -1062,13 +1062,13 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
         """
         return self._is_streaming
 
-    def on_partial_result(self, response: R) -> None:
+    def _on_partial_result(self, response: R) -> None:
         # Note: R should have type list[...].
         self._is_streaming = True
         if response:
             self._queue.put_nowait(response)
 
-    def on_final_result(self, response: R) -> None:
+    def _on_final_result(self, response: R) -> None:
         # Note: if the language server doesn't actually support partial results, then this is the only callback that
         # will be invoked.
         if response:
@@ -1076,7 +1076,7 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
         # Put the final special None value in the queue, so the iteration stops.
         self._queue.put_nowait(None)
 
-    def on_error(self, error: ResponseError) -> None:
+    def _on_error(self, error: ResponseError) -> None:
         self._queue.put_nowait(Error.from_lsp(error))
 
     def __aiter__(self) -> CancellableInflightStreamingRequest:
@@ -2714,8 +2714,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if r.progress:
             r.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         r.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
-        r.on_partial_result = result.on_partial_result
-        self._response_handlers[request_id] = (r, result.on_final_result, result.on_error)
+        r.on_partial_result = result._on_partial_result
+        self._response_handlers[request_id] = (r, result._on_final_result, result._on_error)
         self._invoke_views(r, "on_request_started_async", request_id, r)
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, r)

@@ -67,7 +67,7 @@ class WillSaveWaitTask(LspTask):
     async def run(self) -> None:
         await super().run()
         for session in self._text_command.sessions('textDocumentSync.willSaveWaitUntil'):
-            self._purge_changes_async()
+            await self._purge_changes()
             view = self._text_command.view
             try:
                 if text_edits := await session.request(
@@ -90,7 +90,7 @@ class FormatOnSaveTask(LspTask):
     @override
     async def run(self) -> None:
         await super().run()
-        self._purge_changes_async()
+        await self._purge_changes()
         syntax = self._text_command.view.syntax()
         if not syntax:
             return
@@ -131,7 +131,7 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
             self.select_formatter(base_scope, session_names)
             return
         if listener := self.get_listener():
-            listener.purge_changes_async()
+            await listener.purge_changes()
         if len(session_names) > 1:
             if formatter := get_formatter(self.view.window(), base_scope):
                 if session := self.session_by_name(formatter, self.capability):
@@ -178,7 +178,7 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
             async def do_format() -> None:
                 if session := self.session_by_name(session_name, self.capability):
                     if listener := self.get_listener():
-                        listener.purge_changes_async()
+                        await listener.purge_changes()
                         await self._apply_text_edits(
                             await session.request(text_document_formatting(self.view)), label=self.label
                         )
@@ -205,7 +205,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
 
     async def _run(self) -> None:
         if listener := self.get_listener():
-            listener.purge_changes_async()
+            await listener.purge_changes()
         session: Session | None = None
         text_edits: list[TextEdit] | None = None
         try:

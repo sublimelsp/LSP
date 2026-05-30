@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from .core.aio import run_coroutine
-from .core.aio import run_on_asyncio_thread
 from .core.edit import show_summary_message
 from .core.protocol import Request
 from .core.registry import get_position
@@ -104,7 +103,11 @@ class LspSymbolRenameCommand(LspTextCommand):
         point: int | None = None
     ) -> None:
         if listener := self.get_listener():
-            run_on_asyncio_thread(listener.purge_changes_async)
+
+            async def purge() -> None:
+                await listener.purge_changes()
+
+            run_coroutine(purge())
         location = get_position(self.view, event, point)
         session = self._get_prepare_rename_session(point, session_name)
         if new_name or placeholder or not session:

@@ -27,7 +27,6 @@ from ..protocol import SemanticTokens
 from ..protocol import SemanticTokensDelta
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
-from ..protocol import TextEdit
 from ..protocol import UnchangedDocumentDiagnosticReport
 from .api import AbstractPlugin
 from .api import LspPlugin
@@ -55,7 +54,6 @@ from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
 from .core.types import Capabilities
-from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SemanticToken
@@ -222,16 +220,16 @@ class SessionBuffer(TaskContainer):
         return self._last_synced_version
 
     def on_session_view_initialized(self, view: sublime.View) -> None:
-        self._check_did_open(view)
+        self.create_task(self._check_did_open(view))
 
-    def _check_did_open(self, view: sublime.View) -> None:
+    async def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
             language_id = self.get_language_id()
             if not language_id:
                 # we're closing
                 return
             try:
-                self.session.send_notification_async(did_open(view, language_id))
+                await self.session.notify(did_open(view, language_id))
             except MissingUriError:
                 # Closed tab. Just forget about it.
                 return
@@ -241,7 +239,7 @@ class SessionBuffer(TaskContainer):
             request_flags = self._get_request_flags(view)
             if request_flags & RequestFlags.DOCUMENT_COLOR:
                 self._do_color_boxes_async(view, version)
-            self.do_document_diagnostic_async(view, version)
+            self.create_task(self.do_document_diagnostic(view, version))
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
                 self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
             if request_flags & RequestFlags.INLAY_HINT:
@@ -251,11 +249,11 @@ class SessionBuffer(TaskContainer):
                 self._do_document_link_async(view, version)
             self.session.notify_plugin_on_session_buffer_change_async(self)
 
-    def _check_did_close(self, view: sublime.View) -> None:
+    async def _check_did_close(self, view: sublime.View) -> None:
         if self.opened and self.should_notify_did_close():
-            self.purge_changes_async(view, suppress_requests=True)
-            self.session.send_notification(did_close(uri=self._last_known_uri))
             self.opened = False
+            await self.purge_changes(view, suppress_requests=True)
+            await self.session.notify(did_close(uri=self._last_known_uri))
 
     def get_uri(self) -> DocumentUri | None:
         for sv in self.session_views:
@@ -307,7 +305,7 @@ class SessionBuffer(TaskContainer):
         # in unregistering ourselves from the session.
         if not self.session.exiting:
             # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
-            self._check_did_close(view)
+            await self._check_did_close(view)
             self.session.unregister_session_buffer_async(self)
         return await self.cancel_all_tasks()
 
@@ -327,10 +325,10 @@ class SessionBuffer(TaskContainer):
                 view = sv.view
         if view is not None:
             if capability_path.startswith("textDocumentSync."):
-                self._check_did_open(view)
+                self.create_task(self._check_did_open(view))
             elif capability_path.startswith("diagnosticProvider"):
                 if not suppress_requests:
-                    self.do_document_diagnostic_async(view, view.change_count())
+                    self.create_task(self.do_document_diagnostic(view, view.change_count()))
             elif capability_path.startswith("codeLensProvider"):
                 if not suppress_requests:
                     self.do_code_lenses_async(view)
@@ -384,7 +382,7 @@ class SessionBuffer(TaskContainer):
     def should_notify_did_close(self) -> bool:
         return self.capabilities.should_notify_did_close() or self.session.should_notify_did_close()
 
-    def on_text_changed_async(
+    def on_text_changed(
         self, view: sublime.View, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
     ) -> None:
         if change_count <= self._last_synced_version:
@@ -403,18 +401,36 @@ class SessionBuffer(TaskContainer):
         elif self._pending_changes.version < change_count:
             self._pending_changes.update(change_count, changes)
             purge = True
-        if purge:
-            self._cancel_pending_requests_async()
-            if (
-                userprefs().format_on_type and last_change.len_utf16 == 0
-                and (params := self._get_on_type_formatting_params_async(view, action, last_change.str))
-            ):
-                self.purge_changes_async(view)
-                self.session.send_request_task(Request.onTypeFormatting(params, view)) \
-                    .then(partial(self._on_type_formatting_result_async, view, change_count))
-            else:
-                debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
-                          lambda: view.is_valid() and change_count == view.change_count())
+        if not purge:
+            return
+        self._cancel_pending_requests_async()
+        if (
+            userprefs().format_on_type
+            and last_change.len_utf16 == 0
+            and (params := self._get_on_type_formatting_params_async(view, action, last_change.str))
+        ):
+
+            async def purge_changes_and_do_on_type_formatting() -> None:
+                await self.purge_changes(view)
+                try:
+                    if (
+                        (result := await self.session.request(Request.onTypeFormatting(params, view)))
+                        and view.is_valid()
+                        and change_count == view.change_count()
+                    ):
+                        await apply_text_edits(view, result)
+                except Error:
+                    pass
+
+            self.create_task(purge_changes_and_do_on_type_formatting())
+        else:
+
+            async def maybe_purge_later() -> None:
+                await asyncio.sleep(FEATURES_TIMEOUT / 1000)
+                if view.is_valid() and change_count == view.change_count():
+                    await self.purge_changes(view)
+
+            self.create_task(maybe_purge_later())
 
     def _cancel_pending_requests_async(self) -> None:
         for identifier, pending_request in self._document_diagnostic_pending_requests.items():
@@ -425,15 +441,15 @@ class SessionBuffer(TaskContainer):
             self.session.cancel_request_async(self.semantic_tokens.pending_response)
             self.semantic_tokens.pending_response = None
 
-    def on_revert_async(self, view: sublime.View) -> None:
+    async def on_revert(self, view: sublime.View) -> None:
         self._pending_changes = None  # Don't bother with pending changes
         version = view.change_count()
-        self.session.send_notification(did_change(view, version, None))
-        self._on_after_change_async(view, version)
+        await self.session.notify(did_change(view, version, None))
+        await self._on_after_change(view, version)
 
-    on_reload_async = on_revert_async
+    on_reload = on_revert
 
-    def purge_changes_async(self, view: sublime.View, suppress_requests: bool = False) -> None:
+    async def purge_changes(self, view: sublime.View, suppress_requests: bool = False) -> None:
         if self._pending_changes is None:
             return
         sync_kind = self.text_sync_kind()
@@ -445,17 +461,18 @@ class SessionBuffer(TaskContainer):
         else:
             changes = self._pending_changes.changes
             version = self._pending_changes.version
+        # Note: set _pending_changes to None *now*, not *after* the await point. Otherwise pending changes may arrive
+        # that might be discarded, resulting in a completely messed up state between the lang server and the editor.
+        self._pending_changes = None
         try:
-            self.create_task(self.session.notify(did_change(view, version, changes)))
+            await self.session.notify(did_change(view, version, changes))
             self._last_synced_version = version
         except MissingUriError:
             return  # we're closing
-        finally:
-            self._pending_changes = None
         self.session.notify_plugin_on_session_buffer_change_async(self)
-        self._on_after_change_async(view, version, suppress_requests)
+        await self._on_after_change(view, version, suppress_requests)
 
-    def _on_after_change_async(self, view: sublime.View, version: int, suppress_requests: bool = False) -> None:
+    async def _on_after_change(self, view: sublime.View, version: int, suppress_requests: bool = False) -> None:
         if self._is_saving:
             self._has_changed_during_save = True
             return
@@ -465,7 +482,7 @@ class SessionBuffer(TaskContainer):
             request_flags = self._get_request_flags(view)
             if request_flags & RequestFlags.DOCUMENT_COLOR:
                 self._do_color_boxes_async(view, version)
-            self.do_document_diagnostic_async(view, version)
+            self.create_task(self.do_document_diagnostic(view, version))
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
                 self.do_semantic_tokens_async(view)
             if userprefs().link_highlight_style in {"underline", "none"}:
@@ -476,27 +493,27 @@ class SessionBuffer(TaskContainer):
         except MissingUriError:
             pass
 
-    def on_pre_save_async(self, view: sublime.View) -> None:
+    async def on_pre_save(self, view: sublime.View) -> None:
         self._is_saving = True
         if self.should_notify_will_save():
-            self.purge_changes_async(view)
+            await self.purge_changes(view)
             # TextDocumentSaveReason.Manual
-            self.session.send_notification(will_save(self._last_known_uri, TextDocumentSaveReason.Manual))
+            await self.session.notify(will_save(self._last_known_uri, TextDocumentSaveReason.Manual))
 
-    def on_post_save_async(self, view: sublime.View, new_uri: DocumentUri) -> None:
+    async def on_post_save(self, view: sublime.View, new_uri: DocumentUri) -> None:
         self._is_saving = False
         if new_uri != self._last_known_uri:
-            self._check_did_close(view)
+            await self._check_did_close(view)
             self._last_known_uri = new_uri
-            self._check_did_open(view)
+            await self._check_did_open(view)
         else:
             send_did_save, include_text = self.should_notify_did_save()
             if send_did_save:
-                self.purge_changes_async(view)
-                self.session.send_notification(did_save(view, include_text, self._last_known_uri))
+                await self.purge_changes(view)
+                await self.session.notify(did_save(view, include_text, self._last_known_uri))
         if self._has_changed_during_save:
             self._has_changed_during_save = False
-            self._on_after_change_async(view, view.change_count())
+            await self._on_after_change(view, view.change_count())
         self.session.do_workspace_diagnostics_async()
 
     def on_userprefs_changed_async(self) -> None:
@@ -649,18 +666,26 @@ class SessionBuffer(TaskContainer):
 
     # --- textDocument/diagnostic --------------------------------------------------------------------------------------
 
-    def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = False) -> None:
+    async def do_document_diagnostic(
+        self, view: sublime.View, version: int, *, forced_update: bool = False
+    ) -> list[BaseException | None]:
         mgr = self.session.manager()
         if not mgr or mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
-            return
+            return []
         if version < view.change_count():
             # If the document content changed in the meanwhile, new diagnostic requests will automatically be triggered
             # from _on_after_change_async after the didChange notification.
-            return
+            return []
 
-        for identifier in self.session.diagnostics.get_identifiers(view):
-            self.create_task(self._do_document_diagnostic(view, identifier, version, forced_update=forced_update))
+        task = asyncio.gather(
+            *(
+                self._do_document_diagnostic(view, identifier, version, forced_update=forced_update)
+                for identifier in self.session.diagnostics.get_identifiers(view)
+            ),
+            return_exceptions=True,
+        )
         self._reset_pending_refresh(RequestFlags.DIAGNOSTIC)
+        return await task
 
     async def _do_document_diagnostic(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, *, forced_update: bool = False
@@ -701,12 +726,15 @@ class SessionBuffer(TaskContainer):
             and is_diagnostic_server_cancellation_data(error.data)
             and error.data['retriggerRequest']
         ):
-            # Retrigger the request after a short delay, but only if there are no additional changes to the
-            # buffer in the meanwhile, because in that case a new request will be sent automatically after the
-            # didChange notification.
-            await asyncio.sleep(DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY)
-            if version == view.change_count():
-                self.create_task(self._do_document_diagnostic(view, identifier, version))
+            async def redo_later() -> None:
+                # Retrigger the request after a short delay, but only if there are no additional changes to the
+                # buffer in the meanwhile, because in that case a new request will be sent automatically after the
+                # didChange notification.
+                await asyncio.sleep(DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY)
+                if version == view.change_count():
+                    self.create_task(self._do_document_diagnostic(view, identifier, version))
+
+            self.create_task(redo_later())
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
@@ -817,12 +845,6 @@ class SessionBuffer(TaskContainer):
                 'ch': trigger[0],
             }
         return None
-
-    def _on_type_formatting_result_async(
-        self, view: sublime.View, version: int, result: list[TextEdit] | Error | None
-    ) -> None:
-        if result and not isinstance(result, Error) and version == view.change_count():
-            self.create_task(apply_text_edits(view, result))
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 
@@ -1015,9 +1037,9 @@ class SessionBuffer(TaskContainer):
         kinds: list[str | CodeActionKind] | None = None,
         trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic,
     ) -> Promise[list[Command | CodeAction] | BaseException | None]:
-        return Promise.wrap_task(
-            self.create_task(self.request_code_actions(view, region, diagnostics, kinds, trigger_kind))
-        )
+        if task := self.create_task(self.request_code_actions(view, region, diagnostics, kinds, trigger_kind)):
+            return Promise.wrap_task(task)
+        raise RuntimeError("unable to schedule task")
 
     async def request_code_actions(
         self,

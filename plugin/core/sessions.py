@@ -807,8 +807,9 @@ class SessionBufferProtocol(Protocol):
     def remove_all_inlay_hints(self) -> None:
         ...
 
-    def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
-        ...
+    async def do_document_diagnostic(
+        self, view: sublime.View, version: int, *, forced_update: bool = ...
+    ) -> list[BaseException | None]: ...
 
     def request_code_actions_async(
         self,
@@ -862,11 +863,11 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def purge_changes_async(self) -> None:
+    def purge_changes(self) -> asyncio.Future[list[BaseException | None]]:
         raise NotImplementedError
 
     @abstractmethod
-    def trigger_on_pre_save_async(self) -> None:
+    def trigger_on_pre_save(self) -> asyncio.Future[list[BaseException | None]]:
         raise NotImplementedError
 
     @abstractmethod
@@ -896,21 +897,21 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @overload
-    def do_signature_help_async(
+    async def do_signature_help(
         self,
         trigger_kind: Literal[SignatureHelpTriggerKind.TriggerCharacter],
         trigger_char: str
     ) -> None: ...
 
     @overload
-    def do_signature_help_async(
+    async def do_signature_help(
         self,
         trigger_kind: Literal[SignatureHelpTriggerKind.Invoked, SignatureHelpTriggerKind.ContentChange],
         trigger_char: None = None
     ) -> None: ...
 
     @abstractmethod
-    def do_signature_help_async(self, trigger_kind: SignatureHelpTriggerKind, trigger_char: str | None = None) -> None:
+    async def do_signature_help(self, trigger_kind: SignatureHelpTriggerKind, trigger_char: str | None = None) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -1484,7 +1485,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             listener = session_view.listener()
             if not listener:
                 return None
-            listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked)
+            await listener.do_signature_help(SignatureHelpTriggerKind.Invoked)
             return None
         # Handle VSCode-specific command which is often used for "References" code lenses
         if command_name == "editor.action.showReferences" and view:
@@ -1522,9 +1523,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         view: sublime.View | None = None,
         is_refactoring: bool = False,
     ) -> Promise[LSPAny | BaseException]:
-        return Promise.wrap_task(
-            self.create_task(self.execute_command(command, progress=progress, view=view, is_refactoring=is_refactoring))
-        )
+        if task := self.create_task(
+            self.execute_command(command, progress=progress, view=view, is_refactoring=is_refactoring)
+        ):
+            return Promise.wrap_task(task)
+        raise RuntimeError("unable to schedule task")
 
     def check_log_unsupported_command(self, command: str) -> None:
         if userprefs().log_debug and command not in self._logged_unsupported_commands:
@@ -1936,9 +1939,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return cast('ApplyWorkspaceEditResult', {}), cast('WorkspaceEditSummary', {})
             return x
 
-        return Promise.wrap_task(
-            self.create_task(self.apply_workspace_edit(edit, label=label, is_refactoring=is_refactoring))
-        ).then(ignore_exception)
+        if task := self.create_task(self.apply_workspace_edit(edit, label=label, is_refactoring=is_refactoring)):
+            return Promise.wrap_task(task).then(ignore_exception)
+        raise RuntimeError("unable to schedule task")
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
@@ -2184,7 +2187,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
         for session_buffer, session_view in visible_session_buffers:
             view = session_view.view
-            session_buffer.do_document_diagnostic_async(view, view.change_count(), forced_update=True)
+            self.create_task(session_buffer.do_document_diagnostic(view, view.change_count(), forced_update=True))
         for session_buffer in not_visible_session_buffers:
             session_buffer.set_pending_refresh(RequestFlags.DIAGNOSTIC)
 

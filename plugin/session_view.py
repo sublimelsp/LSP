@@ -22,6 +22,7 @@ from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any
+from typing import Coroutine
 from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakValueDictionary
@@ -364,25 +365,25 @@ class SessionView:
         if request := self._active_requests.get(request_id, None):
             request.update_progress_async(params)
 
-    def on_text_changed_async(
+    def on_text_changed(
         self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
     ) -> None:
-        self.session_buffer.on_text_changed_async(self.view, change_count, changes, action)
+        self.session_buffer.on_text_changed(self.view, change_count, changes, action)
 
-    def on_revert_async(self) -> None:
-        self.session_buffer.on_revert_async(self.view)
+    def on_revert(self) -> Coroutine[None, None, None]:
+        return self.session_buffer.on_revert(self.view)
 
-    def on_reload_async(self) -> None:
-        self.session_buffer.on_reload_async(self.view)
+    def on_reload(self) -> Coroutine[None, None, None]:
+        return self.session_buffer.on_reload(self.view)
 
-    def purge_changes_async(self) -> None:
-        self.session_buffer.purge_changes_async(self.view)
+    def purge_changes(self) -> Coroutine[None, None, None]:
+        return self.session_buffer.purge_changes(self.view)
 
-    def on_pre_save_async(self) -> None:
-        self.session_buffer.on_pre_save_async(self.view)
+    def on_pre_save(self) -> Coroutine[None, None, None]:
+        return self.session_buffer.on_pre_save(self.view)
 
-    def on_post_save_async(self, new_uri: DocumentUri) -> None:
-        self.session_buffer.on_post_save_async(self.view, new_uri)
+    def on_post_save(self, new_uri: DocumentUri) -> Coroutine[None, None, None]:
+        return self.session_buffer.on_post_save(self.view, new_uri)
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_diagnostics_async()

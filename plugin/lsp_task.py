@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .core.aio import run_coroutine
+from .core.logging import exception_log
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
 from abc import ABC
@@ -33,9 +34,9 @@ class LspTask(ABC):
     def _erase_view_status(self) -> None:
         self._text_command.view.erase_status(self._status_key)
 
-    def _purge_changes_async(self) -> None:
+    async def _purge_changes(self) -> None:
         if listener := self._text_command.get_listener():
-            listener.purge_changes_async()
+            await listener.purge_changes()
 
 
 class LspTextCommandWithTasks(LspTextCommand, ABC):
@@ -49,7 +50,7 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
         super().__init__(view)
         self._tasks_runner: asyncio.Task | None = None
 
-    def on_before_tasks(self) -> None:
+    async def on_before_tasks(self) -> None:
         """Override this to execute code before the task handler starts."""
 
     async def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
@@ -70,13 +71,17 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
                     # It's going to throw this exception so catch it.
                     pass
                 self._tasks_runner = None
-        self.on_before_tasks()
+        await self.on_before_tasks()
         self._tasks_runner = asyncio.create_task(self._run_tasks())
         try:
             await asyncio.wait_for(self._tasks_runner, timeout=userprefs().on_save_task_timeout_ms / 1000)
         except asyncio.exceptions.TimeoutError:
             sublime.status_message('Running "on save" tasks took too long!')
-        await self.on_tasks_completed(**kwargs)
+        except Exception as ex:
+            sublime.status_message("Error running save tasks. See the Console for more information.")
+            exception_log("Error running save tasks", ex)
+        finally:
+            await self.on_tasks_completed(**kwargs)
 
     async def _run_tasks(self) -> None:
         for task in self.tasks:

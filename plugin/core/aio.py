@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .logging import debug
 from .logging import exception_log
+from functools import partial
 from typing import Any
 from typing import AsyncIterator
 from typing import Callable
@@ -120,6 +121,24 @@ def next_frame() -> asyncio.Future[None]:
     return run_on_main_thread(noop)
 
 
+def get_clipboard() -> asyncio.Future[str]:
+    """
+    Get the clipboard content.
+
+    Must be called from the asyncio thread. You must await the returned future.
+    """
+    future = asyncio.get_running_loop().create_future()
+
+    def on_done(content: str) -> None:
+        # Future may have been cancelled.
+        if not future.done():
+            future.set_result(content)
+
+    # See: https://github.com/sublimehq/sublime_text/issues/6920
+    sublime.get_clipboard_async(partial(run_on_asyncio_thread, on_done))  # type: ignore
+    return future
+
+
 async def gather_and_flatten_exceptions(*coros: Coroutine[Any, Any, list[Exception]]) -> list[Exception]:
     """
     Takes a list of coroutines, runs them concurrently using asyncio.gather, collects all exceptions, and returns a
@@ -161,7 +180,7 @@ class TaskContainer:
             task.cancel()
         return [x for x in await asyncio.gather(*self._tasks, return_exceptions=True) if isinstance(x, Exception)]
 
-    def create_task(self, coro: Coroutine[object, object, object], name: str | None = None) -> asyncio.Task:
+    def create_task(self, coro: Coroutine[object, object, object], name: str | None = None) -> asyncio.Task | None:
         """
         Spawn a new coroutine, to be run in the background. Not thread-safe. Must be invoked from the asyncio thread.
 
@@ -175,7 +194,11 @@ class TaskContainer:
 
         """
         task = asyncio.create_task(coro, name=name)
-        tasks = self._tasks
+        try:
+            tasks = self._tasks
+        except AttributeError:
+            # This object already died on *some* thread... Most likely DocumentSyncListener.
+            return None
         tasks.add(task)
 
         def on_done(t: asyncio.Task) -> None:

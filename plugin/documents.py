@@ -11,7 +11,6 @@ from ..protocol import DocumentHighlightParams
 from ..protocol import DocumentUri
 from ..protocol import FoldingRange
 from ..protocol import FoldingRangeParams
-from ..protocol import SignatureHelp
 from ..protocol import SignatureHelpContext
 from ..protocol import SignatureHelpParams
 from ..protocol import SignatureHelpTriggerKind
@@ -19,6 +18,7 @@ from .code_actions import filter_quickfix_actions
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.aio import gather_and_flatten_exceptions
+from .core.aio import get_clipboard
 from .core.aio import run_coroutine
 from .core.aio import run_on_asyncio_thread
 from .core.aio import TaskContainer
@@ -28,7 +28,6 @@ from .core.constants import COMMAND_TO_CHANGE_EVENT_ACTION
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import LIGHTBULB_SCOPE
-from .core.constants import MarkdownLangMap
 from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE
@@ -36,6 +35,7 @@ from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
 from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
+from .core.logging import exception_log
 from .core.logging import exceptions_log
 from .core.open import open_file_uri
 from .core.open import open_in_browser
@@ -177,21 +177,26 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         change_count = view.change_count()
         frozen_listeners = WeakSet(self.view_listeners)
 
-        async def notify(action: ChangeEventAction) -> None:
-            await asyncio.gather(
-                *[listener.on_text_changed(change_count, changes, action) for listener in list(frozen_listeners)]
-            )
+        def notify(action: ChangeEventAction, changes: list[sublime.TextChange]) -> None:
+            for listener in list(frozen_listeners):
+                listener.on_text_changed(change_count, changes, action)
 
-        run_coroutine(notify(self._last_edit_action))
+        run_on_asyncio_thread(notify, self._last_edit_action, changes)
         self._reset_last_edit_action()
 
     def on_reload_async(self) -> None:
-        for listener in list(self.view_listeners):
-            listener.reload_async()
+
+        async def run() -> None:
+            await asyncio.gather(*(listener.reload() for listener in list(self.view_listeners)))
+
+        run_coroutine(run())
 
     def on_revert_async(self) -> None:
-        for listener in list(self.view_listeners):
-            listener.revert_async()
+
+        async def run() -> None:
+            await asyncio.gather(*(listener.revert() for listener in list(self.view_listeners)))
+
+        run_coroutine(run())
 
     def set_last_edit_action(self, action: ChangeEventAction) -> None:
         self._last_edit_action = action
@@ -399,12 +404,12 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         return list(self._session_views.values())
 
     @requires_session
-    async def on_text_changed(
+    def on_text_changed(
         self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
     ) -> None:
         if self.view.is_primary():
             for sv in self.session_views_async():
-                sv.on_text_changed_async(change_count, changes, action)
+                sv.on_text_changed(change_count, changes, action)
         self._on_view_updated_async()
 
     def get_uri(self) -> DocumentUri:
@@ -466,7 +471,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             if sb.pending_refreshes & RequestFlags.CODE_LENS:
                 sb.do_code_lenses_async(self.view)
             if sb.pending_refreshes & RequestFlags.DIAGNOSTIC:
-                sb.do_document_diagnostic_async(self.view, self.view.change_count(), forced_update=True)
+                self.create_task(sb.do_document_diagnostic(self.view, self.view.change_count(), forced_update=True))
             if sb.pending_refreshes & RequestFlags.SEMANTIC_TOKENS \
                     and (session_view := sb.session.session_view_for_view_async(self.view)) \
                     and session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
@@ -504,25 +509,28 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             if plugin := sv.session.plugin:
                 plugin.on_selection_modified_async(sv)
 
-    async def on_post_save(self) -> None:
+    async def on_post_save(self) -> list[BaseException | None]:
         # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real
         # filesystem.
         uri = view_to_uri(self.view)
         new_scheme, _ = parse_uri(uri)
         old_scheme, _ = parse_uri(self._uri)
         self.set_uri(uri)
+        exceptions = []
         if new_scheme == old_scheme:
             # The URI scheme hasn't changed so the only thing we have to do is to inform the attached session views
             # about the new URI.
             if self.view.is_primary():
-                for sv in self.session_views_async():
-                    sv.on_post_save_async(self._uri)
+                exceptions = await asyncio.gather(
+                    *(sv.on_post_save(self._uri) for sv in self.session_views_async()), return_exceptions=True
+                )
         else:
             # The URI scheme has changed. This means we need to re-determine whether any language servers should
             # be attached to the view.
             sublime.set_timeout(self._reset)
         self._change_count_on_last_save = self.view.change_count()
         self._toggle_diagnostics_panel_if_needed_async()
+        return exceptions
 
     def _toggle_diagnostics_panel_if_needed_async(self) -> None:
         severity_threshold = userprefs().show_diagnostics_panel_on_save
@@ -674,9 +682,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in {"next_field", "prev_field"} and args is None:
-            run_on_asyncio_thread(
-                lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
-            )
+            run_coroutine(self.do_signature_help(SignatureHelpTriggerKind.ContentChange))
         if not self.view.is_popup_visible():
             return
         if self._is_documenation_popup_open and command_name in {"move", "commit_completion", "delete_word",
@@ -688,13 +694,12 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         completion_list = sublime.CompletionList()
         triggered_manually = self._auto_complete_triggered_manually
         self._auto_complete_triggered_manually = False  # reset state for next completion popup
-        run_on_asyncio_thread(
-            lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
+        run_coroutine(self._on_query_completions(completion_list, locations[0], triggered_manually))
         return completion_list
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
-    def _on_query_completions_async(
+    async def _on_query_completions(
         self, clist: sublime.CompletionList, location: int, triggered_manually: bool
     ) -> None:
         if self._completions_task:
@@ -705,7 +710,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if not sessions or not self.view.is_valid():
             self._completions_task.cancel_async()
             return
-        self.purge_changes_async()
+        await self.purge_changes()
         self._completions_task.query_completions_async(sessions)
 
     def _on_query_completions_resolved_async(
@@ -724,25 +729,25 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
     @overload
-    def do_signature_help_async(
+    async def do_signature_help(
         self,
         trigger_kind: Literal[SignatureHelpTriggerKind.TriggerCharacter],
         trigger_char: str
     ) -> None: ...
 
     @overload
-    def do_signature_help_async(
+    async def do_signature_help(
         self,
         trigger_kind: Literal[SignatureHelpTriggerKind.Invoked, SignatureHelpTriggerKind.ContentChange],
         trigger_char: None = None
     ) -> None: ...
 
     @override
-    def do_signature_help_async(self, trigger_kind: SignatureHelpTriggerKind, trigger_char: str | None = None) -> None:
+    async def do_signature_help(self, trigger_kind: SignatureHelpTriggerKind, trigger_char: str | None = None) -> None:
         session = self._get_signature_help_session()
         if not session or not self._stored_selection:
             return
-        self.purge_changes_async()
+        await self.purge_changes()
         position = self._stored_selection[0].a
         context_params: SignatureHelpContext = {
             'triggerKind': trigger_kind,
@@ -759,9 +764,21 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             "position": position_params["position"],
             "context": context_params
         }
-        language_map = session.markdown_language_id_to_st_syntax_map()
-        request = Request.signatureHelp(params, self.view)
-        session.send_request_async(request, lambda resp: self._on_signature_help(resp, position, language_map))
+        try:
+            new_sighelp = SigHelp.from_lsp(
+                await session.request(Request.signatureHelp(params, self.view)),
+                session.markdown_language_id_to_st_syntax_map(),
+                self._signature_help_style,
+            )
+            if not new_sighelp:
+                if self._sighelp and not self.view.match_selector(position, 'meta.function-call.arguments'):
+                    self.view.hide_popup()
+                return
+            content = new_sighelp.render(self.view)
+            # Show on main thread.
+            sublime.set_timeout(lambda: self._show_sighelp_popup(new_sighelp, content, position))
+        except Exception as ex:
+            exception_log("Error loading signature help", ex)
 
     def _get_signature_help_session(self) -> Session | None:
         # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for
@@ -794,21 +811,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             'active_parameter_underline': active_parameter_underline,
             'inactive_parameter_color': inactive_parameter_color
         }
-
-    def _on_signature_help(
-        self,
-        response: SignatureHelp | None,
-        point: int,
-        language_map: MarkdownLangMap | None
-    ) -> None:
-        new_sighelp = SigHelp.from_lsp(response, language_map, self._signature_help_style)
-        if not new_sighelp:
-            if self._sighelp and not self.view.match_selector(point, 'meta.function-call.arguments'):
-                self.view.hide_popup()
-            return
-        content = new_sighelp.render(self.view)
-        # Show on main thread.
-        sublime.set_timeout(lambda: self._show_sighelp_popup(new_sighelp, content, point))
 
     def _show_sighelp_popup(self, sighelp: SigHelp, content: str, point: int) -> None:
         if self._sighelp:
@@ -992,25 +994,29 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 return sv.has_capability_async(capability_path)
         return False
 
-    def purge_changes_async(self) -> None:
-        for sv in self.session_views_async():
-            sv.purge_changes_async()
+    def purge_changes(self) -> asyncio.Future[list[BaseException | None]]:
+        return asyncio.gather(*(sv.purge_changes() for sv in self.session_views_async()), return_exceptions=True)
 
-    def trigger_on_pre_save_async(self) -> None:
-        for sv in self.session_views_async():
-            sv.on_pre_save_async()
+    def trigger_on_pre_save(self) -> asyncio.Future[list[BaseException | None]]:
+        return asyncio.gather(*(sv.on_pre_save() for sv in self.session_views_async()), return_exceptions=True)
 
-    def revert_async(self) -> None:
+    async def revert(self) -> list[BaseException | None]:
+        exceptions = []
         if self.view.is_primary():
-            for sv in self.session_views_async():
-                sv.on_revert_async()
+            exceptions = await asyncio.gather(
+                *(sv.on_revert() for sv in self.session_views_async()), return_exceptions=True
+            )
         self._on_view_updated_async()
+        return exceptions
 
-    def reload_async(self) -> None:
+    async def reload(self) -> list[BaseException | None]:
+        exceptions = []
         if self.view.is_primary():
-            for sv in self.session_views_async():
-                sv.on_reload_async()
+            exceptions = await asyncio.gather(
+                *(sv.on_reload() for sv in self.session_views_async()), return_exceptions=True
+            )
         self._on_view_updated_async()
+        return exceptions
 
     # --- Private utility methods --------------------------------------------------------------------------------------
 
@@ -1053,17 +1059,20 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     def _on_view_updated_async(self) -> None:
         if self._should_format_on_paste:
             self._should_format_on_paste = False
-            sublime.get_clipboard_async(self._format_on_paste_async)
+
+            async def format_on_paste() -> None:
+                await self._format_on_paste(await get_clipboard())
+
+            self.create_task(format_on_paste())
         first_region, _ = self._update_stored_selection()
         if first_region is None:
             return
         if userprefs().document_highlight_style:
             self._clear_highlight_regions()
-            self._when_selection_remains_stable(
-                self._do_highlights_async, first_region, after_ms=self.debounce_time)
+            self._when_selection_remains_stable(self._do_highlights_async, first_region, after_ms=self.debounce_time)
         if userprefs().show_signature_help and (selection := self._stored_selection):
             if self._sighelp:
-                self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
+                self.create_task(self.do_signature_help(SignatureHelpTriggerKind.ContentChange))
             else:
                 session = self._get_signature_help_session()
                 triggers: list[str] = []
@@ -1074,7 +1083,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 if triggers:
                     previous_char = self.view.substr(selection[0].a - 1)
                     if previous_char in triggers:
-                        self.do_signature_help_async(SignatureHelpTriggerKind.TriggerCharacter, previous_char)
+                        self.create_task(
+                            self.do_signature_help(SignatureHelpTriggerKind.TriggerCharacter, previous_char)
+                        )
 
     def _update_stored_selection(self) -> tuple[sublime.Region | None, bool]:
         """
@@ -1098,7 +1109,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self._stored_selection = selection
         return changed_first_region, True
 
-    def _format_on_paste_async(self, clipboard_text: str) -> None:
+    async def _format_on_paste(self, clipboard_text: str) -> None:
         sel = self.view.sel()
         split_clipboard_text = clipboard_text.split('\n')
         multi_cursor_paste = len(split_clipboard_text) == len(sel) and len(sel) > 1
@@ -1121,7 +1132,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 )
                 formatting_region = sublime.Region(a, pasted_region.b)
                 regions_to_format.append(formatting_region)
-        self.purge_changes_async()
+        await self.purge_changes()
 
         def run_sync() -> None:
             sel.add_all(regions_to_format)

@@ -1130,6 +1130,8 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 class Session(APIHandler, TransportCallbacks, TaskContainer):
 
+    _MAX_WAIT_ATTEMPTS = 40
+
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
     ) -> None:
@@ -1894,17 +1896,25 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             renamed_files.append({'oldUri': old_uri, 'newUri': new_uri})
             return None
 
+        async def wait_for_path_deletion(path: str) -> None:
+            attempts = 0
+            while os.path.exists(path) and attempts < self._MAX_WAIT_ATTEMPTS:  # noqa: ASYNC240
+                await asyncio.sleep(0.1)
+                attempts += 1
+            if attempts >= self._MAX_WAIT_ATTEMPTS:
+                raise asyncio.TimeoutError(f"Timeout waiting for deletion of {path}")
+
         async def delete_file(path: str) -> None:
             # The delete_file command moves the given files into the recycle bin
             self.window.run_command('delete_file', {'files': [path], 'prompt': False})
-            # TODO: How to wait for the deletion? This may be fragile...
-            await asyncio.sleep(0.1)
+            # TODO: ideally we'd have a callback for 'delete_file'
+            await wait_for_path_deletion(path)
 
         async def delete_folder(path: str) -> None:
             # The delete_folder command moves the given folders into the recycle bin
             self.window.run_command('delete_folder', {'dirs': [path], 'prompt': False})
-            # TODO: How to wait for the deletion? This may be fragile...
-            await asyncio.sleep(0.1)
+            # TODO: ideally we'd have a callback for 'delete_folder'
+            await wait_for_path_deletion(path)
 
         async def _continue(failure_reason: str | None) -> ApplyWorkspaceEditResult:
             if failure_reason:

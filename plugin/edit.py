@@ -118,7 +118,7 @@ class LspApplyTextDocumentEditCommand(sublime_plugin.TextCommand):
         with temporary_setting(self.view.settings(), 'translate_tabs_to_spaces', False):
             last_row = self.view.rowcol_utf16(self.view.size())[0]
             snippet_text_edit_already_applied = False
-            for text_edit in sorted(edits, key=lambda e: parse_lsp_position(e['range']['start']), reverse=True):
+            for text_edit in reversed(sorted(edits, key=lambda e: parse_lsp_position(e['range']['start']))):
                 start_row, region = self._get_region(text_edit)
                 if not snippet_text_edit_already_applied and is_snippet_text_edit(text_edit) and \
                         self.view == sublime.active_window().active_view():

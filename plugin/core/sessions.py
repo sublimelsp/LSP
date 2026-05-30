@@ -1044,15 +1044,27 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
     A streaming request that is in flight.
     Use `async for` syntax to asynchronously stream the partial results.
     Only requests for which the partial results are of type list[...] can work with this class.
-    An empty list signals the end of the stream. So the class knows when to signal the end of the `async for` loop.
     """
 
     def __init__(self, req_id: int, session: Session) -> None:
         super().__init__(req_id, session)
         self._queue: asyncio.Queue[R | Error | None] = asyncio.Queue()
+        self._is_streaming = False
+
+    @property
+    def is_streaming(self) -> bool:
+        """
+        Whether the stream is actually streaming.
+
+        This is only deduced after the first (partial) response has arrived. Checking this property before the first
+        iteration has no meaning. A language server may not support streaming partial results and may just send the
+        response in one large list.
+        """
+        return self._is_streaming
 
     def on_partial_result(self, response: R) -> None:
         # Note: R should have type list[...].
+        self._is_streaming = True
         if response:
             self._queue.put_nowait(response)
 

@@ -19,6 +19,7 @@ from typing import Generator
 from typing import Iterable
 from typing import Tuple
 from typing import TYPE_CHECKING
+from typing_extensions import deprecated
 import operator
 import os
 import re
@@ -173,6 +174,7 @@ class LspApplyTextDocumentEditCommand(sublime_plugin.TextCommand):
             self.view.erase(edit, region)
 
 
+@deprecated('Use the lsp_apply_text_document_edit command instead')
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     re_placeholder = re.compile(r'\$(0|\{0:([^}]*)\})')
 

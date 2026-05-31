@@ -84,11 +84,19 @@ def _run_on_st_thread(
     loop = asyncio.get_running_loop()
     future = loop.create_future()
 
+    def on_done(result: T) -> None:
+        if not future.done():
+            future.set_result(result)
+
+    def on_exception(ex: BaseException) -> None:
+        if not future.done():
+            future.set_exception(ex)
+
     def wrap() -> None:
         try:
-            loop.call_soon_threadsafe(future.set_result, f(*args, **kwargs))
+            loop.call_soon_threadsafe(on_done, f(*args, **kwargs))
         except BaseException as ex:
-            loop.call_soon_threadsafe(future.set_exception, ex)
+            loop.call_soon_threadsafe(on_exception, ex)
 
     dispatch_func(wrap)
     return future

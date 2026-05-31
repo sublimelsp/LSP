@@ -152,7 +152,8 @@ def get_clipboard() -> asyncio.Future[str]:
 
     Must be called from the asyncio thread. You must await the returned future.
     """
-    future = asyncio.get_running_loop().create_future()
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
 
     def on_done(content: str) -> None:
         # Future may have been cancelled.
@@ -160,7 +161,7 @@ def get_clipboard() -> asyncio.Future[str]:
             future.set_result(content)
 
     # See: https://github.com/sublimehq/sublime_text/issues/6920
-    sublime.get_clipboard_async(partial(run_on_asyncio_thread, on_done))  # type: ignore
+    sublime.get_clipboard_async(partial(loop.call_soon_threadsafe, on_done))  # type: ignore
     return future
 
 

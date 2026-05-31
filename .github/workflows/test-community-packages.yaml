@@ -1,0 +1,37 @@
+name: Test Community Packages
+
+on:
+  repository_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  type-check:
+    name: Type-check community packages
+    runs-on: macOS-latest
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v6
+        with:
+          path: LSP
+
+      - name: Check out lsp_maintainers (feat/test)
+        uses: actions/checkout@v6
+        with:
+          repository: sublimelsp/lsp_maintainers
+          ref: feat/test
+          path: lsp_maintainers
+
+      - name: Check out community package repositories
+        run: python3 scripts/checkout-repos.py
+        working-directory: lsp_maintainers
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync venv and run basedpyright
+        run: |
+          uv sync
+          uv run basedpyright
+        working-directory: lsp_maintainers/repositories

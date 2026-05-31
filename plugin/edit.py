@@ -115,40 +115,37 @@ class LspApplyTextDocumentEditCommand(sublime_plugin.TextCommand):
             return
         if listener := windows.listener_for_view(self.view):
             listener.set_change_event_action(ChangeEventAction.OTHER)
-        topmost_edit, *other_edits = sorted(edits, key=lambda e: parse_lsp_position(e['range']['start']))
         with temporary_setting(self.view.settings(), 'translate_tabs_to_spaces', False):
             last_row = self.view.rowcol_utf16(self.view.size())[0]
-            for text_edit in reversed(other_edits):
+            snippet_text_edit_already_applied = False
+            for text_edit in reversed(sorted(edits, key=lambda e: parse_lsp_position(e['range']['start']))):  # noqa: C413
                 start_row, region = self._get_region(text_edit)
-                new_text = self._get_new_text(text_edit)
-                if start_row > last_row and not new_text.startswith('\n'):
-                    self._apply_edit(edit, region, '\n' + new_text)
-                    last_row = self.view.rowcol_utf16(self.view.size())[0]
+                if not snippet_text_edit_already_applied and is_snippet_text_edit(text_edit) and \
+                        self.view == sublime.active_window().active_view():
+                    new_text = self._get_new_text(text_edit, keep_placeholders=True)
+                    if start_row > last_row and not new_text.startswith('\n'):
+                        start_row = last_row
+                        new_text = '\n' + new_text
+                    # https://github.com/microsoft/language-server-protocol/pull/1892#issuecomment-1964186341
+                    # The insert_snippet command automatically adds additional indentation to each row, based on the
+                    # indentation level of the row where it gets inserted. Therefore we first have to remove that same
+                    # indentation whitespace after each line break in the snippet text from the language server.
+                    line_content = self.view.substr(self.view.line(self.view.text_point(start_row, 0)))
+                    if leading_whitespace := line_content[:-len(line_content.lstrip())]:
+                        new_text = new_text.replace('\n' + leading_whitespace, '\n')
+                    selection = self.view.sel()
+                    selection.clear()
+                    selection.add(region)
+                    self.view.show(region.a)
+                    self.view.run_command('insert_snippet', {'contents': new_text})
+                    snippet_text_edit_already_applied = True
                 else:
-                    self._apply_edit(edit, region, new_text)
-            start_row, region = self._get_region(topmost_edit)
-            if is_snippet_text_edit(topmost_edit) and self.view == sublime.active_window().active_view():
-                new_text = self._get_new_text(topmost_edit, keep_placeholders=True)
-                if start_row > last_row and not new_text.startswith('\n'):
-                    start_row = last_row
-                    new_text = '\n' + new_text
-                # https://github.com/microsoft/language-server-protocol/pull/1892#issuecomment-1964186341
-                # The insert_snippet command automatically adds additional indentation to each row, based on the
-                # indentation level of the row where it gets inserted. Therefore we first have to remove that same
-                # indentation whitespace after each line break in the snippet text from the language server.
-                line_content = self.view.substr(self.view.line(self.view.text_point(start_row, 0)))
-                if leading_whitespace := line_content[:-len(line_content.lstrip())]:
-                    new_text = new_text.replace('\n' + leading_whitespace, '\n')
-                selection = self.view.sel()
-                selection.clear()
-                selection.add(region)
-                self.view.show(region.a)
-                self.view.run_command('insert_snippet', {'contents': new_text})
-            else:
-                new_text = self._get_new_text(topmost_edit)
-                if start_row > last_row and not new_text.startswith('\n'):
-                    new_text = '\n' + new_text
-                self._apply_edit(edit, region, new_text)
+                    new_text = self._get_new_text(text_edit)
+                    if start_row > last_row and not new_text.startswith('\n'):
+                        self._apply_edit(edit, region, '\n' + new_text)
+                        last_row = self.view.rowcol_utf16(self.view.size())[0]
+                    else:
+                        self._apply_edit(edit, region, new_text)
 
     def _get_region(self, edit: TextEdit | AnnotatedTextEdit | SnippetTextEdit) -> tuple[int, sublime.Region]:
         range_ = edit['range']

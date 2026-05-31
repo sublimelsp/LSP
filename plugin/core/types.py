@@ -172,8 +172,6 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
     :param      f:             The function to possibly run. Its return type is discarded.
     :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
     :param      condition:     The condition that must evaluate to True in order to run the function
-    :param      async_thread:  If true, run the function on the async worker thread, otherwise run the function on the
-                               main thread
     """
 
     async def run() -> None:

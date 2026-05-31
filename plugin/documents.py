@@ -85,6 +85,7 @@ from typing import overload
 from typing import Sequence
 from typing import TYPE_CHECKING
 from typing_extensions import Concatenate
+from typing_extensions import deprecated
 from typing_extensions import override
 from typing_extensions import ParamSpec
 from weakref import WeakSet
@@ -996,6 +997,14 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     def purge_changes(self) -> asyncio.Future[list[BaseException | None]]:
         return asyncio.gather(*(sv.purge_changes() for sv in self.session_views_async()), return_exceptions=True)
+
+    @deprecated("use DocumentSyncListener.purge_changes instead")
+    def purge_changes_async(self) -> None:
+
+        async def run() -> None:
+            await self.purge_changes()
+
+        self.create_task(run())
 
     def trigger_on_pre_save(self) -> asyncio.Future[list[BaseException | None]]:
         return asyncio.gather(*(sv.on_pre_save() for sv in self.session_views_async()), return_exceptions=True)

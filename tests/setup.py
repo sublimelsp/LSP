@@ -4,9 +4,9 @@ from .async_test_case import AsyncTestCase
 from .async_test_case import FutureLike
 from .test_mocks import basic_responses
 from functools import partial
-from LSP.plugin.core.aio import tick
 from LSP.plugin.core.aio import run_coroutine
 from LSP.plugin.core.aio import run_on_asyncio_thread
+from LSP.plugin.core.aio import tick
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.open import open_file
 from LSP.plugin.core.protocol import Notification

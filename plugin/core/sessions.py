@@ -99,10 +99,10 @@ from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import aclosing
 from .aio import gather_and_flatten_exceptions
-from .aio import tick
 from .aio import run_on_asyncio_thread
 from .aio import run_on_main_thread
 from .aio import TaskContainer
+from .aio import tick
 from .constants import ChangeEventAction
 from .constants import MarkdownLangMap
 from .constants import MARKO_MD_PARSER_VERSION

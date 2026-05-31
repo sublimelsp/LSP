@@ -225,7 +225,7 @@ def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Ca
 
 def request_handler(
     method: str
-) -> Callable[[Callable[[Any, P], Awaitable[RequestHandlerResponse]]], Callable[[Any, P, int], Awaitable[Response[R]]]]:
+) -> Callable[[Callable[[Any, P], Awaitable[RequestHandlerResponse]]], Callable[[Any, P, int], Awaitable[Response[R]]]]:  # pyright: ignore[reportInvalidTypeVarUse]
     """
     Decorator to mark a coroutine method as a handler for a specific LSP request.
 

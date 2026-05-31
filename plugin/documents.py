@@ -582,16 +582,13 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if key == "lsp.signature_help_available" and operator == sublime.QueryOperator.EQUAL:
             return operand == bool(not self.view.is_popup_visible() and self._get_signature_help_session())
         if key == "lsp.link_available" and operator == sublime.QueryOperator.EQUAL:
-            position = get_position(self.view)
-            if position is None:
+            if userprefs().link_highlight_style != 'underline':
                 return not operand
-            session = self.session_async('documentLinkProvider', position)
-            if not session:
-                return not operand
-            session_view = session.session_view_for_view_async(self.view)
-            if not session_view:
-                return not operand
-            return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
+            if (position := get_position(self.view)) is not None and \
+                    (session := self.session_async('documentLinkProvider', position)) and \
+                    (session_view := session.session_view_for_view_async(self.view)):
+                return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
+            return not operand
         return None
 
     @requires_session

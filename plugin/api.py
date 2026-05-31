@@ -32,7 +32,6 @@ if TYPE_CHECKING:
     from ..protocol import ExecuteCommandParams
     from .core.collections import DottedDict
     from .core.constants import MarkdownLangMap
-    from .core.promise import Promise
     from .core.protocol import ClientNotification
     from .core.protocol import ClientRequest
     from .core.protocol import ClientResponse
@@ -55,12 +54,12 @@ URI_HANDLER_MARKER = '__URI_HANDLER_MARKER'
 # P represents the parameters *after* the 'self' argument
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
-CommandHandler = Callable[['list[P] | None'], 'Promise[R]']
-CommandHandlerForDecorator = Callable[[Any, 'list[P] | None'], 'Promise[R]']
-UriHandler = Callable[['DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
+CommandHandler = Callable[['list[P] | None'], 'Awaitable[R]']
+CommandHandlerForDecorator = Callable[[Any, 'list[P] | None'], 'Awaitable[R]']
+UriHandler = Callable[['DocumentUri', sublime.NewFileFlags], 'Awaitable[sublime.Sheet | None]']
 # Decorator needs a dedicated type with `Any` as the first parameter representing `Self` to make its
 # implementation happy. I couldn't find a better way (Concatenate and ParamSpec don't seem to help here).
-UriHandlerForDecorator = Callable[[Any, 'DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
+UriHandlerForDecorator = Callable[[Any, 'DocumentUri', sublime.NewFileFlags], 'Awaitable[sublime.Sheet | None]']
 PostResponseCallback = Callable[[], None]
 RequestHandlerResponse = Union[R, Tuple[R, PostResponseCallback]]
 
@@ -278,7 +277,7 @@ def command_handler(command_name: str) -> Callable[[CommandHandlerForDecorator],
     Usage:
         ```py
         @command_handler('typescript.rename')
-        def on_custom_rename(self, arguments: list[LSPAny] | None) -> Promise[LspAny]:
+        async def on_custom_rename(self, arguments: list[LSPAny] | None) -> LspAny:
             ...
         ```
 

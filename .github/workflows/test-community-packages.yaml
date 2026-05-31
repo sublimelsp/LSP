@@ -27,6 +27,11 @@ jobs:
         run: python3 scripts/checkout-repos.py
         working-directory: lsp_maintainers
 
+      - name: Use PR checkout of LSP
+        run: |
+          rm -rf lsp_maintainers/repositories/LSP
+          ln -s ${{ github.workspace }}/LSP lsp_maintainers/repositories/LSP
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
 

@@ -4,7 +4,7 @@ from .async_test_case import AsyncTestCase
 from .async_test_case import FutureLike
 from .test_mocks import basic_responses
 from functools import partial
-from LSP.plugin.core.aio import next_frame
+from LSP.plugin.core.aio import tick
 from LSP.plugin.core.aio import run_coroutine
 from LSP.plugin.core.aio import run_on_asyncio_thread
 from LSP.plugin.core.collections import DottedDict
@@ -215,7 +215,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
     async def wait_until(condition: Callable[[], bool]) -> None:
         """Returns when the given state has been reached."""
         while not condition():
-            await next_frame()
+            await tick()
 
     @classmethod
     def await_message(cls, method: str) -> CancellableInflightRequest[LSPAny]:

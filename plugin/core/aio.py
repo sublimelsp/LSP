@@ -112,13 +112,30 @@ def run_on_async_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> async
     return _run_on_st_thread(sublime.set_timeout_async, f, *args, **kwargs)
 
 
-def next_frame() -> asyncio.Future[None]:
-    """Wait until (at least one) UI frame has passed."""
+def tick(n: int = 1) -> asyncio.Future[None]:
+    """
+    Wait until n ticks have occurred on the main thread.
 
-    def noop() -> None:
-        pass
+    Must be called from the asyncio thread. You must await the returned future.
+    """
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
 
-    return run_on_main_thread(noop)
+    def on_done() -> None:
+        # Future may have been cancelled.
+        if not future.done():
+            future.set_result(None)
+
+    def iterate() -> None:
+        nonlocal n
+        n -= 1
+        if n > 0:
+            sublime.set_timeout(iterate)
+        else:
+            loop.call_soon_threadsafe(on_done)
+
+    sublime.set_timeout(iterate)
+    return future
 
 
 def get_clipboard() -> asyncio.Future[str]:

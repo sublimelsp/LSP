@@ -99,7 +99,7 @@ from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import aclosing
 from .aio import gather_and_flatten_exceptions
-from .aio import next_frame
+from .aio import tick
 from .aio import run_on_asyncio_thread
 from .aio import run_on_main_thread
 from .aio import TaskContainer
@@ -2119,7 +2119,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             # The save operation must be blocking in case the tab should be closed afterwards
             view.run_command('save', {'async': not should_close, 'quiet': True})
             # Allow async thread to process save notifications before closing the file or the method returns.
-            await next_frame()
+            await tick()
         if should_close and not view.is_dirty():
             future = asyncio.get_running_loop().create_future()
             view.close(partial(run_on_asyncio_thread, future.set_result))  # type: ignore

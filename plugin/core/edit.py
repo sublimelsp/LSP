@@ -10,7 +10,7 @@ from ...protocol import SnippetTextEdit
 from ...protocol import TextDocumentEdit
 from ...protocol import TextEdit
 from ...protocol import WorkspaceEdit
-from .aio import next_frame
+from .aio import tick
 from .logging import debug
 from .protocol import UINT_MAX
 from typing import Dict
@@ -120,7 +120,7 @@ async def apply_text_edits(
         view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': label})
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
     # thread, and that we've received view changes in the asynchronous thread.
-    await next_frame()
+    await tick()
     return view if view.is_valid() else None
 
 

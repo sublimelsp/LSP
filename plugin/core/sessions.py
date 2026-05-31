@@ -1504,8 +1504,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self._plugin.on_settings_changed(self.config.settings)
         return self.config.settings.get_resolved(self._variables)
 
-    async def execute_command(
-        self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
+    async def run_command(
+        self,
+        command: ExecuteCommandParams,
+        *,
+        progress: bool = False,
+        view: sublime.View | None = None,
         is_refactoring: bool = False,
     ) -> LSPAny:
         """Run a command from the asyncio thread."""
@@ -1546,8 +1550,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                             key=lambda location: (
                                 normalize_uri(location['uri']) != view_uri,
                                 location['uri'],
-                                Point.from_lsp(location['range']['start'])
-                            )
+                                Point.from_lsp(location['range']['start']),
+                            ),
                         )
                         LocationPicker(view, self, locations, side_by_side=False)
             return None
@@ -1560,8 +1564,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 self._is_executing_refactoring_command = False
         return await future
 
-    @deprecated("use Session.execute_command instead")
-    def execute_command_async(
+    @deprecated("use Session.run_command instead")
+    def execute_command(
         self,
         command: ExecuteCommandParams,
         *,
@@ -1570,7 +1574,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         is_refactoring: bool = False,
     ) -> Promise[LSPAny | BaseException]:
         if task := self.create_task(
-            self.execute_command(command, progress=progress, view=view, is_refactoring=is_refactoring)
+            self.run_command(command, progress=progress, view=view, is_refactoring=is_refactoring)
         ):
             return Promise.wrap_task(task)
         raise RuntimeError("unable to schedule task")
@@ -1592,7 +1596,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
             is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
-            return await self.execute_command(
+            return await self.run_command(
                 command_params, progress=progress, view=view, is_refactoring=is_refactoring
             )
         # At this point it cannot be a command anymore, it has to be a proper code action.
@@ -1826,7 +1830,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            await self.execute_command(execute_command, progress=False, view=view, is_refactoring=is_refactoring)
+            await self.run_command(execute_command, progress=False, view=view, is_refactoring=is_refactoring)
 
     async def apply_document_changes(
         self,

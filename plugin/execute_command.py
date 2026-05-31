@@ -39,7 +39,7 @@ class LspExecuteCommand(LspTextCommand):
 
     async def _run(self, session: Session, command_name: str, params: ExecuteCommandParams) -> None:
         try:
-            result: LSPAny = await session.execute_command(params, progress=True, view=self.view)
+            result: LSPAny = await session.run_command(params, progress=True, view=self.view)
             self.handle_success_async(result, command_name)
         except Error as error:
             self.handle_error_async(error, command_name)

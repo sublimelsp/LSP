@@ -111,7 +111,7 @@ def run_on_main_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asynci
     return _run_on_st_thread(sublime.set_timeout, f, *args, **kwargs)
 
 
-def run_on_async_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
+def run_on_worker_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
     """
     Run a function in Sublime's async, or worker, thread.
 

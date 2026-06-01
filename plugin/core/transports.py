@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .aio import run_on_worker_thread
 from .constants import ST_PLATFORM
 from .logging import debug
 from .logging import exception_log
@@ -320,18 +319,13 @@ class StreamTransport(Transport):
             raise StopLoopError
         body = await self._reader.readexactly(content_length)
         try:
-            return await run_on_worker_thread(self._decoder, body)
+            return self._decoder(body)
         except Exception as ex:
             raise Exception(f"JSON decode error: {ex}") from ex
 
     @override
     async def write(self, payload: JSONRPCMessage) -> None:
-        # You perhaps may think that an asyncio.Lock is needed here to guarantee ordering of the writes. If
-        # transport.write(A) happens at time t0, and transport.write(B) happens at time t1, with t0 < t1, then you'd
-        # reasonably expect that A is sent before B. In case the "worker thread" was a pool of threads, then this is not
-        # guaranteed without an asyncio.Lock. But because there's only one thread acting as worker thread, ordering is
-        # implicitly still guaranteed.
-        body = await run_on_worker_thread(self._encoder, payload)
+        body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
         try:
             await self._writer.drain()

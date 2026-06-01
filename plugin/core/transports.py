@@ -312,7 +312,6 @@ class StreamTransport(Transport):
         super().__init__(encoder, decoder)
         self._reader = reader
         self._writer = writer
-        self._writer_lock = asyncio.Lock()
 
     @override
     async def read(self) -> JSONRPCMessage:
@@ -327,15 +326,19 @@ class StreamTransport(Transport):
 
     @override
     async def write(self, payload: JSONRPCMessage) -> None:
-        async with self._writer_lock:
-            body = await run_on_worker_thread(self._encoder, payload)
-            self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
-            try:
-                await self._writer.drain()
-            except ConnectionResetError:
-                # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
-                # there's other logic that will make the transport shut down.
-                pass
+        # You perhaps may think that an asyncio.Lock is needed here to guarantee ordering of the writes. If
+        # transport.write(A) happens at time t0, and transport.write(B) happens at time t1, with t0 < t1, then you'd
+        # reasonably expect that A is sent before B. In case the "worker thread" was a pool of threads, then this is not
+        # guaranteed without an asyncio.Lock. But because there's only one thread acting as worker thread, ordering is
+        # implicitly still guaranteed.
+        body = await run_on_worker_thread(self._encoder, payload)
+        self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
+        try:
+            await self._writer.drain()
+        except ConnectionResetError:
+            # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
+            # there's other logic that will make the transport shut down.
+            pass
 
     @override
     async def write_bytes(self, payload: bytes) -> None:

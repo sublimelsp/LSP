@@ -768,15 +768,16 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 session.markdown_language_id_to_st_syntax_map(),
                 self._signature_help_style,
             )
-            if not new_sighelp:
-                if self._sighelp and not self.view.match_selector(position, 'meta.function-call.arguments'):
-                    self.view.hide_popup()
-                return
-            content = new_sighelp.render(self.view)
-            # Show on main thread.
-            sublime.set_timeout(lambda: self._show_sighelp_popup(new_sighelp, content, position))
         except Exception as ex:
             exception_log("Error loading signature help", ex)
+            return
+        if not new_sighelp:
+            if self._sighelp and not self.view.match_selector(position, 'meta.function-call.arguments'):
+                self.view.hide_popup()
+            return
+        content = new_sighelp.render(self.view)
+        # Show on main thread.
+        sublime.set_timeout(lambda: self._show_sighelp_popup(new_sighelp, content, position))
 
     def _get_signature_help_session(self) -> Session | None:
         # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for

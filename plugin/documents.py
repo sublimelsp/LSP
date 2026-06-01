@@ -71,6 +71,7 @@ from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .folding_range import folding_range_to_range
+from .formatting import format_selection
 from .session_view import SessionView
 from functools import partial
 from functools import wraps
@@ -1140,14 +1141,17 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 formatting_region = sublime.Region(a, pasted_region.b)
                 regions_to_format.append(formatting_region)
         await self.purge_changes()
+        sel.add_all(regions_to_format)
 
-        def run_sync() -> None:
-            sel.add_all(regions_to_format)
-            self.view.run_command('lsp_format_document_range')
+        def restore_selection() -> None:
             sel.clear()
             sel.add_all(original_selection)
 
-        sublime.set_timeout(run_sync)
+        try:
+            await format_selection(self)
+            sublime.status_message("Paste was formatted")
+        finally:
+            sublime.set_timeout(restore_selection)
 
     async def _clear_session_views(self) -> list[Exception]:
         session_views = self._session_views

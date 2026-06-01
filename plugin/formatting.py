@@ -29,6 +29,7 @@ import sublime
 
 if TYPE_CHECKING:
     from .core.sessions import Session
+    from plugin.core.sessions import AbstractViewListener
 
 FormatResponse = Union[List[TextEdit], None]
 
@@ -54,6 +55,24 @@ async def format_document(text_command: LspTextCommand, formatter: str | None = 
         # ... or use the documentRangeFormattingProvider and format the entire range.
         return await session.request(text_document_range_formatting(view, entire_content_region(view)))
     return None
+
+
+async def format_selection(listener: AbstractViewListener | None) -> None:
+    if not listener:
+        return
+    await listener.purge_changes()
+    session: Session | None = None
+    text_edits: list[TextEdit] | None = None
+    if has_single_nonempty_selection(listener.view):
+        session = listener.session_async('documentRangeFormattingProvider')
+        selection = first_selection_region(listener.view)
+        if session and selection is not None:
+            text_edits = await session.request(text_document_range_formatting(listener.view, selection))
+    elif listener.view.has_non_empty_selection_region():
+        if session := listener.session_async('documentRangeFormattingProvider.rangesSupport'):
+            text_edits = await session.request(text_document_ranges_formatting(listener.view))
+    if text_edits is not None:
+        await apply_text_edits(listener.view, text_edits)
 
 
 class WillSaveWaitTask(LspTask):
@@ -204,21 +223,8 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         run_coroutine(self._run())
 
     async def _run(self) -> None:
-        if listener := self.get_listener():
-            await listener.purge_changes()
-        session: Session | None = None
-        text_edits: list[TextEdit] | None = None
         try:
-            if has_single_nonempty_selection(self.view):
-                session = self.best_session(self.capability)
-                selection = first_selection_region(self.view)
-                if session and selection is not None:
-                    text_edits = await session.request(text_document_range_formatting(self.view, selection))
-            elif self.view.has_non_empty_selection_region():
-                if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
-                    text_edits = await session.request(text_document_ranges_formatting(self.view))
-            if text_edits is not None:
-                await apply_text_edits(self.view, text_edits)
+            await format_selection(self.get_listener())
         except Error as error:
             sublime.status_message(f'Formatting error: {error}')
 

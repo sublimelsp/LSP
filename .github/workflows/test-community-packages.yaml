@@ -30,7 +30,7 @@ jobs:
           ln -s ${{ github.workspace }}/LSP lsp_maintainers/repositories/LSP
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8.1.0
 
       - name: Sync venv and run basedpyright
         run: |

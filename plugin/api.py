@@ -432,7 +432,7 @@ class LspPlugin(APIHandler):
         unregister_plugin_impl(cls)
 
     @classmethod
-    def is_applicable_asyncX(cls, context: IsApplicableContext) -> bool:
+    def is_applicable_async(cls, context: IsApplicableContext) -> bool:
         """
         Determine whether the server should run on the view given by `context.view`.
 

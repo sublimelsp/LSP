@@ -1,7 +1,6 @@
 name: Test Community Packages
 
 on:
-  repository_dispatch:
   pull_request:
     branches:
       - main

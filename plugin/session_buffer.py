@@ -726,15 +726,12 @@ class SessionBuffer(TaskContainer):
             and is_diagnostic_server_cancellation_data(error.data)
             and error.data['retriggerRequest']
         ):
-            async def redo_later() -> None:
-                # Retrigger the request after a short delay, but only if there are no additional changes to the
-                # buffer in the meanwhile, because in that case a new request will be sent automatically after the
-                # didChange notification.
-                await asyncio.sleep(DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY)
-                if version == view.change_count():
-                    self.create_task(self._do_document_diagnostic(view, identifier, version))
-
-            self.create_task(redo_later())
+            # Retrigger the request after a short delay, but only if there are no additional changes to the
+            # buffer in the meanwhile, because in that case a new request will be sent automatically after the
+            # didChange notification.
+            await asyncio.sleep(DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY)
+            if version == view.change_count():
+                self.create_task(self._do_document_diagnostic(view, identifier, version))
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 

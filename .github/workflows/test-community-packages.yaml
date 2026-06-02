@@ -26,7 +26,7 @@ jobs:
         run: python3 scripts/checkout-repos.py --exclude LSP
         working-directory: lsp_maintainers
 
-      - name: Use PR checkout of LSP
+      - name: Use checkout of LSP from PR
         run: |
           ln -s ${{ github.workspace }}/LSP lsp_maintainers/repositories/LSP
 

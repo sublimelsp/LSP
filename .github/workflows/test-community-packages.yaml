@@ -15,7 +15,7 @@ jobs:
         with:
           path: LSP
 
-      - name: Check out lsp_maintainers (feat/test)
+      - name: Check out lsp_maintainers
         uses: actions/checkout@v6
         with:
           repository: sublimelsp/lsp_maintainers

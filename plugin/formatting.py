@@ -28,8 +28,8 @@ from typing_extensions import override
 import sublime
 
 if TYPE_CHECKING:
-    from .core.sessions import Session
     from .core.sessions import AbstractViewListener
+    from .core.sessions import Session
 
 FormatResponse = Union[List[TextEdit], None]
 

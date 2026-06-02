@@ -23,12 +23,11 @@ jobs:
           path: lsp_maintainers
 
       - name: Check out community package repositories
-        run: python3 scripts/checkout-repos.py
+        run: python3 scripts/checkout-repos.py --exclude LSP
         working-directory: lsp_maintainers
 
       - name: Use PR checkout of LSP
         run: |
-          rm -rf lsp_maintainers/repositories/LSP
           ln -s ${{ github.workspace }}/LSP lsp_maintainers/repositories/LSP
 
       - name: Setup uv

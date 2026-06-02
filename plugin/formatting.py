@@ -29,7 +29,7 @@ import sublime
 
 if TYPE_CHECKING:
     from .core.sessions import Session
-    from plugin.core.sessions import AbstractViewListener
+    from .core.sessions import AbstractViewListener
 
 FormatResponse = Union[List[TextEdit], None]
 

@@ -84,7 +84,6 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Coroutine
-from typing import Union
 from typing_extensions import Concatenate
 from typing_extensions import deprecated
 from typing_extensions import ParamSpec
@@ -96,7 +95,6 @@ import sublime
 import time
 
 P = ParamSpec('P')
-MaybeCoroutine = Union[None, Coroutine[None, None, None]]
 
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
@@ -557,9 +555,7 @@ class SessionBuffer(TaskContainer):
         self.pending_refreshes &= ~flags
 
     def _if_view_unchanged(
-        self,
-        f: Callable[Concatenate[sublime.View, P], MaybeCoroutine | None],
-        version: int
+        self, f: Callable[Concatenate[sublime.View, P], Coroutine[None, None, None] | None], version: int
     ) -> Callable[P, None]:
         """Ensures that the view is at the same version when we were called, before calling the `f` function."""
         def handler(*args: P.args, **kwargs: P.kwargs) -> None:

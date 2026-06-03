@@ -27,6 +27,7 @@ jobs:
 
       - name: Use checkout of LSP from PR
         run: |
+          rm -rf ${{ github.workspace }}/LSP/tests
           ln -s ${{ github.workspace }}/LSP lsp_maintainers/repositories/LSP
 
       - name: Setup uv

@@ -22,7 +22,7 @@ jobs:
           path: lsp_maintainers
 
       - name: Check out community package repositories
-        run: python3 scripts/checkout-repos.py --exclude LSP --exclude LSP-pyvoice --exclude WolframLanguage
+        run: python3 scripts/checkout-repos.py --preferred-branch ${{ github.head_ref }} --exclude LSP --exclude LSP-pyvoice --exclude WolframLanguage
         working-directory: lsp_maintainers
 
       - name: Use checkout of LSP from PR

@@ -28,7 +28,8 @@ jobs:
       - name: Use checkout of LSP from PR
         run: |
           rm -rf ${{ github.workspace }}/LSP/tests
-          ln -s ${{ github.workspace }}/LSP lsp_maintainers/repositories/LSP
+          mv ${{ github.workspace }}/LSP/stubs lsp_maintainers/repositories/stubs
+          mv ${{ github.workspace }}/LSP lsp_maintainers/repositories
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v8.2.0

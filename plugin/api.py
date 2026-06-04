@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 from typing_extensions import deprecated
+import asyncio
 import inspect
 import sublime
 
@@ -489,10 +490,12 @@ class LspPlugin(APIHandler):
         Attempt to use non-blocking functionality for downloading binaries and running subprocesses in order to not
         block the asyncio thread.
 
+        When overriding, do not call the base class' method.
+
         :param      context:    The startup context. `context.configuration`, `context.variables` and
                                 `context.working_directory` can be mutated to influence how the server is launched.
         """
-        pass
+        await asyncio.get_running_loop().run_in_executor(None, cls.on_pre_start_async, context)
 
     def __init__(self, weaksession: ref[Session]) -> None:
         """

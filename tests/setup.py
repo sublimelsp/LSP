@@ -264,9 +264,6 @@ class TextDocumentTestCase(SublimeAioTestCase):
         payload = [{"method": method, "response": responses} for method, responses in responses]
         await self.session.request(Request("$test/setResponses", payload))
 
-    async def get_and_clear_unused_mock_responses(self) -> LSPAny:
-        pass
-
     async def mock_client_notification(self, method: str, params: LSPAny = None) -> LSPAny:
         """Emit an arbitrary notification from the fake server."""
         self.assertIsNotNone(self.session)

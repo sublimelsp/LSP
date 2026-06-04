@@ -350,8 +350,6 @@ class Session:
 
     async def _get_and_clear_unused_mock_responses(self, params: PayloadLike) -> PayloadLike:
         responses = list(self._responses)
-        for response in responses:
-            print(f"WARNING: unused mock response: {response}", file=sys.stderr)
         self._responses = []
         return responses
 

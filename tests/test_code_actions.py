@@ -178,6 +178,14 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
     async def test_applies_only_one_pass(self) -> None:
         self.insert_characters('const x = 1')
         initial_change_count = self.view.change_count()
+        await self.mock_client_notification(
+            "textDocument/publishDiagnostics",
+            create_test_diagnostics(
+                [
+                    ('Missing semicolon', range_from_points(Point(0, 11), Point(0, 11))),
+                ]
+            ),
+        )
         code_action_kind = 'source.fixAll'
         await self.mock_responses([
             (
@@ -203,12 +211,6 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
                 ]
             ),
         ])
-        await self.mock_client_notification(
-            "textDocument/publishDiagnostics",
-            create_test_diagnostics([
-                ('Missing semicolon', range_from_points(Point(0, 11), Point(0, 11))),
-            ])
-        )
         self.view.run_command('lsp_save', {'async': True})
         # Wait for the view to be saved
         await self.wait_until(lambda: not self.view.is_dirty())

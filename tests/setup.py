@@ -180,6 +180,12 @@ class TextDocumentTestCase(SublimeAioTestCase):
             else:
                 raise AssertionError(f"unable to open file {filename}")
 
+    async def tearDown(self) -> None:
+        self.assertIsNotNone(self.session)
+        assert self.session
+        for response in await self.session.request(Request("$test/getAndClearUnusedMockResponses")):
+            print(f"WARNING: unused mock response: {response}")
+
     @classmethod
     def get_test_name(cls) -> str:
         return "testfile"
@@ -257,6 +263,9 @@ class TextDocumentTestCase(SublimeAioTestCase):
         assert self.session
         payload = [{"method": method, "response": responses} for method, responses in responses]
         await self.session.request(Request("$test/setResponses", payload))
+
+    async def get_and_clear_unused_mock_responses(self) -> LSPAny:
+        pass
 
     async def mock_client_notification(self, method: str, params: LSPAny = None) -> LSPAny:
         """Emit an arbitrary notification from the fake server."""

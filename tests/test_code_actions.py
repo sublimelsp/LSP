@@ -15,7 +15,6 @@ from LSP.plugin.core.views import kind_contains_other_kind
 from LSP.plugin.core.views import versioned_text_document_identifier
 from LSP.plugin.documents import DocumentSyncListener
 from typing import TYPE_CHECKING
-import asyncio
 import unittest
 
 if TYPE_CHECKING:
@@ -148,7 +147,9 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
             code_action_kind
         )
         await self.mock_response('textDocument/codeAction', [code_action])
+        await self.mock_response('textDocument/codeAction', [code_action])
         self.view.run_command('lsp_save', {'async': True})
+        await self.await_message('textDocument/codeAction')
         await self.await_message('textDocument/codeAction')
         await self.await_message('textDocument/didSave')
         self.assertEqual(entire_content(self.view), 'const x = 1;')
@@ -164,7 +165,9 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
             code_action_kind
         )
         await self.mock_response('textDocument/codeAction', [code_action])
+        await self.mock_response('textDocument/codeAction', [code_action])
         self.view.run_command('lsp_save', {'async': True})
+        code_action_request = await self.await_message('textDocument/codeAction')
         code_action_request = await self.await_message('textDocument/codeAction')
         self.assertEqual(len(code_action_request['context']['diagnostics']), 1)
         self.assertEqual(code_action_request['context']['diagnostics'][0]['message'], 'Missing semicolon')
@@ -175,12 +178,6 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
     async def test_applies_only_one_pass(self) -> None:
         self.insert_characters('const x = 1')
         initial_change_count = self.view.change_count()
-        await self.mock_client_notification(
-            "textDocument/publishDiagnostics",
-            create_test_diagnostics([
-                ('Missing semicolon', range_from_points(Point(0, 11), Point(0, 11))),
-            ])
-        )
         code_action_kind = 'source.fixAll'
         await self.mock_responses([
             (
@@ -206,6 +203,12 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
                 ]
             ),
         ])
+        await self.mock_client_notification(
+            "textDocument/publishDiagnostics",
+            create_test_diagnostics([
+                ('Missing semicolon', range_from_points(Point(0, 11), Point(0, 11))),
+            ])
+        )
         self.view.run_command('lsp_save', {'async': True})
         # Wait for the view to be saved
         await self.wait_until(lambda: not self.view.is_dirty())
@@ -430,7 +433,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
 
     async def tearDown(self) -> None:
         DocumentSyncListener.debounce_time = self.original_debounce_time
-        super().tearDown()
+        await super().tearDown()
 
     @classmethod
     def get_test_server_capabilities(cls) -> dict:
@@ -452,8 +455,12 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         code_action_a = create_test_code_action(self.view, self.view.change_count(), [("A", range_a)])
         code_action_b = create_test_code_action(self.view, self.view.change_count(), [("B", range_b)])
         await self.mock_response('textDocument/codeAction', [code_action_a, code_action_b])
+        await self.mock_response('textDocument/codeAction', [code_action_a, code_action_b])
         self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
-        await asyncio.sleep(0.1)
+        await self.wait_until(
+            lambda: len(self.view.sel()) == 1 and self.view.sel()[0].a == 0 and self.view.sel()[0].b == 3
+        )
+        params = await self.await_message('textDocument/codeAction')
         params = await self.await_message('textDocument/codeAction')
         self.assertEqual(params['range']['start']['line'], 0)
         self.assertEqual(params['range']['start']['character'], 0)

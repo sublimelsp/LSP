@@ -330,6 +330,7 @@ class Session:
         self._on_request("$test/fakeRequest", self._fake_request)
         self._on_request("$test/sendNotification", self._send_notification)
         self._on_request("$test/setResponses", self._set_responses)
+        self._on_request("$test/getAndClearUnusedMockResponses", self._get_and_clear_unused_mock_responses)
         self._on_notification("$test/setResponse", self._on_set_response)
 
     async def _on_set_response(self, params: PayloadLike) -> None:
@@ -346,6 +347,13 @@ class Session:
 
         self._responses.extend([(param['method'], param['response']) for param in params])
         return None
+
+    async def _get_and_clear_unused_mock_responses(self, params: PayloadLike) -> PayloadLike:
+        responses = list(self._responses)
+        for response in responses:
+            print(f"WARNING: unused mock response: {response}", file=sys.stderr)
+        self._responses = []
+        return responses
 
     async def _send_notification(self, params: PayloadLike) -> PayloadLike:
         method, payload = self._validate_request_params(params)

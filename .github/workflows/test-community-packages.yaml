@@ -34,8 +34,8 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v8.2.0
 
-      - name: Sync venv and run basedpyright
+      - name: Sync venv and type check
         run: |
           uv sync
-          uv run pyright
+          uv run basedpyright
         working-directory: lsp_maintainers/repositories

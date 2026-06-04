@@ -1015,3 +1015,7 @@ Follow installation instructions on [LSP-lemminx](https://github.com/sublimelsp/
 ## YAML
 
 Follow installation instructions on [LSP-yaml](https://github.com/sublimelsp/LSP-yaml).
+
+## Zig
+
+Follow instructions on [Sublime Text - zigtools](https://zigtools.org/zls/editors/sublime-text/).

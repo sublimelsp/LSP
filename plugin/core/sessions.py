@@ -1448,10 +1448,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 self._plugin.on_server_response_async('initialize', Response(-1, result))
         await self.notify(Notification.initialized())
         if self._plugin and isinstance(self._plugin, LspPlugin):
-            if self._plugin.use_asyncio:
-                await self._plugin.on_initialized()
-            else:
-                self._plugin.on_initialized_async()
+            await self._plugin.on_initialized()
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")
@@ -1790,11 +1787,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         uri, r = get_uri_and_range_from_location(location)
         return await self.open_uri(uri, r, flags, group)
 
-    def notify_plugin_on_session_buffer_change_async(self, session_buffer: SessionBufferProtocol) -> None:
+    async def notify_plugin_on_session_buffer_change(self, session_buffer: SessionBufferProtocol) -> None:
         if not self._plugin:
             return
         if isinstance(self._plugin, LspPlugin):
-            self._plugin.on_text_changed_async(session_buffer)
+            await self._plugin.on_text_changed(session_buffer)
         else:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
@@ -2640,7 +2637,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.transport = None
         self._response_handlers.clear()
         if self._plugin:
-            self._plugin.on_session_end_async(exit_code, exception)
+            if isinstance(self._plugin, LspPlugin):
+                await self._plugin.on_session_end(exit_code, exception)
+            else:
+                self._plugin.on_session_end_async(exit_code, exception)
             self._plugin = None
         if mgr := self.manager():
             await mgr.on_post_exit(self, exit_code, exception)
@@ -2794,7 +2794,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         elif self._plugin:
             client_notification = cast('ClientNotification',
                                        cast('object', {'method': notification.method, 'params': notification.params}))
-            self._plugin.on_pre_send_notification_async(client_notification)
+            await self._plugin.on_pre_send_notification(client_notification)
             notification.params = cast('P', client_notification['params'])
         self._logger.outgoing_notification(notification.method, notification.params)
         await self.send_payload(notification.to_payload())
@@ -2852,7 +2852,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 elif self._plugin:
                     server_notification = cast('ServerNotification',
                                                cast('object', {'method': method, 'params': result}))
-                    self._plugin.on_server_notification_async(server_notification)
+                    await self._plugin.on_server_notification(server_notification)
                 return res
         elif "id" in payload:
             response_id = payload["id"]
@@ -2868,7 +2868,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 else:
                     server_response = cast('ServerResponse',
                                            cast('object', {'method': method, 'result': response.result}))
-                    self._plugin.on_server_response_async(server_response)
+                    await self._plugin.on_server_response(server_response)
                     response.result = server_response['result']
             return handler, response.result, None, None, None
         else:
@@ -2886,7 +2886,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     # server request
                     try:
                         await self.send_response(
-                            self._handle_plugin_on_pre_send_response_async(
+                            await self._handle_plugin_on_pre_send_response_async(
                                 method, result, await handler(result, req_id)
                             )
                         )
@@ -2900,12 +2900,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         else:
             debug("no handler found for payload:", payload)
 
-    def _handle_plugin_on_pre_send_response_async(
+    async def _handle_plugin_on_pre_send_response_async(
         self, method: str | None, params: Any, response: Response[Any]
     ) -> Response[Any]:
         if method and isinstance(self._plugin, LspPlugin):
             obj = cast('ClientResponse', {'method': method, 'params': params, 'result': response.result})
-            self._plugin.on_pre_send_response_async(obj)
+            await self._plugin.on_pre_send_response(obj)
         return response
 
     def response_handler(

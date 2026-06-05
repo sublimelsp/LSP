@@ -245,7 +245,7 @@ class SessionBuffer(TaskContainer):
             self.do_code_lenses_async(view)
             if userprefs().link_highlight_style == 'underline':
                 self._do_document_link_async(view, version)
-            self.session.notify_plugin_on_session_buffer_change_async(self)
+            await self.session.notify_plugin_on_session_buffer_change(self)
 
     async def _check_did_close(self, view: sublime.View) -> None:
         if self.opened and self.should_notify_did_close():
@@ -467,7 +467,7 @@ class SessionBuffer(TaskContainer):
             self._last_synced_version = version
         except MissingUriError:
             return  # we're closing
-        self.session.notify_plugin_on_session_buffer_change_async(self)
+        await self.session.notify_plugin_on_session_buffer_change(self)
         await self._on_after_change(view, version, suppress_requests)
 
     async def _on_after_change(self, view: sublime.View, version: int, suppress_requests: bool = False) -> None:

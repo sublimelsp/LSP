@@ -450,27 +450,44 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         range_a = range_from_points(Point(0, 0), Point(0, 1))
         range_b = range_from_points(Point(1, 0), Point(1, 1))
         range_c = range_from_points(Point(2, 0), Point(2, 1))
+        code_action_a = create_test_code_action(self.view, self.view.change_count(), [("A", range_a)])
+        code_action_b = create_test_code_action(self.view, self.view.change_count(), [("B", range_b)])
+        await self.mock_response('textDocument/codeAction', [code_action_a, code_action_b])
+
+        # Publish some fake diagnostics.
         await self.mock_client_notification(
             "textDocument/publishDiagnostics",
             create_test_diagnostics([('issue a', range_a), ('issue b', range_b), ('issue c', range_c)])
         )
-        code_action_a = create_test_code_action(self.view, self.view.change_count(), [("A", range_a)])
-        code_action_b = create_test_code_action(self.view, self.view.change_count(), [("B", range_b)])
+
+        # The published diagnostics should cause a code action request.
+        # Since the caret is at the 'c' character, the context should only contain 'issue c'.
+        params = await self.await_message('textDocument/codeAction')
+        self.assertEqual(len(params['context']['diagnostics']), 1)
+        self.assertEqual(params['context']['diagnostics'][0]['message'], 'issue c')
+
+        # Set up another mock response for a code action request from the client.
         await self.mock_response('textDocument/codeAction', [code_action_a, code_action_b])
-        await self.mock_response('textDocument/codeAction', [code_action_a, code_action_b])
-        self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
+
+        # Select a and b.
+        self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})
         await self.wait_until(
             lambda: len(self.view.sel()) == 1 and self.view.sel()[0].a == 0 and self.view.sel()[0].b == 3
         )
+
+        # The change in selection should cause another code action request from the client.
         params = await self.await_message('textDocument/codeAction')
-        params = await self.await_message('textDocument/codeAction')
+
+        # This time, the context should contain 'issue a' and 'issue b' due to the selection change.
+        self.assertEqual(len(params['context']['diagnostics']), 2)
+        self.assertEqual(params['context']['diagnostics'][0]['message'], 'issue a')
+        self.assertEqual(params['context']['diagnostics'][1]['message'], 'issue b')
         self.assertEqual(params['range']['start']['line'], 0)
         self.assertEqual(params['range']['start']['character'], 0)
         self.assertEqual(params['range']['end']['line'], 1)
         self.assertEqual(params['range']['end']['character'], 1)
-        self.assertEqual(len(params['context']['diagnostics']), 2)
+        await self.wait_until(lambda: len(self.view.get_regions(RegionKey.CODE_ACTION)) == 1)
         annotations_range = self.view.get_regions(RegionKey.CODE_ACTION)
-        self.assertEqual(len(annotations_range), 1)
         self.assertEqual(annotations_range[0].a, 3)
         self.assertEqual(annotations_range[0].b, 0)
 

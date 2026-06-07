@@ -99,6 +99,7 @@ from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import aclosing
 from .aio import gather_and_flatten_exceptions
+from .aio import guard
 from .aio import run_on_asyncio_thread
 from .aio import run_on_main_thread
 from .aio import TaskContainer
@@ -178,8 +179,10 @@ from functools import lru_cache
 from functools import partial
 from pathlib import Path
 from typing import Any
+from typing import Awaitable
 from typing import Callable
 from typing import cast
+from typing import Coroutine
 from typing import Generator
 from typing import Generic
 from typing import Literal
@@ -1372,6 +1375,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     # --- misc methods -------------------------------------------------------------------------------------------------
 
+    def _guard(self, untrusted: Awaitable[None]) -> Coroutine[None, None, None]:
+        return guard(untrusted, f"{self._plugin.name} exception" if self._plugin else "exception")
+
     def on_userprefs_changed_async(self) -> None:
         self._redraw_config_status_async()
         for sb in self.session_buffers_async():
@@ -1448,7 +1454,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 self._plugin.on_server_response_async('initialize', Response(-1, result))
         await self.notify(Notification.initialized())
         if self._plugin and isinstance(self._plugin, LspPlugin):
-            await self._plugin.on_initialized()
+            await self._guard(self._plugin.on_initialized())
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")
@@ -1514,6 +1520,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
                 if command_handler := self._plugin.get_command_handler(command_name):
+                    # If the plugin handler raises, let the exception bubble up.
                     return await command_handler(command.get('arguments'))
             else:
                 task: PackagedTask[LSPAny | Error | None] = Promise.packaged_task()
@@ -1675,6 +1682,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
                 if handler := self._plugin.get_uri_handler(scheme):
+                    # If the plugin uri handler raises, let the exception bubble up.
                     sheet = await handler(uri, flags)
                     return self._on_sheet_for_uri_opened(sheet, uri, r)
             else:
@@ -1791,7 +1799,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if not self._plugin:
             return
         if isinstance(self._plugin, LspPlugin):
-            await self._plugin.on_text_changed(session_buffer)
+            await self._guard(self._plugin.on_text_changed(session_buffer))
         else:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
@@ -2638,7 +2646,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._response_handlers.clear()
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
-                await self._plugin.on_session_end(exit_code, exception)
+                await self._guard(self._plugin.on_session_end(exit_code, exception))
             else:
                 self._plugin.on_session_end_async(exit_code, exception)
             self._plugin = None
@@ -2687,6 +2695,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self._plugin.on_pre_send_request_async(request_id, r)
         elif self._plugin:
             client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
+            # If the plugin raises an exception, let the exception bubble up.
             self._plugin.on_pre_send_request_async(client_request, r.view)
             r.params = cast('P', client_request['params'])
         self._logger.outgoing_request(request_id, r.method, r.params)
@@ -2725,6 +2734,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self._plugin.on_pre_send_request_async(request_id, r)
         elif self._plugin:
             client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
+            # If the plugin raises an exception, let the exception bubble up.
             self._plugin.on_pre_send_request_async(client_request, r.view)
             r.params = cast('P', client_request['params'])
         self._logger.outgoing_request(request_id, r.method, r.params)
@@ -2792,10 +2802,14 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_notification_async(notification)
         elif self._plugin:
-            client_notification = cast('ClientNotification',
-                                       cast('object', {'method': notification.method, 'params': notification.params}))
-            await self._plugin.on_pre_send_notification(client_notification)
-            notification.params = cast('P', client_notification['params'])
+            try:
+                client_notification = cast(
+                    'ClientNotification', cast('object', {'method': notification.method, 'params': notification.params})
+                )
+                await self._plugin.on_pre_send_notification(client_notification)
+                notification.params = cast('P', client_notification['params'])
+            except Exception as ex:
+                exception_log(f"{self._plugin.name} exception", ex)
         self._logger.outgoing_notification(notification.method, notification.params)
         await self.send_payload(notification.to_payload())
 
@@ -2852,7 +2866,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 elif self._plugin:
                     server_notification = cast('ServerNotification',
                                                cast('object', {'method': method, 'params': result}))
-                    await self._plugin.on_server_notification(server_notification)
+                    await self._guard(self._plugin.on_server_notification(server_notification))
                 return res
         elif "id" in payload:
             response_id = payload["id"]
@@ -2868,7 +2882,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 else:
                     server_response = cast('ServerResponse',
                                            cast('object', {'method': method, 'result': response.result}))
-                    await self._plugin.on_server_response(server_response)
+                    await self._guard(self._plugin.on_server_response(server_response))
                     response.result = server_response['result']
             return handler, response.result, None, None, None
         else:
@@ -2905,7 +2919,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> Response[Any]:
         if method and isinstance(self._plugin, LspPlugin):
             obj = cast('ClientResponse', {'method': method, 'params': params, 'result': response.result})
-            await self._plugin.on_pre_send_response(obj)
+            await self._guard(self._plugin.on_pre_send_response(obj))
         return response
 
     def response_handler(

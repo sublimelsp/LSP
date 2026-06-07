@@ -26,7 +26,7 @@ import unittest
 import weakref
 
 if TYPE_CHECKING:
-    from LSP.plugin.core.protocol import Error
+    from LSP.plugin.core.protocol import ResponseErrorException
 
 
 class MockManager(Manager):
@@ -90,7 +90,7 @@ class MockLogger(Logger):
     def outgoing_response(self, request_id: Any, params: Any) -> None:
         pass
 
-    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
+    def outgoing_error_response(self, request_id: Any, error: ResponseErrorException) -> None:
         pass
 
     def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:

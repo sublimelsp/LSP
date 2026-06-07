@@ -26,10 +26,10 @@ from .core.promise import Promise
 from .core.protocol import ClientNotification
 from .core.protocol import ClientRequest
 from .core.protocol import ClientResponse
-from .core.protocol import Error
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
+from .core.protocol import ResponseErrorException
 from .core.protocol import ServerNotification
 from .core.protocol import ServerRequest
 from .core.protocol import ServerResponse
@@ -59,7 +59,6 @@ __all__ = [
     'ClientResponse',
     'DebouncerNonThreadSafe',
     'DottedDict',
-    'Error',
     'FileWatcher',
     'FileWatcherEvent',
     'FileWatcherEventType',
@@ -76,6 +75,7 @@ __all__ = [
     'Promise',
     'Request',
     'Response',
+    'ResponseErrorException',
     'ServerNotification',
     'ServerRequest',
     'ServerResponse',

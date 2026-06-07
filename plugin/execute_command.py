@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from .core.aio import run_coroutine
 from .core.logging import debug
-from .core.protocol import Error
 from .core.protocol import LSPAny
+from .core.protocol import ResponseErrorException
 from .core.registry import LspTextCommand
 from .core.views import first_selection_region
 from .core.views import offset_to_point
@@ -41,7 +41,7 @@ class LspExecuteCommand(LspTextCommand):
         try:
             result: LSPAny = await session.run_command(params, progress=True, view=self.view)
             self.handle_success_async(result, command_name)
-        except Error as error:
+        except ResponseErrorException as error:
             self.handle_error_async(error, command_name)
 
     def handle_success_async(self, result: Any, command_name: str) -> None:
@@ -53,7 +53,7 @@ class LspExecuteCommand(LspTextCommand):
         """
         pass
 
-    def handle_error_async(self, error: Error, command_name: str) -> None:
+    def handle_error_async(self, error: ResponseErrorException, command_name: str) -> None:
         """
         Override this method to handle failed response to workspace/executeCommand.
 

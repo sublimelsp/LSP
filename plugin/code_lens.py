@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from .core.aio import run_on_asyncio_thread
 from .core.constants import CODE_LENS_ENABLED_KEY
-from .core.protocol import Error
 from .core.protocol import ResolvedCodeLens
+from .core.protocol import ResponseErrorException
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
@@ -49,8 +49,8 @@ class CachedCodeLens:
         self.range = HashableRange(data['range'])
         self.cached_command = data.get('command')
 
-    def on_resolve(self, response: CodeLens | Error) -> None:
-        if isinstance(response, Error):
+    def on_resolve(self, response: CodeLens | ResponseErrorException) -> None:
+        if isinstance(response, ResponseErrorException):
             return
         assert is_resolved(response)
         self.data = response

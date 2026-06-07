@@ -6,7 +6,7 @@ from .code_actions import CodeActionsOnFormatTask
 from .core.aio import run_coroutine
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
-from .core.protocol import Error
+from .core.protocol import ResponseErrorException
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import userprefs
@@ -225,7 +225,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
     async def _run(self) -> None:
         try:
             await format_selection(self.get_listener())
-        except Error as error:
+        except ResponseErrorException as error:
             sublime.status_message(f'Formatting error: {error}')
 
 

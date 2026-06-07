@@ -293,7 +293,7 @@ class Request(Generic[P, R]):
         return payload
 
 
-class Error(Exception):
+class ResponseErrorException(Exception):
 
     def __init__(self, code: int, message: str, data: Any = None) -> None:
         super().__init__(message)
@@ -301,8 +301,8 @@ class Error(Exception):
         self.data = data
 
     @classmethod
-    def from_lsp(cls, params: ResponseError) -> Error:
-        return Error(params["code"], params["message"], params.get("data"))
+    def from_lsp(cls, params: ResponseError) -> ResponseErrorException:
+        return ResponseErrorException(params["code"], params["message"], params.get("data"))
 
     def to_lsp(self) -> ResponseError:
         result: ResponseError = {"code": self.code, "message": super().__str__()}
@@ -314,8 +314,8 @@ class Error(Exception):
         return f"{super().__str__()} ({self.code})"
 
     @classmethod
-    def from_exception(cls, ex: Exception) -> Error:
-        return Error(ErrorCodes.InternalError, str(ex))
+    def from_exception(cls, ex: Exception) -> ResponseErrorException:
+        return ResponseErrorException(ErrorCodes.InternalError, str(ex))
 
 
 class Response(Generic[P]):

@@ -19,8 +19,8 @@ from .core.open import lsp_range_from_uri_fragment
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.promise import Promise
-from .core.protocol import Error
 from .core.protocol import Request
+from .core.protocol import ResponseErrorException
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
@@ -60,7 +60,7 @@ if TYPE_CHECKING:
     from .core.sessions import SessionBufferProtocol
 
 SessionName = str
-ResolvedHover = Union[Hover, Error]
+ResolvedHover = Union[Hover, ResponseErrorException]
 
 
 class LinkKind:
@@ -163,9 +163,9 @@ class LspHoverCommand(LspTextCommand):
         responses: list[ResolvedHover]
     ) -> None:
         hovers: list[tuple[Hover, MarkdownLangMap | None]] = []
-        errors: list[Error] = []
+        errors: list[ResponseErrorException] = []
         for response, language_map in zip(responses, language_maps):
-            if isinstance(response, Error):
+            if isinstance(response, ResponseErrorException):
                 errors.append(response)
                 continue
             if response:

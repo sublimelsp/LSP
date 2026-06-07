@@ -49,6 +49,9 @@ required-imports = ["from __future__ import annotations"]
 "protocol/__init__.py" = ["D400", "D415"]
 "plugin/core/protocol.py" = ["UP006", "UP007"]
 
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = ["ResponseErrorException"]
+
 [tool.ruff.lint]
 # Enable preview rules.
 preview = true

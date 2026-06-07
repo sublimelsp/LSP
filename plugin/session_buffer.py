@@ -1045,7 +1045,7 @@ class SessionBuffer(TaskContainer):
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = None,
         trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
-    ) -> list[Command | CodeAction] | Error | None:
+    ) -> list[Command | CodeAction] | None:
         context: CodeActionContext = {
             'diagnostics': diagnostics,
             'triggerKind': trigger_kind

@@ -850,7 +850,7 @@ class SessionBufferProtocol(Protocol):
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = ...,
         trigger_kind: CodeActionTriggerKind = ...
-    ) -> list[Command | CodeAction] | Error | None:
+    ) -> list[Command | CodeAction] | None:
         ...
 
     def do_code_lenses_async(self, view: sublime.View) -> None:

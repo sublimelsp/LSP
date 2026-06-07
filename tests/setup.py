@@ -183,7 +183,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
     async def tearDown(self) -> None:
         self.assertIsNotNone(self.session)
         assert self.session
-        for response in await self.session.request(Request("$test/getAndClearUnusedMockResponses")):
+        for response in await self.get_and_clear_unused_mock_responses():
             print(f"WARNING: unused mock response: {response}")
 
     @classmethod
@@ -270,6 +270,9 @@ class TextDocumentTestCase(SublimeAioTestCase):
         assert self.session
         await self.session.request(Request("$test/sendNotification", {"method": method, "params": params}))
         return params
+
+    async def get_and_clear_unused_mock_responses(self) -> list[tuple[str, LSPAny]]:
+        return await self.session.request(Request("$test/getAndClearUnusedMockResponses"))
 
     async def await_clear_view_and_save(self) -> None:
         assert isinstance(self.view, sublime.View)

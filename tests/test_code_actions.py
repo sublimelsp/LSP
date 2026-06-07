@@ -14,6 +14,7 @@ from LSP.plugin.core.views import entire_content
 from LSP.plugin.core.views import kind_contains_other_kind
 from LSP.plugin.core.views import versioned_text_document_identifier
 from LSP.plugin.documents import DocumentSyncListener
+from LSP.protocol import CodeActionTriggerKind
 from typing import TYPE_CHECKING
 import unittest
 
@@ -138,36 +139,83 @@ class CodeActionsOnSaveTaskTestCase(TextDocumentTestCase):
 
 class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
     async def test_applies_matching_kind(self) -> None:
-        await self._setup_document_with_missing_semicolon()
         code_action_kind = 'source.fixAll'
-        code_action = create_test_code_action(
-            self.view,
-            self.view.change_count(),
-            [(';', range_from_points(Point(0, 11), Point(0, 11)))],
-            code_action_kind
+        # The first textDocument/codeAction request should be due to the text change.
+        await self.mock_response(
+            'textDocument/codeAction',
+            [
+                create_test_code_action(
+                    self.view,
+                    self.view.change_count(),
+                    [(';', range_from_points(Point(0, 11), Point(0, 11)))],
+                    code_action_kind,
+                )
+            ],
         )
-        await self.mock_response('textDocument/codeAction', [code_action])
-        await self.mock_response('textDocument/codeAction', [code_action])
+        await self._setup_document_with_missing_semicolon()
+        params = await self.await_message('textDocument/codeAction')
+        self.assertEqual(params['context']['triggerKind'], CodeActionTriggerKind.Automatic)
+        self.assertEqual(params['context']['only'], ['quickfix'])
+        self.assertEqual(
+            params['range'], {'start': {'line': 0, 'character': 11}, 'end': {'line': 0, 'character': 11}}
+        )
+
+        # The second textDocument/codeAction request should be due to saving.
+        await self.mock_response(
+            'textDocument/codeAction',
+            [
+                create_test_code_action(
+                    self.view,
+                    self.view.change_count(),
+                    [(';', range_from_points(Point(0, 11), Point(0, 11)))],
+                    code_action_kind,
+                )
+            ],
+        )
         self.view.run_command('lsp_save', {'async': True})
-        await self.await_message('textDocument/codeAction')
-        await self.await_message('textDocument/codeAction')
-        await self.await_message('textDocument/didSave')
+        params = await self.await_message('textDocument/codeAction')
+        self.assertEqual(params['context']['triggerKind'], CodeActionTriggerKind.Automatic)
+        self.assertEqual(params['context']['only'], ['source.fixAll'])
+        self.assertEqual(
+            params['range'], {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 11}}
+        )
+        params = await self.await_message('textDocument/didSave')
         self.assertEqual(entire_content(self.view), 'const x = 1;')
         self.assertEqual(self.view.is_dirty(), False)
 
     async def test_requests_with_diagnostics(self) -> None:
-        await self._setup_document_with_missing_semicolon()
         code_action_kind = 'source.fixAll'
-        code_action = create_test_code_action(
-            self.view,
-            self.view.change_count(),
-            [(';', range_from_points(Point(0, 11), Point(0, 11)))],
-            code_action_kind
+        # The first textDocument/codeAction request should be due to the text change.
+        await self.mock_response(
+            'textDocument/codeAction',
+            [
+                create_test_code_action(
+                    self.view,
+                    self.view.change_count(),
+                    [(';', range_from_points(Point(0, 11), Point(0, 11)))],
+                    code_action_kind,
+                )
+            ],
         )
-        await self.mock_response('textDocument/codeAction', [code_action])
-        await self.mock_response('textDocument/codeAction', [code_action])
+        await self._setup_document_with_missing_semicolon()
+        params = await self.await_message('textDocument/codeAction')
+        self.assertEqual(params['context']['triggerKind'], CodeActionTriggerKind.Automatic)
+        self.assertEqual(params['context']['only'], ['quickfix'])
+        self.assertEqual(params['range'], {'start': {'line': 0, 'character': 11}, 'end': {'line': 0, 'character': 11}})
+
+        # The second textDocument/codeAction request should be due to saving.
+        await self.mock_response(
+            'textDocument/codeAction',
+            [
+                create_test_code_action(
+                    self.view,
+                    self.view.change_count(),
+                    [(';', range_from_points(Point(0, 11), Point(0, 11)))],
+                    code_action_kind,
+                )
+            ],
+        )
         self.view.run_command('lsp_save', {'async': True})
-        code_action_request = await self.await_message('textDocument/codeAction')
         code_action_request = await self.await_message('textDocument/codeAction')
         self.assertEqual(len(code_action_request['context']['diagnostics']), 1)
         self.assertEqual(code_action_request['context']['diagnostics'][0]['message'], 'Missing semicolon')
@@ -176,8 +224,53 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
         self.assertEqual(self.view.is_dirty(), False)
 
     async def test_applies_only_one_pass(self) -> None:
-        self.insert_characters('const x = 1')
         initial_change_count = self.view.change_count()
+        code_action_kind = 'source.fixAll'
+        should_be_unused_code_actions = [
+            create_test_code_action(
+                self.view,
+                initial_change_count + 2,
+                [('\nAnd again!', range_from_points(Point(0, 12), Point(0, 12)))],
+                code_action_kind,
+            )
+        ]
+        await self.mock_responses(
+            [
+                (
+                    # This first one is for the initial code actions request when the text changes.
+                    'textDocument/codeAction',
+                    [
+                        create_test_code_action(
+                            self.view,
+                            initial_change_count + 1,
+                            [(';', range_from_points(Point(0, 11), Point(0, 11)))],
+                            code_action_kind,
+                        )
+                    ],
+                ),
+                (
+                    # These last two are for the on-save tasks.
+                    # The first one has a matching document version, so it will apply.
+                    # The second one, with the '\nAnd again!' text change, also has a matching document version!
+                    # But, on-save tasks should only do *one pass*. Not more passes.
+                    'textDocument/codeAction',
+                    [
+                        create_test_code_action(
+                            self.view,
+                            initial_change_count + 1,
+                            [(';', range_from_points(Point(0, 11), Point(0, 11)))],
+                            code_action_kind,
+                        )
+                    ],
+                ),
+                (
+                    # This one should NOT be requested, because on-save tasks should only do one pass.
+                    'textDocument/codeAction',
+                    should_be_unused_code_actions,
+                ),
+            ]
+        )
+        self.insert_characters('const x = 1')
         await self.mock_client_notification(
             "textDocument/publishDiagnostics",
             create_test_diagnostics(
@@ -186,35 +279,17 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
                 ]
             ),
         )
-        code_action_kind = 'source.fixAll'
-        await self.mock_responses([
-            (
-                'textDocument/codeAction',
-                [
-                    create_test_code_action(
-                        self.view,
-                        initial_change_count,
-                        [(';', range_from_points(Point(0, 11), Point(0, 11)))],
-                        code_action_kind
-                    )
-                ]
-            ),
-            (
-                'textDocument/codeAction',
-                [
-                    create_test_code_action(
-                        self.view,
-                        initial_change_count + 1,
-                        [('\nAnd again!', range_from_points(Point(0, 12), Point(0, 12)))],
-                        code_action_kind
-                    )
-                ]
-            ),
-        ])
+
+        # Save the file, check that the COAS was applied.
         self.view.run_command('lsp_save', {'async': True})
-        # Wait for the view to be saved
         await self.wait_until(lambda: not self.view.is_dirty())
         self.assertEqual(entire_content(self.view), 'const x = 1;')
+
+        # Check that the last mock response was NOT requested.
+        unused_mock_responses = await self.get_and_clear_unused_mock_responses()
+        self.assertEqual(len(unused_mock_responses), 1)
+        self.assertEqual(unused_mock_responses[0][0], 'textDocument/codeAction')
+        self.assertEqual(unused_mock_responses[0][1], should_be_unused_code_actions)
 
     async def test_applies_immediately_after_text_change(self) -> None:
         self.insert_characters('const x = 1')
@@ -233,6 +308,18 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
         self.assertEqual(self.view.is_dirty(), False)
 
     async def test_no_fix_on_non_matching_kind(self) -> None:
+        code_action_kind = 'some.non.matching.kind.that.does.not.exist'
+        await self.mock_response(
+            'textDocument/codeAction',
+            [
+                create_test_code_action(
+                    self.view,
+                    self.view.change_count(),
+                    [(';', range_from_points(Point(0, 11), Point(0, 11)))],
+                    code_action_kind,
+                )
+            ],
+        )
         await self._setup_document_with_missing_semicolon()
         initial_content = 'const x = 1'
         self.view.run_command('lsp_save', {'async': True})
@@ -249,6 +336,9 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
             [(';', range_from_points(Point(0, 11), Point(0, 11)))],
             code_action_kind
         )
+        # First one is for the text changes.
+        await self.mock_response('textDocument/codeAction', [code_action])
+        # Second one is for the on-save actions.
         await self.mock_response('textDocument/codeAction', [code_action])
         self.view.run_command('lsp_save', {'async': True})
         await self.await_message('textDocument/didSave')
@@ -521,6 +611,15 @@ class CodeActionsTestCase(TextDocumentTestCase):
         return capabilities
 
     async def test_requests_code_actions_on_newly_published_diagnostics(self) -> None:
+        # Set up a mock response so we don't get an exception.
+        await self.mock_response(
+            'textDocument/codeAction',
+            [
+                create_disabled_code_action(
+                    self.view, self.view.change_count(), [(';', range_from_points(Point(0, 0), Point(0, 1)))]
+                )
+            ],
+        )
         self.insert_characters('a\nb')
         await self.await_message("textDocument/didChange")
         await self.mock_client_notification(

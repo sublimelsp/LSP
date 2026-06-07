@@ -82,10 +82,12 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
     if has_prev_val:
         prev_val = settings.get(key)
     settings.set(key, val)
-    yield
-    settings.erase(key)
-    if has_prev_val and settings.get(key) != prev_val:
-        settings.set(key, prev_val)
+    try:
+        yield
+    finally:
+        settings.erase(key)
+        if has_prev_val and settings.get(key) != prev_val:
+            settings.set(key, prev_val)
 
 
 class LspApplyWorkspaceEditCommand(LspWindowCommand):

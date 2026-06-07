@@ -6,8 +6,8 @@ from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
 from .core.aio import run_coroutine
-from .core.protocol import Error
 from .core.protocol import Request
+from .core.protocol import ResponseErrorException
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
@@ -182,7 +182,7 @@ class CodeActionsManager:
                             # Return only results for non-empty lists.
                             (sb.session.config.name, [a for a in response_filter(sb, response) if len(a) > 0])
                         )
-                except Error:
+                except ResponseErrorException:
                     pass
         return results
 
@@ -211,7 +211,7 @@ class CodeActionsManager:
                         session_kinds = get_session_kinds(sb)
                         matching_kinds = get_matching_kinds(code_actions, session_kinds)
                         actions = [a for a in response if a.get('kind') in matching_kinds and not a.get('disabled')]
-                except Error:
+                except ResponseErrorException:
                     pass
                 yield (sb.session.config.name, actions)
 
@@ -413,7 +413,7 @@ class LspCodeActionsCommand(LspTextCommand):
         run_coroutine(run())
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
-        if isinstance(response, Error):
+        if isinstance(response, ResponseErrorException):
             sublime.error_message(f"{session_name}: {response}")
 
 
@@ -475,7 +475,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
                 self._handle_response_async(config_name, response)
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
-        if isinstance(response, Error):
+        if isinstance(response, ResponseErrorException):
             sublime.error_message(f"{session_name}: {response}")
 
     def _is_cache_valid(self, event: dict | None) -> bool:

@@ -45,10 +45,10 @@ from .core.constants import SEMANTIC_TOKENS_MAP
 from .core.constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .core.edit import apply_text_edits
 from .core.promise import Promise
-from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.protocol import ResponseError
+from .core.protocol import ResponseErrorException
 from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
@@ -417,7 +417,7 @@ class SessionBuffer(TaskContainer):
                         and change_count == view.change_count()
                     ):
                         await apply_text_edits(view, result)
-                except Error:
+                except ResponseErrorException:
                     pass
 
             self.create_task(purge_changes_and_do_on_type_formatting())
@@ -703,7 +703,7 @@ class SessionBuffer(TaskContainer):
             params['previousResultId'] = result_id
         req = self.session.request(Request.documentDiagnostic(params, view))
         self._document_diagnostic_pending_requests[identifier] = PendingDocumentDiagnosticRequest(version, req.id)
-        error: Error | None = None
+        error: ResponseErrorException | None = None
         try:
             response = await req
             self._diagnostics_versions[identifier] = version
@@ -716,7 +716,7 @@ class SessionBuffer(TaskContainer):
                     self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
                     if is_full_document_diagnostic_report(diagnostic_report):
                         self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
-        except Error as e:
+        except ResponseErrorException as e:
             error = e
         finally:
             self._document_diagnostic_pending_requests[identifier] = None

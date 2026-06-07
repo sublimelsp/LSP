@@ -34,9 +34,9 @@ from .panels import MAX_LOG_LINES_LIMIT_OFF
 from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
-from .protocol import Error
 from .protocol import Notification
 from .protocol import Point
+from .protocol import ResponseErrorException
 from .sessions import AbstractViewListener
 from .sessions import Logger
 from .sessions import Manager
@@ -699,7 +699,7 @@ class PanelLogger(Logger):
         duration = self._request_time_tracker.end_tracking(request_id, server_initiated=True)
         self.log(self._format_response(">>>", request_id, duration), params)
 
-    def outgoing_error_response(self, request_id: int | str, error: Error) -> None:
+    def outgoing_error_response(self, request_id: int | str, error: ResponseErrorException) -> None:
         if not userprefs().log_server:
             return
         duration = self._request_time_tracker.end_tracking(request_id, server_initiated=True)
@@ -848,7 +848,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_OUTGOING,
         })
 
-    def outgoing_error_response(self, request_id: int | str, error: Error) -> None:
+    def outgoing_error_response(self, request_id: int | str, error: ResponseErrorException) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,

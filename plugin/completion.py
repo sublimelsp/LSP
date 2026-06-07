@@ -20,8 +20,8 @@ from .core.constants import MarkdownLangMap
 from .core.edit import apply_text_edits
 from .core.logging import debug
 from .core.promise import Promise
-from .core.protocol import Error
 from .core.protocol import Request
+from .core.protocol import ResponseErrorException
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
 from .core.views import FORMAT_MARKUP_CONTENT
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from .core.sessions import Session
 
 SessionName: TypeAlias = str
-CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, Error, None]
+CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, ResponseErrorException, None]
 ResolvedCompletions: TypeAlias = Tuple[CompletionResponse, 'weakref.ref[Session]']
 CompletionsStore: TypeAlias = Tuple[List[CompletionItem], CompletionItemDefaults]
 
@@ -228,13 +228,13 @@ class QueryCompletionsTask:
         LspSelectCompletionCommand.completions = {}
         items: list[sublime.CompletionItem] = []
         item_defaults: CompletionItemDefaults = {}
-        errors: list[Error] = []
+        errors: list[ResponseErrorException] = []
         flags = self._get_userpref_flags()
         view_settings = self._view.settings()
         include_snippets = view_settings.get("auto_complete_include_snippets") and \
             (self._triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
         for response, weak_session in responses:
-            if isinstance(response, Error):
+            if isinstance(response, ResponseErrorException):
                 errors.append(response)
                 continue
             session = weak_session()
@@ -391,7 +391,7 @@ class LspSelectCompletionCommand(LspTextCommand):
         if session and not item.get('additionalTextEdits'):
             try:
                 item = await session.request(Request.resolveCompletionItem(item, self.view))
-            except Error as error:
+            except ResponseErrorException as error:
                 debug("Error resolving completion item:", error)
         if additional_edits := item.get('additionalTextEdits'):
             await apply_text_edits(self.view, additional_edits)

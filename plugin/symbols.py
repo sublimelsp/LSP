@@ -13,10 +13,10 @@ from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler
 from .core.promise import Promise
-from .core.protocol import Error
 from .core.protocol import Point
 from .core.protocol import Request
 from .core.protocol import ResponseError
+from .core.protocol import ResponseErrorException
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
@@ -373,13 +373,12 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
         Promise.all(promises).then(partial(self._on_all_responses, change_count))
 
     def _handle_response_async(
-        self, session_name: str, response: list[SymbolInformation] | list[WorkspaceSymbol] | Error | None
+        self,
+        session_name: str,
+        response: list[SymbolInformation] | list[WorkspaceSymbol] | ResponseErrorException | None,
     ) -> list[sublime.ListInputItem]:
-        if response and not isinstance(response, Error):
-            return [
-                symbol_to_list_input_item(item, session_name=session_name)
-                for item in response
-            ]
+        if response and not isinstance(response, ResponseErrorException):
+            return [symbol_to_list_input_item(item, session_name=session_name) for item in response]
         return []
 
     def _on_all_responses(self, change_count: int, item_lists: list[list[sublime.ListInputItem]]) -> None:

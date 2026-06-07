@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .setup import TextDocumentTestCase
-from LSP.plugin import Error
+from LSP.plugin import ResponseErrorException
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
@@ -34,7 +34,7 @@ async def verify(
     try:
         result = await testcase.make_server_do_fake_request(method, input_params)
         testcase.assertEqual(result, expected_output_params)
-    except Error as error:
+    except ResponseErrorException as error:
         if expected_error_code is not None:
             testcase.assertEqual(error.code, expected_error_code)
         else:

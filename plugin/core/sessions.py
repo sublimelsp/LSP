@@ -134,7 +134,6 @@ from .promise import Promise
 from .protocol import ClientNotification
 from .protocol import ClientRequest
 from .protocol import ClientResponse
-from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
 from .protocol import Point
@@ -142,6 +141,7 @@ from .protocol import Request
 from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
+from .protocol import ResponseErrorException
 from .protocol import ServerNotification
 from .protocol import ServerResponse
 from .settings import globalprefs
@@ -972,7 +972,7 @@ class Logger(ABC):
         pass
 
     @abstractmethod
-    def outgoing_error_response(self, request_id: int | str, error: Error) -> None:
+    def outgoing_error_response(self, request_id: int | str, error: ResponseErrorException) -> None:
         pass
 
     @abstractmethod
@@ -1048,7 +1048,7 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
 
     def __init__(self, req_id: int, session: Session) -> None:
         super().__init__(req_id, session)
-        self._queue: asyncio.Queue[R | Error | None] = asyncio.Queue()
+        self._queue: asyncio.Queue[R | ResponseErrorException | None] = asyncio.Queue()
         self._is_streaming = False
 
     @property
@@ -1077,7 +1077,7 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
         self._queue.put_nowait(None)
 
     def _on_error(self, error: ResponseError) -> None:
-        self._queue.put_nowait(Error.from_lsp(error))
+        self._queue.put_nowait(ResponseErrorException.from_lsp(error))
 
     def __aiter__(self) -> CancellableInflightStreamingRequest:
         """Stream partial results using the `async for` syntax."""
@@ -1088,7 +1088,7 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
         item = await self._queue.get()
         if item is None:
             raise StopAsyncIteration
-        if isinstance(item, Error):
+        if isinstance(item, ResponseErrorException):
             raise item
         return item
 
@@ -1516,7 +1516,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 if command_handler := self._plugin.get_command_handler(command_name):
                     return await command_handler(command.get('arguments'))
             else:
-                task: PackagedTask[LSPAny | Error | None] = Promise.packaged_task()
+                task: PackagedTask[LSPAny | ResponseErrorException | None] = Promise.packaged_task()
                 promise, resolve = task
                 if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                     return cast("LSPAny", await promise)
@@ -1808,10 +1808,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return await self.request(Request("codeAction/resolve", code_action))
         return code_action
 
-    async def _apply_code_action(self, code_action: CodeAction | Error | None, view: sublime.View | None) -> None:
+    async def _apply_code_action(
+        self, code_action: CodeAction | ResponseErrorException | None, view: sublime.View | None
+    ) -> None:
         if not code_action:
             return
-        if isinstance(code_action, Error):
+        if isinstance(code_action, ResponseErrorException):
             # TODO: do something with the error?
             self.window.status_message(f"Failed to apply code action: {code_action}")
             return
@@ -2216,7 +2218,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         if is_workspace_full_document_diagnostic_report(diagnostic_report):
                             self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
                 self.workspace_diagnostics_pending_responses[identifier] = None
-        except Error as e:
+        except ResponseErrorException as e:
             if e.code == LSPErrorCodes.ServerCancelled:
                 if is_diagnostic_server_cancellation_data(e.data) and e.data['retriggerRequest']:
                     # Retrigger the request after a short delay, but don't reset the pending response variable for this
@@ -2360,7 +2362,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 response: TextDocumentContentResult = await self.request(
                     Request('workspace/textDocumentContent', {'uri': uri})
                 )
-            except Error as error:
+            except ResponseErrorException as error:
                 sublime.status_message(f"Error getting content: {error}")
                 break
             new_content = response['text'].replace('\r', '')
@@ -2679,7 +2681,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         def on_error(error: ResponseError) -> None:
             # Future may have been cancelled.
             if not future.done():
-                future.set_exception(Error.from_lsp(error))
+                future.set_exception(ResponseErrorException.from_lsp(error))
 
         self._response_handlers[request_id] = (r, on_result, on_error)
         self._invoke_views(r, "on_request_started_async", request_id, r)
@@ -2745,7 +2747,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if future.cancelled():
                 return
             if ex := future.exception():
-                if callable(on_error) and isinstance(ex, Error):
+                if callable(on_error) and isinstance(ex, ResponseErrorException):
                     on_error(ex.to_lsp())
                     return
                 exception_log("Response error is ignored", ex)
@@ -2766,17 +2768,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         run_on_asyncio_thread(lambda: self.send_request_async(request, on_result, on_error))
 
     @deprecated("use Session.request or Session.stream instead")
-    def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:
+    def send_request_task(self, request: Request[P, R]) -> Promise[R | ResponseErrorException]:
         task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
-        self.send_request(request, resolver, lambda x: resolver(Error.from_lsp(x)))
+        self.send_request(request, resolver, lambda x: resolver(ResponseErrorException.from_lsp(x)))
         return promise
 
     @deprecated("use Session.request or Session.stream instead")
-    def send_request_task_2(self, request: Request[P, R]) -> tuple[Promise[R | Error], int]:
-        task: PackagedTask[R | Error] = Promise.packaged_task()
+    def send_request_task_2(self, request: Request[P, R]) -> tuple[Promise[R | ResponseErrorException], int]:
+        task: PackagedTask[R | ResponseErrorException] = Promise.packaged_task()
         promise, resolver = task
-        request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
+        request_id = self.send_request_async(request, resolver, lambda x: resolver(ResponseErrorException.from_lsp(x)))
         return (promise, request_id)
 
     def cancel_request_async(self, request_id: int) -> None:
@@ -2813,7 +2815,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if response.post_response_callback:
             response.post_response_callback()
 
-    async def send_error_response(self, request_id: int | str, error: Error) -> None:
+    async def send_error_response(self, request_id: int | str, error: ResponseErrorException) -> None:
         self._logger.outgoing_error_response(request_id, error)
         await self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
 
@@ -2841,7 +2843,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 req_id = payload["id"]
                 self._logger.incoming_request(req_id, method, result)
                 if handler is None:
-                    await self.send_error_response(req_id, Error(ErrorCodes.MethodNotFound, method))
+                    await self.send_error_response(req_id, ResponseErrorException(ErrorCodes.MethodNotFound, method))
                 else:
                     return (handler, result, req_id, "request", method)
             else:
@@ -2890,10 +2892,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                                 method, result, await handler(result, req_id)
                             )
                         )
-                    except Error as err:
+                    except ResponseErrorException as err:
                         await self.send_error_response(req_id, err)
                     except Exception as ex:
-                        await self.send_error_response(req_id, Error.from_exception(ex))
+                        await self.send_error_response(req_id, ResponseErrorException.from_exception(ex))
                         raise
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)

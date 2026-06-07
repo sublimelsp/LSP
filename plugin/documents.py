@@ -509,7 +509,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             if code_lenses_enabled:
                 sv.session_buffer.resolve_visible_code_lenses_async(self.view)
             if plugin := sv.session.plugin:
-                plugin.on_selection_modified_async(sv)
+                try:
+                    plugin.on_selection_modified_async(sv)
+                except Exception as ex:
+                    exception_log(f"{plugin.name} exception", ex)
 
     async def on_post_save(self) -> list[BaseException | None]:
         # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real

@@ -106,7 +106,7 @@ class StdioTransportConfig(TransportConfig):
             raise Exception('Failed to create transport config due to not being able to pipe stdio')
         return TransportWrapper(
             callback_object=callbacks,
-            transport=StreamTransport(encode_json, decode_json, process.stdout, process.stdin),
+            transport=Transport(encode_json, decode_json, process.stdout, process.stdin),
             process=process,
             process_args=launch.command,
             error_reader=ErrorReader(callbacks, process.stderr),
@@ -164,7 +164,7 @@ class TcpClientTransportConfig(TransportConfig):
                 )
                 return TransportWrapper(
                     callback_object=callbacks,
-                    transport=StreamTransport(encode_json, decode_json, reader, writer),
+                    transport=Transport(encode_json, decode_json, reader, writer),
                     process=process,
                     process_args=launch.command if launch else None,
                     error_reader=error_reader,
@@ -216,7 +216,7 @@ class TcpServerTransportConfig(TransportConfig):
 
             async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
                 async with self.cv:
-                    transport = StreamTransport(encode_json, decode_json, reader, writer)
+                    transport = Transport(encode_json, decode_json, reader, writer)
                     self.wrapper = TransportWrapper(callbacks, transport, self.process, command, self.error_reader)
                     self.cv.notify()
 
@@ -250,37 +250,7 @@ class TcpServerTransportConfig(TransportConfig):
 # --- Transports -------------------------------------------------------------------------------------------------------
 
 
-class TransportCallbacks:
-    async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None: ...
-
-    async def on_payload(self, payload: JSONRPCMessage) -> None: ...
-
-    def on_stderr_message(self, message: str) -> None: ...
-
-
-class Transport(ABC):
-    def __init__(self, encoder: Callable[[JSONRPCMessage], bytes], decoder: Callable[[bytes], JSONRPCMessage]) -> None:
-        self._encoder = encoder
-        self._decoder = decoder
-
-    @abstractmethod
-    async def read(self) -> JSONRPCMessage | None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def write(self, payload: JSONRPCMessage) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def write_bytes(self, payload: bytes) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def close(self) -> None:
-        raise NotImplementedError
-
-
-async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str]:
+async def _parse_headers(reader: asyncio.StreamReader) -> dict[str, str]:
     headers: dict[str, str] = {}
     try:
         headers_bytes = (await reader.readuntil(b'\r\n\r\n')).decode("ascii").rstrip()
@@ -294,13 +264,22 @@ async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str]:
     return headers
 
 
-async def parse_content_length(reader: asyncio.StreamReader) -> int | None:
-    headers = await parse_headers(reader)
+async def _parse_content_length(reader: asyncio.StreamReader) -> int | None:
+    headers = await _parse_headers(reader)
     content_length = headers.get("content-length")
     return int(content_length) if content_length else None
 
 
-class StreamTransport(Transport):
+class TransportCallbacks:
+    async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None: ...
+
+    async def on_payload(self, payload: JSONRPCMessage) -> None: ...
+
+    def on_stderr_message(self, message: str) -> None: ...
+
+
+@final
+class Transport:
     def __init__(
         self,
         encoder: Callable[[JSONRPCMessage], bytes],
@@ -308,13 +287,21 @@ class StreamTransport(Transport):
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
-        super().__init__(encoder, decoder)
+        self._encoder = encoder
+        self._decoder = decoder
         self._reader = reader
         self._writer = writer
 
-    @override
+    @property
+    def reader(self) -> asyncio.StreamReader:
+        return self._reader
+
+    @property
+    def writer(self) -> asyncio.StreamWriter:
+        return self._writer
+
     async def read(self) -> JSONRPCMessage:
-        content_length = await parse_content_length(self._reader)
+        content_length = await _parse_content_length(self._reader)
         if content_length is None:
             raise StopLoopError
         body = await self._reader.readexactly(content_length)
@@ -323,7 +310,6 @@ class StreamTransport(Transport):
         except Exception as ex:
             raise Exception(f"JSON decode error: {ex}") from ex
 
-    @override
     async def write(self, payload: JSONRPCMessage) -> None:
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
@@ -334,27 +320,17 @@ class StreamTransport(Transport):
             # there's other logic that will make the transport shut down.
             pass
 
-    @override
-    async def write_bytes(self, payload: bytes) -> None:
-        self._writer.write(payload)
-        await self._writer.drain()
-
-    @override
     async def close(self) -> None:
         self._writer.close()
         await self._writer.wait_closed()
 
 
-# --- TransportWrapper -------------------------------------------------------------------------------------------------
-
-
 @final
 class TransportWrapper:
     """
-    Double dispatch-like class that takes a (subclass of) Transport, and provides to a (subclass of) TransportCallbacks
-    appropriately decoded messages. The TransportWrapper is also responsible for keeping the spawned child
-    process around (if any), and also keeps track of the ErrorReader. It can be the case that there is no ErrorReader,
-    for instance when talking to a remote TCP language server. So it can be None.
+    Provides to a (subclass of) TransportCallbacks appropriately decoded messages. The TransportWrapper is also
+    responsible for keeping the spawned child process around (if any), and also keeps track of the ErrorReader. It can
+    be the case that there is no ErrorReader, for instance when talking to a remote TCP language server.
     """
 
     def __init__(
@@ -380,13 +356,17 @@ class TransportWrapper:
         """
         return self._process_args
 
+    @property
+    def reader(self) -> asyncio.StreamReader | None:
+        return self._transport.reader if self._transport else None
+
+    @property
+    def writer(self) -> asyncio.StreamWriter | None:
+        return self._transport.writer if self._transport else None
+
     async def send(self, payload: JSONRPCMessage) -> None:
         if self._transport:
             await self._transport.write(payload)
-
-    async def send_bytes(self, payload: bytes) -> None:
-        if self._transport:
-            await self._transport.write_bytes(payload)
 
     async def close(self) -> None:
         if self._error_reader:

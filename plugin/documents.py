@@ -87,7 +87,6 @@ from weakref import WeakValueDictionary
 import itertools
 import sublime
 import sublime_plugin
-import weakref
 import webbrowser
 
 if TYPE_CHECKING:
@@ -199,14 +198,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        weakself = weakref.ref(self)
-
-        def on_change() -> None:
-            nonlocal weakself
-            this = weakself()
-            if this is not None:
-                this._on_settings_object_changed()
-
         settings = view.settings()
         self._uri = ''  # assumed to never be falsey
         self._current_syntax = settings.get("syntax")
@@ -217,7 +208,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
-        self._registration = SettingsRegistration(settings, on_change=on_change)
+        self._registration = SettingsRegistration(settings, on_change=self._on_settings_object_changed)
         self._completions_task: QueryCompletionsTask | None = None
         self._is_documenation_popup_open = False
         self._stored_selection: list[sublime.Region] = []
@@ -524,6 +515,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             manager = self._manager
             sublime.set_timeout_async(lambda: manager.unregister_listener_async(self))
         self._clear_session_views_async()
+        self._registration.unregister()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool | None:
         # You can filter key bindings by the precense of a provider,

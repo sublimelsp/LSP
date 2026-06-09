@@ -190,11 +190,7 @@ class SettingsRegistration:
 
     def __init__(self, settings: sublime.Settings, on_change: Callable[[], None]) -> None:
         self.settings = settings
-
-        def on_change_handler() -> None:
-            on_change()
-
-        self.settings.add_on_change("LSP", on_change_handler)
+        self.settings.add_on_change("LSP", on_change)
 
     def unregister(self) -> None:
         self.settings.clear_on_change("LSP")

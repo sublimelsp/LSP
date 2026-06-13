@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from .test_mocks import basic_responses
-from collections.abc import Generator
 from LSP.plugin.core.collections import DottedDict
-from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows

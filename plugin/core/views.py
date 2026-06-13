@@ -150,8 +150,10 @@ class InvalidUriSchemeError(Exception):
 @contextmanager
 def mutable(view: sublime.View) -> Generator:
     view.set_read_only(False)
-    yield
-    view.set_read_only(True)
+    try:
+        yield
+    finally:
+        view.set_read_only(True)
 
 
 def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:

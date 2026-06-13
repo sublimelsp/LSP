@@ -48,7 +48,6 @@ import posixpath
 import re
 import sublime
 import time
-import weakref
 
 if TYPE_CHECKING:
     from .file_watcher import FileWatcherEventType
@@ -180,26 +179,20 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
     runner(run, timeout_ms)
 
 
+@dataclass
+class SettingsStore:
+    settings: sublime.Settings
+    settings_path: str
+
+
 class SettingsRegistration:
-    __slots__ = ("settings", "settings_path", "__weakref__")  # pyright: ignore[reportUninitializedInstanceVariable]
+    __slots__ = ("settings", )
 
-    def __init__(
-        self, settings: sublime.Settings, settings_path: str, on_change: Callable[[SettingsRegistration], None]
-    ) -> None:
+    def __init__(self, settings: sublime.Settings, on_change: Callable[[], None]) -> None:
         self.settings = settings
-        self.settings_path = settings_path
-        weak_self = weakref.ref(self)
+        self.settings.add_on_change("LSP", on_change)
 
-        def on_change_handler() -> None:
-            if self_ := weak_self():
-                on_change(self_)
-
-        self.settings.add_on_change("LSP", on_change_handler)
-
-    def __del__(self) -> None:
-        # FIXME: Relying on reference counts and garbage collection timings for the change listener handling is a very
-        # bad idea, because instances of this class are dynamically passed between other object instances, and it can
-        # easily cause bugs like https://github.com/sublimelsp/LSP/pull/2867
+    def unregister(self) -> None:
         self.settings.clear_on_change("LSP")
 
 
@@ -807,7 +800,7 @@ class ClientConfig:
         diagnostics_mode: str = "all_files",
         markdown_language_map: MarkdownLangMapJson | None = None,
         path_maps: list[PathMap] | None = None,
-        settings_registration: SettingsRegistration | None = None,
+        settings_store: SettingsStore | None = None,
         custom_config_keys: dict[str, Any] | None = None
     ) -> None:
         """
@@ -845,7 +838,7 @@ class ClientConfig:
             applies no extra mapping.
         :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
             server (e.g. inside a container).
-        :param settings_registration: The `SettingsRegistration` instance holding resource path and `Settings` instance
+        :param settings_store: The `SettingsStore` instance holding resource path and `Settings` instance
             for the plugin settings. Present only for `ClientConfig`s created through `from_sublime_settings()`.
         :param custom_config_keys: The complete raw settings dictionary. Used as a fallback for attribute/key access for
             settings not explicitly modelled above.
@@ -873,7 +866,7 @@ class ClientConfig:
         # Transformed mapping that uses tuples instead of lists for mdpopups.
         self.resolved_markdown_language_map: MarkdownLangMap | None = None
         self.markdown_language_map = markdown_language_map  # use the setter to populate resolved_markdown_language_map
-        self._settings_registration = settings_registration
+        self._settings_store = settings_store
         if isinstance(custom_config_keys, dict):
             self._custom_config_keys = custom_config_keys
             # Only retain server configuration keys that we don't have dedicated properties for.
@@ -908,9 +901,9 @@ class ClientConfig:
     def enabled(self, enabled: bool) -> None:
         if enabled == self._enabled:
             return
-        if self._settings_registration:
-            settings_basename = os.path.basename(self._settings_registration.settings_path)
-            self._settings_registration.settings.set("enabled", enabled)
+        if self._settings_store:
+            settings_basename = os.path.basename(self._settings_store.settings_path)
+            self._settings_store.settings.set("enabled", enabled)
             sublime.save_settings(settings_basename)
         self._enabled = enabled
 
@@ -938,7 +931,7 @@ class ClientConfig:
         return result
 
     @classmethod
-    def from_sublime_settings(cls, name: str, settings_registration: SettingsRegistration) -> ClientConfig:
+    def from_sublime_settings(cls, name: str, settings_store: SettingsStore) -> ClientConfig:
         """
         Create a ClientConfig from a Sublime Text `Settings` object.
 
@@ -946,10 +939,10 @@ class ClientConfig:
         overrides are layered on top from `Settings`.
 
         :param name: Unique server name.
-        :param settings_registration: The `SettingsRegistration` object for this client.
+        :param settings_store: The `SettingsStore` object for this client.
         """
-        s = settings_registration.settings
-        file = settings_registration.settings_path
+        s = settings_store.settings
+        file = settings_store.settings_path
         base = sublime.decode_value(sublime.load_resource(file))
         settings = DottedDict(deepcopy(base.get("settings", {})))  # defined by the plugin author
         settings.update(deepcopy(read_dict_setting(s, "settings", {})))  # overrides from the user
@@ -988,7 +981,7 @@ class ClientConfig:
             diagnostics_mode=str(s.get("diagnostics_mode", "all_files")),
             markdown_language_map=deepcopy(s.get("markdown_language_map")),
             path_maps=PathMap.parse(s.get("path_maps")),
-            settings_registration=settings_registration,
+            settings_store=settings_store,
             custom_config_keys=deepcopy(s.to_dict())
         )
 
@@ -1067,7 +1060,7 @@ class ClientConfig:
             diagnostics_mode=deepcopy(override.get("diagnostics_mode", src_config.diagnostics_mode)),
             markdown_language_map=deepcopy(override.get("markdown_language_map", src_config.markdown_language_map)),
             path_maps=PathMap.parse(override.get("path_maps")) or deepcopy(src_config.path_maps),
-            settings_registration=src_config._settings_registration,
+            settings_store=src_config._settings_store,
             custom_config_keys=deepcopy({**src_config._custom_config_keys, **override})
         )
 

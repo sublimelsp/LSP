@@ -8,6 +8,8 @@ from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
 from functools import partial
+from typing import Any
+from typing import Literal
 from typing import TYPE_CHECKING
 from typing import TypeVar
 import html
@@ -48,7 +50,7 @@ class TreeItem:
         kind: SublimeKind = sublime.KIND_AMBIGUOUS,
         description: str = "",
         tooltip: str = "",
-        command_url: str = ""
+        action_command: tuple[str, dict[str, Any]] | None = None,
     ) -> None:
         self.label = label
         """ A human-readable string describing this item. """
@@ -58,13 +60,12 @@ class TreeItem:
         """ A human-readable string which is rendered less prominent. """
         self.tooltip = tooltip
         """ The tooltip text when you hover over this item. """
-        self.command_url = command_url
-        """ A HTML embeddable URL for a command that should be executed when the tree item label is clicked.
-        Use the sublime.command_url function to generate this URL. """
+        self.action_command = action_command
+        """ The command and its arguments to be executed when the tree item label is clicked. """
         self.collapsible_state = TreeItemCollapsibleState.COLLAPSED
         self.id = str(uuid.uuid4())
 
-    def html(self, sheet_name: str, indent_level: int) -> str:
+    def html(self, sheet_name: str, indent_level: int, is_active: bool = False) -> str:
         indent_html = f'<span style="padding-left: {indent_level}rem;">&nbsp;</span>'
         if self.collapsible_state == TreeItemCollapsibleState.COLLAPSED:
             disclosure_button_html = '<a class="disclosure-button" href="{}">▶</a>'.format(
@@ -79,14 +80,20 @@ class TreeItem:
             kind_class_name, self.kind[2], self.kind[1] or '&nbsp;')
         escaped_tooltip = html.escape(self.tooltip)
         escaped_label = html.escape(self.label)
-        if self.command_url and self.tooltip:
-            label_html = f'<a class="label" href="{self.command_url}" title="{escaped_tooltip}">{escaped_label}</a>'
-        elif self.command_url:
-            label_html = f'<a class="label" href="{self.command_url}">{escaped_label}</a>'
+        command_url = (
+            sublime.command_url('lsp_activate_tree_item', {'name': sheet_name, 'node_id': self.id})
+            if self.action_command else None
+        )
+        if command_url and self.tooltip:
+            label_html = f'<a class="label" href="{command_url}" title="{escaped_tooltip}">{escaped_label}</a>'
+        elif command_url:
+            label_html = f'<a class="label" href="{command_url}">{escaped_label}</a>'
         elif self.tooltip:
             label_html = f'<span class="label" title="{escaped_tooltip}">{escaped_label}</span>'
         else:
             label_html = f'<span class="label">{escaped_label}</span>'
+        if is_active:
+            label_html = f'<span class="active">{label_html}</span>'
         description_html = f'<span class="description">{html.escape(self.description)}</span>' if \
             self.description else ''
         content = indent_html + disclosure_button_html + icon_html + label_html + description_html
@@ -95,11 +102,12 @@ class TreeItem:
 
 class Node:
 
-    __slots__ = ('element', 'tree_item', 'indent_level', 'child_ids', 'is_resolved')
+    __slots__ = ('element', 'tree_item', 'parent_node_id', 'indent_level', 'child_ids', 'is_resolved')
 
-    def __init__(self, element: T, tree_item: TreeItem, indent_level: int = 0) -> None:
+    def __init__(self, element: T, tree_item: TreeItem, parent_node_id: str | None, indent_level: int = 0) -> None:
         self.element = element
         self.tree_item = tree_item
+        self.parent_node_id = parent_node_id
         self.indent_level = indent_level
         self.child_ids: list[str] = []
         self.is_resolved = False
@@ -127,6 +135,8 @@ class TreeViewSheet(sublime.HtmlSheet):
     def __init__(self, sheet_id: int, name: str, data_provider: TreeDataProvider, header: str = "") -> None:
         super().__init__(sheet_id)
         self.nodes: dict[str, Node] = {}
+        self.selected_node_id: str | None = None
+        self.ordered_node_ids: list[str] = []
         self.root_nodes: list[str] = []
         self.name = name
         self.data_provider = data_provider
@@ -152,9 +162,11 @@ class TreeViewSheet(sublime.HtmlSheet):
         for element in elements:
             tree_item = self.data_provider.get_tree_item(element)
             tree_item.collapsible_state = TreeItemCollapsibleState.EXPANDED
-            self.nodes[tree_item.id] = Node(element, tree_item)
+            self.nodes[tree_item.id] = Node(element, tree_item, parent_node_id=None)
             self.root_nodes.append(tree_item.id)
             promises.append(self.data_provider.get_children(element).then(partial(self._add_children, tree_item.id)))
+        if self.root_nodes:
+            self.selected_node_id = self.root_nodes[0]
         Promise.all(promises).then(lambda _: self._update_contents())
 
     def _add_children(self, node_id: str, elements: list[T]) -> None:
@@ -162,11 +174,52 @@ class TreeViewSheet(sublime.HtmlSheet):
         node = self.nodes[node_id]
         for element in elements:
             tree_item = self.data_provider.get_tree_item(element)
-            self.nodes[tree_item.id] = Node(element, tree_item, node.indent_level + 1)
+            self.nodes[tree_item.id] = Node(element, tree_item, node_id, node.indent_level + 1)
             node.child_ids.append(tree_item.id)
         if len(elements) == 0:
             node.tree_item.collapsible_state = TreeItemCollapsibleState.NONE
         node.is_resolved = True
+
+    def _resolve_children(self, node_id: str) -> None:
+        assert node_id in self.nodes
+        node = self.nodes[node_id]
+        self.data_provider.get_children(node.element) \
+            .then(partial(self._add_children, node_id)) \
+            .then(lambda _: self._update_contents())
+
+    def navigate(self, direction: Literal['up', 'right', 'down', 'left', 'close']) -> None:
+        if direction == 'close':
+            self.close()
+            return
+        if not self.selected_node_id or not (selected_node := self.nodes[self.selected_node_id]):
+            return
+        if direction == 'down':
+            current_index = self.ordered_node_ids.index(self.selected_node_id)
+            next_index = min(len(self.ordered_node_ids) - 1, current_index + 1)
+            if current_index == next_index:
+                return
+            next_node_id = self.ordered_node_ids[next_index]
+            self.activate_item(next_node_id)
+        elif direction == 'up':
+            current_index = self.ordered_node_ids.index(self.selected_node_id)
+            previous_index = max(0, current_index - 1)
+            if current_index == previous_index:
+                return
+            previous_node_id = self.ordered_node_ids[previous_index]
+            self.activate_item(previous_node_id)
+        elif direction == 'left':
+            if selected_node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
+                self.collapse_item(self.selected_node_id)
+            elif selected_node.parent_node_id and selected_node.tree_item.collapsible_state in {
+                TreeItemCollapsibleState.COLLAPSED,
+                TreeItemCollapsibleState.NONE
+            }:
+                self.activate_item(selected_node.parent_node_id)
+        elif direction == 'right':
+            if selected_node.tree_item.collapsible_state == TreeItemCollapsibleState.COLLAPSED:
+                self.expand_item(self.selected_node_id)
+        # TODO: reliable focus
+        sublime.set_timeout(lambda: sublime.active_window().focus_sheet(self), 300)
 
     def expand_item(self, node_id: str) -> None:
         assert node_id in self.nodes
@@ -175,14 +228,23 @@ class TreeViewSheet(sublime.HtmlSheet):
         if node.is_resolved:
             self._update_contents()
             return
-        self.data_provider.get_children(node.element) \
-            .then(partial(self._add_children, node_id)) \
-            .then(lambda _: self._update_contents())
+        self._resolve_children(node_id)
 
     def collapse_item(self, node_id: str) -> None:
         assert node_id in self.nodes
         self.nodes[node_id].tree_item.collapsible_state = TreeItemCollapsibleState.COLLAPSED
         self._update_contents()
+
+    def activate_item(self, node_id: str) -> None:
+        assert node_id in self.nodes
+        self.selected_node_id = node_id
+        node = self.nodes[node_id]
+        if node.is_resolved:
+            self._update_contents()
+        else:
+            self._resolve_children(node_id)
+        if action_command := node.tree_item.action_command:
+            sublime.active_window().run_command(*action_command)
 
     def _update_contents(self) -> None:
         contents = """
@@ -193,6 +255,15 @@ class TreeViewSheet(sublime.HtmlSheet):
             {}
             h3 a {{
                 text-decoration: none;
+            }}
+            kbd {{
+                background-color: color(var(--foreground) lightness(+ 5%));
+                border-radius: 0.25rem;
+                border: 1px solid color(var(--foreground) alpha(0.25));
+                color: var(--background);
+                font-size: 0.9rem;
+                padding: 0.05rem 0.25rem;
+                line-height: 0.8rem;
             }}
             .tree-view {{
                 padding: 0.5rem;
@@ -261,17 +332,34 @@ class TreeViewSheet(sublime.HtmlSheet):
                 color: color(var(--foreground) alpha(0.6));
                 padding-left: 0.5rem;
             }}
+            .active {{
+                background-color: color(var(--accent));
+            }}
         </style>
         <body id="lsp-tree-view" class="lsp_sheet">
             <h3>{}</h3>
+            <div class="description">use <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> to move around</div>
             <div class="tree-view">{}</div>
         </body>
         """.format(css().sheets, self.header, "".join([self._subtree_html(root_id) for root_id in self.root_nodes]))
         self.set_contents(contents)
+        self._update_ordered_node_ids()
+
+    def _update_ordered_node_ids(self) -> None:
+        # Iterative to avoid recursion.
+        result: list[str] = []
+        stack = list(reversed(self.root_nodes))
+        while stack:
+            node_id = stack.pop()
+            node = self.nodes[node_id]
+            result.append(node_id)
+            if node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
+                stack.extend(reversed(node.child_ids))
+        self.ordered_node_ids = result
 
     def _subtree_html(self, node_id: str) -> str:
         node = self.nodes[node_id]
-        html = node.tree_item.html(self.name, node.indent_level)
+        html = node.tree_item.html(self.name, node.indent_level, node_id == self.selected_node_id)
         if node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
             html += "".join([self._subtree_html(child_id) for child_id in node.child_ids])
         return html
@@ -333,6 +421,16 @@ def toggle_tree_item(window: sublime.Window, name: str, node_id: str, expand: bo
         sheet.collapse_item(node_id)
 
 
+def activate_tree_item(window: sublime.Window, name: str, node_id: str) -> None:
+    wm = windows.lookup(window)
+    if not wm:
+        return
+    sheet = wm.tree_view_sheets.get(name)
+    if not sheet:
+        return
+    sheet.activate_item(node_id)
+
+
 class LspExpandTreeItemCommand(LspWindowCommand):
 
     def run(self, name: str, node_id: str) -> None:
@@ -343,3 +441,9 @@ class LspCollapseTreeItemCommand(LspWindowCommand):
 
     def run(self, name: str, node_id: str) -> None:
         toggle_tree_item(self.window, name, node_id, False)
+
+
+class LspActivateTreeItemCommand(LspWindowCommand):
+
+    def run(self, name: str, node_id: str) -> None:
+        activate_tree_item(self.window, name, node_id)

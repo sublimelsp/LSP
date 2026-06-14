@@ -101,8 +101,10 @@ def basescope2languageid(base_scope: str) -> str:
 @contextlib.contextmanager
 def runtime(token: str) -> Generator[None, None, None]:
     t = time.time()
-    yield
-    debug(token, "running time:", int((time.time() - t) * 1000000), "μs")
+    try:
+        yield
+    finally:
+        debug(token, "running time:", int((time.time() - t) * 1000000), "μs")
 
 
 T = TypeVar("T")

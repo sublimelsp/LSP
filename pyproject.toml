@@ -150,3 +150,12 @@ ignore = [
     "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
     "TRY301",  # https://docs.astral.sh/ruff/rules/raise-within-try/
 ]
+
+[tool.pyrefly]
+python-version = "3.8.0"
+site-package-path = ["./stubs"]
+infer-with-first-use = false
+
+[tool.pyrefly.errors]
+bad-override = "ignore"
+missing-source = "ignore"

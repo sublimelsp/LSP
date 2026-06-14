@@ -4,6 +4,7 @@
             "bracex",
             "mdpopups",
             "orjson",
+            "sublime_aio",
             "typing_extensions",
             "wcmatch"
         ]

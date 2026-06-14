@@ -8,6 +8,7 @@ from ..protocol import SymbolInformation
 from ..protocol import SymbolKind
 from ..protocol import SymbolTag
 from ..protocol import WorkspaceSymbol
+from .core.aio import run_coroutine
 from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler
@@ -328,24 +329,22 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
     capability = 'workspaceSymbolProvider'
 
     def run(self, symbol: WorkspaceSymbolValue) -> None:
+        run_coroutine(self._run(symbol))
+
+    async def _run(self, symbol: WorkspaceSymbolValue) -> None:
         session_name = symbol['session']
         if session := self.session_by_name(session_name):
             if location := symbol.get('location'):
-                session.open_location_async(location, sublime.NewFileFlags.ENCODED_POSITION)
+                await session.open_location(location, sublime.NewFileFlags.ENCODED_POSITION)
             elif workspace_symbol := symbol.get('workspaceSymbol'):
-                session.send_request(
-                    Request.resolveWorkspaceSymbol(workspace_symbol),
-                    partial(self._on_resolved_symbol_async, session_name))
+                workspace_symbol = await session.request(Request.resolveWorkspaceSymbol(workspace_symbol))
+                location = cast('Location', workspace_symbol['location'])
+                await session.open_location(location, sublime.NewFileFlags.ENCODED_POSITION)
 
     def input(self, args: dict[str, Any]) -> sublime_plugin.ListInputHandler | None:
         if 'symbol' not in args:
             return WorkspaceSymbolsInputHandler(self, args)
         return None
-
-    def _on_resolved_symbol_async(self, session_name: str, response: WorkspaceSymbol) -> None:
-        if session := self.session_by_name(session_name):
-            location = cast('Location', response['location'])
-            session.open_location_async(location, sublime.NewFileFlags.ENCODED_POSITION)
 
 
 class WorkspaceSymbolsInputHandler(DynamicListInputHandler):

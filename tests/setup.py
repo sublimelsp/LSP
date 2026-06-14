@@ -1,48 +1,43 @@
 from __future__ import annotations
 
+from .async_test_case import AsyncTestCase
+from .async_test_case import FutureLike
 from .test_mocks import basic_responses
+from functools import partial
+from LSP.plugin.core.aio import run_coroutine
+from LSP.plugin.core.aio import run_on_asyncio_thread
+from LSP.plugin.core.aio import tick
 from LSP.plugin.core.collections import DottedDict
+from LSP.plugin.core.open import open_file
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.types import ClientStates
+from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
 from typing import Any
+from typing import Callable
+from typing import Coroutine
 from typing import TYPE_CHECKING
-from unittesting import DeferrableTestCase
+from typing_extensions import override
+import asyncio
 import sublime
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-    from LSP.plugin.core.promise import Promise
+    from LSP.plugin.core.sessions import CancellableInflightRequest
+    from LSP.plugin.core.sessions import Session
+    from LSP.plugin.core.windows import WindowManager
+    from LSP.protocol import CodeAction
+    from LSP.protocol import LSPAny
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
 TIMEOUT_TIME = 10000 if CI else 2000
 text_config = ClientConfig(name="textls", selector="text.plain", command=[], tcp_port=None)
-
-
-class YieldPromise:
-    __slots__ = ("__done", "__result")
-
-    def __init__(self) -> None:
-        self.__done = False
-
-    def __call__(self) -> bool:
-        return self.__done
-
-    def fulfill(self, result: Any = None) -> None:
-        assert not self.__done
-        self.__result = result
-        self.__done = True
-
-    def result(self) -> Any:
-        return self.__result
 
 
 def make_stdio_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
@@ -94,57 +89,102 @@ def remove_config(config: ClientConfig) -> None:
     client_configs.remove_for_testing(config)
 
 
-def close_test_view(view: sublime.View | None) -> Generator:
+async def close_test_view(view: sublime.View | None) -> None:
     if view:
+        while view.is_loading():  # noqa: ASYNC110
+            await asyncio.sleep(0.05)
         view.set_scratch(True)
-        yield {"condition": lambda: not view.is_loading(), "timeout": TIMEOUT_TIME}
-        view.close()
+        future = asyncio.get_running_loop().create_future()
+        view.close(partial(run_on_asyncio_thread, future.set_result))
+        await future
 
 
 def expand(s: str, w: sublime.Window) -> str:
     return sublime.expand_variables(s, w.extract_variables())
 
 
-class TextDocumentTestCase(DeferrableTestCase):
+class SublimeAioTestCase(AsyncTestCase):
+    timeout_ms = TIMEOUT_TIME
+
+    @classmethod
+    def run_coroutine(cls, coro: Coroutine) -> FutureLike:
+        return run_coroutine(coro)
+
+
+class TextDocumentTestCase(SublimeAioTestCase):
+
+    config: ClientConfig
+    wm: WindowManager
+    view: sublime.View
+    session: Session
+
     @classmethod
     def get_stdio_test_config(cls) -> ClientConfig:
         return make_stdio_test_config("TEST")
 
+    @override
     @classmethod
-    def setUpClass(cls) -> Generator:
-        super().setUpClass()
+    async def asyncSetUpClass(cls) -> None:
         test_name = cls.get_test_name()
         server_capabilities = cls.get_test_server_capabilities()
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", f"{test_name}.txt"), window)
-        open_view = window.find_open_file(filename)
-        yield from close_test_view(open_view)
+        await close_test_view(window.find_open_file(filename))
         cls.config = cls.get_stdio_test_config()
         cls.config.initialization_options.set("serverResponse", server_capabilities)
         add_config(cls.config)
-        cls.wm = windows.lookup(window)
-        cls.view = window.open_file(filename)
-        yield {"condition": lambda: not cls.view.is_loading(), "timeout": TIMEOUT_TIME}
-        yield cls.ensure_document_listener_created
-        yield {"condition": lambda: cls.wm.get_session(cls.config.name, filename) is not None, "timeout": TIMEOUT_TIME}
-        cls.session = cls.wm.get_session(cls.config.name, filename)
-        yield {"condition": lambda: cls.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
-        cls.initialize_params = yield from cls.await_message("initialize")
-        yield from cls.await_message("initialized")
-        yield from close_test_view(cls.view)
+        if wm := windows.lookup(window):
+            cls.wm = wm
+        else:
+            raise AssertionError("unable to find WindowManager")
+        if view := await open_file(window, filename_to_uri(filename)):
+            cls.view = view
+        else:
+            raise AssertionError(f"unable to open file {filename}")
+        if listener := cls.ensure_document_listener_created():
+            if session := await cls.wm.start(cls.config, listener):
+                cls.session = session
+            else:
+                raise AssertionError("unable to start session")
+        else:
+            raise AssertionError(f"unable to find listener for view {cls.view.id()}")
+        cls.initialize_params = await cls.await_message("initialize")
+        await cls.await_message("initialized")
 
-    def setUp(self) -> Generator:
+    @override
+    async def setUp(self) -> None:
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", f"{self.get_test_name()}.txt"), window)
-        open_view = window.find_open_file(filename)
-        if not open_view:
-            self.__class__.view = window.open_file(filename)
-            yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
-            self.assertTrue(self.wm.get_config_manager().match_view(self.view, self.wm.workspace_folders))
+        await close_test_view(window.find_open_file(filename))
+        if view := await open_file(window, filename_to_uri(filename)):
+            self.__class__.view = view
+        else:
+            raise AssertionError(f"unable to open file {filename}")
         self.init_view_settings()
-        yield self.ensure_document_listener_created
-        params = yield from self.await_message("textDocument/didOpen")
-        self.assertEqual(params["textDocument"]["version"], 0)
+        self.assertIsNotNone(self.ensure_document_listener_created())
+        params = await self.await_message("textDocument/didOpen")
+        self.assertIsInstance(params, dict)
+        assert isinstance(params, dict)
+        self.assertIsInstance(params["textDocument"], dict)
+        assert isinstance(params["textDocument"], dict)
+        version: int = params["textDocument"]["version"]
+        if version != 0:
+            print(
+                f"WARNING: for some reason, the document version of {filename} is {version}. Attempting to close and then re-open it..."  # noqa: E501
+            )
+            await asyncio.sleep(0.2)
+            await close_test_view(self.__class__.view)
+            await asyncio.sleep(0.2)
+            if view := await open_file(window, filename_to_uri(filename)):
+                self.__class__.view = view
+            else:
+                raise AssertionError(f"unable to open file {filename}")
+
+    async def tearDown(self) -> None:
+        self.assertIsNotNone(self.session)
+        assert self.session
+        for response in await self.get_and_clear_unused_mock_responses():
+            print(f"WARNING: unused mock response: {response}")
 
     @classmethod
     def get_test_name(cls) -> str:
@@ -154,9 +194,9 @@ class TextDocumentTestCase(DeferrableTestCase):
     def get_test_server_capabilities(cls) -> dict:
         return basic_responses["initialize"]
 
-    @classmethod
-    def init_view_settings(cls) -> None:
-        s = cls.view.settings().set
+    def init_view_settings(self) -> None:
+        assert self.view
+        s = self.view.settings().set
         s("auto_complete_selector", "text")
         s("ensure_newline_at_eof_on_save", False)
         s("rulers", [])
@@ -166,7 +206,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         s("lsp_format_on_save", False)
 
     @classmethod
-    def ensure_document_listener_created(cls) -> bool:
+    def ensure_document_listener_created(cls) -> DocumentSyncListener | None:
         assert cls.view
         # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
         # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
@@ -174,12 +214,17 @@ class TextDocumentTestCase(DeferrableTestCase):
         # Revisit this once we're on ST4.
         for listener in view_event_listeners[cls.view.id()]:
             if isinstance(listener, DocumentSyncListener):
-                sublime.set_timeout_async(listener.on_activated_async)
-                return True
-        return False
+                return listener
+        return None
+
+    @staticmethod
+    async def wait_until(condition: Callable[[], bool]) -> None:
+        """Returns when the given state has been reached."""
+        while not condition():
+            await tick()
 
     @classmethod
-    def await_message(cls, method: str, promise: YieldPromise | None = None) -> Generator[Any, None, Any]:
+    def await_message(cls, method: str) -> CancellableInflightRequest[LSPAny]:
         """
         Awaits until server receives a request with a specified method.
 
@@ -188,130 +233,76 @@ class TextDocumentTestCase(DeferrableTestCase):
         request yet, it will wait for it and then respond.
 
         :param      method: The method type that we are awaiting response for.
-        :param      promise: The optional promise to fullfill on response.
 
-        :returns:   A generator with resolved value.
+        :returns:   resolved value.
         """
         # cls.assertIsNotNone(cls.session)
         assert cls.session
-        if promise is None:
-            promise = YieldPromise()
-
-        def handler(params: Any) -> None:
-            promise.fulfill(params)
-
-        def error_handler(params: Any) -> None:
-            print("Got error:", params, "awaiting timeout :(")
-
-        cls.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
-        yield from cls.await_promise(promise)
-        return promise.result()  # noqa: B901
-
-    def make_server_do_fake_request(self, method: str, params: Any) -> YieldPromise:
-        promise = YieldPromise()
-
-        def on_result(params: Any) -> None:
-            promise.fulfill(params)
-
-        def on_error(params: Any) -> None:
-            promise.fulfill(params)
-
-        req = Request("$test/fakeRequest", {"method": method, "params": params})
-        self.session.send_request(req, on_result, on_error)
-        return promise
+        return cls.session.request(Request("$test/getReceived", {"method": method}))
 
     @classmethod
-    def await_promise(cls, promise: YieldPromise | Promise) -> Generator[Any, None, Any]:
-        if isinstance(promise, YieldPromise):
-            yielder = promise
-        else:
-            yielder = YieldPromise()
-            promise.then(yielder.fulfill)
-        yield {"condition": yielder, "timeout": TIMEOUT_TIME}
-        return yielder.result()  # noqa: B901
+    def make_server_do_fake_request(cls, method: str, params: LSPAny) -> CancellableInflightRequest[LSPAny]:
+        """Make the fake server do an arbitrary request."""
+        assert cls.session
+        return cls.session.request(Request("$test/fakeRequest", {"method": method, "params": params}))
 
-    def await_run_code_action(self, code_action: dict[str, Any]) -> Generator:
-        promise = YieldPromise()
-        sublime.set_timeout_async(
-            lambda: self.session.run_code_action_async(code_action, progress=False, view=self.view).then(
-                promise.fulfill
-            )
-        )
-        yield from self.await_promise(promise)
+    @classmethod
+    async def await_run_code_action(cls, code_action: CodeAction) -> LSPAny:
+        assert cls.session
+        return await cls.session.run_code_action(code_action, progress=False, view=cls.view)
 
-    def set_response(self, method: str, response: Any) -> None:
+    async def mock_response(self, method: str, response: LSPAny) -> None:
+        """Set up what the fake server should reply when it receives this method."""
         self.assertIsNotNone(self.session)
         assert self.session
-        self.session.send_notification(Notification("$test/setResponse", {"method": method, "response": response}))
+        await self.session.notify(Notification("$test/setResponse", {"method": method, "response": response}))
 
-    def set_responses(self, responses: list[tuple[str, Any]]) -> Generator:
+    async def mock_responses(self, responses: list[tuple[str, LSPAny]]) -> None:
+        """Set up what the fake server should reply, given these request methods."""
         self.assertIsNotNone(self.session)
         assert self.session
-        promise = YieldPromise()
-
-        def handler(params: Any) -> None:
-            promise.fulfill(params)
-
-        def error_handler(params: Any) -> None:
-            print("Got error:", params, "awaiting timeout :(")
-
         payload = [{"method": method, "response": responses} for method, responses in responses]
-        self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
-        yield from self.await_promise(promise)
+        await self.session.request(Request("$test/setResponses", payload))
 
-    def await_client_notification(self, method: str, params: Any = None) -> Generator:
+    async def mock_client_notification(self, method: str, params: LSPAny = None) -> LSPAny:
+        """Emit an arbitrary notification from the fake server."""
         self.assertIsNotNone(self.session)
         assert self.session
-        promise = YieldPromise()
+        await self.session.request(Request("$test/sendNotification", {"method": method, "params": params}))
+        return params
 
-        def handler(params: Any) -> None:
-            promise.fulfill(params)
+    async def get_and_clear_unused_mock_responses(self) -> list[tuple[str, LSPAny]]:
+        return await self.session.request(Request("$test/getAndClearUnusedMockResponses"))
 
-        def error_handler(params: Any) -> None:
-            print("Got error:", params, "awaiting timeout :(")
-
-        req = Request("$test/sendNotification", {"method": method, "params": params})
-        self.session.send_request(req, handler, error_handler)
-        yield from self.await_promise(promise)
-
-    def await_clear_view_and_save(self) -> Generator:
+    async def await_clear_view_and_save(self) -> None:
         assert isinstance(self.view, sublime.View)
         self.view.run_command("select_all")
         self.view.run_command("left_delete")
         self.view.run_command("save")
-        yield from self.await_message("textDocument/didChange")
-        yield from self.await_message("textDocument/didSave")
+        await self.await_message("textDocument/didChange")
+        await self.await_message("textDocument/didSave")
 
-    def await_view_change(self, expected_change_count: int) -> Generator:
+    async def await_view_change(self, expected_change_count: int) -> None:
         assert isinstance(self.view, sublime.View)
-
-        def condition() -> bool:
-            nonlocal self, expected_change_count
-            assert self.view
-            v = self.view
-            return v.change_count() == expected_change_count
-
-        yield {"condition": condition, "timeout": TIMEOUT_TIME}
+        await self.wait_until(lambda: self.view.change_count() == expected_change_count)
 
     def insert_characters(self, characters: str) -> int:
         assert isinstance(self.view, sublime.View)
         self.view.run_command("insert", {"characters": characters})
         return self.view.change_count()
 
+    @override
     @classmethod
-    def tearDownClass(cls) -> Generator:
-        if cls.session and cls.wm:
-            sublime.set_timeout_async(cls.session.end_async)
-            yield lambda: cls.session.state == ClientStates.STOPPING
-            if cls.view:
-                yield lambda: cls.wm.get_session(cls.config.name, cls.view.file_name()) is None
-        cls.session = None
-        cls.wm = None
-        # restore the user's configs
-        remove_config(cls.config)
-        super().tearDownClass()
+    async def asyncTearDownClass(cls) -> None:
+        try:
+            if cls.session and cls.wm:
+                await cls.session.end()
+        finally:
+            # restore the user's configs
+            remove_config(cls.config)
+        await super().asyncTearDownClass()
 
-    def doCleanups(self) -> Generator:
+    @override
+    async def asyncDoCleanups(self) -> None:
         if self.view and self.view.is_valid():
-            yield from close_test_view(self.view)
-        yield from super().doCleanups()
+            await close_test_view(self.view)

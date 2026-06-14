@@ -1,30 +1,47 @@
+# ruff: noqa: ASYNC240
+
 from __future__ import annotations
 
+from .setup import CI
 from .setup import TextDocumentTestCase
+from LSP.plugin import Error
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from pathlib import Path
 from typing import Any
-from typing import Generator
 from typing import TYPE_CHECKING
 import os
+import sys
 import tempfile
+import unittest
 
 if TYPE_CHECKING:
     from ..protocol import ApplyWorkspaceEditParams
     from ..protocol import ApplyWorkspaceEditResult
     from ..protocol import WorkspaceEdit
+    from LSP.protocol import ErrorCodes
 
 
-def verify(testcase: TextDocumentTestCase, method: str, input_params: Any, expected_result: Any) -> Generator:
-    promise = testcase.make_server_do_fake_request(method, input_params)
-    yield from testcase.await_promise(promise)
-    testcase.assertEqual(promise.result(), expected_result)
+async def verify(
+    testcase: TextDocumentTestCase,
+    method: str,
+    input_params: Any,
+    expected_output_params: Any,
+    expected_error_code: ErrorCodes | None = None,
+) -> None:
+    try:
+        result = await testcase.make_server_do_fake_request(method, input_params)
+        testcase.assertEqual(result, expected_output_params)
+    except Error as error:
+        if expected_error_code is not None:
+            testcase.assertEqual(error.code, expected_error_code)
+        else:
+            testcase.fail(f"method {method} returned error {error}")
 
 
 class ApplyWorkspaceEditTests(TextDocumentTestCase):
 
-    def test_changes(self) -> Generator:
+    async def test_changes(self) -> None:
         old_change_count = self.insert_characters('hello\nworld\n')
         uri = filename_to_uri(self.view.file_name())
         workspace_edit: WorkspaceEdit = {
@@ -39,13 +56,13 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
         }
         params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
         expected_result: ApplyWorkspaceEditResult = {'applied': True}
-        yield from verify(self, 'workspace/applyEdit', params, expected_result)
+        await verify(self, 'workspace/applyEdit', params, expected_result)
         # `changes` should increase the document version
         self.assertTrue(self.view.change_count() > old_change_count)
         # `changes` should have been applied
         self.assertEqual(entire_content(self.view), 'hello\nthere\n')
 
-    def test_document_changes(self) -> Generator:
+    async def test_document_changes(self) -> None:
         uri = filename_to_uri(self.view.file_name())
         version = self.insert_characters('hello\nworld\n')
         workspace_edit: WorkspaceEdit = {
@@ -63,13 +80,13 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
         }
         params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
         expected_result: ApplyWorkspaceEditResult = {'applied': True}
-        yield from verify(self, 'workspace/applyEdit', params, expected_result)
+        await verify(self, 'workspace/applyEdit', params, expected_result)
         # `documentChanges` should increase the document version by exactly 1
         self.assertEqual(self.view.change_count(), version + 1)
         # `documentChanges` should have been applied
         self.assertEqual(entire_content(self.view), 'hello\nthere\n')
 
-    def test_changes_for_unopened_files(self) -> Generator:
+    async def test_changes_for_unopened_files(self) -> None:
         with tempfile.TemporaryDirectory() as dirpath:
             file1 = os.path.join(dirpath, 'file1.txt')
             file2 = os.path.join(dirpath, 'file2.txt')
@@ -103,7 +120,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             }
             params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
             expected_result: ApplyWorkspaceEditResult = {'applied': True}
-            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            await verify(self, 'workspace/applyEdit', params, expected_result)
             # Changes should have been applied
             window = self.view.window()
             for file, expected_text in zip([file1, file2], ['hello there', 'general kenobi']):
@@ -112,7 +129,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
                 view.set_scratch(True)
                 view.close()
 
-    def test_fails_on_wrong_uri(self) -> Generator:
+    async def test_fails_on_wrong_uri(self) -> None:
         uri = 'file:///C:/wrong/uri.txt'
         workspace_edit: WorkspaceEdit = {
             'documentChanges': [
@@ -133,9 +150,9 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             'failureReason': f'Failed to open URI {uri}',
             'failedChange': 0
         }
-        yield from verify(self, 'workspace/applyEdit', params, expected_result)
+        await verify(self, 'workspace/applyEdit', params, expected_result)
 
-    def test_fails_on_wrong_document_version(self) -> Generator:
+    async def test_fails_on_wrong_document_version(self) -> None:
         change_count = self.view.change_count()
         uri = filename_to_uri(self.view.file_name())
         version = change_count - 1
@@ -158,9 +175,9 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             'failureReason': f'Document version for URI {uri} is {change_count}, but required {version}',
             'failedChange': 0
         }
-        yield from verify(self, 'workspace/applyEdit', params, expected_result)
+        await verify(self, 'workspace/applyEdit', params, expected_result)
 
-    def test_create_file(self) -> Generator:
+    async def test_create_file(self) -> None:
         window = self.view.window()
         with tempfile.TemporaryDirectory() as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')
@@ -186,14 +203,14 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
             expected_result: ApplyWorkspaceEditResult = {'applied': True}
             self.assertFalse(os.path.isfile(filepath))
-            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            await verify(self, 'workspace/applyEdit', params, expected_result)
             # The file should have been created
             self.assertTrue(os.path.isfile(filepath))
             # The TextDocumentEdit (second item in `documentChanges`) should have been applied
             content = entire_content(window.open_file(filepath))
             self.assertEqual(content, new_text)
 
-    def test_fails_create_file_exists(self) -> Generator:
+    async def test_fails_create_file_exists(self) -> None:
         with tempfile.TemporaryDirectory() as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')
             old_text = 'hello\nthere\n'
@@ -223,12 +240,12 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
                 'failureReason': f'CreateFile failed because a file already exists at target {uri}',
                 'failedChange': 0
             }
-            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            await verify(self, 'workspace/applyEdit', params, expected_result)
             # The file should still have its original content
             content = Path(filepath).read_text(encoding='utf-8')
             self.assertEqual(content, old_text)
 
-    def test_create_file_exists_ignore(self) -> Generator:
+    async def test_create_file_exists_ignore(self) -> None:
         window = self.view.window()
         with tempfile.TemporaryDirectory() as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')
@@ -258,12 +275,13 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             }
             params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
             expected_result: ApplyWorkspaceEditResult = {'applied': True}
-            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            await verify(self, 'workspace/applyEdit', params, expected_result)
             # The TextDocumentEdit (second item in `documentChanges`) should have been applied
             content = entire_content(window.open_file(filepath))
             self.assertEqual(content, new_text + old_text)
 
-    def test_create_file_exists_overwrite(self) -> Generator:
+    @unittest.skipIf(sys.platform == 'darwin' and CI, 'Moving files to the Recycle Bin times out on macOS CI')
+    async def test_create_file_exists_overwrite(self) -> None:
         window = self.view.window()
         with tempfile.TemporaryDirectory() as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')
@@ -294,12 +312,12 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             }
             params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
             expected_result: ApplyWorkspaceEditResult = {'applied': True}
-            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            await verify(self, 'workspace/applyEdit', params, expected_result)
             # The file content should only be the new text because the file was overwritten
             content = entire_content(window.open_file(filepath))
             self.assertEqual(content, new_text)
 
-    def test_rename_file(self) -> Generator:
+    async def test_rename_file(self) -> None:
         window = self.view.window()
         with tempfile.TemporaryDirectory() as dirpath:
             old_path = os.path.join(dirpath, 'old_file.txt')
@@ -329,7 +347,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             }
             params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
             expected_result: ApplyWorkspaceEditResult = {'applied': True}
-            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            await verify(self, 'workspace/applyEdit', params, expected_result)
             # The file should have been renamed
             self.assertFalse(os.path.isfile(old_path))
             self.assertTrue(os.path.isfile(new_path))
@@ -337,7 +355,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             content = entire_content(window.open_file(new_path))
             self.assertEqual(content, new_text + old_text)
 
-    def test_rename_file_exists(self) -> Generator:
+    async def test_rename_file_exists(self) -> None:
         with tempfile.TemporaryDirectory() as dirpath:
             old_path = os.path.join(dirpath, 'old_file.txt')
             new_path = os.path.join(dirpath, 'new_file.txt')
@@ -372,14 +390,14 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
                 'failureReason': f'RenameFile failed because target {new_uri} already exists',
                 'failedChange': 0
             }
-            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            await verify(self, 'workspace/applyEdit', params, expected_result)
             # The old file should *not* have been deleted (rename operation failed)
             self.assertTrue(os.path.isfile(old_path))
             # The target file should still have its original content
             content = Path(new_path).read_text(encoding='utf-8')
             self.assertEqual(content, old_text2)
 
-    def test_rename_file_exists_ignore(self) -> Generator:
+    async def test_rename_file_exists_ignore(self) -> None:
         window = self.view.window()
         with tempfile.TemporaryDirectory() as dirpath:
             old_path = os.path.join(dirpath, 'old_file.txt')
@@ -414,14 +432,15 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             }
             params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
             expected_result: ApplyWorkspaceEditResult = {'applied': True}
-            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            await verify(self, 'workspace/applyEdit', params, expected_result)
             # The old file should *not* have been deleted (rename operation ignored)
             self.assertTrue(os.path.isfile(old_path))
             # The TextDocumentEdit (second item in `documentChanges`) should have been applied to the target file
             content = entire_content(window.open_file(new_path))
             self.assertEqual(content, new_text + old_text2)
 
-    def test_rename_file_exists_overwrite(self) -> Generator:
+    @unittest.skipIf(sys.platform == 'darwin' and CI, 'Moving files to the Recycle Bin times out on macOS CI')
+    async def test_rename_file_exists_overwrite(self) -> None:
         window = self.view.window()
         with tempfile.TemporaryDirectory() as dirpath:
             old_path = os.path.join(dirpath, 'old_file.txt')
@@ -457,14 +476,15 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             }
             params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
             expected_result: ApplyWorkspaceEditResult = {'applied': True}
-            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            await verify(self, 'workspace/applyEdit', params, expected_result)
             # The old file should have been deleted (rename operation succeeded)
             self.assertFalse(os.path.isfile(old_path))
             # The TextDocumentEdit (second item in `documentChanges`) should have been applied to the renamed file
             content = entire_content(window.open_file(new_path))
             self.assertEqual(content, new_text + old_text1)
 
-    def test_delete_file(self) -> Generator:
+    @unittest.skipIf(sys.platform == 'darwin' and CI, 'Moving files to the Recycle Bin times out on macOS CI')
+    async def test_delete_file(self) -> None:
         with tempfile.TemporaryDirectory() as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')
             Path(filepath).write_text('hello\nworld\n', encoding='utf-8')
@@ -480,6 +500,6 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             params: ApplyWorkspaceEditParams = {'edit': workspace_edit}
             expected_result: ApplyWorkspaceEditResult = {'applied': True}
             self.assertTrue(os.path.isfile(filepath))
-            yield from verify(self, 'workspace/applyEdit', params, expected_result)
+            await verify(self, 'workspace/applyEdit', params, expected_result)
             # The file should have been deleted
             self.assertFalse(os.path.isfile(filepath))

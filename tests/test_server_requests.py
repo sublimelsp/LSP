@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from .setup import TextDocumentTestCase
+from LSP.plugin import Error
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
 from LSP.protocol import TextDocumentSyncKind
 from typing import Any
-from typing import Generator
 from typing import TYPE_CHECKING
 import os
 import sublime
@@ -24,24 +24,41 @@ def get_auto_complete_trigger(sb: SessionBufferProtocol) -> list[dict[str, str]]
     return None
 
 
-def verify(testcase: TextDocumentTestCase, method: str, input_params: Any, expected_output_params: Any) -> Generator:
-    promise = testcase.make_server_do_fake_request(method, input_params)
-    yield from testcase.await_promise(promise)
-    testcase.assertEqual(promise.result(), expected_output_params)
+async def verify(
+    testcase: TextDocumentTestCase,
+    method: str,
+    input_params: Any,
+    expected_output_params: Any,
+    expected_error_code: ErrorCodes | None = None,
+) -> None:
+    try:
+        result = await testcase.make_server_do_fake_request(method, input_params)
+        testcase.assertEqual(result, expected_output_params)
+    except Error as error:
+        if expected_error_code is not None:
+            testcase.assertEqual(error.code, expected_error_code)
+        else:
+            testcase.fail(f"method {method} returned error {error}")
 
 
 class ServerRequests(TextDocumentTestCase):
+    async def test_unknown_method(self) -> None:
+        await verify(
+            self,
+            "foobar/qux",
+            {},
+            {"code": ErrorCodes.MethodNotFound, "message": "foobar/qux"},
+            ErrorCodes.MethodNotFound,
+        )
 
-    def test_unknown_method(self) -> Generator:
-        yield from verify(self, "foobar/qux", {}, {"code": ErrorCodes.MethodNotFound, "message": "foobar/qux"})
-
-    def test_m_workspace_workspaceFolders(self) -> Generator:
+    async def test_m_workspace_workspaceFolders(self) -> None:
         expected_output = [{"name": os.path.basename(f), "uri": filename_to_uri(f)}
                            for f in sublime.active_window().folders()]
         self.maxDiff = None
-        yield from verify(self, "workspace/workspaceFolders", {}, expected_output)
+        await verify(self, "workspace/workspaceFolders", {}, expected_output)
 
-    def test_m_workspace_configuration(self) -> Generator:
+    async def test_m_workspace_configuration(self) -> None:
+        assert self.session
         self.session.config.settings.set("foo.bar", "$hello")
         self.session.config.settings.set("foo.baz", "$world")
         self.session.config.settings.set("foo.a", 1)
@@ -51,11 +68,11 @@ class ServerRequests(TextDocumentTestCase):
         method = "workspace/configuration"
         params = {"items": [{"section": "foo"}]}
         expected_output = [{"bar": "X", "baz": "Y", "a": 1, "b": None, "c": ["asdf X Y"]}]
-        yield from verify(self, method, params, expected_output)
+        await verify(self, method, params, expected_output)
         self.session.config.settings.clear()
 
-    def test_m_client_registerCapability(self) -> Generator:
-        yield from verify(
+    async def test_m_client_registerCapability(self) -> None:
+        await verify(
             self,
             "client/registerCapability",
             {
@@ -88,8 +105,9 @@ class ServerRequests(TextDocumentTestCase):
 
         # willSaveWaitUntil is *only* registered on the buffer
         self.assertFalse(self.session.capabilities.get("textDocumentSync.willSaveWaitUntil"))
+        await self.wait_until(lambda: len(list(self.session.session_buffers_async())) > 0)
         sb = next(self.session.session_buffers_async())
-        self.assertEqual(sb.capabilities.text_sync_kind(), TextDocumentSyncKind.Full)
+        await self.wait_until(lambda: sb.capabilities.text_sync_kind() == TextDocumentSyncKind.Full)
         self.assertEqual(sb.capabilities.get("textDocumentSync.willSaveWaitUntil"), {"id": "2"})
         self.assertEqual(self.session.capabilities.text_sync_kind(), TextDocumentSyncKind.Incremental)
 
@@ -97,18 +115,18 @@ class ServerRequests(TextDocumentTestCase):
         # characters for each view were updated
         self.assertEqual(sb.capabilities.get("completionProvider.id"), "myCompletionRegistrationId")
         self.assertEqual(sb.capabilities.get("completionProvider.triggerCharacters"), ["!", "@", "#"])
+        await self.wait_until(lambda: get_auto_complete_trigger(sb) is not None)
         trigger = get_auto_complete_trigger(sb)
-        self.assertTrue(trigger)
         self.assertEqual(trigger.get("characters"), "!@#")
 
-    def test_m_client_unregisterCapability(self) -> Generator:
-        yield from verify(
+    async def test_m_client_unregisterCapability(self) -> None:
+        await verify(
             self,
             "client/registerCapability",
             {"registrations": [{"method": "foo/bar", "id": "hello"}]},
             None)
         self.assertIn("barProvider", self.session.capabilities)
-        yield from verify(
+        await verify(
             self,
             "client/unregisterCapability",
             {"unregisterations": [{"method": "foo/bar", "id": "hello"}]},
@@ -132,8 +150,8 @@ class ServerRequestsWithAutoCompleteSelector(TextDocumentTestCase):
             }
         )
 
-    def test_m_client_registerCapability(self) -> Generator:
-        yield from verify(
+    async def test_m_client_registerCapability(self) -> None:
+        await verify(
             self,
             "client/registerCapability",
             {

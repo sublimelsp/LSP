@@ -5,6 +5,7 @@ from ...protocol import *  # For backward compatibility with LSP packages.  # no
 from functools import total_ordering
 from typing import Any
 from typing import Callable
+from typing import final
 from typing import Generic
 from typing import List
 from typing import Literal
@@ -14,6 +15,7 @@ from typing import TypeVar
 from typing import Union
 from typing_extensions import NotRequired
 from typing_extensions import TypeAlias
+import asyncio
 
 if TYPE_CHECKING:
     from plugin.api import PostResponseCallback
@@ -22,7 +24,7 @@ if TYPE_CHECKING:
 INT_MAX = 2**31 - 1
 UINT_MAX = INT_MAX
 
-P = TypeVar('P', bound=LSPAny)
+P_contra = TypeVar('P_contra', bound=LSPAny, contravariant=True)
 R = TypeVar('R', bound=LSPAny)
 
 
@@ -49,14 +51,14 @@ class NotificationMessage(TypedDict):
 JSONRPCMessage = Union[RequestMessage, ResponseMessage, NotificationMessage]
 
 
-class Request(Generic[P, R]):
+class Request(Generic[P_contra, R]):
 
     __slots__ = ('method', 'params', 'view', 'progress', 'on_partial_result')
 
     def __init__(
         self,
         method: str,
-        params: P = None,
+        params: P_contra = None,
         view: sublime.View | None = None,
         progress: bool = False,
         on_partial_result: Callable[[R], None] | None = None,
@@ -271,9 +273,9 @@ class Request(Generic[P, R]):
 
     @classmethod
     def workspaceDiagnostic(
-        cls, params: WorkspaceDiagnosticParams, on_partial_result: Callable[[WorkspaceDiagnosticReport], None]
+        cls, params: WorkspaceDiagnosticParams
     ) -> Request[WorkspaceDiagnosticParams, WorkspaceDiagnosticReport]:
-        return Request('workspace/diagnostic', params, on_partial_result=on_partial_result)
+        return Request('workspace/diagnostic', params)
 
     @classmethod
     def shutdown(cls) -> Request[None, None]:
@@ -293,37 +295,94 @@ class Request(Generic[P, R]):
         return payload
 
 
+class CancelledError(asyncio.CancelledError):
+    def __init__(self, message: str, data: Any = None) -> None:
+        super().__init__(message)
+        self._data = data
+
+    @property
+    def data(self) -> Any:
+        return self._data
+
+
 class Error(Exception):
 
     def __init__(self, code: int, message: str, data: Any = None) -> None:
         super().__init__(message)
-        self.code = code
-        self.data = data
+        self._code = code
+        self._data = data
+
+    @property
+    def code(self) -> int:
+        return self._code
+
+    @property
+    def data(self) -> Any:
+        return self._data
 
     @classmethod
-    def from_lsp(cls, params: ResponseError) -> Error:
-        return Error(params["code"], params["message"], params.get("data"))
+    def from_lsp(cls, params: ResponseError) -> Error | CancelledError:
+        code: int = params["code"]
+        message: str = params["message"]
+        data: Any = params.get("data")
+        if code == ErrorCodes.ParseError:
+            return ParseError(code, message, data)
+        if code == ErrorCodes.InvalidRequest:
+            return InvalidRequestError(code, message, data)
+        if code == ErrorCodes.MethodNotFound:
+            return MethodNotFoundError(code, message, data)
+        if code == ErrorCodes.InvalidParams:
+            return InvalidParamsError(code, message, data)
+        if code == ErrorCodes.InternalError:
+            return InternalError(code, message, data)
+        if code == ErrorCodes.ServerNotInitialized:
+            return ServerNotInitializedError(code, message, data)
+        if code == ErrorCodes.UnknownErrorCode:
+            return UnknownError(code, message, data)
+        if code == LSPErrorCodes.RequestFailed:
+            return RequestFailedError(code, message, data)
+        if code == LSPErrorCodes.ServerCancelled:
+            return ServerCancelledError(message, data)
+        if code == LSPErrorCodes.ContentModified:
+            return ContentModifiedError(code, message, data)
+        if code == LSPErrorCodes.RequestCancelled:
+            return RequestCancelledError(message, data)
+        return Error(code, message, data)
 
+    @final
     def to_lsp(self) -> ResponseError:
-        result: ResponseError = {"code": self.code, "message": super().__str__()}
-        if self.data:
-            result["data"] = self.data
+        result: ResponseError = {"code": self._code, "message": super().__str__()}
+        if self._data:
+            result["data"] = self._data
         return result
 
+    @final
     def __str__(self) -> str:
-        return f"{super().__str__()} ({self.code})"
+        return f"{super().__str__()} ({self._code})"
 
     @classmethod
     def from_exception(cls, ex: Exception) -> Error:
         return Error(ErrorCodes.InternalError, str(ex))
 
 
-class Response(Generic[P]):
+class ParseError(Error): pass  # noqa: E701
+class InvalidRequestError(Error): pass  # noqa: E302, E701
+class MethodNotFoundError(Error): pass  # noqa: E302, E701
+class InvalidParamsError(Error): pass  # noqa: E302, E701
+class InternalError(Error): pass  # noqa: E302, E701
+class ServerNotInitializedError(Error): pass  # noqa: E302, E701
+class UnknownError(Error): pass  # noqa: E302, E701
+class RequestFailedError(Error): pass  # noqa: E302, E701
+class ContentModifiedError(Error): pass  # noqa: E302, E701
+class ServerCancelledError(CancelledError): pass  # noqa: E302, E701
+class RequestCancelledError(CancelledError): pass  # noqa: E302, E701
 
+
+class Response(Generic[R]):
     __slots__ = ('request_id', 'result', 'post_response_callback')
 
     def __init__(
-        self, request_id: str | int, result: P, post_response_callback: PostResponseCallback | None = None
+        self, request_id: str | int, result: R, post_response_callback: PostResponseCallback | None = None
     ) -> None:
         self.request_id = request_id
         self.result = result
@@ -337,11 +396,11 @@ class Response(Generic[P]):
         }
 
 
-class Notification(Generic[P]):
+class Notification(Generic[P_contra]):
 
     __slots__ = ('method', 'params')
 
-    def __init__(self, method: str, params: P = None) -> None:
+    def __init__(self, method: str, params: P_contra = None) -> None:
         self.method = method
         self.params = params
 

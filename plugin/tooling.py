@@ -4,11 +4,13 @@ from .api import get_plugin
 from .api import LspPlugin
 from .api import OnPreStartContext
 from .api import PluginStartError
+from .core.aio import run_coroutine
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
 from .core.transports import TransportCallbacks
 from .core.transports import TransportWrapper
+from .core.types import ClientConfig
 from .core.version import __version__
 from .core.views import extract_variables
 from .core.views import make_command_link
@@ -21,18 +23,19 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import TYPE_CHECKING
+import asyncio
 import json
 import mdpopups
 import os
 import sublime
 import sublime_plugin
 import textwrap
+import traceback
 import urllib.parse
 import urllib.request
 
 if TYPE_CHECKING:
     from .core.types import Capabilities
-    from .core.types import ClientConfig
     from .session_buffer import SessionBuffer
 
 
@@ -326,19 +329,15 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
         output_sheet = mdpopups.new_html_sheet(
             self.window, f'Server: {config.name}', '# Running server test...',
             css=css().sheets, wrapper_class=css().sheets_classname)
-        sublime.set_timeout_async(lambda: self.test_run_server_async(config, self.window, active_view, output_sheet))
-
-    def test_run_server_async(self, config: ClientConfig, window: sublime.Window,
-                              active_view: sublime.View, output_sheet: sublime.HtmlSheet) -> None:
-        server = ServerTestRunner(
-            config, window, active_view,
+        # Store the instance so that it's not GC'ed before it's finished.
+        self.test_runner: ServerTestRunner | None = ServerTestRunner(
+            config, self.window, active_view,
             lambda resolved_command, output, exit_code: self.update_sheet(
                 config, active_view, output_sheet, resolved_command, output, exit_code))
-        # Store the instance so that it's not GC'ed before it's finished.
-        self.test_runner: ServerTestRunner | None = server
+        run_coroutine(self.test_runner.run())
 
     def update_sheet(self, config: ClientConfig, active_view: sublime.View | None, output_sheet: sublime.HtmlSheet,
-                     resolved_command: list[str], server_output: str, exit_code: int) -> None:
+                     resolved_command: list[str] | None, server_output: str, exit_code: int) -> None:
         self.test_runner = None
         frontmatter = mdpopups.format_frontmatter({'allow_code_wrap': True})
         contents = self.get_contents(config, active_view, resolved_command, server_output, exit_code)
@@ -348,7 +347,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
         formatted = f'{frontmatter}{copy_link}\n{contents}'
         mdpopups.update_html_sheet(output_sheet, formatted, css=css().sheets, wrapper_class=css().sheets_classname)
 
-    def get_contents(self, config: ClientConfig, active_view: sublime.View | None, resolved_command: list[str],
+    def get_contents(self, config: ClientConfig, active_view: sublime.View | None, resolved_command: list[str] | None,
                      server_output: str, exit_code: int) -> str:
         lines = []
 
@@ -365,8 +364,9 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
         line(f' - exit code: {exit_code}\n - output\n{self.code_block(server_output)}')
 
         line('## Server Configuration')
-        line(f' - command\n{self.json_dump(config.command)}')
-        line(' - shell command\n{}'.format(self.code_block(list2cmdline(resolved_command), 'sh')))
+        if resolved_command:
+            line(f' - command\n{self.json_dump(config.command)}')
+            line(' - shell command\n{}'.format(self.code_block(list2cmdline(resolved_command), 'sh')))
         line(f' - selector\n{self.code_block(config.selector)}')
         line(f' - priority_selector\n{self.code_block(config.priority_selector)}')
         line(' - init_options')
@@ -495,45 +495,58 @@ class ServerTestRunner(TransportCallbacks):
         config: ClientConfig,
         window: sublime.Window,
         initiating_view: sublime.View,
-        on_close: Callable[[list[str], str, int], None]
+        on_close: Callable[[list[str] | None, str, int], None]
     ) -> None:
+        self._config = config
+        self._window = window
+        self._initiating_view = initiating_view
         self._on_close = on_close
         self._transport: TransportWrapper | None = None
-        self._resolved_command: list[str] = []
+        self._resolved_command: list[str] | None = None
         self._stderr_lines: list[str] = []
+
+    async def run(self) -> None:
+        view = self._initiating_view
+        file_path = view.file_name() or ''
+        config = ClientConfig.from_config(self._config, {})
+        loop = asyncio.get_running_loop()
+
         try:
-            variables = extract_variables(window)
+            workspace = ProjectFolders(self._window)
+            workspace_folders = sorted_workspace_folders(workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
-            workspace = ProjectFolders(window)
-            workspace_folders = sorted_workspace_folders(workspace.folders, initiating_view.file_name() or '')
-            cwd = None
+            variables = extract_variables(self._window)
+            cwd = workspace_folders[0].path if workspace_folders else None
+            context = OnPreStartContext(config, variables, view, cwd, workspace_folders)
             if plugin_class:
-                # TODO: We should share this common code with WindowManager.start_async
-                cwd = workspace_folders[0].path if workspace_folders else None
-                plugin_context = OnPreStartContext(config, variables, initiating_view, cwd, workspace_folders)
+                # TODO: We should share this common code with WindowManager.start
                 if issubclass(plugin_class, LspPlugin):
-                    plugin_class.on_pre_start_async(plugin_context)
+                    await plugin_class.on_pre_start(context)
+                    cwd = context.working_directory
                 else:
                     if plugin_class.needs_update_or_installation():
-                        plugin_class.install_or_update()
+                        # Historically these methods tended to run relatively slow.
+                        # We don't want to use Sublime's worker thread for this any longer.
+                        # Utilize the default thread pool instead.
+                        # https://docs.python.org/3/library/asyncio-dev.html#running-blocking-code
+                        await loop.run_in_executor(None, plugin_class.install_or_update)
                     additional_variables = plugin_class.additional_variables()
                     if isinstance(additional_variables, dict):
                         variables.update(additional_variables)
-                    reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
+                    reason = plugin_class.can_start(
+                        self._window, view, workspace_folders, config)
                     if reason:
                         raise PluginStartError(f'Plugin.can_start() prevented the start due to: {reason}')
-                    if new_cwd := plugin_class.on_pre_start(window, initiating_view, workspace_folders, config):
+                    if new_cwd := plugin_class.on_pre_start(self._window, view, workspace_folders, config):
                         cwd = new_cwd
-            transport_config = config.create_transport_config()
-            self._transport = transport_config.start(config.command, config.env, cwd, variables, self)
-            self._resolved_command = self._transport.process_args
-            sublime.set_timeout_async(self.force_close_transport, self.CLOSE_TIMEOUT_SEC * 1000)
-        except Exception as ex:
-            self.on_transport_close(-1, ex)
 
-    def force_close_transport(self) -> None:
-        if self._transport:
-            self._transport.close()
+            transport_config = config.create_transport_config()
+            self._transport = await transport_config.start(config.command, config.env, cwd, variables, self)
+            self._resolved_command = self._transport.process_args
+            await asyncio.sleep(self.CLOSE_TIMEOUT_SEC)
+            await self._transport.close()
+        except Exception as ex:
+            await self.on_transport_close(-1, ex)
 
     def on_payload(self, payload: dict[str, Any]) -> None:
         pass
@@ -541,9 +554,11 @@ class ServerTestRunner(TransportCallbacks):
     def on_stderr_message(self, message: str) -> None:
         self._stderr_lines.append(message)
 
-    def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
-        self._transport = None
-        output = str(exception) if exception else '\n'.join(self._stderr_lines).rstrip()
+    async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
+        if exception:
+            output = ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
+        else:
+            output = '\n'.join(self._stderr_lines).rstrip()
         sublime.set_timeout(lambda: self._on_close(self._resolved_command, output, exit_code))
 
 

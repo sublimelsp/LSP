@@ -33,6 +33,7 @@ from .plugin.core.settings import unload_settings
 from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
+from .plugin.core.tree_view import LspActivateTreeItemCommand
 from .plugin.core.tree_view import LspCollapseTreeItemCommand
 from .plugin.core.tree_view import LspExpandTreeItemCommand
 from .plugin.core.views import LspRunTextCommandHelperCommand
@@ -88,6 +89,7 @@ from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
 from typing import Any
+from typing import Literal
 import os
 import sublime
 import sublime_plugin
@@ -95,6 +97,7 @@ import sublime_plugin
 __all__ = (
     "DocumentSyncListener",
     "Listener",
+    "LspActivateTreeItemCommand",
     "LspApplyDocumentEditCommand",
     "LspApplyTextDocumentEditCommand",
     "LspApplyWorkspaceEditCommand",
@@ -289,3 +292,19 @@ class Listener(sublime_plugin.EventListener):
                 sublime.set_timeout_async(wm.update_diagnostics_panel_async)
             elif panel_manager.is_panel_open(PanelName.Log):
                 sublime.set_timeout(lambda: panel_manager.update_log_panel(scroll_to_selection=True))
+
+
+# TODO: Added just for testing
+class LspMoveFocusCommand(sublime_plugin.WindowCommand):
+
+    def is_enabled(self) -> bool:
+        if wm := windows.lookup(self.window):
+            if (active_sheet := self.window.active_sheet()) and (sheet := wm.tree_view_sheets.get('Call Hierarchy')):
+                return sheet.id() == active_sheet.id()
+        return False
+
+    def run(self, direction: Literal['down', 'up', 'left', 'right', 'close']) -> None:
+        if wm := windows.lookup(self.window):
+            if (active_sheet := self.window.active_sheet()) and (sheet := wm.tree_view_sheets.get('Call Hierarchy')):
+                if sheet.id() == active_sheet.id():
+                    sheet.navigate(direction)

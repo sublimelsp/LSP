@@ -10,8 +10,10 @@ from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.settings import userprefs
 from .core.views import position_to_offset
+from typing import Awaitable
 from typing import cast
 from typing import TYPE_CHECKING
+import asyncio
 import html
 import sublime
 import uuid
@@ -47,14 +49,16 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
         if not isinstance(enable, bool):
             enable = not bool(window_settings.get('lsp_show_inlay_hints'))
         window_settings.set('lsp_show_inlay_hints', enable)
-        status = 'on' if enable else 'off'
-        sublime.status_message(f'Inlay Hints are {status}')
+        coros: list[Awaitable[None]] = []
         for session in self.sessions():
             for sv in session.session_views_async():
                 if not enable:
                     sv.session_buffer.remove_all_inlay_hints()
                 elif sv.get_request_flags() & RequestFlags.INLAY_HINT:
-                    sv.session_buffer.do_inlay_hints_async(sv.view)
+                    coros.append(sv.session_buffer.do_inlay_hints(sv.view))
+        await asyncio.gather(*coros)
+        status = 'on' if enable else 'off'
+        sublime.status_message(f'Inlay Hints are {status}')
 
     def is_checked(self) -> bool:
         return bool(self.window.settings().get('lsp_show_inlay_hints'))

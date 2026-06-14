@@ -233,7 +233,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
         self._registration = SettingsRegistration(settings, on_change=self._on_settings_object_changed)
-        self._completions_task: QueryCompletionsTask | None = None
         self._is_documenation_popup_open = False
         self._stored_selection: list[sublime.Region] = []
         self._should_format_on_paste = False
@@ -324,8 +323,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 for sb in self.session_buffers_async('semanticTokensProvider'):
                     if sb.session != session:
                         sb.clear_semantic_tokens_async()
-                        if request_id := sb.semantic_tokens.pending_response:
-                            sb.session.cancel_request_async(request_id)
+                        if request := sb.semantic_tokens.pending_response:
+                            self.create_task(request.cancel())
                             sb.semantic_tokens.pending_response = None
 
     async def on_session_shutdown(self, session: Session) -> list[Exception]:
@@ -464,17 +463,21 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             return
         for sb in self.session_buffers_async():
             if sb.pending_refreshes & RequestFlags.CODE_LENS:
-                sb.do_code_lenses_async(self.view)
+                sb.create_task(sb.do_code_lenses(self.view))
             if sb.pending_refreshes & RequestFlags.DIAGNOSTIC:
-                self.create_task(sb.do_document_diagnostic(self.view, self.view.change_count(), forced_update=True))
-            if sb.pending_refreshes & RequestFlags.SEMANTIC_TOKENS \
-                    and (session_view := sb.session.session_view_for_view_async(self.view)) \
-                    and session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
-                sb.do_semantic_tokens_async(self.view)
-            if sb.pending_refreshes & RequestFlags.INLAY_HINT \
-                    and (session_view := sb.session.session_view_for_view_async(self.view)) \
-                    and session_view.get_request_flags() & RequestFlags.INLAY_HINT:
-                sb.do_inlay_hints_async(self.view)
+                sb.create_task(sb.do_document_diagnostic(self.view, self.view.change_count(), forced_update=True))
+            if (
+                sb.pending_refreshes & RequestFlags.SEMANTIC_TOKENS
+                and (session_view := sb.session.session_view_for_view_async(self.view))
+                and session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS
+            ):
+                sb.create_task(sb.do_semantic_tokens(self.view))
+            if (
+                sb.pending_refreshes & RequestFlags.INLAY_HINT
+                and (session_view := sb.session.session_view_for_view_async(self.view))
+                and session_view.get_request_flags() & RequestFlags.INLAY_HINT
+            ):
+                sb.create_task(sb.do_inlay_hints(self.view))
         if userprefs().show_code_actions:
             self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
 
@@ -500,7 +503,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         code_lenses_enabled = LspToggleCodeLensesCommand.are_enabled(self.view.window())
         for sv in self.session_views_async():
             if code_lenses_enabled:
-                sv.session_buffer.resolve_visible_code_lenses_async(self.view)
+                sv.session_buffer.create_task(sv.session_buffer.resolve_visible_code_lenses(self.view))
             if plugin := sv.session.plugin:
                 plugin.on_selection_modified_async(sv)
 
@@ -684,42 +687,20 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                                                                  "delete_to_mark", "left_delete", "right_delete"}:
             self.view.hide_popup()
 
-    @requires_session
-    def on_query_completions(self, prefix: str, locations: list[int]) -> sublime.CompletionList | None:
-        completion_list = sublime.CompletionList()
-        triggered_manually = self._auto_complete_triggered_manually
-        self._auto_complete_triggered_manually = False  # reset state for next completion popup
-        run_coroutine(self._on_query_completions(completion_list, locations[0], triggered_manually))
-        return completion_list
-
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
-    async def _on_query_completions(
-        self, clist: sublime.CompletionList, location: int, triggered_manually: bool
-    ) -> None:
-        if self._completions_task:
-            self._completions_task.cancel_async()
-        on_done = partial(self._on_query_completions_resolved_async, clist)
-        self._completions_task = QueryCompletionsTask(self.view, location, triggered_manually, on_done)
+    async def on_query_completions(self, prefix: str, locations: list[int]) -> sublime.CompletionList:
+        clist = sublime.CompletionList()
+        triggered_manually = self._auto_complete_triggered_manually
+        self._auto_complete_triggered_manually = False  # reset state for next completion popup
         sessions = list(self.sessions_async('completionProvider'))
         if not sessions or not self.view.is_valid():
-            self._completions_task.cancel_async()
-            return
+            return clist
         await self.purge_changes()
-        self._completions_task.query_completions_async(sessions)
-
-    def _on_query_completions_resolved_async(
-        self,
-        clist: sublime.CompletionList,
-        completions: list[sublime.CompletionItem],
-        flags: sublime.AutoCompleteFlags = sublime.AutoCompleteFlags.NONE
-    ) -> None:
-        self._completions_task = None
-        if ST_VERSION >= 4184:  # https://github.com/sublimehq/sublime_text/issues/6249#issuecomment-2502804237
-            clist.set_completions(completions, flags)
-        else:
-            # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
-            sublime.set_timeout(lambda: clist.set_completions(completions, flags))
+        clist.set_completions(
+            *await QueryCompletionsTask(self.view, locations[0], triggered_manually).query_completions(sessions)
+        )
+        return clist
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 

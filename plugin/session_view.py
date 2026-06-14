@@ -26,6 +26,7 @@ from typing import Coroutine
 from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakValueDictionary
+import asyncio
 import html
 import itertools
 import sublime
@@ -34,6 +35,7 @@ if TYPE_CHECKING:
     from .core.protocol import Request
     from .core.protocol import ResolvedCodeLens
     from .core.sessions import AbstractViewListener
+    from .core.sessions import CancellableRequest
     from .core.sessions import Session
 
 
@@ -94,9 +96,7 @@ class SessionView:
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            for request_id, data in self._active_requests.items():
-                if data.request.view and not data.canceled:
-                    self.session.cancel_request_async(request_id)
+            await asyncio.gather(*(data.cancel() for data in self._active_requests.values()))
             await self.session.unregister_session_view(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(DIAGNOSTIC_STYLES.keys()):
@@ -351,8 +351,8 @@ class SessionView:
             else:
                 self.view.erase_regions(data.key)
 
-    def on_request_started_async(self, request_id: int, request: Request[Any, Any]) -> None:
-        self._active_requests[request_id] = ActiveRequest(self, request_id, request)
+    def on_request_started_async(self, cancellable: CancellableRequest, request: Request[Any, Any]) -> None:
+        self._active_requests[cancellable.id] = ActiveRequest(self, cancellable, request)
 
     def on_request_finished_async(self, request_id: int) -> None:
         self._active_requests.pop(request_id, None)

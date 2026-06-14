@@ -42,7 +42,6 @@ from ...protocol import Location
 from ...protocol import LocationLink
 from ...protocol import LogMessageParams
 from ...protocol import LSPAny
-from ...protocol import LSPErrorCodes
 from ...protocol import LSPObject
 from ...protocol import MarkdownClientCapabilities
 from ...protocol import MarkupKind
@@ -131,17 +130,21 @@ from .open import open_resource
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
+from .protocol import CancelledError
 from .protocol import ClientNotification
 from .protocol import ClientRequest
 from .protocol import ClientResponse
 from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
+from .protocol import P_contra
 from .protocol import Point
 from .protocol import Request
+from .protocol import RequestCancelledError
 from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
+from .protocol import ServerCancelledError
 from .protocol import ServerNotification
 from .protocol import ServerResponse
 from .settings import globalprefs
@@ -180,6 +183,7 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import Coroutine
 from typing import Generator
 from typing import Generic
 from typing import Literal
@@ -188,6 +192,7 @@ from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing_extensions import deprecated
+from typing_extensions import override
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
 from urllib.parse import urldefrag
@@ -206,8 +211,8 @@ if TYPE_CHECKING:
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
-P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
+T = TypeVar('T')
 
 
 class ViewStateActions(IntFlag):
@@ -715,9 +720,6 @@ class SessionViewProtocol(Protocol):
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
         ...
 
-    def on_request_started_async(self, request_id: int, request: Request[Any, Any]) -> None:
-        ...
-
     def on_request_finished_async(self, request_id: int) -> None:
         ...
 
@@ -747,6 +749,9 @@ class SessionViewProtocol(Protocol):
 
 
 class SessionBufferProtocol(Protocol):
+
+    def create_task(self, coro: Coroutine[object, object, T], *, name: str | None = None) -> asyncio.Task[T] | None:
+        ...
 
     @property
     def session(self) -> Session:
@@ -811,7 +816,7 @@ class SessionBufferProtocol(Protocol):
     def update_document_link(self, new_link: DocumentLink) -> None:
         ...
 
-    def do_semantic_tokens_async(self, view: sublime.View) -> None:
+    async def do_semantic_tokens(self, view: sublime.View) -> None:
         ...
 
     def get_semantic_tokens(self) -> list[SemanticToken]:
@@ -820,7 +825,7 @@ class SessionBufferProtocol(Protocol):
     def on_color_scheme_changed(self, view: sublime.View) -> None:
         ...
 
-    def do_inlay_hints_async(self, view: sublime.View) -> None:
+    async def do_inlay_hints(self, view: sublime.View) -> None:
         ...
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
@@ -853,7 +858,7 @@ class SessionBufferProtocol(Protocol):
     ) -> list[Command | CodeAction] | None:
         ...
 
-    def do_code_lenses_async(self, view: sublime.View) -> None:
+    async def do_code_lenses(self, view: sublime.View) -> None:
         ...
 
     def set_pending_refresh(self, flags: RequestFlags) -> None:
@@ -996,7 +1001,7 @@ class Logger(ABC):
         pass
 
 
-class CancellableRequest(Generic[R]):
+class CancellableRequest:
     """A request that is cancellable."""
 
     _id: int | None
@@ -1006,12 +1011,15 @@ class CancellableRequest(Generic[R]):
         self._id = req_id
         self._weaksession = weakref.ref(session)
 
-    def cancel(self) -> None:
-        """Cancel this request."""
+    async def cancel(self) -> int | None:
+        """Cancel this request. Return the request ID."""
         if self._id is not None:
             if session := self._weaksession():
-                session.cancel_request_async(self._id)
+                req_id = self._id
                 self._id = None
+                await session.cancel_request(req_id)
+                return req_id
+        return None
 
     @property
     def id(self) -> int:
@@ -1020,26 +1028,57 @@ class CancellableRequest(Generic[R]):
             return self._id
         raise asyncio.CancelledError
 
+    @property
+    def cancelled(self) -> bool:
+        """Whether the request was cancelled."""
+        return self._id is None
 
-class CancellableInflightRequest(CancellableRequest[R]):
+
+class CancellableInflightRequest(CancellableRequest, Generic[R]):
     """A request that is in flight. The result can be awaited."""
 
     _future: asyncio.Future[R]
 
+    @staticmethod
+    def _on_done(req_id: int, f: asyncio.Future[R]) -> None:
+        if not f.cancelled() and (ex := f.exception()) and not isinstance(ex, RequestCancelledError):
+            exception_log(f"request with ID {req_id} finished with exception", ex)
+
     def __init__(self, future: asyncio.Future[R], req_id: int, session: Session) -> None:
         super().__init__(req_id, session)
         self._future = future
+
+    def add_done_callback(self, f: Callable[[asyncio.Future[R]], object]) -> None:
+        self._future.add_done_callback(f)
+
+    @override
+    async def cancel(self) -> int | None:
+        if (req_id := await super().cancel()) and req_id is not None:
+            self.add_done_callback(partial(self._on_done, req_id))
+
+    async def _run(self) -> R:
+        try:
+            return await self._future
+        except CancelledError:
+            raise
+        except asyncio.CancelledError:
+            # When the await was cancelled by the user, cancel the request. Shield it from itself being cancelled.
+            await asyncio.shield(self.cancel())
+            # And then let the cancellation bubble up.
+            raise
 
     def __await__(self) -> Generator[Any, None, R]:
         """
         You can `await` the response of an in-flight request.
         However, note that immediately awaiting this object prevents you from ever canceling it.
         When the language server replies with an error, an exception of type protocol.Error is raised.
+        When the coroutine awaiting the request is cancelled (using task.cancel() or something similar),
+        the cancellation is held off for a bit in order to cancel the request server-side.
         """
-        return self._future.__await__()
+        return self._run().__await__()
 
 
-class CancellableInflightStreamingRequest(CancellableRequest[R]):
+class CancellableInflightStreamingRequest(CancellableRequest, Generic[R]):
     """
     A streaming request that is in flight.
     Use `async for` syntax to asynchronously stream the partial results.
@@ -1048,7 +1087,7 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
 
     def __init__(self, req_id: int, session: Session) -> None:
         super().__init__(req_id, session)
-        self._queue: asyncio.Queue[R | Error | None] = asyncio.Queue()
+        self._queue: asyncio.Queue[R | Error | CancelledError | None] = asyncio.Queue()
         self._is_streaming = False
 
     @property
@@ -1088,7 +1127,7 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
         item = await self._queue.get()
         if item is None:
             raise StopAsyncIteration
-        if isinstance(item, Error):
+        if isinstance(item, (Error, CancelledError)):
             raise item
         return item
 
@@ -2216,19 +2255,19 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         if is_workspace_full_document_diagnostic_report(diagnostic_report):
                             self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
                 self.workspace_diagnostics_pending_responses[identifier] = None
-        except Error as e:
-            if e.code == LSPErrorCodes.ServerCancelled:
-                if is_diagnostic_server_cancellation_data(e.data) and e.data['retriggerRequest']:
-                    # Retrigger the request after a short delay, but don't reset the pending response variable for this
-                    # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to
-                    # prevent infinite cycles of cancel -> retrigger, in case the server is busy.
+        except ServerCancelledError as e:
+            if is_diagnostic_server_cancellation_data(e.data) and e.data['retriggerRequest']:
+                # Retrigger the request after a short delay, but don't reset the pending response variable for this
+                # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to
+                # prevent infinite cycles of cancel -> retrigger, in case the server is busy.
 
-                    async def retry_later() -> None:
-                        await asyncio.sleep(WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY / 1000.0)
-                        await self._do_workspace_diagnostics(identifier)
+                async def retry_later() -> None:
+                    await asyncio.sleep(WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY / 1000.0)
+                    await self._do_workspace_diagnostics(identifier)
 
-                    self.create_task(retry_later())
-                    return
+                self.create_task(retry_later())
+                return
+        finally:
             self.workspace_diagnostics_pending_responses[identifier] = None
 
     # --- workspace/didChangeConfiguration -----------------------------------------------------------------------------
@@ -2291,7 +2330,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
             for session_buffer, session_view in visible_session_buffers:
-                session_buffer.do_code_lenses_async(session_view.view)
+                session_buffer.create_task(session_buffer.do_code_lenses(session_view.view))
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.CODE_LENS)
 
@@ -2304,7 +2343,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
             for session_buffer, session_view in visible_session_buffers:
                 if session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
-                    session_buffer.do_semantic_tokens_async(session_view.view)
+                    session_buffer.create_task(session_buffer.do_semantic_tokens(session_view.view))
                 else:
                     session_buffer.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
             for session_buffer in not_visible_session_buffers:
@@ -2319,7 +2358,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
             for session_buffer, session_view in visible_session_buffers:
                 if session_view.get_request_flags() & RequestFlags.INLAY_HINT:
-                    session_buffer.do_inlay_hints_async(session_view.view)
+                    session_buffer.create_task(session_buffer.do_inlay_hints(session_view.view))
                 else:
                     session_buffer.set_pending_refresh(RequestFlags.INLAY_HINT)
             for session_buffer in not_visible_session_buffers:
@@ -2335,7 +2374,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
         for session_buffer, session_view in visible_session_buffers:
             view = session_view.view
-            self.create_task(session_buffer.do_document_diagnostic(view, view.change_count(), forced_update=True))
+            session_buffer.create_task(
+                session_buffer.do_document_diagnostic(view, view.change_count(), forced_update=True)
+            )
         for session_buffer in not_visible_session_buffers:
             session_buffer.set_pending_refresh(RequestFlags.DIAGNOSTIC)
 
@@ -2647,7 +2688,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     # --- RPC message handling ----------------------------------------------------------------------------------------
 
-    def request(self, r: Request[P, R]) -> CancellableInflightRequest[R]:
+    def request(self, r: Request[P_contra, R]) -> CancellableInflightRequest[R]:
         """
         Make a request to the language server.
 
@@ -2682,18 +2723,18 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 future.set_exception(Error.from_lsp(error))
 
         self._response_handlers[request_id] = (r, on_result, on_error)
-        self._invoke_views(r, "on_request_started_async", request_id, r)
+        self._invoke_views(r, "on_request_started_async", result, r)
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, r)
         elif self._plugin:
             client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
             self._plugin.on_pre_send_request_async(client_request, r.view)
-            r.params = cast('P', client_request['params'])
+            r.params = cast('P_contra', client_request['params'])
         self._logger.outgoing_request(request_id, r.method, r.params)
         self.create_task(self.send_payload(r.to_payload(request_id)))
         return result
 
-    def stream(self, r: Request[P, R]) -> CancellableInflightStreamingRequest[R]:
+    def stream(self, r: Request[P_contra, R]) -> CancellableInflightStreamingRequest[R]:
         """
         Stream partial results from the language server.
 
@@ -2720,13 +2761,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         r.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
         r.on_partial_result = result._on_partial_result
         self._response_handlers[request_id] = (r, result._on_final_result, result._on_error)
-        self._invoke_views(r, "on_request_started_async", request_id, r)
+        self._invoke_views(r, "on_request_started_async", result, r)
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, r)
         elif self._plugin:
             client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
             self._plugin.on_pre_send_request_async(client_request, r.view)
-            r.params = cast('P', client_request['params'])
+            r.params = cast('P_contra', client_request['params'])
         self._logger.outgoing_request(request_id, r.method, r.params)
         self.create_task(self.send_payload(r.to_payload(request_id)))
         return result
@@ -2734,7 +2775,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     @deprecated("use Session.request or Session.stream instead")
     def send_request_async(
         self,
-        request: Request[P, R],
+        request: Request[P_contra, R],
         on_result: Callable[[R], None],
         on_error: Callable[[ResponseError], None] | None = None
     ) -> int:
@@ -2758,7 +2799,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     @deprecated("use Session.request or Session.stream instead")
     def send_request(
         self,
-        request: Request[P, R],
+        request: Request[P_contra, R],
         on_result: Callable[[R], None],
         on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
@@ -2766,28 +2807,26 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         run_on_asyncio_thread(lambda: self.send_request_async(request, on_result, on_error))
 
     @deprecated("use Session.request or Session.stream instead")
-    def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:
+    def send_request_task(self, request: Request[P_contra, R]) -> Promise[R | Error]:
         task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
         self.send_request(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 
     @deprecated("use Session.request or Session.stream instead")
-    def send_request_task_2(self, request: Request[P, R]) -> tuple[Promise[R | Error], int]:
-        task: PackagedTask[R | Error] = Promise.packaged_task()
+    def send_request_task_2(self, request: Request[P_contra, R]) -> tuple[Promise[R | Error | CancelledError], int]:
+        task: PackagedTask[R | Error | CancelledError] = Promise.packaged_task()
         promise, resolver = task
         request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return (promise, request_id)
 
-    def cancel_request_async(self, request_id: int) -> None:
+    async def cancel_request(self, request_id: int) -> None:
         if request_id in self._response_handlers:
-            self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
-            request, _, error_handler = self._response_handlers[request_id]
-            error_handler({"code": LSPErrorCodes.RequestCancelled, "message": "Request canceled by client"})
-            self._invoke_views(request, "on_request_canceled_async", request_id)
-            self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
+            await self.notify(Notification("$/cancelRequest", {"id": request_id}))
+            if tup := self._response_handlers.get(request_id):
+                self._invoke_views(tup[0], "on_request_canceled_async", request_id)
 
-    async def notify(self, notification: Notification[P]) -> None:
+    async def notify(self, notification: Notification[P_contra]) -> None:
         """Send a notification to the server."""
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_notification_async(notification)
@@ -2795,19 +2834,19 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             client_notification = cast('ClientNotification',
                                        cast('object', {'method': notification.method, 'params': notification.params}))
             await self._plugin.on_pre_send_notification(client_notification)
-            notification.params = cast('P', client_notification['params'])
+            notification.params = cast('P_contra', client_notification['params'])
         self._logger.outgoing_notification(notification.method, notification.params)
         await self.send_payload(notification.to_payload())
 
-    def send_notification_async(self, notification: Notification[P]) -> None:
+    def send_notification_async(self, notification: Notification[P_contra]) -> None:
         """Send a notification to the server. Not thread safe. Must be called from the asyncio thread."""
         self.create_task(self.notify(notification))
 
-    def send_notification(self, notification: Notification[P]) -> None:
+    def send_notification(self, notification: Notification[P_contra]) -> None:
         """Send a notification to the server. Thread safe. Can be called from any thread."""
         self.create_task_threadsafe(self.notify(notification))
 
-    async def send_response(self, response: Response[P]) -> None:
+    async def send_response(self, response: Response[R]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)
         await self.send_payload(response.to_payload())
         if response.post_response_callback:

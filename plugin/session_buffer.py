@@ -878,7 +878,7 @@ class SessionBuffer(TaskContainer):
                     "textDocument": text_document_identifier(view),
                     "range": entire_content_range(view)
                 }, view))
-        except BaseException as e:
+        except BaseException:
             self.semantic_tokens.result_id = None
             raise
 

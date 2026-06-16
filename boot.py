@@ -132,6 +132,7 @@ __all__ = (
     "LspHierarchyToggleCommand",
     "LspHoverCommand",
     "LspInlayHintClickCommand",
+    "LspMoveFocusCommand",
     "LspNextDiagnosticCommand",
     "LspOnDoubleClickCommand",
     "LspOpenLinkCommand",

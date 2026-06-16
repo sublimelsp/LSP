@@ -1,4 +1,43 @@
 [
+    // TODO: Only for testing.
+    {
+        "keys": [
+            "left"
+        ],
+        "command": "lsp_move_focus",
+        "args": {
+            "direction": "left"
+        },
+    },
+    {
+        "keys": [
+            "right"
+        ],
+        "command": "lsp_move_focus",
+        "args": {
+            "direction": "right"
+        },
+    },
+    {
+        "keys": [
+            "up"
+        ],
+        "command": "lsp_move_focus",
+        "args": {
+            "direction": "up"
+        },
+    },
+    {
+        "keys": [
+            "down"
+        ],
+        "command": "lsp_move_focus",
+        "args": {
+            "direction": "down"
+        },
+    },
+
+
     // To enable or change an existing key binding, copy it to the right view and uncomment, if needed.
     // To change the associated key press, edit the "keys" value.
 

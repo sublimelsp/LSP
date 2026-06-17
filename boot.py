@@ -299,13 +299,13 @@ class Listener(sublime_plugin.EventListener):
 class LspMoveFocusCommand(sublime_plugin.WindowCommand):
 
     def is_enabled(self) -> bool:
-        if wm := windows.lookup(self.window):
-            if (active_sheet := self.window.active_sheet()) and (sheet := wm.tree_view_sheets.get('Call Hierarchy')):
-                return sheet.id() == active_sheet.id()
+        if (active_sheet := self.window.active_sheet()) and (wm := windows.lookup(self.window)):
+            return active_sheet in wm.tree_view_sheets.values()
         return False
 
     def run(self, direction: Literal['down', 'up', 'left', 'right', 'close']) -> None:
-        if wm := windows.lookup(self.window):
-            if (active_sheet := self.window.active_sheet()) and (sheet := wm.tree_view_sheets.get('Call Hierarchy')):
-                if sheet.id() == active_sheet.id():
-                    sheet.navigate(direction)
+        if (
+            (active_sheet := self.window.active_sheet()) and (wm := windows.lookup(self.window))
+            and (sheet := next((sheet for sheet in wm.tree_view_sheets.values() if sheet == active_sheet), None))
+        ):
+            sheet.navigate(direction)

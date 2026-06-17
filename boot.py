@@ -36,6 +36,7 @@ from .plugin.core.transports import kill_all_subprocesses
 from .plugin.core.tree_view import LspActivateTreeItemCommand
 from .plugin.core.tree_view import LspCollapseTreeItemCommand
 from .plugin.core.tree_view import LspExpandTreeItemCommand
+from .plugin.core.tree_view import LspHandleTreeViewActionCommand
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener
@@ -89,7 +90,6 @@ from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
 from typing import Any
-from typing import Literal
 import os
 import sublime
 import sublime_plugin
@@ -129,10 +129,10 @@ __all__ = (
     "LspFormatDocumentCommand",
     "LspFormatDocumentRangeCommand",
     "LspGotoDiagnosticCommand",
+    "LspHandleTreeViewActionCommand",
     "LspHierarchyToggleCommand",
     "LspHoverCommand",
     "LspInlayHintClickCommand",
-    "LspMoveFocusCommand",
     "LspNextDiagnosticCommand",
     "LspOnDoubleClickCommand",
     "LspOpenLinkCommand",
@@ -293,19 +293,3 @@ class Listener(sublime_plugin.EventListener):
                 sublime.set_timeout_async(wm.update_diagnostics_panel_async)
             elif panel_manager.is_panel_open(PanelName.Log):
                 sublime.set_timeout(lambda: panel_manager.update_log_panel(scroll_to_selection=True))
-
-
-# TODO: Added just for testing
-class LspMoveFocusCommand(sublime_plugin.WindowCommand):
-
-    def is_enabled(self) -> bool:
-        if (active_sheet := self.window.active_sheet()) and (wm := windows.lookup(self.window)):
-            return active_sheet in wm.tree_view_sheets.values()
-        return False
-
-    def run(self, direction: Literal['down', 'up', 'left', 'right', 'close']) -> None:
-        if (
-            (active_sheet := self.window.active_sheet()) and (wm := windows.lookup(self.window))
-            and (sheet := next((sheet for sheet in wm.tree_view_sheets.values() if sheet == active_sheet), None))
-        ):
-            sheet.navigate(direction)

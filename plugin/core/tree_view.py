@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .css import css
 from .promise import Promise
-from .registry import LspWindowCommand
 from .registry import windows
 from abc import ABC
 from abc import abstractmethod
@@ -15,6 +14,7 @@ from typing import TypeVar
 import html
 import sublime
 import sublime_api  # pyright: ignore[reportMissingImports]
+import sublime_plugin
 import uuid
 
 if TYPE_CHECKING:
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 # pyright: reportInvalidTypeVarUse=false
 T = TypeVar('T')
 
+TreeViewAction = Literal['move_up', 'move_right', 'move_down', 'move_left', 'close', 'activate']
 
 KIND_CLASS_NAMES: dict[int, str] = {
     sublime.KindId.KEYWORD: 'kind kind_keyword',
@@ -187,27 +188,27 @@ class TreeViewSheet(sublime.HtmlSheet):
             .then(partial(self._add_children, node_id)) \
             .then(lambda _: self._update_contents())
 
-    def navigate(self, direction: Literal['up', 'right', 'down', 'left', 'close']) -> None:
-        if direction == 'close':
+    def handle_action(self, action: TreeViewAction) -> None:
+        if action == 'close':
             self.close()
             return
         if not self.selected_node_id or not (selected_node := self.nodes[self.selected_node_id]):
             return
-        if direction == 'down':
+        if action == 'move_down':
             current_index = self.ordered_node_ids.index(self.selected_node_id)
             next_index = min(len(self.ordered_node_ids) - 1, current_index + 1)
             if current_index == next_index:
                 return
             next_node_id = self.ordered_node_ids[next_index]
             self.activate_item(next_node_id)
-        elif direction == 'up':
+        elif action == 'move_up':
             current_index = self.ordered_node_ids.index(self.selected_node_id)
             previous_index = max(0, current_index - 1)
             if current_index == previous_index:
                 return
             previous_node_id = self.ordered_node_ids[previous_index]
             self.activate_item(previous_node_id)
-        elif direction == 'left':
+        elif action == 'move_left':
             if selected_node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
                 self.collapse_item(self.selected_node_id)
             elif selected_node.parent_node_id and selected_node.tree_item.collapsible_state in {
@@ -215,11 +216,9 @@ class TreeViewSheet(sublime.HtmlSheet):
                 TreeItemCollapsibleState.NONE
             }:
                 self.activate_item(selected_node.parent_node_id)
-        elif direction == 'right':
+        elif action == 'move_right':
             if selected_node.tree_item.collapsible_state == TreeItemCollapsibleState.COLLAPSED:
                 self.expand_item(self.selected_node_id)
-        # TODO: reliable focus
-        sublime.set_timeout(lambda: sublime.active_window().focus_sheet(self), 300)
 
     def expand_item(self, node_id: str) -> None:
         assert node_id in self.nodes
@@ -255,15 +254,6 @@ class TreeViewSheet(sublime.HtmlSheet):
             {}
             h3 a {{
                 text-decoration: none;
-            }}
-            kbd {{
-                background-color: color(var(--foreground) lightness(+ 5%));
-                border-radius: 0.25rem;
-                border: 1px solid color(var(--foreground) alpha(0.25));
-                color: var(--background);
-                font-size: 0.9rem;
-                padding: 0.05rem 0.25rem;
-                line-height: 0.8rem;
             }}
             .tree-view {{
                 padding: 0.5rem;
@@ -338,7 +328,6 @@ class TreeViewSheet(sublime.HtmlSheet):
         </style>
         <body id="lsp-tree-view" class="lsp_sheet">
             <h3>{}</h3>
-            <div class="description">use <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> to move around</div>
             <div class="tree-view">{}</div>
         </body>
         """.format(css().sheets, self.header, "".join([self._subtree_html(root_id) for root_id in self.root_nodes]))
@@ -431,19 +420,34 @@ def activate_tree_item(window: sublime.Window, name: str, node_id: str) -> None:
     sheet.activate_item(node_id)
 
 
-class LspExpandTreeItemCommand(LspWindowCommand):
+class LspExpandTreeItemCommand(sublime_plugin.WindowCommand):
 
     def run(self, name: str, node_id: str) -> None:
         toggle_tree_item(self.window, name, node_id, True)
 
 
-class LspCollapseTreeItemCommand(LspWindowCommand):
+class LspCollapseTreeItemCommand(sublime_plugin.WindowCommand):
 
     def run(self, name: str, node_id: str) -> None:
         toggle_tree_item(self.window, name, node_id, False)
 
 
-class LspActivateTreeItemCommand(LspWindowCommand):
+class LspActivateTreeItemCommand(sublime_plugin.WindowCommand):
 
     def run(self, name: str, node_id: str) -> None:
         activate_tree_item(self.window, name, node_id)
+
+
+class LspHandleTreeViewActionCommand(sublime_plugin.WindowCommand):
+
+    def is_enabled(self) -> bool:
+        if (active_sheet := self.window.active_sheet()) and (wm := windows.lookup(self.window)):
+            return active_sheet in wm.tree_view_sheets.values()
+        return False
+
+    def run(self, action: TreeViewAction) -> None:
+        if (
+            (active_sheet := self.window.active_sheet()) and (wm := windows.lookup(self.window))
+            and (sheet := next((sheet for sheet in wm.tree_view_sheets.values() if sheet == active_sheet), None))
+        ):
+            sheet.handle_action(action)

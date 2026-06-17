@@ -270,6 +270,12 @@
         "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
     },
     {
+        "keys": ["enter"],
+        "command": "lsp_handle_tree_view_action",
+        "args": {"action": "activate"},
+        "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
+    },
+    {
         "keys": ["escape"],
         "command": "lsp_handle_tree_view_action",
         "args": {"action": "close"},

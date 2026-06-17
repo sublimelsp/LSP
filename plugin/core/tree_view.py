@@ -200,14 +200,14 @@ class TreeViewSheet(sublime.HtmlSheet):
             if current_index == next_index:
                 return
             next_node_id = self.ordered_node_ids[next_index]
-            self.activate_item(next_node_id)
+            self.select_item(next_node_id)
         elif action == 'move_up':
             current_index = self.ordered_node_ids.index(self.selected_node_id)
             previous_index = max(0, current_index - 1)
             if current_index == previous_index:
                 return
             previous_node_id = self.ordered_node_ids[previous_index]
-            self.activate_item(previous_node_id)
+            self.select_item(previous_node_id)
         elif action == 'move_left':
             if selected_node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
                 self.collapse_item(self.selected_node_id)
@@ -215,10 +215,12 @@ class TreeViewSheet(sublime.HtmlSheet):
                 TreeItemCollapsibleState.COLLAPSED,
                 TreeItemCollapsibleState.NONE
             }:
-                self.activate_item(selected_node.parent_node_id)
+                self.select_item(selected_node.parent_node_id)
         elif action == 'move_right':
             if selected_node.tree_item.collapsible_state == TreeItemCollapsibleState.COLLAPSED:
                 self.expand_item(self.selected_node_id)
+        elif action == 'activate':
+            self.activate_item(self.selected_node_id)
 
     def expand_item(self, node_id: str) -> None:
         assert node_id in self.nodes
@@ -234,7 +236,7 @@ class TreeViewSheet(sublime.HtmlSheet):
         self.nodes[node_id].tree_item.collapsible_state = TreeItemCollapsibleState.COLLAPSED
         self._update_contents()
 
-    def activate_item(self, node_id: str) -> None:
+    def select_item(self, node_id: str) -> None:
         assert node_id in self.nodes
         self.selected_node_id = node_id
         node = self.nodes[node_id]
@@ -242,6 +244,12 @@ class TreeViewSheet(sublime.HtmlSheet):
             self._update_contents()
         else:
             self._resolve_children(node_id)
+
+    def activate_item(self, node_id: str) -> None:
+        self.select_item(node_id)
+        assert node_id in self.nodes
+        self.selected_node_id = node_id
+        node = self.nodes[node_id]
         if action_command := node.tree_item.action_command:
             sublime.active_window().run_command(*action_command)
 

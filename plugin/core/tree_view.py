@@ -440,11 +440,6 @@ class LspActivateTreeItemCommand(sublime_plugin.WindowCommand):
 
 class LspHandleTreeViewActionCommand(sublime_plugin.WindowCommand):
 
-    def is_enabled(self) -> bool:
-        if (active_sheet := self.window.active_sheet()) and (wm := windows.lookup(self.window)):
-            return active_sheet in wm.tree_view_sheets.values()
-        return False
-
     def run(self, action: TreeViewAction) -> None:
         if (
             (active_sheet := self.window.active_sheet()) and (wm := windows.lookup(self.window))

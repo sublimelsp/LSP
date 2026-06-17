@@ -92,6 +92,7 @@ class ClientConfigs:
         names = list(self.all.keys())
         for name in names:
             self.remove_external_config(name, notify_listener=False)
+        self.all.clear()
 
     def _update_external_config(self, name: str, settings_store: SettingsStore) -> None:
         try:

@@ -1493,7 +1493,7 @@ class Session(APIHandler, TransportCallbacks):
             view = self.window.new_file(flags)
             view.set_scratch(True)
             return Promise.resolve(view)
-        if scheme in self.get_capability('workspace.textDocumentContent.schemes', []):
+        if scheme in self.get_capability('textDocumentContentProvider.schemes', []):
             return self.send_request_task(Request('workspace/textDocumentContent', {'uri': uri})) \
                 .then(lambda response: self._on_text_document_content_async(response, uri, flags, group)) \
                 .then(lambda view: self._on_view_for_uri_opened(view, uri, r) if view else None)

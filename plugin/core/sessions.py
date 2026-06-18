@@ -424,7 +424,8 @@ def get_initialize_params(
                 "parameterInformation": {
                     "labelOffsetSupport": True
                 },
-                "activeParameterSupport": True
+                "activeParameterSupport": True,
+                "noActiveParameterSupport": True
             },
             "contextSupport": True
         },

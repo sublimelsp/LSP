@@ -167,7 +167,7 @@ class WindowConfigManagerTests(ViewTestCase):
         manager.add_change_listener(change_listener)
         global_configs[TEST_CONFIG.name] = TEST_CONFIG
         manager.update(TEST_CONFIG.name)
-        change_listener.on_configs_changed.assert_not_called()
+        change_listener.on_configs_changed.assert_called_once_with([TEST_CONFIG])
         change_listener.on_server_settings_changed.assert_not_called()
         self.assertIn(TEST_CONFIG.name, manager.all)
 
@@ -282,7 +282,7 @@ class WindowConfigManagerTests(ViewTestCase):
             }
         }
         manager.update()
-        change_listener.on_configs_changed.assert_not_called()
+        change_listener.on_configs_changed.assert_called_once_with([manager.all[PROJECT_TEST_CONFIG_NAME]])
         change_listener.on_server_settings_changed.assert_not_called()
         self.assertIn(PROJECT_TEST_CONFIG_NAME, manager.all)
 

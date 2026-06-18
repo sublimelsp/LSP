@@ -206,8 +206,7 @@ def _register_all_plugins() -> None:
 
 def _unregister_all_plugins() -> None:
     g_plugins.clear()
-    client_configs.external.clear()
-    client_configs.all.clear()
+    client_configs.remove_all_configs()
 
 
 def plugin_loaded() -> None:
@@ -229,6 +228,10 @@ def plugin_loaded() -> None:
 def plugin_unloaded() -> None:
     _unregister_all_plugins()
     run_coroutine(windows.disable())
+    for listeners in sublime_plugin.view_event_listeners.values():
+        for listener in listeners:
+            if isinstance(listener, DocumentSyncListener):
+                listener.before_destroy()
     unload_settings()
 
 

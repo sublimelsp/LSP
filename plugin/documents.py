@@ -282,6 +282,11 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         # But this has to run on the asyncio thread again
         run_coroutine(self._activated_impl())
 
+    def before_destroy(self) -> None:
+        self._cleanup()
+        self._registration.unregister()
+        self._closed = True
+
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
     def on_post_move_window_async(self) -> None:
@@ -554,9 +559,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if self._registered and self._manager:
             manager = self._manager
             manager.unregister_listener_async(self)
-        self._cleanup()
-        self._registration.unregister()
-        self._closed = True
+        self.before_destroy()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool | None:
         # You can filter key bindings by the precense of a provider,

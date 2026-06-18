@@ -1699,7 +1699,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
             return await run_on_main_thread(open_untitled_buffer, flags)
 
-        if scheme in self.get_capability('workspace.textDocumentContent.schemes', []):
+        if scheme in self.get_capability('textDocumentContentProvider.schemes', []):
             title = urlparse(uri).path.split('/')[-1]
             response: TextDocumentContentResult = await self.request(
                 Request('workspace/textDocumentContent', {'uri': uri})

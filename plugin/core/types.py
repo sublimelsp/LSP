@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from ...protocol import DocumentFilter
 from ...protocol import DocumentSelector
 from ...protocol import DocumentUri
 from ...protocol import FileOperationFilter
 from ...protocol import FileOperationPatternKind
+from ...protocol import NotebookCellTextDocumentFilter
 from ...protocol import ServerCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextDocumentSyncOptions
@@ -39,6 +41,7 @@ from typing import TypeVar
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import override
+from typing_extensions import TypeGuard
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -448,6 +451,10 @@ class ClientStates:
     STOPPING = 2
 
 
+def is_notebook_cell_text_document_filter(document_filter: DocumentFilter) -> TypeGuard[NotebookCellTextDocumentFilter]:
+    return 'notebook' in document_filter
+
+
 class DocumentFilterMatcher:
     """
     A document filter denotes a document through properties like language, scheme or pattern.
@@ -499,7 +506,10 @@ class DocumentSelectorMatcher:
     __slots__ = ("filters",)
 
     def __init__(self, document_selector: DocumentSelector) -> None:
-        self.filters = [DocumentFilterMatcher(**cast("dict", document_filter)) for document_filter in document_selector]
+        self.filters = [
+            DocumentFilterMatcher(**cast("dict", document_filter)) for document_filter in document_selector
+            if not is_notebook_cell_text_document_filter(document_filter)
+        ]
 
     def __bool__(self) -> bool:
         return bool(self.filters)

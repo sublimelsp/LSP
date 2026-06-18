@@ -59,7 +59,7 @@ class SigHelp:
         self._language_map = language_map
         self._signatures = self._state["signatures"]
         self._active_signature_index = self._state.get("activeSignature") or 0
-        self._active_parameter_index = self._state.get("activeParameter") or 0
+        self._active_parameter_index = self._state.get("activeParameter", 0)
         self._style = style
 
     @classmethod
@@ -115,7 +115,8 @@ class SigHelp:
         label = signature["label"]
         if parameters := signature.get("parameters"):
             prev, start, end = 0, 0, 0
-            active_parameter_index = signature.get("activeParameter", self._active_parameter_index)
+            active_parameter_index = signature['activeParameter'] if 'activeParameter' in signature else \
+                self._active_parameter_index
             for i, param in enumerate(parameters):
                 rawlabel = param["label"]
                 if isinstance(rawlabel, list):
@@ -147,9 +148,12 @@ class SigHelp:
         parameters = signature.get("parameters")
         if not parameters:
             return None
+        active_parameter_index = signature['activeParameter'] if 'activeParameter' in signature else \
+            self._active_parameter_index
+        if active_parameter_index is None:
+            return None
         try:
-            active_parameter = signature.get("activeParameter")
-            parameter = parameters[active_parameter or self._active_parameter_index]
+            parameter = parameters[active_parameter_index]
         except IndexError:
             return None
         if documentation := parameter.get("documentation"):

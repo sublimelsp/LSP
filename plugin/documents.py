@@ -259,6 +259,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         # But this has to run on the async thread again
         sublime.set_timeout_async(self.on_activated_async)
 
+    def before_destroy(self) -> None:
+        self._cleanup()
+        self._registration.unregister()
+        self._closed = True
+
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
     def on_post_move_window_async(self) -> None:
@@ -517,9 +522,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self._registered and self._manager:
             manager = self._manager
             sublime.set_timeout_async(lambda: manager.unregister_listener_async(self))
-        self._cleanup()
-        self._registration.unregister()
-        self._closed = True
+        self.before_destroy()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool | None:
         # You can filter key bindings by the precense of a provider,

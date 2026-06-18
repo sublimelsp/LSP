@@ -115,8 +115,7 @@ class SigHelp:
         label = signature["label"]
         if parameters := signature.get("parameters"):
             prev, start, end = 0, 0, 0
-            active_parameter_index = signature['activeParameter'] if 'activeParameter' in signature else \
-                self._active_parameter_index
+            active_parameter_index = signature.get("activeParameter", self._active_parameter_index)
             for i, param in enumerate(parameters):
                 rawlabel = param["label"]
                 if isinstance(rawlabel, list):
@@ -148,8 +147,7 @@ class SigHelp:
         parameters = signature.get("parameters")
         if not parameters:
             return None
-        active_parameter_index = signature['activeParameter'] if 'activeParameter' in signature else \
-            self._active_parameter_index
+        active_parameter_index = signature.get('activeParameter', self._active_parameter_index)
         if active_parameter_index is None:
             return None
         try:

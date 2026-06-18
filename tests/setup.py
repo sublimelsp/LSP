@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from .async_test_case import AsyncTestCase
-from .async_test_case import FutureLike
 from .test_mocks import basic_responses
 from functools import partial
-from LSP.plugin.core.aio import run_coroutine
 from LSP.plugin.core.aio import run_on_asyncio_thread
 from LSP.plugin.core.aio import tick
 from LSP.plugin.core.collections import DottedDict
@@ -21,9 +18,9 @@ from os.path import join
 from sublime_plugin import view_event_listeners
 from typing import Any
 from typing import Callable
-from typing import Coroutine
 from typing import TYPE_CHECKING
 from typing_extensions import override
+from unittesting import AsyncTestCase
 import asyncio
 import sublime
 
@@ -103,15 +100,8 @@ def expand(s: str, w: sublime.Window) -> str:
     return sublime.expand_variables(s, w.extract_variables())
 
 
-class SublimeAioTestCase(AsyncTestCase):
+class TextDocumentTestCase(AsyncTestCase):
     timeout_ms = TIMEOUT_TIME
-
-    @classmethod
-    def run_coroutine(cls, coro: Coroutine) -> FutureLike:
-        return run_coroutine(coro)
-
-
-class TextDocumentTestCase(SublimeAioTestCase):
 
     config: ClientConfig
     wm: WindowManager
@@ -124,7 +114,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
 
     @override
     @classmethod
-    async def asyncSetUpClass(cls) -> None:
+    async def setUpClass(cls) -> None:
         test_name = cls.get_test_name()
         server_capabilities = cls.get_test_server_capabilities()
         window = sublime.active_window()
@@ -181,10 +171,14 @@ class TextDocumentTestCase(SublimeAioTestCase):
                 raise AssertionError(f"unable to open file {filename}")
 
     async def tearDown(self) -> None:
-        self.assertIsNotNone(self.session)
-        assert self.session
-        for response in await self.get_and_clear_unused_mock_responses():
-            print(f"WARNING: unused mock response: {response}")
+        try:
+            self.assertIsNotNone(self.session)
+            assert self.session
+            for response in await self.get_and_clear_unused_mock_responses():
+                print(f"WARNING: unused mock response: {response}")
+        finally:
+            if self.view and self.view.is_valid():
+                await close_test_view(self.view)
 
     @classmethod
     def get_test_name(cls) -> str:
@@ -293,16 +287,11 @@ class TextDocumentTestCase(SublimeAioTestCase):
 
     @override
     @classmethod
-    async def asyncTearDownClass(cls) -> None:
+    async def tearDownClass(cls) -> None:
         try:
             if cls.session and cls.wm:
                 await cls.session.end()
         finally:
             # restore the user's configs
             remove_config(cls.config)
-        await super().asyncTearDownClass()
-
-    @override
-    async def asyncDoCleanups(self) -> None:
-        if self.view and self.view.is_valid():
-            await close_test_view(self.view)
+        await super().tearDownClass()

@@ -406,26 +406,11 @@ def new_tree_view_sheet(
 
 
 def toggle_tree_item(window: sublime.Window, name: str, node_id: str, expand: bool) -> None:
-    wm = windows.lookup(window)
-    if not wm:
-        return
-    sheet = wm.tree_view_sheets.get(name)
-    if not sheet:
-        return
-    if expand:
-        sheet.expand_item(node_id)
-    else:
-        sheet.collapse_item(node_id)
-
-
-def activate_tree_item(window: sublime.Window, name: str, node_id: str) -> None:
-    wm = windows.lookup(window)
-    if not wm:
-        return
-    sheet = wm.tree_view_sheets.get(name)
-    if not sheet:
-        return
-    sheet.activate_item(node_id)
+    if (wm := windows.lookup(window)) and (sheet := wm.tree_view_sheets.get(name)):
+        if expand:
+            sheet.expand_item(node_id)
+        else:
+            sheet.collapse_item(node_id)
 
 
 class LspExpandTreeItemCommand(sublime_plugin.WindowCommand):
@@ -443,7 +428,8 @@ class LspCollapseTreeItemCommand(sublime_plugin.WindowCommand):
 class LspActivateTreeItemCommand(sublime_plugin.WindowCommand):
 
     def run(self, name: str, node_id: str) -> None:
-        activate_tree_item(self.window, name, node_id)
+        if (wm := windows.lookup(self.window)) and (sheet := wm.tree_view_sheets.get(name)):
+            sheet.activate_item(node_id)
 
 
 class LspHandleTreeViewActionCommand(sublime_plugin.WindowCommand):

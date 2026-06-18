@@ -1615,7 +1615,7 @@ class Session(APIHandler, TransportCallbacks):
             return Promise.resolve(None)
         title = urlparse(uri).path.split('/')[-1]
         content = response['text'].replace('\r', '')
-        syntax = ''
+        syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
         return self.open_scratch_buffer(title, content, syntax, flags, group)  # pyright: ignore[reportReturnType]
 
     def _on_text_document_content_refreshed(self, view: sublime.View, new_content: str) -> None:

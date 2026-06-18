@@ -326,11 +326,20 @@ JETLS requires Julia 1.12 or higher.
             "command": ["jetls", "serve", "--socket=${port}"],
             "tcp_port": 0,
             "selector": "source.julia",
+            "syntax_map": {
+                "jetls-macro-expansion": "Julia.sublime-syntax",
+                "jetls-type-annotation": "Julia.sublime-syntax"
+            },
             // For all configuration options see https://aviatesk.github.io/JETLS.jl/configuration/
             "settings": {
                 // "jetls.full_analysis.debounce": 1.0,
                 // "jetls.full_analysis.auto_instantiate": true,
                 // "jetls.diagnostic.all_files": true,
+                // "jetls.code_lens.references": false,
+                // "jetls.code_lens.testrunner": true,
+                // "jetls.inlay_hint.types.enabled": true,
+                // "jetls.inlay_hint.block_end.enabled": true,
+                // "jetls.inlay_hint.block_end.min_lines": 25,
             }
         }
     }

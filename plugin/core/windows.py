@@ -66,6 +66,7 @@ from weakref import ref
 from weakref import WeakSet
 import functools
 import json
+import os
 import sublime
 import threading
 
@@ -295,7 +296,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
-            cwd = workspace_folders[0].path if workspace_folders else None
+            cwd = (
+                workspace_folders[0].path
+                if workspace_folders
+                else (os.path.dirname(file_path) if file_path else None)
+            )
             context = OnPreStartContext(config, variables, initiating_view, cwd, workspace_folders)
             if plugin_class:
                 if issubclass(plugin_class, LspPlugin):

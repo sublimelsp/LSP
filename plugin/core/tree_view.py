@@ -66,7 +66,7 @@ class TreeItem:
         self.collapsible_state = TreeItemCollapsibleState.COLLAPSED
         self.id = str(uuid.uuid4())
 
-    def html(self, sheet_name: str, indent_level: int, is_active: bool = False) -> str:
+    def html(self, sheet_name: str, indent_level: int, *, has_focus: bool = False) -> str:
         indent_html = f'<span style="padding-left: {indent_level}rem;">&nbsp;</span>'
         if self.collapsible_state == TreeItemCollapsibleState.COLLAPSED:
             disclosure_button_html = '<a class="disclosure-button" href="{}">▶</a>'.format(
@@ -93,8 +93,8 @@ class TreeItem:
             label_html = f'<span class="label" title="{escaped_tooltip}">{escaped_label}</span>'
         else:
             label_html = f'<span class="label">{escaped_label}</span>'
-        if is_active:
-            label_html = f'<span class="active">{label_html}</span>'
+        if has_focus:
+            label_html = f'<span class="has-focus">{label_html}</span>'
         description_html = f'<span class="description">{html.escape(self.description)}</span>' if \
             self.description else ''
         content = indent_html + disclosure_button_html + icon_html + label_html + description_html
@@ -330,7 +330,7 @@ class TreeViewSheet(sublime.HtmlSheet):
                 color: color(var(--foreground) alpha(0.6));
                 padding-left: 0.5rem;
             }}
-            .active {{
+            .has-focus {{
                 background-color: color(var(--accent));
             }}
         </style>
@@ -356,7 +356,7 @@ class TreeViewSheet(sublime.HtmlSheet):
 
     def _subtree_html(self, node_id: str) -> str:
         node = self.nodes[node_id]
-        html = node.tree_item.html(self.name, node.indent_level, node_id == self.selected_node_id)
+        html = node.tree_item.html(self.name, node.indent_level, has_focus=node_id == self.selected_node_id)
         if node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
             html += "".join([self._subtree_html(child_id) for child_id in node.child_ids])
         return html

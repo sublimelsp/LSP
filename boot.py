@@ -33,8 +33,10 @@ from .plugin.core.settings import unload_settings
 from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
+from .plugin.core.tree_view import LspActivateTreeItemCommand
 from .plugin.core.tree_view import LspCollapseTreeItemCommand
 from .plugin.core.tree_view import LspExpandTreeItemCommand
+from .plugin.core.tree_view import LspHandleTreeViewActionCommand
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener
@@ -95,6 +97,7 @@ import sublime_plugin
 __all__ = (
     "DocumentSyncListener",
     "Listener",
+    "LspActivateTreeItemCommand",
     "LspApplyDocumentEditCommand",
     "LspApplyTextDocumentEditCommand",
     "LspApplyWorkspaceEditCommand",
@@ -126,6 +129,7 @@ __all__ = (
     "LspFormatDocumentCommand",
     "LspFormatDocumentRangeCommand",
     "LspGotoDiagnosticCommand",
+    "LspHandleTreeViewActionCommand",
     "LspHierarchyToggleCommand",
     "LspHoverCommand",
     "LspInlayHintClickCommand",

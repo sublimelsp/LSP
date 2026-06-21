@@ -331,7 +331,7 @@ class TreeViewSheet(sublime.HtmlSheet):
                 padding-left: 0.5rem;
             }}
             .has-focus {{
-                background-color: color(var(--accent));
+                background-color: color(var(--accent) alpha(0.3));
             }}
         </style>
         <body id="lsp-tree-view" class="lsp_sheet">

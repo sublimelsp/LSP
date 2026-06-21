@@ -296,3 +296,10 @@ class Listener(sublime_plugin.EventListener):
                 sublime.set_timeout_async(wm.update_diagnostics_panel_async)
             elif panel_manager.is_panel_open(PanelName.Log):
                 sublime.set_timeout(lambda: panel_manager.update_log_panel(scroll_to_selection=True))
+
+    def on_query_context(
+        self, view: sublime.View, key: str, operator: sublime.QueryOperator, operand: str, match_all: bool
+    ) -> bool | None:
+        if key == 'lsp.tree_view_sheet_has_focus':
+            return False
+        return None

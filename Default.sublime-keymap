@@ -244,41 +244,41 @@
         "args": {"async": true},
         "context": [{"key": "lsp.session_with_capability", "operand": "textDocumentSync.willSave | textDocumentSync.willSaveWaitUntil | codeActionProvider.codeActionKinds | documentFormattingProvider | documentRangeFormattingProvider"}]
     },
-    // Navigate in Tree Views
-    {
-        "keys": ["left"],
-        "command": "lsp_handle_tree_view_action",
-        "args": {"action": "move_left"},
-        "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
-    },
-    {
-        "keys": ["right"],
-        "command": "lsp_handle_tree_view_action",
-        "args": {"action": "move_right"},
-        "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
-    },
-    {
-        "keys": ["up"],
-        "command": "lsp_handle_tree_view_action",
-        "args": {"action": "move_up"},
-        "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
-    },
-    {
-        "keys": ["down"],
-        "command": "lsp_handle_tree_view_action",
-        "args": {"action": "move_down"},
-        "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
-    },
-    {
-        "keys": ["enter"],
-        "command": "lsp_handle_tree_view_action",
-        "args": {"action": "activate"},
-        "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
-    },
-    {
-        "keys": ["escape"],
-        "command": "lsp_handle_tree_view_action",
-        "args": {"action": "close"},
-        "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
-    },
+    // Navigate in Tree Views (pending keybinding support in Sheets - https://github.com/sublimehq/sublime_text/issues/5377)
+    // {
+    //     "keys": ["left"],
+    //     "command": "lsp_handle_tree_view_action",
+    //     "args": {"action": "move_left"},
+    //     "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
+    // },
+    // {
+    //     "keys": ["right"],
+    //     "command": "lsp_handle_tree_view_action",
+    //     "args": {"action": "move_right"},
+    //     "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
+    // },
+    // {
+    //     "keys": ["up"],
+    //     "command": "lsp_handle_tree_view_action",
+    //     "args": {"action": "move_up"},
+    //     "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
+    // },
+    // {
+    //     "keys": ["down"],
+    //     "command": "lsp_handle_tree_view_action",
+    //     "args": {"action": "move_down"},
+    //     "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
+    // },
+    // {
+    //     "keys": ["enter"],
+    //     "command": "lsp_handle_tree_view_action",
+    //     "args": {"action": "activate"},
+    //     "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
+    // },
+    // {
+    //     "keys": ["escape"],
+    //     "command": "lsp_handle_tree_view_action",
+    //     "args": {"action": "close"},
+    //     "context": [{"key": "lsp.tree_view_sheet_has_focus"}]
+    // },
 ]

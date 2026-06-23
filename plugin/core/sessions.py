@@ -432,7 +432,8 @@ def get_initialize_params(
                 "parameterInformation": {
                     "labelOffsetSupport": True
                 },
-                "activeParameterSupport": True
+                "activeParameterSupport": True,
+                "noActiveParameterSupport": True
             },
             "contextSupport": True
         },
@@ -1705,7 +1706,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 Request('workspace/textDocumentContent', {'uri': uri})
             )
             content = response['text'].replace('\r', '')
-            syntax = ''
+            syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
             return self._on_view_for_uri_opened(
                 await self.open_scratch_buffer(title, content, syntax, flags, group), uri, r
             )

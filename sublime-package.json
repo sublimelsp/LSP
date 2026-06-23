@@ -377,8 +377,14 @@
                 "diagnostics_mode": {
                   "$ref": "#/definitions/ClientDiagnosticsMode"
                 },
+                "semantic_tokens": {
+                  "$ref": "#/definitions/SemanticTokens"
+                },
                 "markdown_language_map": {
                   "$ref": "#/definitions/ClientMarkdownLanguageMap"
+                },
+                "syntax_map": {
+                  "$ref": "#/definitions/ClientSyntaxMap"
                 },
               }
             },
@@ -426,6 +432,13 @@
                   }
                 }
               ]
+            },
+            "ClientSyntaxMap": {
+              "type": "object",
+              "markdownDescription": "A mapping of custom URI schemes to Sublime Text syntaxes, used when fetching dynamic document content from the server via [`workspace/textDocumentContent`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workspace_textDocumentContent) request.",
+              "additionalProperties": {
+                "type": "string"
+              }
             }
           }
         }
@@ -1029,6 +1042,9 @@
             },
             "markdown_language_map": {
               "$ref": "sublime://settings/LSP#/definitions/ClientMarkdownLanguageMap"
+            },
+            "syntax_map": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientSyntaxMap"
             },
           }
         }

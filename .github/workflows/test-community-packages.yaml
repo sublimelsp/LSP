@@ -11,12 +11,12 @@ jobs:
     runs-on: macOS-latest
     steps:
       - name: Check out PR branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: LSP
 
       - name: Check out lsp_maintainers
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: sublimelsp/lsp_maintainers
           path: lsp_maintainers

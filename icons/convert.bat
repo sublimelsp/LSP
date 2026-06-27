@@ -12,3 +12,5 @@ inkscape --export-type=png --export-area=-1.23:-1.23:18.46:18.46 -w 32 -h 32 --e
 inkscape --export-type=png --export-area=-1.23:-1.23:18.46:18.46 -w 48 -h 48 --export-filename=warning@3x.png warning.svg
 inkscape --export-type=png -w 32 -h 32 --export-filename=lightbulb-32.png lightbulb.svg
 inkscape --export-type=png -w 32 -h 32 --export-filename=lightbulb-star-32.png lightbulb-star.svg
+inkscape --export-type=png -w 32 -h 32 --export-filename=lightbulb-sparkle-32.png lightbulb-sparkle.svg
+inkscape --export-type=png -w 32 -h 32 --export-filename=lightbulb-sparkle-star-32.png lightbulb-sparkle-star.svg

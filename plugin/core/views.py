@@ -4,6 +4,7 @@ from ...protocol import CodeAction
 from ...protocol import CodeActionContext
 from ...protocol import CodeActionKind
 from ...protocol import CodeActionParams
+from ...protocol import CodeActionTag
 from ...protocol import CodeActionTriggerKind
 from ...protocol import Color
 from ...protocol import ColorInformation
@@ -878,13 +879,9 @@ def _html_element(tag: str, content: str, *, class_name: str | None = None, esca
 
 
 @lru_cache
-def lightbulb_html(color: str, star: bool) -> str:
-    if star:
-        img = 'Packages/LSP/icons/lightbulb-star-32.png'
-        tooltip = 'Preferred Quick Fix'
-    else:
-        img = 'Packages/LSP/icons/lightbulb-32.png'
-        tooltip = 'Quick Fix'
+def lightbulb_html(color: str, is_preferred: bool, llm_generated: bool) -> str:
+    img = f'Packages/LSP/icons/lightbulb{"-sparkle" if llm_generated else ""}{"-star" if is_preferred else ""}-32.png'
+    tooltip = f'{"Preferred " if is_preferred else ""}Quick Fix{" (LLM-generated)" if llm_generated else ""}'
     return f'<span class="lightbulb" title="{tooltip}">{mdpopups.tint(img, color)}</span>'
 
 
@@ -945,7 +942,9 @@ def format_diagnostic_for_html(
     if code_actions:
         version = view.change_count()
         for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
-            icon = lightbulb_html(lightbulb_color, code_action.get('isPreferred', False))
+            is_preferred = code_action.get('isPreferred', False)
+            llm_generated = CodeActionTag.LLMGenerated in code_action.get('tags', [])
+            icon = lightbulb_html(lightbulb_color, is_preferred, llm_generated)
             code_action_uri = encode_code_action_uri(config.name, version, code_action)
             content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
     severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class

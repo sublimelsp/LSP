@@ -338,8 +338,9 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
                 await session.open_location(location, sublime.NewFileFlags.ENCODED_POSITION)
             elif workspace_symbol := symbol.get('workspaceSymbol'):
                 workspace_symbol = await session.request(Request.resolveWorkspaceSymbol(workspace_symbol))
-                location = cast('Location', workspace_symbol['location'])
-                await session.open_location(location, sublime.NewFileFlags.ENCODED_POSITION)
+                if not isinstance(workspace_symbol, Error):
+                    location = cast('Location', workspace_symbol['location'])
+                    await session.open_location(location, sublime.NewFileFlags.ENCODED_POSITION)
 
     def input(self, args: dict[str, Any]) -> sublime_plugin.ListInputHandler | None:
         if 'symbol' not in args:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .core.aio import run_coroutine
 from .core.constants import CODE_LENS_ENABLED_KEY
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.registry import LspTextCommand
@@ -52,10 +53,11 @@ class CachedCodeLens:
 
     async def resolve(self, session: Session, view: sublime.View) -> CachedCodeLens:
         response = await session.request(Request('codeLens/resolve', self.data, view))
-        assert is_resolved(response)
-        self.data = response
-        self.range = HashableRange(response['range'])
-        self.cached_command = response['command']
+        if not isinstance(response, Error):
+            assert is_resolved(response)
+            self.data = response
+            self.range = HashableRange(response['range'])
+            self.cached_command = response['command']
         return self
 
 

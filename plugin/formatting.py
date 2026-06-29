@@ -6,6 +6,7 @@ from .code_actions import CodeActionsOnFormatTask
 from .core.aio import run_coroutine
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
+from .core.logging import exception_log
 from .core.protocol import Error
 from .core.registry import LspTextCommand
 from .core.registry import windows
@@ -43,7 +44,7 @@ def get_formatter(window: sublime.Window | None, base_scope: str) -> str | None:
         isinstance(project_data, dict) else window_manager.formatters.get(base_scope)
 
 
-async def format_document(text_command: LspTextCommand, formatter: str | None = None) -> FormatResponse:
+async def format_document(text_command: LspTextCommand, formatter: str | None = None) -> FormatResponse | Error:
     view = text_command.view
     if formatter:
         if session := text_command.session_by_name(formatter, LspFormatDocumentCommand.capability):
@@ -57,12 +58,12 @@ async def format_document(text_command: LspTextCommand, formatter: str | None = 
     return None
 
 
-async def format_selection(listener: AbstractViewListener | None) -> None:
+async def format_selection(listener: AbstractViewListener | None) -> Error | None:
     if not listener:
-        return
+        return None
     await listener.purge_changes()
     session: Session | None = None
-    text_edits: list[TextEdit] | None = None
+    text_edits: list[TextEdit] | Error | None = None
     if has_single_nonempty_selection(listener.view):
         session = listener.session_async('documentRangeFormattingProvider')
         selection = first_selection_region(listener.view)
@@ -72,7 +73,11 @@ async def format_selection(listener: AbstractViewListener | None) -> None:
         if session := listener.session_async('documentRangeFormattingProvider.rangesSupport'):
             text_edits = await session.request(text_document_ranges_formatting(listener.view))
     if text_edits is not None:
-        await apply_text_edits(listener.view, text_edits)
+        if isinstance(text_edits, list):
+            await apply_text_edits(listener.view, text_edits)
+        else:
+            return text_edits
+    return None
 
 
 class WillSaveWaitTask(LspTask):
@@ -88,13 +93,11 @@ class WillSaveWaitTask(LspTask):
         for session in self._text_command.sessions('textDocumentSync.willSaveWaitUntil'):
             await self._purge_changes()
             view = self._text_command.view
-            try:
-                if text_edits := await session.request(
-                    will_save_wait_until(view, reason=TextDocumentSaveReason.Manual)
-                ):
-                    await apply_text_edits(self._text_command.view, text_edits, label="Format on Save")
-            except Exception as ex:
-                sublime.status_message(f"Failed to apply Will Save Task: {ex}")
+            text_edits = await session.request(will_save_wait_until(view, reason=TextDocumentSaveReason.Manual))
+            if isinstance(text_edits, Error):
+                sublime.status_message(f"Failed to apply Will Save Task: {text_edits}")
+            elif text_edits:
+                await apply_text_edits(self._text_command.view, text_edits, label="Format on Save")
 
 
 class FormatOnSaveTask(LspTask):
@@ -115,11 +118,11 @@ class FormatOnSaveTask(LspTask):
             return
         base_scope = syntax.scope
         formatter = get_formatter(self._text_command.view.window(), base_scope)
-        try:
-            if text_edits := await format_document(self._text_command, formatter):
-                await apply_text_edits(self._text_command.view, text_edits, label="Format On Save")
-        except Exception as ex:
-            sublime.status_message(f"Failed to apply Format On Save: {ex}")
+        text_edits = await format_document(self._text_command, formatter)
+        if isinstance(text_edits, Error):
+            sublime.status_message(f"Failed to apply Format On Save: {text_edits}")
+        elif text_edits:
+            await apply_text_edits(self._text_command.view, text_edits, label="Format On Save")
 
 
 class LspFormatDocumentCommand(LspTextCommandWithTasks):
@@ -140,29 +143,33 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
         return super().is_enabled() or bool(self.best_session(LspFormatDocumentRangeCommand.capability))
 
     @override
-    async def on_tasks_completed(self, *, select: bool = False, **kwargs: dict[str, Any]) -> None:
+    async def on_tasks_completed(self, *, select: bool = False, **kwargs: dict[str, Any]) -> Error | None:
         session_names = [session.config.name for session in self.sessions(self.capability)]
         syntax = self.view.syntax()
         if not syntax:
-            return
+            return None
         base_scope = syntax.scope
         if select:
             self.select_formatter(base_scope, session_names)
-            return
+            return None
         if listener := self.get_listener():
             await listener.purge_changes()
         if len(session_names) > 1:
             if formatter := get_formatter(self.view.window(), base_scope):
                 if session := self.session_by_name(formatter, self.capability):
-                    await self._apply_text_edits(
-                        await session.request(text_document_formatting(self.view)), label=self.label
-                    )
-                    return
+                    text_edits = await session.request(text_document_formatting(self.view))
+                    if isinstance(text_edits, Error):
+                        return text_edits
+                    return await self._apply_text_edits(text_edits, label=self.label)
             self.select_formatter(base_scope, session_names)
         else:
-            await self._apply_text_edits(await format_document(self), label=self.label)
+            text_edits = await format_document(self)
+            if isinstance(text_edits, Error):
+                return text_edits
+            return await self._apply_text_edits(text_edits, label=self.label)
+        return None
 
-    async def _apply_text_edits(self, text_edits: list[TextEdit] | None, label: str) -> None:
+    async def _apply_text_edits(self, text_edits: list[TextEdit] | None, label: str) -> Error | None:
         try:
             if text_edits:
                 await apply_text_edits(self.view, text_edits, label=label)
@@ -198,9 +205,11 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
                 if session := self.session_by_name(session_name, self.capability):
                     if listener := self.get_listener():
                         await listener.purge_changes()
-                        await self._apply_text_edits(
-                            await session.request(text_document_formatting(self.view)), label=self.label
-                        )
+                        result = await session.request(text_document_formatting(self.view))
+                        if isinstance(result, Error):
+                            exception_log("failed to apply formatting", result)
+                        else:
+                            await self._apply_text_edits(result, label=self.label)
 
             run_coroutine(do_format())
 

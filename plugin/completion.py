@@ -283,9 +283,12 @@ class LspResolveDocsCommand(LspTextCommand):
         item = completion_with_defaults(items[index], item_defaults)
         if session := self.session_by_name(session_name, 'completionProvider.resolveProvider'):
             language_map = session.markdown_language_id_to_st_syntax_map()
-            item = await session.request(Request.resolveCompletionItem(item, self.view))
-            # TODO: why do we only pass the language_map when the langserver is a resolveProvider?
-            self._handle_resolve_response_async(language_map, item)
+            resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
+            if isinstance(resolved_item, Error):
+                self._handle_resolve_response_async(None, item)
+            else:
+                # TODO: why do we only pass the language_map when the langserver is a resolveProvider?
+                self._handle_resolve_response_async(language_map, resolved_item)
         else:
             self._handle_resolve_response_async(None, item)
 
@@ -373,10 +376,11 @@ class LspSelectCompletionCommand(LspTextCommand):
     async def _run(self, session_name: str, item: CompletionItem) -> None:
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
         if session and not item.get('additionalTextEdits'):
-            try:
-                item = await session.request(Request.resolveCompletionItem(item, self.view))
-            except Error as error:
-                debug("Error resolving completion item:", error)
+            resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
+            if isinstance(resolved_item, Error):
+                debug("Error resolving completion item:", resolved_item)
+            else:
+                item = resolved_item
         if additional_edits := item.get('additionalTextEdits'):
             await apply_text_edits(self.view, additional_edits)
         if command := item.get("command"):

@@ -44,6 +44,7 @@ from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.constants import SEMANTIC_TOKENS_MAP
 from .core.constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .core.edit import apply_text_edits
+from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
@@ -415,15 +416,13 @@ class SessionBuffer(TaskContainer):
 
             async def purge_changes_and_do_on_type_formatting() -> None:
                 await self.purge_changes(view)
-                try:
-                    if (
-                        (result := await self.session.request(Request.onTypeFormatting(params, view)))
-                        and view.is_valid()
-                        and change_count == view.change_count()
-                    ):
-                        await apply_text_edits(view, result)
-                except Error:
-                    pass
+                if (
+                    (result := await self.session.request(Request.onTypeFormatting(params, view)))
+                    and not isinstance(result, Error)
+                    and view.is_valid()
+                    and change_count == view.change_count()
+                ):
+                    await apply_text_edits(view, result)
 
             self.create_task(purge_changes_and_do_on_type_formatting())
         else:
@@ -709,10 +708,12 @@ class SessionBuffer(TaskContainer):
         req = self.session.request(Request.documentDiagnostic(params, view))
         self._document_diagnostic_pending_requests[identifier] = PendingDocumentDiagnosticRequest(version, req)
         error: ServerCancelledError | None = None
-        try:
-            response = await req
-        except ServerCancelledError as e:
-            error = e
+        response = await req
+        if isinstance(response, Error):
+            if isinstance(response, ServerCancelledError):
+                error = response
+            else:
+                debug(f"error loading diagnostics: {response}")
         else:
             self._diagnostics_versions[identifier] = version
             self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
@@ -724,8 +725,7 @@ class SessionBuffer(TaskContainer):
                     self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
                     if is_full_document_diagnostic_report(diagnostic_report):
                         self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
-        finally:
-            self._document_diagnostic_pending_requests[identifier] = None
+        self._document_diagnostic_pending_requests[identifier] = None
         if error and is_diagnostic_server_cancellation_data(error.data) and error.data['retriggerRequest']:
             # Retrigger the request after a short delay, but only if there are no additional changes to the
             # buffer in the meanwhile, because in that case a new request will be sent automatically after the
@@ -890,7 +890,7 @@ class SessionBuffer(TaskContainer):
         only_viewport: bool = False,
     ) -> None:
         self.semantic_tokens.pending_response = self.session.request(request)
-        if response := await self.semantic_tokens.pending_response:
+        if (response := await self.semantic_tokens.pending_response) and not isinstance(response, Error):
             self.semantic_tokens.pending_response = None
             self.semantic_tokens.result_id = response.get("resultId")
             self.semantic_tokens.data = response["data"]
@@ -904,7 +904,7 @@ class SessionBuffer(TaskContainer):
         request: Request[SemanticTokensDeltaParams, SemanticTokens | SemanticTokensDelta | None]
     ) -> None:
         self.semantic_tokens.pending_response = self.session.request(request)
-        if response := await self.semantic_tokens.pending_response:
+        if (response := await self.semantic_tokens.pending_response) and not isinstance(response, Error):
             self.semantic_tokens.pending_response = None
             self.semantic_tokens.result_id = response.get("resultId")
             if "edits" in response:  # response is of type SemanticTokensDelta
@@ -1002,7 +1002,9 @@ class SessionBuffer(TaskContainer):
             "range": entire_content_range(view)
         }
         self._reset_pending_refresh(RequestFlags.INLAY_HINT)
-        if response := await self.session.request(Request.inlayHint(params, view)):
+        if (response := await self.session.request(Request.inlayHint(params, view))) and not isinstance(
+            response, Error
+        ):
             phantoms = [inlay_hint_to_phantom(view, inlay_hint, self.session) for inlay_hint in response]
             sublime.set_timeout(lambda: self.present_inlay_hints(phantoms))
         else:
@@ -1043,7 +1045,7 @@ class SessionBuffer(TaskContainer):
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = None,
         trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
-    ) -> list[Command | CodeAction] | None:
+    ) -> list[Command | CodeAction] | Error | None:
         context: CodeActionContext = {
             'diagnostics': diagnostics,
             'triggerKind': trigger_kind
@@ -1078,8 +1080,9 @@ class SessionBuffer(TaskContainer):
         code_lenses = await self.session.request(
             Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
         )
-        self._code_lenses.handle_response_async(code_lenses or [])
-        await self.resolve_visible_code_lenses(view)
+        if not isinstance(code_lenses, Error):
+            self._code_lenses.handle_response_async(code_lenses or [])
+            await self.resolve_visible_code_lenses(view)
 
     async def resolve_visible_code_lenses(self, view: sublime.View) -> None:
         if self.has_capability('codeLensProvider.resolveProvider'):

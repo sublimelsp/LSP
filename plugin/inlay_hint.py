@@ -5,6 +5,7 @@ from .core.constants import RequestFlags
 from .core.constants import ST_VERSION
 from .core.css import css
 from .core.edit import apply_text_edits
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
@@ -78,7 +79,9 @@ class LspInlayHintClickCommand(LspTextCommand):
         # and InlayHintLabelPart.command will be executed.
         session = self.session_by_name(session_name, 'inlayHintProvider')
         if session and session.has_capability('inlayHintProvider.resolveProvider'):
-            inlay_hint = await session.request(Request.resolveInlayHint(inlay_hint, self.view))
+            result = await session.request(Request.resolveInlayHint(inlay_hint, self.view))
+            if not isinstance(result, Error):
+                inlay_hint = result
 
         if session and (text_edits := inlay_hint.get('textEdits')):
             for sb in session.session_buffers_async():

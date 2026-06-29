@@ -40,6 +40,7 @@ from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.panels import PanelName
 from .core.promise import Promise
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import best_session
 from .core.registry import get_position
@@ -445,9 +446,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if initially_folded_kinds := userprefs().initially_folded:
             if session := self.session_async('foldingRangeProvider'):
                 params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
-                self._on_initial_folding_ranges(
-                    initially_folded_kinds, await session.request(Request.foldingRange(params, self.view))
-                )
+                result = await session.request(Request.foldingRange(params, self.view))
+                if not isinstance(result, Error):
+                    self._on_initial_folding_ranges(initially_folded_kinds, result)
         await self._activated_impl()
 
     async def on_post_move(self) -> None:
@@ -743,15 +744,15 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             "position": position_params["position"],
             "context": context_params
         }
-        try:
-            new_sighelp = SigHelp.from_lsp(
-                await session.request(Request.signatureHelp(params, self.view)),
-                session.markdown_language_id_to_st_syntax_map(),
-                self._signature_help_style,
-            )
-        except Exception as ex:
-            exception_log("Error loading signature help", ex)
+        result = await session.request(Request.signatureHelp(params, self.view))
+        if isinstance(result, Error):
+            exception_log("Error loading signature help", result)
             return
+        new_sighelp = SigHelp.from_lsp(
+            result,
+            session.markdown_language_id_to_st_syntax_map(),
+            self._signature_help_style,
+        )
         if not new_sighelp:
             if self._sighelp and not self.view.match_selector(position, 'meta.function-call.arguments'):
                 self.view.hide_popup()

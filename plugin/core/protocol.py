@@ -15,7 +15,6 @@ from typing import TypeVar
 from typing import Union
 from typing_extensions import NotRequired
 from typing_extensions import TypeAlias
-import asyncio
 
 if TYPE_CHECKING:
     from plugin.api import PostResponseCallback
@@ -295,16 +294,6 @@ class Request(Generic[P_contra, R]):
         return payload
 
 
-class CancelledError(asyncio.CancelledError):
-    def __init__(self, message: str, data: Any = None) -> None:
-        super().__init__(message)
-        self._data = data
-
-    @property
-    def data(self) -> Any:
-        return self._data
-
-
 class Error(Exception):
 
     def __init__(self, code: int, message: str, data: Any = None) -> None:
@@ -321,7 +310,7 @@ class Error(Exception):
         return self._data
 
     @classmethod
-    def from_lsp(cls, params: ResponseError) -> Error | CancelledError:
+    def from_lsp(cls, params: ResponseError) -> Error:
         code: int = params["code"]
         message: str = params["message"]
         data: Any = params.get("data")
@@ -342,11 +331,11 @@ class Error(Exception):
         if code == LSPErrorCodes.RequestFailed:
             return RequestFailedError(code, message, data)
         if code == LSPErrorCodes.ServerCancelled:
-            return ServerCancelledError(message, data)
+            return ServerCancelledError(code, message, data)
         if code == LSPErrorCodes.ContentModified:
             return ContentModifiedError(code, message, data)
         if code == LSPErrorCodes.RequestCancelled:
-            return RequestCancelledError(message, data)
+            return RequestCancelledError(code, message, data)
         return Error(code, message, data)
 
     @final
@@ -374,8 +363,8 @@ class ServerNotInitializedError(Error): pass  # noqa: E302, E701
 class UnknownError(Error): pass  # noqa: E302, E701
 class RequestFailedError(Error): pass  # noqa: E302, E701
 class ContentModifiedError(Error): pass  # noqa: E302, E701
-class ServerCancelledError(CancelledError): pass  # noqa: E302, E701
-class RequestCancelledError(CancelledError): pass  # noqa: E302, E701
+class ServerCancelledError(Error): pass  # noqa: E302, E701
+class RequestCancelledError(Error): pass  # noqa: E302, E701
 
 
 class Response(Generic[R]):

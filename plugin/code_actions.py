@@ -166,7 +166,9 @@ class CodeActionsManager:
     async def _collect_code_actions(
         self,
         listener: AbstractViewListener,
-        request_factory: Callable[[SessionBufferProtocol], Request[CodeActionParams, list[CodeActionOrCommand] | None] | None],  # noqa: E501
+        request_factory: Callable[
+            [SessionBufferProtocol], Request[CodeActionParams, list[CodeActionOrCommand] | None] | None
+        ],
         response_filter: Callable[[SessionBufferProtocol, list[CodeActionOrCommand]], list[CodeActionOrCommand]],
     ) -> list[CodeActionsByConfigName]:
         results: list[CodeActionsByConfigName] = []
@@ -176,14 +178,11 @@ class CodeActionsManager:
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
                 await listener.purge_changes()
                 await sb.do_document_diagnostic(listener.view, listener.view.change_count())
-                try:
-                    if response := await session.request(request):
-                        results.append(
-                            # Return only results for non-empty lists.
-                            (sb.session.config.name, [a for a in response_filter(sb, response) if len(a) > 0])
-                        )
-                except Error:
-                    pass
+                if (response := await session.request(request)) and not isinstance(response, Error):
+                    results.append(
+                        # Return only results for non-empty lists.
+                        (sb.session.config.name, [a for a in response_filter(sb, response) if len(a) > 0])
+                    )
         return results
 
     async def request_on_save_or_format(
@@ -203,16 +202,15 @@ class CodeActionsManager:
                 diagnostics = [diagnostic for diagnostic, _ in sb.diagnostics]
                 params = text_document_code_action_params(view, region, diagnostics, [kind], manual=False)
                 actions = []
-                try:
-                    if response := await sb.session.request(Request.codeAction(params, view)):
-                        # Filter actions returned from the session so that only matching kinds are collected.
-                        # Since older servers don't support the "context.only" property, those will return all
-                        # actions that need to be then manually filtered.
-                        session_kinds = get_session_kinds(sb)
-                        matching_kinds = get_matching_kinds(code_actions, session_kinds)
-                        actions = [a for a in response if a.get('kind') in matching_kinds and not a.get('disabled')]
-                except Error:
-                    pass
+                if (response := await sb.session.request(Request.codeAction(params, view))) and not isinstance(
+                    response, Error
+                ):
+                    # Filter actions returned from the session so that only matching kinds are collected.
+                    # Since older servers don't support the "context.only" property, those will return all
+                    # actions that need to be then manually filtered.
+                    session_kinds = get_session_kinds(sb)
+                    matching_kinds = get_matching_kinds(code_actions, session_kinds)
+                    actions = [a for a in response if a.get('kind') in matching_kinds and not a.get('disabled')]
                 yield (sb.session.config.name, actions)
 
 

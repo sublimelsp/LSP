@@ -130,7 +130,6 @@ from .open import open_resource
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import CancelledError
 from .protocol import ClientNotification
 from .protocol import ClientRequest
 from .protocol import ClientResponse
@@ -856,7 +855,7 @@ class SessionBufferProtocol(Protocol):
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = ...,
         trigger_kind: CodeActionTriggerKind = ...
-    ) -> list[Command | CodeAction] | None:
+    ) -> list[Command | CodeAction] | Error | None:
         ...
 
     async def do_code_lenses(self, view: sublime.View) -> None:
@@ -1024,7 +1023,7 @@ class CancellableRequest:
 
     @property
     def id(self) -> int:
-        """Get the request ID. If the request was cancelled, raises asyncio.CancelledError."""
+        """The request ID. If the request was cancelled, raises asyncio.CancelledError."""
         if self._id is not None:
             return self._id
         raise asyncio.CancelledError
@@ -1038,18 +1037,18 @@ class CancellableRequest:
 class CancellableInflightRequest(CancellableRequest, Generic[R]):
     """A request that is in flight. The result can be awaited."""
 
-    _future: asyncio.Future[R]
+    _future: asyncio.Future[R | Error]
 
     @staticmethod
-    def _on_done(req_id: int, f: asyncio.Future[R]) -> None:
+    def _on_done(req_id: int, f: asyncio.Future[R | Error]) -> None:
         if not f.cancelled() and (ex := f.exception()) and not isinstance(ex, RequestCancelledError):
             exception_log(f"request with ID {req_id} finished with exception", ex)
 
-    def __init__(self, future: asyncio.Future[R], req_id: int, session: Session) -> None:
+    def __init__(self, future: asyncio.Future[R | Error], req_id: int, session: Session) -> None:
         super().__init__(req_id, session)
         self._future = future
 
-    def add_done_callback(self, f: Callable[[asyncio.Future[R]], object]) -> None:
+    def add_done_callback(self, f: Callable[[asyncio.Future[R | Error]], object]) -> None:
         self._future.add_done_callback(f)
 
     @override
@@ -1057,18 +1056,16 @@ class CancellableInflightRequest(CancellableRequest, Generic[R]):
         if (req_id := await super().cancel()) and req_id is not None:
             self.add_done_callback(partial(self._on_done, req_id))
 
-    async def _run(self) -> R:
+    async def _run(self) -> R | Error:
         try:
             return await self._future
-        except CancelledError:
-            raise
         except asyncio.CancelledError:
             # When the await was cancelled by the user, cancel the request. Shield it from itself being cancelled.
             await asyncio.shield(self.cancel())
             # And then let the cancellation bubble up.
             raise
 
-    def __await__(self) -> Generator[Any, None, R]:
+    def __await__(self) -> Generator[Any, None, R | Error]:
         """
         You can `await` the response of an in-flight request.
         However, note that immediately awaiting this object prevents you from ever canceling it.
@@ -1088,7 +1085,7 @@ class CancellableInflightStreamingRequest(CancellableRequest, Generic[R]):
 
     def __init__(self, req_id: int, session: Session) -> None:
         super().__init__(req_id, session)
-        self._queue: asyncio.Queue[R | Error | CancelledError | None] = asyncio.Queue()
+        self._queue: asyncio.Queue[R | Error | None] = asyncio.Queue()
         self._is_streaming = False
 
     @property
@@ -1123,13 +1120,11 @@ class CancellableInflightStreamingRequest(CancellableRequest, Generic[R]):
         """Stream partial results using the `async for` syntax."""
         return self
 
-    async def __anext__(self) -> R:
+    async def __anext__(self) -> R | Error:
         """Get the next partial result."""
         item = await self._queue.get()
         if item is None:
             raise StopAsyncIteration
-        if isinstance(item, (Error, CancelledError)):
-            raise item
         return item
 
     async def aclose(self) -> None:
@@ -1461,18 +1456,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         variables: dict[str, str],
         working_directory: str | None,
         transport: TransportWrapper
-    ) -> InitializeResult:
+    ) -> InitializeResult | Error:
         loop = asyncio.get_running_loop()
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
         self.transport = transport
         self.working_directory = working_directory
         params = get_initialize_params(variables, self._workspace_folders, self.config)
-        try:
-            result = await self.request(Request.initialize(params))
-        except:
+        result = await self.request(Request.initialize(params))
+        if isinstance(result, Error):
             await self.end()  # ignore exceptions
-            raise
+            return result
         capabilities = result['capabilities']
         self.capabilities.assign(capabilities)
         if self._workspace_folders and not self._supports_workspace_folders():
@@ -1548,7 +1542,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         progress: bool = False,
         view: sublime.View | None = None,
         is_refactoring: bool = False,
-    ) -> LSPAny:
+    ) -> LSPAny | Error:
         """Run a command from the asyncio thread."""
         command_name = command['command']
         if self._plugin:
@@ -1623,7 +1617,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     async def run_code_action(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
-    ) -> LSPAny:
+    ) -> LSPAny | Error:
         command = code_action.get("command")
         if isinstance(command, str):
             code_action = cast('Command', code_action)
@@ -1640,8 +1634,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
         code_action = cast('CodeAction', code_action)
-        code_action = await self._maybe_resolve_code_action(code_action, view)
-        return await self._apply_code_action(code_action, view)
+        code_action_or_error = await self._maybe_resolve_code_action(code_action, view)
+        if isinstance(code_action_or_error, Error):
+            return code_action_or_error
+        return await self._apply_code_action(code_action_or_error, view)
 
     @deprecated("use Session.run_code_action instead")
     def run_code_action_async(
@@ -1702,9 +1698,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
         if scheme in self.get_capability('textDocumentContentProvider.schemes', []):
             title = urlparse(uri).path.split('/')[-1]
-            response: TextDocumentContentResult = await self.request(
+            response: TextDocumentContentResult | Error = await self.request(
                 Request('workspace/textDocumentContent', {'uri': uri})
             )
+            if isinstance(response, Error):
+                # TODO: Handle error.
+                return None
             content = response['text'].replace('\r', '')
             syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
             return self._on_view_for_uri_opened(
@@ -1837,7 +1836,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     async def _maybe_resolve_code_action(
         self, code_action: CodeAction, view: sublime.View | None
-    ) -> CodeAction:
+    ) -> CodeAction | Error:
         if "edit" not in code_action:
             has_capability = self.has_capability("codeActionProvider.resolveProvider")
             if not has_capability and view:
@@ -2239,9 +2238,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.workspace_diagnostics_pending_responses[identifier] = inflight_request = self.stream(
             Request.workspaceDiagnostic(params)
         )
+        error: Error | None = None
         try:
             async with aclosing(inflight_request) as stream:
                 async for partial_response in stream:
+                    if isinstance(partial_response, Error):
+                        error = partial_response
+                        break
                     for diagnostic_report in partial_response['items']:
                         uri = normalize_uri(diagnostic_report['uri'])
                         version = diagnostic_report['version']
@@ -2256,8 +2259,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         if is_workspace_full_document_diagnostic_report(diagnostic_report):
                             self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
                 self.workspace_diagnostics_pending_responses[identifier] = None
-        except ServerCancelledError as e:
-            if is_diagnostic_server_cancellation_data(e.data) and e.data['retriggerRequest']:
+        finally:
+            self.workspace_diagnostics_pending_responses[identifier] = None
+        if error and isinstance(error, ServerCancelledError):
+            if is_diagnostic_server_cancellation_data(error.data) and error.data['retriggerRequest']:
                 # Retrigger the request after a short delay, but don't reset the pending response variable for this
                 # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to
                 # prevent infinite cycles of cancel -> retrigger, in case the server is busy.
@@ -2268,8 +2273,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
                 self.create_task(retry_later())
                 return
-        finally:
-            self.workspace_diagnostics_pending_responses[identifier] = None
 
     # --- workspace/didChangeConfiguration -----------------------------------------------------------------------------
 
@@ -2398,12 +2401,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 continue
             if candidate_uri != uri:
                 continue
-            try:
-                response: TextDocumentContentResult = await self.request(
-                    Request('workspace/textDocumentContent', {'uri': uri})
-                )
-            except Error as error:
-                sublime.status_message(f"Error getting content: {error}")
+            response: TextDocumentContentResult | Error = await self.request(
+                Request('workspace/textDocumentContent', {'uri': uri})
+            )
+            if isinstance(response, Error):
+                sublime.status_message(f"Error getting content: {response}")
                 break
             new_content = response['text'].replace('\r', '')
             if new_content == entire_content(view):
@@ -2696,11 +2698,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         You must call this method from the asyncio thread.
 
         ```py
-        try:
-            result = await session.request(Request(...))
+        result = await session.request(Request(...))
+        if isinstance(result, Error):
+            print(result.code, result.message)
+        else:
             print(result)
-        except Error as error:
-            print(error.code)
         ```
         """
         self.request_id += 1
@@ -2744,12 +2746,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         Use in combination with `async for` syntax:
 
         ```py
-        try:
-            async .core.aio.aclosing(session.stream(Request(...))) as stream:
-                async for partial_result in stream:
+        async .core.aio.aclosing(session.stream(Request(...))) as stream:
+            async for partial_result in stream:
+                if isinstance(partial_result, Error):
+                    print(partial_result.code, partial_result.message)
+                else:
                     print(partial_result)
-        except Error as error:
-            print(error.code)
         ```
         """
         self.request_id += 1
@@ -2783,16 +2785,20 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         """You must call this method from the asyncio loop thread. Callbacks will run in the asyncio thread."""
         result = self.request(request)
 
-        def on_done(future: asyncio.Future[R]) -> None:
+        def on_done(future: asyncio.Future[R | Error]) -> None:
             if future.cancelled():
                 return
             if ex := future.exception():
-                if callable(on_error) and isinstance(ex, Error):
-                    on_error(ex.to_lsp())
-                    return
-                exception_log("Response error is ignored", ex)
+                exception_log(f"Unhandled exception during request {request.method}", ex)
                 return
-            on_result(future.result())
+            result = future.result()
+            if isinstance(result, Error):
+                if callable(on_error):
+                    on_error(result.to_lsp())
+                else:
+                    exception_log("Response error is ignored", result)
+            else:
+                on_result(result)
 
         result._future.add_done_callback(on_done)
         return result.id
@@ -2815,8 +2821,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         return promise
 
     @deprecated("use Session.request or Session.stream instead")
-    def send_request_task_2(self, request: Request[P_contra, R]) -> tuple[Promise[R | Error | CancelledError], int]:
-        task: PackagedTask[R | Error | CancelledError] = Promise.packaged_task()
+    def send_request_task_2(self, request: Request[P_contra, R]) -> tuple[Promise[R | Error], int]:
+        task: PackagedTask[R | Error] = Promise.packaged_task()
         promise, resolver = task
         request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return (promise, request_id)

@@ -8,6 +8,7 @@ from ...protocol import ChangeAnnotationIdentifier
 from ...protocol import ClientCapabilities
 from ...protocol import CodeAction
 from ...protocol import CodeActionKind
+from ...protocol import CodeActionTag
 from ...protocol import CodeActionTriggerKind
 from ...protocol import Command
 from ...protocol import CompletionItemKind
@@ -489,6 +490,9 @@ def get_initialize_params(
                 "properties": [
                     "edit"
                 ]
+            },
+            "tagSupport": {
+                "valueSet": [CodeActionTag.LLMGenerated]
             }
         },
         "codeLens": {

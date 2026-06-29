@@ -1,0 +1,26 @@
+=> 2.13.0
+
+# Features
+
+- Add support for LLM-generated code action tag (#2969) (jwortmann)
+- Add focus state to minihtml tree view (#2954) (Rafał Chłodnicki)
+- Add support for noActiveParameterSupport in signature help (#2963) (jwortmann)
+- Add config to set syntax for dynamic text document content (#2962) (jwortmann)
+
+# Fixes
+
+- Fix DottedDict return default on non-existing last sub-key (#2967) (asl97)
+- Trigger session start on adding the plugin (#2965) (Rafał Chłodnicki)
+- Fix wrong capability name for textDocumentContent provider (#2960) (jwortmann)
+- Fix dynamic registration with NotebookCellTextDocumentFilter (#2959) (jwortmann)
+- Fix errors on re-enabling disabled LSP package (#2951) (Rafał Chłodnicki)
+- Only request documentLink after changes if underline style enabled (#2935) (jwortmann)
+- Don't require SnippetTextEdit in TextDocumentEdit to be the topmost edit (#2944) (jwortmann)
+
+# Refactors
+
+- Deprecate process_placeholders argument for apply_text_edits function (#2941) (jwortmann)
+
+# Documentation
+
+- Add Zig to servers (#2946) (Rafał Chłodnicki)

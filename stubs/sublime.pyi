@@ -1,13 +1,7 @@
 # Stubs for sublime.py
 from enum import IntEnum, IntFlag
 from typing import Any, Callable, Iterable, Iterator, Literal, Optional, Reversible, Sequence
-from typing_extensions import TypedDict, deprecated
-
-
-class Layout(TypedDict):
-    cells: list[list[int]]
-    cols: list[float]
-    rows: list[float]
+from typing_extensions import deprecated
 
 
 class HoverZone(IntEnum):
@@ -1269,17 +1263,17 @@ class Window:
         """
         ...
 
-    def layout(self) -> Layout:
+    def layout(self) -> dict[str, Any]:
         """
         Get the group layout of the window.
         """
         ...
 
     @deprecated("Use layout() instead")
-    def get_layout(self) -> Layout:
+    def get_layout(self) -> dict[str, Any]:
         ...
 
-    def set_layout(self, layout: Layout) -> None:
+    def set_layout(self, layout: dict[str, Any]) -> None:
         """
         Set the group layout of the window.
         """

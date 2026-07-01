@@ -28,7 +28,6 @@ jobs:
             --exclude LSP \
             --exclude LSP-pyvoice \
             --exclude LSP-vale-ls \
-            --exclude LSP-VHDL-ls \
             --exclude WolframLanguage
         working-directory: lsp_maintainers
 

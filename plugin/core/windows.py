@@ -20,6 +20,7 @@ from ..api import PluginStartError
 from .aio import gather_and_flatten_exceptions
 from .aio import run_coroutine
 from .aio import run_on_asyncio_thread
+from .aio import run_on_threadpool
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -236,7 +237,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
             config = ClientConfig.from_config(config, {})
             config.set_view_status_handler(self)
-            loop = asyncio.get_running_loop()
 
             try:
                 workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
@@ -256,7 +256,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                             # We don't want to use Sublime's worker thread for this any longer.
                             # Utilize the default thread pool instead.
                             # https://docs.python.org/3/library/asyncio-dev.html#running-blocking-code
-                            await loop.run_in_executor(None, plugin_class.install_or_update)
+                            await run_on_threadpool(plugin_class.install_or_update)
                         additional_variables = plugin_class.additional_variables()
                         if isinstance(additional_variables, dict):
                             variables.update(additional_variables)

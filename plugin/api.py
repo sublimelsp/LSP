@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..protocol import LSPAny
+from .core.aio import run_on_threadpool
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
 from .core.protocol import Response
@@ -23,7 +24,6 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 from typing_extensions import deprecated
-import asyncio
 import inspect
 import sublime
 
@@ -483,7 +483,7 @@ class LspPlugin(APIHandler):
         # We don't want to use Sublime's worker thread for this any longer.
         # Utilize the default thread pool instead.
         # https://docs.python.org/3/library/asyncio-dev.html#running-blocking-code
-        await asyncio.get_running_loop().run_in_executor(None, cls.on_pre_start_async, context)
+        await run_on_threadpool(cls.on_pre_start_async, context)
 
     def __init__(self, weaksession: ref[Session]) -> None:
         """

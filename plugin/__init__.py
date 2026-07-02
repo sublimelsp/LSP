@@ -13,6 +13,7 @@ from .api import unregister_plugin
 from .api import uri_handler
 from .core.aio import run_coroutine
 from .core.aio import run_on_asyncio_thread
+from .core.aio import run_on_threadpool
 from .core.collections import DottedDict
 from .core.constants import MarkdownLangMap
 from .core.constants import ST_STORAGE_PATH
@@ -99,6 +100,7 @@ __all__ = [
     'request_handler',
     'run_coroutine',
     'run_on_asyncio_thread',
+    'run_on_threadpool',
     'unregister_plugin',
     'uri_from_view',
     'uri_handler',

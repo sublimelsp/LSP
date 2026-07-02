@@ -73,6 +73,11 @@ def run_on_asyncio_thread(f: Callable[..., Any], *args: Any, context: Context | 
     return sublime_aio.call_soon_threadsafe(f, *args, context=context)
 
 
+def run_on_threadpool(f: Callable[..., T], *args: Any) -> asyncio.Future[T]:
+    """Invoke a function on the loop's default thread pool. Must be invoked from the asyncio thread."""
+    return asyncio.get_running_loop().run_in_executor(None, f, *args)
+
+
 def _run_on_st_thread(
     dispatch_func: Callable[[Callable[[], None]], None], f: Callable[..., T], *args: Any, **kwargs: Any
 ) -> asyncio.Future[T]:

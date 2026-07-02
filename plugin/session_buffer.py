@@ -19,6 +19,7 @@ from ..protocol import DocumentOnTypeFormattingParams
 from ..protocol import DocumentUri
 from ..protocol import FullDocumentDiagnosticReport
 from ..protocol import InlayHintParams
+from ..protocol import LSPErrorCodes
 from ..protocol import RelatedFullDocumentDiagnosticReport
 from ..protocol import SemanticTokens
 from ..protocol import SemanticTokensDelta
@@ -49,7 +50,6 @@ from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
-from .core.protocol import ServerCancelledError
 from .core.sessions import CancellableRequest
 from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
@@ -707,10 +707,10 @@ class SessionBuffer(TaskContainer):
             params['previousResultId'] = result_id
         req = self.session.request(Request.documentDiagnostic(params, view))
         self._document_diagnostic_pending_requests[identifier] = PendingDocumentDiagnosticRequest(version, req)
-        error: ServerCancelledError | None = None
+        error: Error | None = None
         response = await req
         if isinstance(response, Error):
-            if isinstance(response, ServerCancelledError):
+            if response.code == LSPErrorCodes.ServerCancelled:
                 error = response
             else:
                 debug(f"error loading diagnostics: {response}")

@@ -311,32 +311,7 @@ class Error(Exception):
 
     @classmethod
     def from_lsp(cls, params: ResponseError) -> Error:
-        code: int = params["code"]
-        message: str = params["message"]
-        data: Any = params.get("data")
-        if code == ErrorCodes.ParseError:
-            return ParseError(code, message, data)
-        if code == ErrorCodes.InvalidRequest:
-            return InvalidRequestError(code, message, data)
-        if code == ErrorCodes.MethodNotFound:
-            return MethodNotFoundError(code, message, data)
-        if code == ErrorCodes.InvalidParams:
-            return InvalidParamsError(code, message, data)
-        if code == ErrorCodes.InternalError:
-            return InternalError(code, message, data)
-        if code == ErrorCodes.ServerNotInitialized:
-            return ServerNotInitializedError(code, message, data)
-        if code == ErrorCodes.UnknownErrorCode:
-            return UnknownError(code, message, data)
-        if code == LSPErrorCodes.RequestFailed:
-            return RequestFailedError(code, message, data)
-        if code == LSPErrorCodes.ServerCancelled:
-            return ServerCancelledError(code, message, data)
-        if code == LSPErrorCodes.ContentModified:
-            return ContentModifiedError(code, message, data)
-        if code == LSPErrorCodes.RequestCancelled:
-            return RequestCancelledError(code, message, data)
-        return Error(code, message, data)
+        return Error(params["code"], params["message"], params.get("data"))
 
     @final
     def to_lsp(self) -> ResponseError:
@@ -352,19 +327,6 @@ class Error(Exception):
     @classmethod
     def from_exception(cls, ex: Exception) -> Error:
         return Error(ErrorCodes.InternalError, str(ex))
-
-
-class ParseError(Error): pass  # noqa: E701
-class InvalidRequestError(Error): pass  # noqa: E302, E701
-class MethodNotFoundError(Error): pass  # noqa: E302, E701
-class InvalidParamsError(Error): pass  # noqa: E302, E701
-class InternalError(Error): pass  # noqa: E302, E701
-class ServerNotInitializedError(Error): pass  # noqa: E302, E701
-class UnknownError(Error): pass  # noqa: E302, E701
-class RequestFailedError(Error): pass  # noqa: E302, E701
-class ContentModifiedError(Error): pass  # noqa: E302, E701
-class ServerCancelledError(Error): pass  # noqa: E302, E701
-class RequestCancelledError(Error): pass  # noqa: E302, E701
 
 
 class Response(Generic[R]):

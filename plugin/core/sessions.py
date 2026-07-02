@@ -43,6 +43,7 @@ from ...protocol import Location
 from ...protocol import LocationLink
 from ...protocol import LogMessageParams
 from ...protocol import LSPAny
+from ...protocol import LSPErrorCodes
 from ...protocol import LSPObject
 from ...protocol import MarkdownClientCapabilities
 from ...protocol import MarkupKind
@@ -141,11 +142,9 @@ from .protocol import Notification
 from .protocol import P_contra
 from .protocol import Point
 from .protocol import Request
-from .protocol import RequestCancelledError
 from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
-from .protocol import ServerCancelledError
 from .protocol import ServerNotification
 from .protocol import ServerResponse
 from .settings import globalprefs
@@ -193,7 +192,6 @@ from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing_extensions import deprecated
-from typing_extensions import override
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
 from urllib.parse import urldefrag
@@ -1044,22 +1042,18 @@ class CancellableInflightRequest(CancellableRequest, Generic[R]):
 
     _future: asyncio.Future[R | Error]
 
-    @staticmethod
-    def _on_done(req_id: int, f: asyncio.Future[R | Error]) -> None:
-        if not f.cancelled() and (ex := f.exception()) and not isinstance(ex, RequestCancelledError):
-            exception_log(f"request with ID {req_id} finished with exception", ex)
-
     def __init__(self, future: asyncio.Future[R | Error], req_id: int, session: Session) -> None:
+        """
+        Create a new instance of this class.
+
+        Instances should never be created manually. The factory method for creating these objects is Session.request.
+        """
         super().__init__(req_id, session)
         self._future = future
 
     def add_done_callback(self, f: Callable[[asyncio.Future[R | Error]], object]) -> None:
+        """Add a callback to be run when the request completes."""
         self._future.add_done_callback(f)
-
-    @override
-    async def cancel(self) -> int | None:
-        if (req_id := await super().cancel()) and req_id is not None:
-            self.add_done_callback(partial(self._on_done, req_id))
 
     async def _run(self) -> R | Error:
         try:
@@ -1074,7 +1068,7 @@ class CancellableInflightRequest(CancellableRequest, Generic[R]):
         """
         You can `await` the response of an in-flight request.
         However, note that immediately awaiting this object prevents you from ever canceling it.
-        When the language server replies with an error, an exception of type protocol.Error is raised.
+        When the language server replies with an error, an object of type protocol.Error is returned.
         When the coroutine awaiting the request is cancelled (using task.cancel() or something similar),
         the cancellation is held off for a bit in order to cancel the request server-side.
         """
@@ -2194,7 +2188,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         response = await req
         if isinstance(response, Error):
             if (
-                isinstance(response, ServerCancelledError)
+                response.code == LSPErrorCodes.ServerCancelled
                 and is_diagnostic_server_cancellation_data(response.data)
                 and response.data['retriggerRequest']
             ):

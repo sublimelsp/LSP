@@ -698,7 +698,7 @@ class SessionBuffer(TaskContainer):
         if pending := self._document_diagnostic_pending_requests.get(identifier):
             if pending.version == version and not forced_update:
                 return
-            if pending.request:
+            if not pending.request.cancelled:
                 await pending.request.cancel()
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
         if identifier:

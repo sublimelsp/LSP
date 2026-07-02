@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ...protocol import *  # For backward compatibility with LSP packages.  # noqa: F403
-from functools import total_ordering
+from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import Generic
@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
+from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import TypeAlias
 
@@ -412,37 +413,28 @@ class Notification(Generic[P]):
         return payload
 
 
-@total_ordering
-class Point:
-    def __init__(self, row: int, col: int) -> None:
-        self.row = int(row)
-        self.col = int(col)  # in UTF-16
+@dataclass(frozen=True, order=True)
+class TextPosition:
+    row: int
+    col: int  # in UTF-16
 
     def __repr__(self) -> str:
         return f"{self.row}:{self.col}"
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Point):
-            return NotImplemented
-        return self.row == other.row and self.col == other.col
-
-    def __lt__(self, other: object) -> bool:
-        if not isinstance(other, Point):
-            return NotImplemented
-        return (self.row, self.col) < (other.row, other.col)
-
-    def __hash__(self) -> int:
-        return hash(self.__repr__())
-
     @classmethod
-    def from_lsp(cls, point: Position) -> Point:
-        return Point(point['line'], point['character'])
+    def from_lsp(cls, position: Position) -> TextPosition:
+        return cls(position['line'], position['character'])
 
     def to_lsp(self) -> Position:
         return {
             "line": self.row,
             "character": self.col
         }
+
+
+@deprecated('Use TextPosition instead')
+class Point(TextPosition):
+    pass
 
 
 class ResponseError(TypedDict):

@@ -83,6 +83,8 @@ from ...protocol import WorkDoneProgressEnd
 from ...protocol import WorkDoneProgressReport
 from ...protocol import WorkspaceClientCapabilities
 from ...protocol import WorkspaceDiagnosticParams
+from ...protocol import WorkspaceDiagnosticReport
+from ...protocol import WorkspaceDiagnosticReportPartialResult
 from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFolder as LspWorkspaceFolder
@@ -97,7 +99,6 @@ from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
-from .aio import aclosing
 from .aio import gather_and_flatten_exceptions
 from .aio import run_on_asyncio_thread
 from .aio import run_on_main_thread
@@ -1080,62 +1081,6 @@ class CancellableInflightRequest(CancellableRequest, Generic[R]):
         return self._run().__await__()
 
 
-class CancellableInflightStreamingRequest(CancellableRequest, Generic[R]):
-    """
-    A streaming request that is in flight.
-    Use `async for` syntax to asynchronously stream the partial results.
-    Only requests for which the partial results are of type list[...] can work with this class.
-    """
-
-    def __init__(self, req_id: int, session: Session) -> None:
-        super().__init__(req_id, session)
-        self._queue: asyncio.Queue[R | Error | None] = asyncio.Queue()
-        self._is_streaming = False
-
-    @property
-    def is_streaming(self) -> bool:
-        """
-        Whether the stream is actually streaming.
-
-        This is only deduced after the first (partial) response has arrived. Checking this property before the first
-        iteration has no meaning. A language server may not support streaming partial results and may just send the
-        response in one large list.
-        """
-        return self._is_streaming
-
-    def _on_partial_result(self, response: R) -> None:
-        # Note: R should have type list[...].
-        self._is_streaming = True
-        if response:
-            self._queue.put_nowait(response)
-
-    def _on_final_result(self, response: R) -> None:
-        # Note: if the language server doesn't actually support partial results, then this is the only callback that
-        # will be invoked.
-        if response:
-            self._queue.put_nowait(response)
-        # Put the final special None value in the queue, so the iteration stops.
-        self._queue.put_nowait(None)
-
-    def _on_error(self, error: ResponseError) -> None:
-        self._queue.put_nowait(Error.from_lsp(error))
-
-    def __aiter__(self) -> CancellableInflightStreamingRequest:
-        """Stream partial results using the `async for` syntax."""
-        return self
-
-    async def __anext__(self) -> R | Error:
-        """Get the next partial result."""
-        item = await self._queue.get()
-        if item is None:
-            raise StopAsyncIteration
-        return item
-
-    async def aclose(self) -> None:
-        # See: https://docs.python.org/3/library/asyncio-dev.html#close-asynchronous-generators-explicitly
-        self._queue.put_nowait(None)
-
-
 def print_to_status_bar(error: ResponseError) -> None:
     sublime.status_message(error["message"])
 
@@ -1199,7 +1144,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
-        self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, CancellableInflightStreamingRequest | None] = {}  # noqa: E501
+        self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, CancellableRequest | None] = {}
         self.exiting = False
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0
@@ -2228,9 +2173,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 # The server is probably leaving the request open intentionally, in order to continuously stream updates
                 # via $/progress notifications.
                 continue
-            self.create_task(self._do_workspace_diagnostics(identifier))
+            self.create_task(self._do_workspace_diagnostics_async(identifier))
 
-    async def _do_workspace_diagnostics(self, identifier: DiagnosticsIdentifier) -> None:
+    async def _do_workspace_diagnostics_async(self, identifier: DiagnosticsIdentifier) -> None:
         previous_result_ids: list[PreviousResultId] = [
             {'uri': uri, 'value': result_id} for (uri, id_), result_id in self.diagnostics_result_ids.items()
             if id_ == identifier and result_id is not None
@@ -2238,45 +2183,50 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
         if identifier is not None:
             params['identifier'] = identifier
-
-        self.workspace_diagnostics_pending_responses[identifier] = inflight_request = self.stream(
-            Request.workspaceDiagnostic(params)
+        self.workspace_diagnostics_pending_responses[identifier] = req = self.request(
+            Request.workspaceDiagnostic(
+                params,
+                on_partial_result=partial(
+                    self._on_workspace_diagnostics_async, identifier, reset_pending_response=False
+                ),
+            ),
         )
-        error: Error | None = None
-        try:
-            async with aclosing(inflight_request) as stream:
-                async for partial_response in stream:
-                    if isinstance(partial_response, Error):
-                        error = partial_response
-                        break
-                    for diagnostic_report in partial_response['items']:
-                        uri = normalize_uri(diagnostic_report['uri'])
-                        version = diagnostic_report['version']
-                        # Skip if outdated
-                        if (
-                            isinstance(version, int)
-                            and (session_buffer := self.get_session_buffer_for_uri_async(uri))
-                            and version < session_buffer.last_synced_version
-                        ):
-                            continue
-                        self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-                        if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                            self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
-                self.workspace_diagnostics_pending_responses[identifier] = None
-        finally:
-            self.workspace_diagnostics_pending_responses[identifier] = None
-        if error and isinstance(error, ServerCancelledError):
-            if is_diagnostic_server_cancellation_data(error.data) and error.data['retriggerRequest']:
+        response = await req
+        if isinstance(response, Error):
+            if (
+                isinstance(response, ServerCancelledError)
+                and is_diagnostic_server_cancellation_data(response.data)
+                and response.data['retriggerRequest']
+            ):
                 # Retrigger the request after a short delay, but don't reset the pending response variable for this
-                # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to
-                # prevent infinite cycles of cancel -> retrigger, in case the server is busy.
-
-                async def retry_later() -> None:
-                    await asyncio.sleep(WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY / 1000.0)
-                    await self._do_workspace_diagnostics(identifier)
-
-                self.create_task(retry_later())
+                # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to prevent
+                # infinite cycles of cancel -> retrigger, in case the server is busy.
+                await asyncio.sleep(WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY / 1000.0)
+                self.create_task(self._do_workspace_diagnostics_async(identifier))
                 return
+            self.workspace_diagnostics_pending_responses[identifier] = None
+            return
+        self._on_workspace_diagnostics_async(identifier, response, reset_pending_response=False)
+
+    def _on_workspace_diagnostics_async(
+        self,
+        identifier: DiagnosticsIdentifier,
+        response: WorkspaceDiagnosticReportPartialResult | WorkspaceDiagnosticReport,
+        *,
+        reset_pending_response: bool = True
+    ) -> None:
+        if reset_pending_response:
+            self.workspace_diagnostics_pending_responses[identifier] = None
+        for diagnostic_report in response['items']:
+            uri = normalize_uri(diagnostic_report['uri'])
+            version = diagnostic_report['version']
+            # Skip if outdated
+            if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri_async(uri)) and \
+                    version < session_buffer.last_synced_version:
+                continue
+            self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
+            if is_workspace_full_document_diagnostic_report(diagnostic_report):
+                self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
 
     # --- workspace/didChangeConfiguration -----------------------------------------------------------------------------
 
@@ -2730,44 +2680,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 future.set_exception(Error.from_lsp(error))
 
         self._response_handlers[request_id] = (r, on_result, on_error)
-        self._invoke_views(r, "on_request_started_async", result, r)
-        if self._plugin and isinstance(self._plugin, AbstractPlugin):
-            self._plugin.on_pre_send_request_async(request_id, r)
-        elif self._plugin:
-            client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
-            self._plugin.on_pre_send_request_async(client_request, r.view)
-            r.params = cast('P_contra', client_request['params'])
-        self._logger.outgoing_request(request_id, r.method, r.params)
-        self.create_task(self.send_payload(r.to_payload(request_id)))
-        return result
-
-    def stream(self, r: Request[P_contra, R]) -> CancellableInflightStreamingRequest[R]:
-        """
-        Stream partial results from the language server.
-
-        You must call this method from the asyncio thread.
-
-        Use in combination with `async for` syntax:
-
-        ```py
-        async .core.aio.aclosing(session.stream(Request(...))) as stream:
-            async for partial_result in stream:
-                if isinstance(partial_result, Error):
-                    print(partial_result.code, partial_result.message)
-                else:
-                    print(partial_result)
-        ```
-        """
-        self.request_id += 1
-        request_id = self.request_id
-        result = CancellableInflightStreamingRequest(request_id, self)
-        if not isinstance(r.params, dict):
-            raise TypeError("request should have dict params")
-        if r.progress:
-            r.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
-        r.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
-        r.on_partial_result = result._on_partial_result
-        self._response_handlers[request_id] = (r, result._on_final_result, result._on_error)
         self._invoke_views(r, "on_request_started_async", result, r)
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, r)

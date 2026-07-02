@@ -7,51 +7,26 @@ from .logging import exception_log
 from enum import IntFlag
 from functools import partial
 from typing import Any
-from typing import AsyncIterator
 from typing import Callable
 from typing import Coroutine
-from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypeVar
 import asyncio
-import contextlib
 import sublime
 import sublime_aio
-import sys
-
-
-class ExceptionPolicy(IntFlag):
-    IGNORE = 0
-    STACKTRACE = 1
-    MESSAGEBOX = 2
-
 
 if TYPE_CHECKING:
     from contextvars import Context
     import concurrent.futures
 
 
-class SupportsAclose(Protocol):
-    async def aclose(self) -> None: ...
-
-
 T = TypeVar("T")
-S = TypeVar("S", bound="SupportsAclose")
 
 
-# `async with aclosing(stream(...))`. This function in the contextlib module is available since python 3.10, but we also
-# need to support python 3.8.
-# See: https://docs.python.org/3/library/contextlib.html#contextlib.aclosing
-if sys.version_info >= (3, 10, 0):
-    aclosing = contextlib.aclosing
-else:
-
-    @contextlib.asynccontextmanager
-    async def aclosing(thing: S) -> AsyncIterator[S]:
-        try:
-            yield thing
-        finally:
-            await thing.aclose()
+class ExceptionPolicy(IntFlag):
+    IGNORE = 0
+    STACKTRACE = 1
+    MESSAGEBOX = 2
 
 
 _futures: set[concurrent.futures.Future] = set()

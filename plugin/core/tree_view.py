@@ -288,7 +288,8 @@ class TreeViewSheet(sublime.HtmlSheet):
                 margin-right: 6px;
             }}
             .kind_ambiguous {{
-                display: none;
+                margin-left: 0;
+                width: 0;
             }}
             .kind_keyword {{
                 background-color: color(var(--pinkish) a(0.2));

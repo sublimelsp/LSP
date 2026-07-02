@@ -5,7 +5,7 @@ from ..protocol import CodeActionKind
 from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
-from .core.promise import Promise
+from .core.aio import run_coroutine
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
@@ -20,8 +20,8 @@ from .core.views import text_document_code_action_params
 from .lsp_task import LspTask
 from abc import ABC
 from abc import abstractmethod
-from functools import partial
 from typing import Any
+from typing import AsyncGenerator
 from typing import cast
 from typing import final
 from typing import List
@@ -29,14 +29,13 @@ from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import override
+import asyncio
 import sublime
 
 if TYPE_CHECKING:
     from .core.sessions import AbstractViewListener
     from .core.sessions import SessionBufferProtocol
     from collections.abc import Callable
-    from collections.abc import Generator
-    from collections.abc import Iterator
     from typing_extensions import TypeGuard
 
 
@@ -65,9 +64,9 @@ def is_quickfix(action: Command | CodeAction) -> bool:
 
 
 def filter_quickfix_actions(
-    only_with_diagnostics: bool, response: list[Command | CodeAction] | Error | None
+    only_with_diagnostics: bool, response: list[Command | CodeAction] | BaseException | None
 ) -> list[Command | CodeAction]:
-    if isinstance(response, Error) or not response:
+    if isinstance(response, BaseException) or not response:
         return []
     if only_with_diagnostics:
         # If there are multiple diagnostics for the region, in the hover popup we can only use those code actions which
@@ -87,19 +86,19 @@ class CodeActionsManager:
     """Manager for per-location caching of code action responses."""
 
     def __init__(self) -> None:
-        self._response_cache: tuple[str, Promise[list[CodeActionsByConfigName]]] | None = None
+        self._response_cache: tuple[str, asyncio.Future[list[CodeActionsByConfigName]]] | None = None
         self.menu_actions_cache_key: str | None = None
         self.refactor_actions_cache: list[tuple[str, CodeAction]] = []
         self.source_actions_cache: list[tuple[str, CodeAction]] = []
 
-    def request_for_region_async(
+    def request_for_region(
         self,
         view: sublime.View,
         region: sublime.Region,
         session_buffer_diagnostics: list[tuple[SessionBufferProtocol, list[Diagnostic]]],
         only_kinds: list[str | CodeActionKind] | None = None,
         manual: bool = False,
-    ) -> Promise[list[CodeActionsByConfigName]]:
+    ) -> asyncio.Future[list[CodeActionsByConfigName]]:
         """
         Requests code actions with provided diagnostics and specified region. If there are
         no diagnostics for given session, the request will be made with empty diagnostics list.
@@ -107,7 +106,9 @@ class CodeActionsManager:
         listener = windows.listener_for_view(view)
         if not listener:
             self.menu_actions_cache_key = None
-            return Promise.resolve([])
+            future = asyncio.get_running_loop().create_future()
+            future.set_result([])
+            return future
         location_cache_key = None
         use_cache = not manual
         if use_cache:
@@ -157,70 +158,60 @@ class CodeActionsManager:
                 )
             ]
 
-        task = self._collect_code_actions_async(listener, request_factory, response_filter)
+        task = asyncio.ensure_future(self._collect_code_actions(listener, request_factory, response_filter))
         if location_cache_key:
             self._response_cache = (location_cache_key, task)
         return task
 
-    def _collect_code_actions_async(
+    async def _collect_code_actions(
         self,
         listener: AbstractViewListener,
-        request_factory: Callable[[SessionBufferProtocol], Request[CodeActionParams, list[CodeActionOrCommand] | None] | None],  # noqa: E501
+        request_factory: Callable[
+            [SessionBufferProtocol], Request[CodeActionParams, list[CodeActionOrCommand] | None] | None
+        ],
         response_filter: Callable[[SessionBufferProtocol, list[CodeActionOrCommand]], list[CodeActionOrCommand]],
-    ) -> Promise[list[CodeActionsByConfigName]]:
-
-        def on_response(
-            sb: SessionBufferProtocol, response: Error | list[CodeActionOrCommand] | None
-        ) -> CodeActionsByConfigName:
-            actions = []
-            if response and not isinstance(response, Error):
-                actions = response_filter(sb, response)
-            return (sb.session.config.name, actions)
-
-        tasks: list[Promise[CodeActionsByConfigName]] = []
+    ) -> list[CodeActionsByConfigName]:
+        results: list[CodeActionsByConfigName] = []
         for sb in listener.session_buffers_async('codeActionProvider'):
             session = sb.session
             if request := request_factory(sb):
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
-                listener.purge_changes_async()
-                sb.do_document_diagnostic_async(listener.view, listener.view.change_count())
-                response_handler = partial(on_response, sb)
-                task = session.send_request_task(request)
-                tasks.append(task.then(response_handler))
-        # Return only results for non-empty lists.
-        return Promise.all(tasks) \
-            .then(lambda actions_list: list(filter(lambda actions: len(actions[1]), actions_list)))
+                await listener.purge_changes()
+                await sb.do_document_diagnostic(listener.view, listener.view.change_count())
+                if (response := await session.request(request)) and not isinstance(response, Error):
+                    results.append(
+                        # Return only results for non-empty lists.
+                        (sb.session.config.name, [a for a in response_filter(sb, response) if len(a) > 0])
+                    )
+        return results
 
-    def request_on_save_or_format_async(
+    async def request_on_save_or_format(
         self, view: sublime.View, code_actions: dict[str, bool]
-    ) -> Generator[Promise[CodeActionsByConfigName]]:
+    ) -> AsyncGenerator[CodeActionsByConfigName]:
         listener = windows.listener_for_view(view)
         if not listener:
             return
 
-        def on_response(
-            sb: SessionBufferProtocol, response: Error | list[CodeActionOrCommand] | None
-        ) -> CodeActionsByConfigName:
-            actions = []
-            if response and not isinstance(response, Error):
-                # Filter actions returned from the session so that only matching kinds are collected.
-                # Since older servers don't support the "context.only" property, those will return all
-                # actions that need to be then manually filtered.
-                session_kinds = get_session_kinds(sb)
-                matching_kinds = get_matching_kinds(code_actions, session_kinds)
-                actions = [a for a in response if a.get('kind') in matching_kinds and not a.get('disabled')]
-            return (sb.session.config.name, actions)
-
         for sb in listener.session_buffers_async('codeActionProvider'):
             matching_kinds = get_matching_kinds(code_actions, get_session_kinds(sb))
             for kind in matching_kinds:
-                listener.purge_changes_async()
+                await listener.purge_changes()
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
-                sb.do_document_diagnostic_async(view, view.change_count())
+                await sb.do_document_diagnostic(view, view.change_count())
                 region = entire_content_region(view)
                 diagnostics = [diagnostic for diagnostic, _ in sb.diagnostics]
                 params = text_document_code_action_params(view, region, diagnostics, [kind], manual=False)
-                yield sb.session.send_request_task(Request.codeAction(params, view)).then(partial(on_response, sb))
+                actions = []
+                if (response := await sb.session.request(Request.codeAction(params, view))) and not isinstance(
+                    response, Error
+                ):
+                    # Filter actions returned from the session so that only matching kinds are collected.
+                    # Since older servers don't support the "context.only" property, those will return all
+                    # actions that need to be then manually filtered.
+                    session_kinds = get_session_kinds(sb)
+                    matching_kinds = get_matching_kinds(code_actions, session_kinds)
+                    actions = [a for a in response if a.get('kind') in matching_kinds and not a.get('disabled')]
+                yield (sb.session.config.name, actions)
 
 
 actions_manager = CodeActionsManager()
@@ -281,35 +272,18 @@ class CodeActionsTaskBase(LspTask):
         }
 
     @override
-    def run_async(self) -> None:
-        super().run_async()
-        view = self._task_runner.view
+    async def run(self) -> None:
+        await super().run()
+        view = self._text_command.view
         code_action_kinds = self.get_code_action_kinds(view)
-        request_iterator = actions_manager.request_on_save_or_format_async(view, code_action_kinds)
-        self._process_next_request(request_iterator)
-
-    def _process_next_request(self, request_iterator: Iterator[Promise[CodeActionsByConfigName]]) -> None:
-        if self._cancelled:
-            return
-        if request := next(request_iterator, None):
-            request.then(lambda response: self._handle_response_async(response, request_iterator))
-        else:
-            self._on_complete()
-
-    def _handle_response_async(
-        self, response: CodeActionsByConfigName, request_iterator: Iterator[Promise[CodeActionsByConfigName]]
-    ) -> None:
-        if self._cancelled:
-            return
-        view = self._task_runner.view
-        tasks: list[Promise[None]] = []
-        config_name, code_actions = response
-        session = self._task_runner.session_by_name(config_name, 'codeActionProvider')
-        if session and code_actions:
-            tasks.extend([
-                session.run_code_action_async(action, progress=False, view=view) for action in code_actions
-            ])
-        Promise.all(tasks).then(lambda _: self._process_next_request(request_iterator))
+        async for config_name, code_actions in actions_manager.request_on_save_or_format(view, code_action_kinds):
+            if code_actions and (session := self._text_command.session_by_name(config_name, 'codeActionProvider')):
+                await asyncio.gather(
+                    *(
+                        session.run_code_action(action, progress=False, view=self._text_command.view)
+                        for action in code_actions
+                    )
+                )
 
 
 @final
@@ -386,9 +360,9 @@ class LspCodeActionsCommand(LspTextCommand):
         if code_actions_by_config:
             self._handle_code_actions(code_actions_by_config, run_first=True)
             return
-        self._run_async(only_kinds)
+        run_coroutine(self._run(only_kinds))
 
-    def _run_async(self, only_kinds: list[str | CodeActionKind] | None = None) -> None:
+    async def _run(self, only_kinds: list[str | CodeActionKind] | None = None) -> None:
         view = self.view
         region = first_selection_region(view)
         if region is None:
@@ -397,9 +371,10 @@ class LspCodeActionsCommand(LspTextCommand):
         if not listener:
             return
         session_buffer_diagnostics = listener.get_diagnostics_async(region)
-        actions_manager \
-            .request_for_region_async(view, region, session_buffer_diagnostics, only_kinds, manual=True) \
-            .then(lambda actions: sublime.set_timeout(lambda: self._handle_code_actions(actions)))
+        actions = await actions_manager.request_for_region(
+            view, region, session_buffer_diagnostics, only_kinds, manual=True
+        )
+        sublime.set_timeout(lambda: self._handle_code_actions(actions))
 
     def _handle_code_actions(self, response: list[CodeActionsByConfigName], run_first: bool = False) -> None:
         # Flatten response to a list of (config_name, code_action) tuples.
@@ -427,13 +402,13 @@ class LspCodeActionsCommand(LspTextCommand):
         if index == -1:
             return
 
-        def run_async() -> None:
+        async def run() -> None:
             config_name, action = actions[index]
             if session := self.session_by_name(config_name):
-                session.run_code_action_async(action, progress=True, view=self.view) \
-                    .then(lambda response: self._handle_response_async(config_name, response))
+                response = await session.run_code_action(action, progress=True, view=self.view)
+                self._handle_response_async(config_name, response)
 
-        sublime.set_timeout_async(run_async)
+        run_coroutine(run())
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
@@ -463,7 +438,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
     def is_visible(self, index: int, event: dict | None = None) -> bool:
         if index == -1:
             if self._has_session(event):
-                sublime.set_timeout_async(partial(self._request_menu_actions_async, event))
+                run_coroutine(self._request_menu_actions(event))
             return False
         return index < len(self.actions_cache) and self._is_cache_valid(event)
 
@@ -488,14 +463,14 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
         return True
 
     def run(self, index: int, event: dict | None = None) -> None:
-        sublime.set_timeout_async(partial(self.run_async, index, event))
+        run_coroutine(self._run(index, event))
 
-    def run_async(self, index: int, event: dict | None) -> None:
+    async def _run(self, index: int, event: dict | None) -> None:
         if self._is_cache_valid(event):
             config_name, action = self.actions_cache[index]
             if session := self.session_by_name(config_name):
-                session.run_code_action_async(action, progress=True, view=self.view) \
-                    .then(lambda response: self._handle_response_async(config_name, response))
+                response = await session.run_code_action(action, progress=True, view=self.view)
+                self._handle_response_async(config_name, response)
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
@@ -521,12 +496,12 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
     def applies_to_context_menu(event: dict | None) -> bool:
         return event is not None and 'x' in event
 
-    def _request_menu_actions_async(self, event: dict | None) -> None:
+    async def _request_menu_actions(self, event: dict | None) -> None:
         view = self.view
         if not view:
             return
         if (region := self._get_region(event)) is not None:
-            actions_manager.request_for_region_async(view, region, [], MENU_ACTIONS_KINDS, True)
+            await actions_manager.request_for_region(view, region, [], MENU_ACTIONS_KINDS, True)
 
 
 class LspRefactorCommand(LspMenuActionCommand):

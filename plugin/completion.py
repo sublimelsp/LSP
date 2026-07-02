@@ -14,14 +14,15 @@ from ..protocol import MarkupContent
 from ..protocol import MarkupKind
 from ..protocol import Range
 from ..protocol import TextEdit
+from .core.aio import run_coroutine
 from .core.constants import COMPLETION_KINDS
 from .core.constants import MarkdownLangMap
 from .core.edit import apply_text_edits
 from .core.logging import debug
-from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
+from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import FORMAT_STRING
@@ -31,27 +32,27 @@ from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from typing import Any
-from typing import Callable
 from typing import cast
 from typing import Generator
+from typing import Iterator
 from typing import List
 from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
-import functools
+import asyncio
 import html
 import sublime
-import weakref
 import webbrowser
 
 if TYPE_CHECKING:
-    from .core.sessions import Session
+    from plugin.core.sessions import CancellableInflightRequest
+    from plugin.core.sessions import CancellableRequest
 
 SessionName: TypeAlias = str
-CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, Error, None]
-ResolvedCompletions: TypeAlias = Tuple[CompletionResponse, 'weakref.ref[Session]']
+CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, None]
+ResolvedCompletions: TypeAlias = Tuple[Union[CompletionResponse, BaseException], Session]
 CompletionsStore: TypeAlias = Tuple[List[CompletionItem], CompletionItemDefaults]
 
 
@@ -194,51 +195,49 @@ class QueryCompletionsTask:
         self,
         view: sublime.View,
         location: int,
-        triggered_manually: bool,
-        on_done_async: Callable[[list[sublime.CompletionItem], sublime.AutoCompleteFlags], None]
+        triggered_manually: bool
     ) -> None:
         self._view = view
         self._location = location
         self._triggered_manually = triggered_manually
-        self._on_done_async = on_done_async
-        self._resolved = False
-        self._pending_completion_requests: dict[int, weakref.ref[Session]] = {}
+        self._pending_completion_requests: dict[int, CancellableRequest] = {}
 
-    def query_completions_async(self, sessions: list[Session]) -> None:
-        promises = [self._create_completion_request_async(session) for session in sessions]
-        Promise.all(promises).then(self._resolve_completions_async)
+    async def query_completions(
+        self, sessions: list[Session]
+    ) -> tuple[list[sublime.CompletionItem], sublime.AutoCompleteFlags]:
+        return self._resolve_completions_async(
+            zip(
+                await asyncio.gather(
+                    *(self._create_completion_request_async(session) for session in sessions),
+                    return_exceptions=True,
+                ),
+                sessions,
+            )
+        )
 
-    def _create_completion_request_async(self, session: Session) -> Promise[ResolvedCompletions]:
+    def _create_completion_request_async(self, session: Session) -> CancellableInflightRequest[CompletionResponse]:
         params = cast('CompletionParams', text_document_position_params(self._view, self._location))
         request = Request.complete(params, self._view)
-        promise, request_id = session.send_request_task_2(request)
-        weak_session = weakref.ref(session)
-        self._pending_completion_requests[request_id] = weak_session
-        return promise.then(lambda response: self._on_completion_response_async(response, request_id, weak_session))
+        future = session.request(request)
+        req_id = future.id
+        self._pending_completion_requests[req_id] = future
+        future.add_done_callback(lambda f: self._pending_completion_requests.pop(req_id))
+        return future
 
-    def _on_completion_response_async(
-        self, response: CompletionResponse, request_id: int, weak_session: weakref.ref[Session]
-    ) -> ResolvedCompletions:
-        self._pending_completion_requests.pop(request_id, None)
-        return (response, weak_session)
-
-    def _resolve_completions_async(self, responses: list[ResolvedCompletions]) -> None:
-        if self._resolved:
-            return
+    def _resolve_completions_async(
+        self, responses: Iterator[ResolvedCompletions]
+    ) -> tuple[list[sublime.CompletionItem], sublime.AutoCompleteFlags]:
         LspSelectCompletionCommand.completions = {}
         items: list[sublime.CompletionItem] = []
         item_defaults: CompletionItemDefaults = {}
-        errors: list[Error] = []
+        errors: list[BaseException] = []
         flags = self._get_userpref_flags()
         view_settings = self._view.settings()
         include_snippets = view_settings.get("auto_complete_include_snippets") and \
             (self._triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
-        for response, weak_session in responses:
-            if isinstance(response, Error):
+        for response, session in responses:
+            if isinstance(response, BaseException):
                 errors.append(response)
-                continue
-            session = weak_session()
-            if not session:
                 continue
             response_items: list[CompletionItem] = []
             if isinstance(response, dict):
@@ -262,22 +261,7 @@ class QueryCompletionsTask:
         if errors:
             error_messages = ", ".join(str(error) for error in errors)
             sublime.status_message(f'Completion error: {error_messages}')
-        self._resolve_task_async(items, flags)
-
-    def cancel_async(self) -> None:
-        self._resolve_task_async([], self._get_userpref_flags())
-        self._cancel_pending_requests_async()
-
-    def _cancel_pending_requests_async(self) -> None:
-        # Iterate a copy of the dictionary since keys are popped on canceling.
-        for request_id, weak_session in self._pending_completion_requests.copy().items():
-            if session := weak_session():
-                session.cancel_request_async(request_id)
-
-    def _resolve_task_async(self, completions: list[sublime.CompletionItem], flags: sublime.AutoCompleteFlags) -> None:
-        if not self._resolved:
-            self._resolved = True
-            self._on_done_async(completions, flags)
+        return items, flags
 
     def _get_userpref_flags(self) -> sublime.AutoCompleteFlags:
         prefs = userprefs()
@@ -292,19 +276,21 @@ class QueryCompletionsTask:
 class LspResolveDocsCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, index: int, session_name: str, event: dict | None = None) -> None:
+        run_coroutine(self._run(index, session_name, event))
 
-        def run_async() -> None:
-            items, item_defaults = LspSelectCompletionCommand.completions[session_name]
-            item = completion_with_defaults(items[index], item_defaults)
-            if session := self.session_by_name(session_name, 'completionProvider.resolveProvider'):
-                request = Request.resolveCompletionItem(item, self.view)
-                language_map = session.markdown_language_id_to_st_syntax_map()
-                handler = functools.partial(self._handle_resolve_response_async, language_map)
-                session.send_request_async(request, handler)
-            else:
+    async def _run(self, index: int, session_name: str, event: dict | None = None) -> None:
+        items, item_defaults = LspSelectCompletionCommand.completions[session_name]
+        item = completion_with_defaults(items[index], item_defaults)
+        if session := self.session_by_name(session_name, 'completionProvider.resolveProvider'):
+            language_map = session.markdown_language_id_to_st_syntax_map()
+            resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
+            if isinstance(resolved_item, Error):
                 self._handle_resolve_response_async(None, item)
-
-        sublime.set_timeout_async(run_async)
+            else:
+                # TODO: why do we only pass the language_map when the langserver is a resolveProvider?
+                self._handle_resolve_response_async(language_map, resolved_item)
+        else:
+            self._handle_resolve_response_async(None, item)
 
     def _handle_resolve_response_async(self, language_map: MarkdownLangMap | None, item: CompletionItem) -> None:
         detail = ""
@@ -385,33 +371,28 @@ class LspSelectCompletionCommand(LspTextCommand):
             self.view.run_command("insert_snippet", {"contents": new_text})
         else:
             self.view.run_command("insert", {"characters": new_text})
-        # TODO: this should all run from the worker thread
+        run_coroutine(self._run(session_name, item))
+
+    async def _run(self, session_name: str, item: CompletionItem) -> None:
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
-        additional_text_edits = item.get('additionalTextEdits')
-        if session and not additional_text_edits:
-            session.send_request_async(
-                Request.resolveCompletionItem(item, self.view),
-                functools.partial(self._on_resolved_async, session_name))
-        else:
-            self._on_resolved(session_name, item)
-
-    def want_event(self) -> bool:
-        return False
-
-    def _on_resolved_async(self, session_name: str, item: CompletionItem) -> None:
-        sublime.set_timeout(functools.partial(self._on_resolved, session_name, item))
-
-    def _on_resolved(self, session_name: str, item: CompletionItem) -> None:
-        if additional_edits := item.get('additionalTextEdits', []):
-            apply_text_edits(self.view, additional_edits)
+        if session and not item.get('additionalTextEdits'):
+            resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
+            if isinstance(resolved_item, Error):
+                debug("Error resolving completion item:", resolved_item)
+            else:
+                item = resolved_item
+        if additional_edits := item.get('additionalTextEdits'):
+            await apply_text_edits(self.view, additional_edits)
         if command := item.get("command"):
             debug(f'Running server command "{command}" for view {self.view.id()}')
-            args = {
+            self.view.run_command("lsp_execute", {
                 "command_name": command["command"],
                 "command_args": command.get("arguments"),
                 "session_name": session_name
-            }
-            self.view.run_command("lsp_execute", args)
+            })
+
+    def want_event(self) -> bool:
+        return False
 
     def _translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
         selection = self.view.sel()

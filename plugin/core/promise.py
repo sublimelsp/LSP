@@ -1,13 +1,22 @@
 from __future__ import annotations
 
+from typing import Any
 from typing import Callable
+from typing import Generator
 from typing import Generic
 from typing import Protocol
 from typing import Tuple
+from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
+import asyncio
 import functools
+import inspect
 import threading
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
 
 T = TypeVar('T')
 S = TypeVar('S')
@@ -105,6 +114,28 @@ class Promise(Generic[T]):
         promise = Promise(executor)
         assert callable(executor.resolver)
         return promise, executor.resolver
+
+    @staticmethod
+    def wrap_task(task: asyncio.Task[T]) -> Promise[T | BaseException]:
+        """Wrap a task in a Promise. The Promise resolves when the task is done."""
+
+        def executor(resolve: ResolveFunc[T | BaseException]) -> None:
+
+            def on_done(t: asyncio.Task[T]) -> None:
+                if ex := t.exception():
+                    resolve(ex)
+                else:
+                    resolve(t.result())
+
+            setattr(on_done, "_strong_task_ref", task)
+            task.add_done_callback(on_done)
+
+        return Promise(executor)
+
+    @staticmethod
+    def wrap_coroutine(coro: Coroutine[None, None, T]) -> Promise[T | BaseException]:
+        """Wrap a coroutine object in a Promise. The Promise resolves when the coroutine is done."""
+        return Promise.wrap_task(asyncio.create_task(coro))
 
     # Could also support passing plain S.
     @staticmethod
@@ -207,6 +238,28 @@ class Promise(Generic[T]):
             return Promise(sync_wrapper)
         return Promise(async_wrapper)
 
+    def __await__(self) -> Generator[Any, None, T]:
+        """You can `await` a Promise."""
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        with self.mutex:
+            if self.resolved:
+                future.set_result(self.value)
+            else:
+
+                def resolve_callback(resolve_value: T) -> None:
+
+                    def set_result(resolve_value: T) -> None:
+                        # Future may have been cancelled.
+                        if not future.done():
+                            future.set_result(resolve_value)
+
+                    # We don't know from which thread we are resolving, so use call_soon_threadsafe.
+                    loop.call_soon_threadsafe(functools.partial(set_result, resolve_value))
+
+                self.callbacks.append(resolve_callback)
+        return future.__await__()
+
     def _do_resolve(self, new_value: T) -> None:
         # No need to block as we can't change from resolved to unresolved.
         if self.resolved:
@@ -215,6 +268,8 @@ class Promise(Generic[T]):
             self.resolved = True
             self.value = new_value
             for callback in self.callbacks:
+                if inspect.iscoroutine(callback) or inspect.iscoroutinefunction(callback):
+                    raise RuntimeError("Cannot await a coroutine in a Promise.then")
                 callback(new_value)
 
     def _add_callback(self, callback: ResolveFunc[T]) -> None:

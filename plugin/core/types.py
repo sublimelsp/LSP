@@ -10,6 +10,8 @@ from ...protocol import ServerCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextDocumentSyncOptions
 from ...protocol import URI
+from .aio import run_coroutine
+from .aio import TaskContainer
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
 from .constants import MarkdownLangMap
@@ -44,6 +46,7 @@ from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
 from wcmatch.glob import IGNORECASE
+import asyncio
 import contextlib
 import fnmatch
 import os
@@ -164,24 +167,23 @@ def sublime_pattern_to_glob(pattern: str, *, is_directory_pattern: bool, root_pa
     return glob
 
 
-def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
-              async_thread: bool = False) -> None:
+def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True) -> None:
     """
-    Possibly run a function at a later point in time, either on the async thread or on the main thread.
+    Possibly run a function at a later point in time. Always on the asyncio thread.
+
+    Note: use asyncio.sleep(x) and simple condition checking if you're already running in an `async` function.
 
     :param      f:             The function to possibly run. Its return type is discarded.
     :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
     :param      condition:     The condition that must evaluate to True in order to run the function
-    :param      async_thread:  If true, run the function on the async worker thread, otherwise run the function on the
-                               main thread
     """
 
-    def run() -> None:
+    async def run() -> None:
+        await asyncio.sleep(timeout_ms / 1000.0)
         if condition():
             f()
 
-    runner = sublime.set_timeout_async if async_thread else sublime.set_timeout
-    runner(run, timeout_ms)
+    run_coroutine(run())
 
 
 @dataclass
@@ -208,12 +210,11 @@ class DebouncerNonThreadSafe:
     When calling `debounce()` multiple times, if the time span between calls is shorter than the specified `timeout_ms`,
     the callback function will only be called once, after `timeout_ms` since the last call.
 
-    This implementation is not thread safe. You must ensure that `debounce()` is called from the same thread as
-    was chosen during initialization through the `async_thread` argument.
+    This implementation is not thread safe. You must ensure that `debounce()` is called from the asyncio thread.
     """
 
-    def __init__(self, async_thread: bool) -> None:
-        self._async_thread = async_thread
+    def __init__(self, task_container: TaskContainer) -> None:
+        self._task_container = task_container
         self._current_id = -1
         self._next_id = 0
 
@@ -221,23 +222,23 @@ class DebouncerNonThreadSafe:
         self, f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True
     ) -> None:
         """
-        Possibly run a function at a later point in time on the thread chosen during initialization.
+        Possibly run a function at a later point in time on the asyncio thread.
 
         :param      f:             The function to possibly run
         :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
         :param      condition:     The condition that must evaluate to True in order to run the function
         """
 
-        def run(debounce_id: int) -> None:
+        async def run(debounce_id: int) -> None:
+            await asyncio.sleep(timeout_ms / 1000.0)
             if debounce_id != self._current_id:
                 return
             if condition():
                 f()
 
-        runner = sublime.set_timeout_async if self._async_thread else sublime.set_timeout
         current_id = self._current_id = self._next_id
         self._next_id += 1
-        runner(lambda: run(current_id), timeout_ms)
+        self._task_container.create_task(run(current_id))
 
     def cancel_pending(self) -> None:
         self._current_id = -1

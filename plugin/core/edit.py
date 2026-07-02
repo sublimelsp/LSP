@@ -119,6 +119,7 @@ def apply_text_edits(
             }
         )
     elif required_view_version is None or required_view_version == view.change_count():
+        # TODO: Communicate results back.
         view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': label})
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
     # thread, and that we've received view changes in the asynchronous thread.
@@ -126,9 +127,11 @@ def apply_text_edits(
 
 
 def show_summary_message(
-    window: sublime.Window, result: ApplyWorkspaceEditResult, summary: WorkspaceEditSummary
+    window: sublime.Window, result: ApplyWorkspaceEditResult, summary: WorkspaceEditSummary | BaseException
 ) -> None:
-    if result['applied']:
+    if isinstance(summary, BaseException):
+        message = f"Error: {summary}"
+    elif result['applied']:
         message = f"Applied {summary['total_changes']} changes in {summary['edited_files']} files"
     else:
         message = "Error while applying WorkspaceEdit"

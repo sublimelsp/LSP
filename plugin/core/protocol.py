@@ -5,6 +5,7 @@ from ...protocol import *  # For backward compatibility with LSP packages.  # no
 from functools import total_ordering
 from typing import Any
 from typing import Callable
+from typing import final
 from typing import Generic
 from typing import List
 from typing import Literal
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 INT_MAX = 2**31 - 1
 UINT_MAX = INT_MAX
 
-P = TypeVar('P', bound=LSPAny)
+P_contra = TypeVar('P_contra', bound=LSPAny, contravariant=True)
 R = TypeVar('R', bound=LSPAny)
 
 
@@ -49,14 +50,14 @@ class NotificationMessage(TypedDict):
 JSONRPCMessage = Union[RequestMessage, ResponseMessage, NotificationMessage]
 
 
-class Request(Generic[P, R]):
+class Request(Generic[P_contra, R]):
 
     __slots__ = ('method', 'params', 'view', 'progress', 'on_partial_result')
 
     def __init__(
         self,
         method: str,
-        params: P = None,
+        params: P_contra = None,
         view: sublime.View | None = None,
         progress: bool = False,
         on_partial_result: Callable[[R], None] | None = None,
@@ -297,33 +298,42 @@ class Error(Exception):
 
     def __init__(self, code: int, message: str, data: Any = None) -> None:
         super().__init__(message)
-        self.code = code
-        self.data = data
+        self._code = code
+        self._data = data
+
+    @property
+    def code(self) -> int:
+        return self._code
+
+    @property
+    def data(self) -> Any:
+        return self._data
 
     @classmethod
     def from_lsp(cls, params: ResponseError) -> Error:
         return Error(params["code"], params["message"], params.get("data"))
 
+    @final
     def to_lsp(self) -> ResponseError:
-        result: ResponseError = {"code": self.code, "message": super().__str__()}
-        if self.data:
-            result["data"] = self.data
+        result: ResponseError = {"code": self._code, "message": super().__str__()}
+        if self._data:
+            result["data"] = self._data
         return result
 
+    @final
     def __str__(self) -> str:
-        return f"{super().__str__()} ({self.code})"
+        return f"{super().__str__()} ({self._code})"
 
     @classmethod
     def from_exception(cls, ex: Exception) -> Error:
         return Error(ErrorCodes.InternalError, str(ex))
 
 
-class Response(Generic[P]):
-
+class Response(Generic[R]):
     __slots__ = ('request_id', 'result', 'post_response_callback')
 
     def __init__(
-        self, request_id: str | int, result: P, post_response_callback: PostResponseCallback | None = None
+        self, request_id: str | int, result: R, post_response_callback: PostResponseCallback | None = None
     ) -> None:
         self.request_id = request_id
         self.result = result
@@ -337,11 +347,11 @@ class Response(Generic[P]):
         }
 
 
-class Notification(Generic[P]):
+class Notification(Generic[P_contra]):
 
     __slots__ = ('method', 'params')
 
-    def __init__(self, method: str, params: P = None) -> None:
+    def __init__(self, method: str, params: P_contra = None) -> None:
         self.method = method
         self.params = params
 

@@ -712,7 +712,7 @@ class SessionBuffer(TaskContainer):
         if isinstance(response, Error):
             if response.code == LSPErrorCodes.ServerCancelled:
                 error = response
-            else:
+            elif response.code != LSPErrorCodes.RequestCancelled:
                 debug(f"error loading diagnostics: {response}")
         else:
             self._diagnostics_versions[identifier] = version

@@ -25,7 +25,9 @@ jobs:
         run: |
           python3 scripts/checkout-repos.py \
             --preferred-branch ${{ github.head_ref }} \
+            --exclude Chialisp \
             --exclude LSP \
+            --exclude LSP-aurelia \
             --exclude LSP-gnols \
             --exclude LSP-pyvoice \
             --exclude LSP-vale-ls \

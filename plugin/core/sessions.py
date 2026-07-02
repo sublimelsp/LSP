@@ -2677,7 +2677,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         def on_error(error: ResponseError) -> None:
             # Future may have been cancelled.
             if not future.done():
-                future.set_exception(Error.from_lsp(error))
+                future.set_result(Error.from_lsp(error))
 
         self._response_handlers[request_id] = (r, on_result, on_error)
         self._invoke_views(r, "on_request_started_async", result, r)

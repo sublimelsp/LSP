@@ -1159,6 +1159,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._maybe_end_task: asyncio.Task | None = None
         super().__init__()
 
+    def __del__(self) -> None:
+        print('__del__ Session')
+
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
     def get_workspace_folders(self) -> list[WorkspaceFolder]:
         return self._workspace_folders

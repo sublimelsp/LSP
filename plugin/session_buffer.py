@@ -207,6 +207,9 @@ class SessionBuffer(TaskContainer):
             # Happens when the view is already closed in the meantime.
             pass
 
+    def __del__(self) -> None:
+        print('__del__ SessionBuffer')
+
     @property
     def session(self) -> Session:
         return self._session

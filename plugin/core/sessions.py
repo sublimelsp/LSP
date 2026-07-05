@@ -2501,13 +2501,20 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 file_watcher.destroy()
 
     @request_handler('window/showDocument')
-    async def on_window_show_document(self, params: ShowDocumentParams) -> ShowDocumentResult:
-        uri = params.get("uri")
-        if params.get("external"):
-            return {"success": open_externally(uri)}
-        # TODO: ST API does not allow us to say "do not focus this new view"
-        result = await self.try_open_uri(uri, params.get("selection"))
-        return {"success": False if result is False or result is None else result.is_valid()}
+    async def on_window_show_document(
+        self, params: ShowDocumentParams
+    ) -> tuple[ShowDocumentResult, PostResponseCallback]:
+
+        def continue_after_response() -> None:
+            uri = params.get("uri")
+            if params.get("external"):
+                open_externally(uri)
+            else:
+                # TODO: ST API does not allow us to say "do not focus this new view"
+                self.create_task(self.try_open_uri(uri, params.get("selection")))
+
+        # TODO: Communicate result back? (does it even matter?)
+        return {"success": True}, continue_after_response
 
     @request_handler('window/workDoneProgress/create')
     async def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> None:

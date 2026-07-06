@@ -58,6 +58,38 @@ Follow installation instructions on [LSP-clangd](https://github.com/sublimelsp/L
 
 ## C\#
 
+### roslyn-language-server
+
+1. Make sure you have .NET 10 or later installed.
+2. Make sure you have the `dotnet` CLI tool available.
+3. Install the [roslyn-language-server](https://github.com/dotnet/roslyn/blob/main/src/LanguageServer/Microsoft.CodeAnalysis.LanguageServer/README.md) from a command prompt using the following command:
+
+    ```sh
+    dotnet tool install --global roslyn-language-server --prerelease
+    ```
+
+4. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"roslyn"` configuration:
+
+    ```jsonc
+    {
+        "roslyn": {
+            "enabled": true,
+            "command": [
+                "<path-to-your-home-folder>/.dotnet/tools/roslyn-language-server",
+                "--logLevel",
+                "Warning",
+                "--autoLoadProjects",
+                "--stdio"
+            ],
+            "selector": "source.cs"
+        }
+    }
+    ```
+
+!!! warning "The `--autoLoadProjects` command-line flag is important. When not given, much of the functionality is malfunctioning."
+
+### OmniSharp
+
 Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimelsp/LSP-OmniSharp).
 
 ## Civet

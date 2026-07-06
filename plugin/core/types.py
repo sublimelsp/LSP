@@ -551,6 +551,7 @@ _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
     'workspace/didChangeConfiguration': ('workspace.didChangeConfiguration', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
                                             'workspace.workspaceFolders.changeNotifications'),
+    'workspace/textDocumentContent': ('workspace.textDocumentContent', None),
     'textDocument/didOpen': ('textDocumentSync.didOpen', None),
     'textDocument/didClose': ('textDocumentSync.didClose', None),
     'textDocument/didChange': ('textDocumentSync.change', None),

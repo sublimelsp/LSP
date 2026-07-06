@@ -20,7 +20,8 @@ import sublime
 if TYPE_CHECKING:
     from collections.abc import Generator
     from LSP.plugin.core.promise import Promise
-    from LSP.protocol import LSPObject
+    from LSP.plugin.core.protocol import ServerRequest
+
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
@@ -260,11 +261,9 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
         yield from self.await_promise(promise)
 
-    def mock_command_action(self, command_name: str, action: LSPObject) -> Generator:
+    def mock_command_action(self, command_name: str, action: ServerRequest) -> Generator:
         """
         Make the fake server send a request when workspace/executeCommand is received.
-
-        The action must have a "method" key and a "params" key.
 
         Examples:
             await self.mock_command_action("myCommand", {

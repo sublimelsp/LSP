@@ -18,7 +18,6 @@ Tests can await this request to make sure that they receive notification before 
 resumes (since response to request will arrive after requested notification).
 
 To make the server do a request when running a Command, send the $test/setupCommandAction request.
-
 """
 from __future__ import annotations
 

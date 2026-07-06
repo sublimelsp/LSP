@@ -54,6 +54,7 @@ import posixpath
 import re
 import sublime
 import time
+import weakref
 
 if TYPE_CHECKING:
     from .file_watcher import FileWatcherEventType
@@ -214,7 +215,7 @@ class DebouncerNonThreadSafe:
     """
 
     def __init__(self, task_container: TaskContainer) -> None:
-        self._task_container = task_container
+        self._task_container = weakref.ref(task_container)
         self._current_id = -1
         self._next_id = 0
 
@@ -228,6 +229,9 @@ class DebouncerNonThreadSafe:
         :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
         :param      condition:     The condition that must evaluate to True in order to run the function
         """
+        task_container = self._task_container()
+        if not task_container:
+            return
 
         async def run(debounce_id: int) -> None:
             await asyncio.sleep(timeout_ms / 1000.0)
@@ -238,7 +242,7 @@ class DebouncerNonThreadSafe:
 
         current_id = self._current_id = self._next_id
         self._next_id += 1
-        self._task_container.create_task(run(current_id))
+        task_container.create_task(run(current_id))
 
     def cancel_pending(self) -> None:
         self._current_id = -1

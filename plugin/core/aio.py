@@ -17,7 +17,11 @@ import sublime_aio
 if TYPE_CHECKING:
     from contextvars import Context
     from sublime_aio import T
+    from sublime_aio import Ts
+    from typing_extensions import ParamSpec
+    from typing_extensions import Unpack
     import concurrent.futures
+    P = ParamSpec("P")
 
 
 class ExceptionPolicy(IntFlag):
@@ -65,18 +69,20 @@ def run_coroutine(
     return future
 
 
-def run_on_asyncio_thread(f: Callable[..., Any], *args: Any, context: Context | None = None) -> asyncio.Handle:
+def run_on_asyncio_thread(
+    f: Callable[[Unpack[Ts]], Any], *args: Unpack[Ts], context: Context | None = None
+) -> asyncio.Handle:
     """Invoke a function in the asyncio thread, from any thread."""
     return sublime_aio.call_soon_threadsafe(f, *args, context=context)
 
 
-def run_on_threadpool(f: Callable[..., T], *args: Any) -> asyncio.Future[T]:
+def run_on_threadpool(f: Callable[[Unpack[Ts]], T], *args: Unpack[Ts]) -> asyncio.Future[T]:
     """Invoke a function on the loop's default thread pool. Must be invoked from the asyncio thread."""
     return sublime_aio.run_in_worker(f, *args)
 
 
 def _run_on_st_thread(
-    dispatch_func: Callable[[Callable[[], None]], None], f: Callable[..., T], *args: Any, **kwargs: Any
+    dispatch_func: Callable[[Callable[[], None]], None], f: Callable[P, T], *args: P.args, **kwargs: P.kwargs
 ) -> asyncio.Future[T]:
     loop = asyncio.get_running_loop()
     future = loop.create_future()
@@ -99,7 +105,7 @@ def _run_on_st_thread(
     return future
 
 
-def run_on_main_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
+def run_on_main_thread(f: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> asyncio.Future[T]:
     """
     Run a function in Sublime's main (UI) thread.
 
@@ -108,7 +114,7 @@ def run_on_main_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asynci
     return _run_on_st_thread(sublime.set_timeout, f, *args, **kwargs)
 
 
-def run_on_worker_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
+def run_on_worker_thread(f: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> asyncio.Future[T]:
     """
     Run a function in Sublime's async, or worker, thread.
 

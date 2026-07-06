@@ -333,6 +333,27 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_message("workspace/executeCommand")
         self.assertEqual(promise.result(), {"canReturnAnythingHere": "asdf"})
 
+    def test_complex_request_chain_with_command(self) -> Generator:
+        # Setup mocks.
+        yield from self.mock_command_action(
+            "fooooobar",
+            {"method": "window/showDocument", "params": {"uri": "r2d2:some-decompiled-file-from-a-jar-or-dll"}},
+        )
+        self.set_response("workspace/textDocumentContent", {"text": "hello world"})
+        promise = YieldPromise()
+        sublime.set_timeout_async(
+            lambda: self.session.execute_command(
+                {"command": "fooooobar", "arguments": ["doesnt", "matter"]},
+                progress=False,
+                view=self.view,
+            ).then(promise.fulfill)
+        )
+        yield from self.await_promise(promise)
+        # Assert that some methods have been called.
+        params = yield from self.await_message("workspace/textDocumentContent")
+        self.assertEqual(params, {"uri": "r2d2:some-decompiled-file-from-a-jar-or-dll"})
+        self.assertEqual(promise.result(), {"success": True})
+
     def test_progress(self) -> Generator:
         request = Request("foobar", {"hello": "world"}, self.view, progress=True)
         self.set_response("foobar", {"general": "kenobi"})

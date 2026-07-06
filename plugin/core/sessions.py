@@ -1591,22 +1591,22 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> Promise[BaseException | None]:
         return Promise.wrap_coroutine(self.run_code_action(code_action, progress, view))
 
-    async def try_open_uri(
+    async def open_uri(
         self,
         uri: DocumentUri,
         r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
-    ) -> sublime.View | Literal[False] | None:
+    ) -> sublime.View | None:
         """
-        Try to open an URI.
+        Try to open a URI.
 
-        If the URI has the file: scheme, opens the file in a tab.
-        If the URI has the res: scheme, opens the Sublime resource file in a tab.
-        If the URI has the untitled: scheme, opens a scratch tab.
-        Otherwise, if there's a plugin attached, delegates to the plugin.
-        If the plugin does not handle the URI scheme, returns the constant boolean False.
-        If the URI can be opened, returns an optional sublime.View.
+        - If the URI has the file: scheme, opens the file in a tab.
+        - Otherwise, if the URI has the res: scheme, opens the Sublime resource file in a tab.
+        - Otherwise, if the URI has the untitled: scheme, opens a scratch tab.
+        - Otherwise, if the URI has a scheme supported by the language server, then asks the language server for the
+          content.
+        - Otherwise, if there's a plugin attached, delegates to the plugin.
         """
         scheme, _ = parse_uri(uri)
         if scheme == 'file':
@@ -1665,20 +1665,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             else:
                 return await self._open_uri_with_plugin(self._plugin, uri, r, flags, group)
 
-        return False
-
-    async def open_uri(
-        self,
-        uri: DocumentUri,
-        r: Range | None = None,
-        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
-        group: int = -1
-    ) -> sublime.View | None:
-        """Open a URI. If the URI can't be opened, raises RuntimeError."""
-        result = await self.try_open_uri(uri, r, flags, group)
-        if result is False:
-            raise RuntimeError(f"unable to open URI {uri}")
-        return result
+        return None
 
     async def _open_file_uri(
         self,
@@ -1714,7 +1701,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         r: Range | None,
         flags: sublime.NewFileFlags,
         group: int,
-    ) -> sublime.View | Literal[False] | None:
+    ) -> sublime.View | None:
         # I cannot type-hint an unpacked tuple
         pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         promise, resolve = pair
@@ -1726,7 +1713,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return self._on_view_for_uri_opened(view, uri, r)
         # resolve unused promise
         resolve(('', '', ''))
-        return False
+        return None
 
     async def open_scratch_buffer(
         self,
@@ -2509,8 +2496,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if params.get("external"):
             return {"success": open_externally(uri)}
         # TODO: ST API does not allow us to say "do not focus this new view"
-        result = await self.try_open_uri(uri, params.get("selection"))
-        return {"success": False if result is False or result is None else result.is_valid()}
+        result = await self.open_uri(uri, params.get("selection"))
+        return {"success": result.is_valid() if result else False}
 
     @request_handler('window/workDoneProgress/create')
     async def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> None:

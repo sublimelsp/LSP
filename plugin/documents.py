@@ -242,7 +242,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self._setup()
 
     def __del__(self) -> None:
-        print('__del__ DocumentSyncListener')
         self._cleanup()
 
     def __repr__(self) -> str:

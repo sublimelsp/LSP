@@ -113,9 +113,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         self._view_statuses: dict[int, dict[str, str]] = {}  # Mapping(ViewId -> Mapping(ConfigName -> StatusText))
         self._config_manager.add_change_listener(self)
 
-    def __del__(self) -> None:
-        print('__del__ WindowManager')
-
     @property
     @override
     def window(self) -> sublime.Window:

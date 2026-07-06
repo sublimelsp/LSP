@@ -75,7 +75,7 @@ Follow installation instructions on [LSP-clangd](https://github.com/sublimelsp/L
         "roslyn": {
             "enabled": true,
             "command": [
-                "<path-to-your-home-folder>/.dotnet/tools/roslyn-language-server",
+                "${home}/.dotnet/tools/roslyn-language-server",
                 "--logLevel",
                 "Warning",
                 "--autoLoadProjects",

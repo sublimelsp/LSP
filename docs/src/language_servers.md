@@ -86,7 +86,7 @@ Follow installation instructions on [LSP-clangd](https://github.com/sublimelsp/L
     }
     ```
 
-!!! warning The `--autoLoadProjects` command-line flag is important. When not given, much of the functionality is malfunctioning.
+!!! warning "The `--autoLoadProjects` command-line flag is important. When not given, much of the functionality is malfunctioning."
 
 ### OmniSharp
 

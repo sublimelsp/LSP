@@ -10,17 +10,14 @@ from typing import Any
 from typing import Callable
 from typing import Coroutine
 from typing import TYPE_CHECKING
-from typing import TypeVar
 import asyncio
 import sublime
 import sublime_aio
 
 if TYPE_CHECKING:
     from contextvars import Context
+    from sublime_aio import T
     import concurrent.futures
-
-
-T = TypeVar("T")
 
 
 class ExceptionPolicy(IntFlag):
@@ -75,7 +72,7 @@ def run_on_asyncio_thread(f: Callable[..., Any], *args: Any, context: Context | 
 
 def run_on_threadpool(f: Callable[..., T], *args: Any) -> asyncio.Future[T]:
     """Invoke a function on the loop's default thread pool. Must be invoked from the asyncio thread."""
-    return asyncio.get_running_loop().run_in_executor(None, f, *args)
+    return sublime_aio.run_in_worker(f, *args)
 
 
 def _run_on_st_thread(

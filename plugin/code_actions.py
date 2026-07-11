@@ -173,16 +173,17 @@ class CodeActionsManager:
     ) -> list[CodeActionsByConfigName]:
         results: list[CodeActionsByConfigName] = []
         for sb in listener.session_buffers_async('codeActionProvider'):
-            session = sb.session
             if request := request_factory(sb):
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
                 await listener.purge_changes()
                 await sb.do_document_diagnostic(listener.view, listener.view.change_count())
-                if (response := await session.request(request)) and not isinstance(response, Error):
-                    results.append(
-                        # Return only results for non-empty lists.
-                        (sb.session.config.name, [a for a in response_filter(sb, response) if len(a) > 0])
-                    )
+                if (
+                    (response := await sb.session.request(request))
+                    and not isinstance(response, Error)
+                    # Return only results for non-empty lists.
+                    and (code_actions := response_filter(sb, response))
+                ):
+                    results.append((sb.session.config.name, code_actions))
         return results
 
     async def request_on_save_or_format(

@@ -1672,7 +1672,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         group: int = -1
     ) -> sublime.View | None:
         view = await open_file(self.window, uri, flags, group)
-        if view and r:
+        # Note: opening a JPEG/PNG returns a sublime.View, but view.is_valid() returns False in that case.
+        if view and r and view.is_valid():
             center_selection(view, r)
         return view
 
@@ -2494,7 +2495,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return {"success": open_externally(uri)}
         # TODO: ST API does not allow us to say "do not focus this new view"
         result = await self.open_uri(uri, params.get("selection"))
-        return {"success": result.is_valid() if result else False}
+        return {"success": result is not None}
 
     @request_handler('window/workDoneProgress/create')
     async def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> None:

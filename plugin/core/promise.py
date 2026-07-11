@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .protocol import Error
 from typing import Any
 from typing import Callable
 from typing import Generator
@@ -116,14 +117,14 @@ class Promise(Generic[T]):
         return promise, executor.resolver
 
     @staticmethod
-    def wrap_task(task: asyncio.Task[T]) -> Promise[T | BaseException]:
+    def wrap_task(task: asyncio.Task[T]) -> Promise[T | Error]:
         """Wrap a task in a Promise. The Promise resolves when the task is done."""
 
-        def executor(resolve: ResolveFunc[T | BaseException]) -> None:
+        def executor(resolve: ResolveFunc[T | Error]) -> None:
 
             def on_done(t: asyncio.Task[T]) -> None:
                 if ex := t.exception():
-                    resolve(ex)
+                    resolve(Error.from_exception(ex))
                 else:
                     resolve(t.result())
 
@@ -133,7 +134,7 @@ class Promise(Generic[T]):
         return Promise(executor)
 
     @staticmethod
-    def wrap_coroutine(coro: Coroutine[None, None, T]) -> Promise[T | BaseException]:
+    def wrap_coroutine(coro: Coroutine[None, None, T]) -> Promise[T | Error]:
         """Wrap a coroutine object in a Promise. The Promise resolves when the coroutine is done."""
         return Promise.wrap_task(asyncio.create_task(coro))
 

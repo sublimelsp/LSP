@@ -848,7 +848,7 @@ class SessionBufferProtocol(Protocol):
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = ...,
         trigger_kind: CodeActionTriggerKind = ...
-    ) -> Promise[list[Command | CodeAction] | BaseException | None]:
+    ) -> Promise[list[Command | CodeAction] | Error | None]:
         ...
 
     async def request_code_actions(
@@ -1546,7 +1546,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         progress: bool = False,
         view: sublime.View | None = None,
         is_refactoring: bool = False,
-    ) -> Promise[LSPAny | BaseException]:
+    ) -> Promise[LSPAny | Error]:
         if task := self.create_task(
             self.run_command(command, progress=progress, view=view, is_refactoring=is_refactoring)
         ):
@@ -1585,7 +1585,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     @deprecated("use Session.run_code_action instead")
     def run_code_action_async(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
-    ) -> Promise[BaseException | None]:
+    ) -> Promise[Error | None]:
         return Promise.wrap_coroutine(self.run_code_action(code_action, progress, view))
 
     async def open_uri(

@@ -1033,7 +1033,7 @@ class SessionBuffer(TaskContainer):
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = None,
         trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic,
-    ) -> Promise[list[Command | CodeAction] | BaseException | None]:
+    ) -> Promise[list[Command | CodeAction] | Error | None]:
         if task := self.create_task(self.request_code_actions(view, region, diagnostics, kinds, trigger_kind)):
             return Promise.wrap_task(task)
         raise RuntimeError("unable to schedule task")

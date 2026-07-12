@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .settings import userprefs
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
@@ -76,7 +77,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         return self.session() is not None
 
     def session(self) -> Session | None:
-        wm = windows.lookup(self.window)
+        wm = self.manager()
         if not wm:
             return None
         for session in wm.get_sessions():
@@ -88,7 +89,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         return None
 
     def sessions(self) -> Generator[Session]:
-        wm = windows.lookup(self.window)
+        wm = self.manager()
         if not wm:
             return
         for session in wm.get_sessions():
@@ -99,7 +100,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             yield session
 
     def session_by_name(self, session_name: str) -> Session | None:
-        wm = windows.lookup(self.window)
+        wm = self.manager()
         if not wm:
             return None
         for session in wm.get_sessions():
@@ -108,6 +109,9 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             if session.config.name == session_name:
                 return session
         return None
+
+    def manager(self) -> WindowManager | None:
+        return windows.lookup(self.window)
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
@@ -253,7 +257,9 @@ class LspCheckApplicableCommand(sublime_plugin.TextCommand):
             wm.recheck_is_applicable_async(self.view, session_name)
 
 
-def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = True) -> None:
+def navigate_diagnostics(
+    view: sublime.View, point: int | None, severity_level: int | None, *, forward: bool = True
+) -> None:
     try:
         uri = uri_from_view(view)
     except MissingUriError:
@@ -261,9 +267,11 @@ def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = 
     wm = windows.lookup(view.window())
     if not wm:
         return
+    if severity_level is None:
+        severity_level = userprefs().show_diagnostics_severity_level
     diagnostics: list[Diagnostic] = []
     for session in wm.get_sessions():
-        diagnostics.extend(session.diagnostics.get_diagnostics_for_uri(uri))
+        diagnostics.extend(session.diagnostics.get_diagnostics_for_uri(uri, severity_level))
     if not diagnostics:
         return
     # Sort diagnostics by location
@@ -294,8 +302,8 @@ def _show_diagnostic_popup(view: sublime.View, point: int) -> None:
 
 class LspNextDiagnosticCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, point: int | None = None) -> None:
-        navigate_diagnostics(self.view, point, forward=True)
+    def run(self, edit: sublime.Edit, point: int | None = None, severity_level: int | None = None) -> None:
+        navigate_diagnostics(self.view, point, severity_level, forward=True)
 
     def want_event(self) -> bool:
         return False
@@ -303,8 +311,8 @@ class LspNextDiagnosticCommand(LspTextCommand):
 
 class LspPrevDiagnosticCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, point: int | None = None) -> None:
-        navigate_diagnostics(self.view, point, forward=False)
+    def run(self, edit: sublime.Edit, point: int | None = None, severity_level: int | None = None) -> None:
+        navigate_diagnostics(self.view, point, severity_level, forward=False)
 
     def want_event(self) -> bool:
         return False

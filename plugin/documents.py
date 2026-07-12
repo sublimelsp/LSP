@@ -87,7 +87,6 @@ from weakref import WeakValueDictionary
 import itertools
 import sublime
 import sublime_plugin
-import weakref
 import webbrowser
 
 if TYPE_CHECKING:
@@ -199,14 +198,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        weakself = weakref.ref(self)
-
-        def on_change(_: SettingsRegistration) -> None:
-            nonlocal weakself
-            this = weakself()
-            if this is not None:
-                this._on_settings_object_changed()
-
         settings = view.settings()
         self._uri = ''  # assumed to never be falsey
         self._current_syntax = settings.get("syntax")
@@ -217,11 +208,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
-        self._registration = SettingsRegistration(settings, '', on_change=on_change)
+        self._registration = SettingsRegistration(settings, on_change=self._on_settings_object_changed)
         self._completions_task: QueryCompletionsTask | None = None
         self._is_documenation_popup_open = False
         self._stored_selection: list[sublime.Region] = []
         self._should_format_on_paste = False
+        self._closed = False
         self.hover_provider_count = 0
         self._setup()
 
@@ -247,6 +239,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._registered = False
 
     def _cleanup(self) -> None:
+        if self._closed:
+            return
         settings = self.view.settings()
         triggers: list[dict[str, str]] = settings.get("auto_complete_triggers") or []
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
@@ -264,6 +258,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             session.diagnostics.clear_identifiers_cache_for_view(self.view)
         # But this has to run on the async thread again
         sublime.set_timeout_async(self.on_activated_async)
+
+    def before_destroy(self) -> None:
+        self._cleanup()
+        self._registration.unregister()
+        self._closed = True
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
@@ -523,7 +522,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self._registered and self._manager:
             manager = self._manager
             sublime.set_timeout_async(lambda: manager.unregister_listener_async(self))
-        self._clear_session_views_async()
+        self.before_destroy()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool | None:
         # You can filter key bindings by the precense of a provider,
@@ -549,16 +548,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if key == "lsp.signature_help_available" and operator == sublime.QueryOperator.EQUAL:
             return operand == bool(not self.view.is_popup_visible() and self._get_signature_help_session())
         if key == "lsp.link_available" and operator == sublime.QueryOperator.EQUAL:
-            position = get_position(self.view)
-            if position is None:
+            if userprefs().link_highlight_style != 'underline':
                 return not operand
-            session = self.session_async('documentLinkProvider', position)
-            if not session:
-                return not operand
-            session_view = session.session_view_for_view_async(self.view)
-            if not session_view:
-                return not operand
-            return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
+            if (position := get_position(self.view)) is not None and \
+                    (session := self.session_async('documentLinkProvider', position)) and \
+                    (session_view := session.session_view_for_view_async(self.view)):
+                return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
+            return not operand
         return None
 
     @requires_session

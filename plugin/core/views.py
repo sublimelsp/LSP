@@ -4,6 +4,7 @@ from ...protocol import CodeAction
 from ...protocol import CodeActionContext
 from ...protocol import CodeActionKind
 from ...protocol import CodeActionParams
+from ...protocol import CodeActionTag
 from ...protocol import CodeActionTriggerKind
 from ...protocol import Color
 from ...protocol import ColorInformation
@@ -55,6 +56,7 @@ from .settings import userprefs
 from .url import encode_code_action_uri
 from .url import parse_uri
 from .workspace import is_subpath_of
+from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import lru_cache
 from operator import itemgetter
@@ -63,6 +65,7 @@ from os.path import expanduser
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import Generator
 from typing import Iterable
 from typing import Sequence
 from typing import TYPE_CHECKING
@@ -144,6 +147,15 @@ class DiagnosticSeverityData:
 class InvalidUriSchemeError(Exception):
     def __init__(self, uri: str) -> None:
         super().__init__(f"invalid URI scheme: {uri}")
+
+
+@contextmanager
+def mutable(view: sublime.View) -> Generator:
+    view.set_read_only(False)
+    try:
+        yield
+    finally:
+        view.set_read_only(True)
 
 
 def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
@@ -611,8 +623,6 @@ def minihtml(
                 }
             }
         ]
-        # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
-        result = re.sub('(\\S)  \n', '\\1\n\n', result)  # noqa: RUF039
     if isinstance(language_id_map, dict):
         frontmatter["language_map"] = language_id_map
     return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
@@ -875,13 +885,9 @@ def _html_element(tag: str, content: str, *, class_name: str | None = None, esca
 
 
 @lru_cache
-def lightbulb_html(color: str, star: bool) -> str:
-    if star:
-        img = 'Packages/LSP/icons/lightbulb-star-32.png'
-        tooltip = 'Preferred Quick Fix'
-    else:
-        img = 'Packages/LSP/icons/lightbulb-32.png'
-        tooltip = 'Quick Fix'
+def lightbulb_html(color: str, is_preferred: bool, llm_generated: bool) -> str:
+    img = f'Packages/LSP/icons/lightbulb{"-sparkle" if llm_generated else ""}{"-star" if is_preferred else ""}-32.png'
+    tooltip = f'{"Preferred " if is_preferred else ""}Quick Fix{" (LLM-generated)" if llm_generated else ""}'
     return f'<span class="lightbulb" title="{tooltip}">{mdpopups.tint(img, color)}</span>'
 
 
@@ -942,7 +948,9 @@ def format_diagnostic_for_html(
     if code_actions:
         version = view.change_count()
         for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
-            icon = lightbulb_html(lightbulb_color, code_action.get('isPreferred', False))
+            is_preferred = code_action.get('isPreferred', False)
+            llm_generated = CodeActionTag.LLMGenerated in code_action.get('tags', [])
+            icon = lightbulb_html(lightbulb_color, is_preferred, llm_generated)
             code_action_uri = encode_code_action_uri(config.name, version, code_action)
             content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
     severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class

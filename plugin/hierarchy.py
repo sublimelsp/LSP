@@ -69,22 +69,21 @@ class HierarchyDataProvider(TreeDataProvider):
     def get_tree_item(self, element: HierarchyItemWrapper) -> TreeItem:
         item = element['item']
         selection_range = element['selectionRange']
-        command_url = sublime.command_url('lsp_open_location', {
-            'location': {
-                'targetUri': item['uri'],
-                'targetRange': item['range'],
-                'targetSelectionRange': selection_range
-            },
-            'session_name': self.session_name,
-            'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
-        })
         path = simple_path(self.weaksession(), item['uri'])
         return TreeItem(
             item['name'],
             kind=SYMBOL_KINDS.get(item['kind'], sublime.KIND_AMBIGUOUS),
             description=item.get('detail', ''),
             tooltip="{}:{}".format(path, item['selectionRange']['start']['line'] + 1),
-            command_url=command_url
+            action_command=('lsp_open_location', {
+                'location': {
+                    'targetUri': item['uri'],
+                    'targetRange': item['range'],
+                    'targetSelectionRange': selection_range
+                },
+                'session_name': self.session_name,
+                'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
+            })
         )
 
 

@@ -8,6 +8,7 @@ from ...protocol import ChangeAnnotationIdentifier
 from ...protocol import ClientCapabilities
 from ...protocol import CodeAction
 from ...protocol import CodeActionKind
+from ...protocol import CodeActionTag
 from ...protocol import CodeActionTriggerKind
 from ...protocol import Command
 from ...protocol import CompletionItemKind
@@ -28,7 +29,10 @@ from ...protocol import DocumentUri
 from ...protocol import ErrorCodes
 from ...protocol import ExecuteCommandParams
 from ...protocol import FailureHandlingKind
+from ...protocol import FileCreate
+from ...protocol import FileDelete
 from ...protocol import FileEvent
+from ...protocol import FileRename
 from ...protocol import FileSystemWatcher
 from ...protocol import FoldingRangeKind
 from ...protocol import GeneralClientCapabilities
@@ -53,6 +57,7 @@ from ...protocol import PublishDiagnosticsParams
 from ...protocol import Range
 from ...protocol import RegistrationParams
 from ...protocol import RenameFile
+from ...protocol import ResourceOperationKind
 from ...protocol import SemanticTokenModifiers
 from ...protocol import SemanticTokenTypes
 from ...protocol import ShowDocumentParams
@@ -64,6 +69,8 @@ from ...protocol import SnippetTextEdit
 from ...protocol import SymbolKind
 from ...protocol import SymbolTag
 from ...protocol import TextDocumentClientCapabilities
+from ...protocol import TextDocumentContentRefreshParams
+from ...protocol import TextDocumentContentResult
 from ...protocol import TextDocumentEdit
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextEdit
@@ -86,6 +93,7 @@ from ..api import AbstractPlugin
 from ..api import APIHandler
 from ..api import LspPlugin
 from ..api import notification_handler
+from ..api import PostResponseCallback
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
@@ -149,8 +157,13 @@ from .url import filename_to_uri
 from .url import normalize_uri
 from .url import parse_uri
 from .version import __version__
+from .views import entire_content
+from .views import entire_content_region
+from .views import first_selection_region
 from .views import get_uri_and_range_from_location
 from .views import kind_contains_other_kind
+from .views import MissingUriError
+from .views import mutable
 from .views import uri_from_view
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
@@ -160,6 +173,7 @@ from enum import IntFlag
 from functools import lru_cache
 from functools import partial
 from operator import itemgetter
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -173,6 +187,7 @@ from typing import Union
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
 from urllib.parse import urldefrag
+from urllib.parse import urlparse
 from weakref import WeakSet
 import itertools
 import mdpopups
@@ -315,6 +330,18 @@ class Manager(ABC):
     def handle_stderr_log(self, config_name: str, message: str) -> None:
         ...
 
+    @abstractmethod
+    def notify_did_create_files(self, created_files: list[FileCreate]) -> None:
+        ...
+
+    @abstractmethod
+    def notify_did_rename_files(self, renamed_files: list[FileRename]) -> None:
+        ...
+
+    @abstractmethod
+    def notify_did_delete_files(self, deleted_files: list[FileDelete]) -> None:
+        ...
+
 
 def get_initialize_params(
     variables: dict[str, str], workspace_folders: list[WorkspaceFolder], config: ClientConfig
@@ -398,7 +425,8 @@ def get_initialize_params(
                 "parameterInformation": {
                     "labelOffsetSupport": True
                 },
-                "activeParameterSupport": True
+                "activeParameterSupport": True,
+                "noActiveParameterSupport": True
             },
             "contextSupport": True
         },
@@ -455,6 +483,9 @@ def get_initialize_params(
                 "properties": [
                     "edit"
                 ]
+            },
+            "tagSupport": {
+                "valueSet": [CodeActionTag.LLMGenerated]
             }
         },
         "codeLens": {
@@ -547,6 +578,11 @@ def get_initialize_params(
         "applyEdit": True,
         "workspaceEdit": {
             "documentChanges": True,
+            "resourceOperations": [
+                ResourceOperationKind.Create,
+                ResourceOperationKind.Rename,
+                ResourceOperationKind.Delete
+            ],
             "failureHandling": FailureHandlingKind.Abort,
             "normalizesLineEndings": True,
             "changeAnnotationSupport": {
@@ -591,6 +627,9 @@ def get_initialize_params(
         },
         "diagnostics": {
             "refreshSupport": True
+        },
+        "textDocumentContent": {
+            "dynamicRegistration": True
         }
     }
     window_capabilities: WindowClientCapabilities = {
@@ -1160,10 +1199,10 @@ class Session(APIHandler, TransportCallbacks):
             return any(sb.has_capability(capability) for sb in self.session_buffers_async())
         return False
 
-    def get_capability(self, capability: str) -> Any | None:
+    def get_capability(self, capability: str, default: Any = None) -> Any:
         if self.config.is_disabled_capability(capability):
-            return None
-        return self.capabilities.get(capability)
+            return default
+        return self.capabilities.get(capability, default)
 
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open()
@@ -1432,7 +1471,8 @@ class Session(APIHandler, TransportCallbacks):
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
     ) -> Promise[sublime.View | None] | None:
-        if uri.startswith("file:"):
+        scheme, _ = parse_uri(uri)
+        if scheme == 'file':
             return self._open_file_uri_async(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
         if sb := self.get_session_buffer_for_uri_async(uri):
@@ -1441,9 +1481,9 @@ class Session(APIHandler, TransportCallbacks):
             if r:
                 center_selection(view, r)
             return Promise.resolve(view)
-        if uri.startswith('res:'):
+        if scheme == 'res':
             return self._open_res_uri_async(uri, r, group)
-        if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
+        if scheme == 'untitled':  # VSCode specific URI scheme for unsaved buffers
             flags &= sublime.NewFileFlags.TRANSIENT | sublime.NewFileFlags.ADD_TO_SELECTION
             if name := uri[len('untitled:'):]:
                 # Check if there is a pre-existing unsaved buffer with the given name
@@ -1458,12 +1498,15 @@ class Session(APIHandler, TransportCallbacks):
             view = self.window.new_file(flags)
             view.set_scratch(True)
             return Promise.resolve(view)
+        if scheme in self.get_capability('workspace.textDocumentContent.schemes', []):
+            return self.send_request_task(Request('workspace/textDocumentContent', {'uri': uri})) \
+                .then(lambda response: self._on_text_document_content_async(response, uri, flags, group)) \
+                .then(lambda view: self._on_view_for_uri_opened(view, uri, r) if view else None)
         # There is no pre-existing session-buffer, so we have to go through the plugin's URI handler.
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
-                scheme, _ = parse_uri(uri)
                 if handler := self._plugin.get_uri_handler(scheme):
-                    return handler(uri, flags).then(lambda sheet: self._on_sheet_opened(sheet, uri, r))
+                    return handler(uri, flags).then(lambda sheet: self._on_sheet_for_uri_opened(sheet, uri, r))
             else:
                 return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None
@@ -1527,7 +1570,7 @@ class Session(APIHandler, TransportCallbacks):
         callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             return promise.then(lambda tup: self.open_scratch_buffer(*tup, flags, group)) \
-                .then(lambda view: self._on_sheet_opened(view.sheet(), uri, r))
+                .then(lambda view: self._on_view_for_uri_opened(view, uri, r))
         # resolve unused promise
         resolve(('', '', ''))
         return None
@@ -1558,14 +1601,48 @@ class Session(APIHandler, TransportCallbacks):
         sublime.set_timeout(continue_on_main_thread)
         return promise
 
-    def _on_sheet_opened(self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None) -> sublime.View | None:
-        if sheet and (view := sheet.view()):
-            uri_no_fragment = urldefrag(uri).url
-            view.settings().set('lsp_uri', uri_no_fragment)
-            if r:
-                center_selection(view, r)
-            return view
-        return None
+    def _on_sheet_for_uri_opened(
+        self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
+    ) -> sublime.View | None:
+        return self._on_view_for_uri_opened(view, uri, r) if sheet and (view := sheet.view()) else None
+
+    def _on_view_for_uri_opened(self, view: sublime.View, uri: DocumentUri, r: Range | None) -> sublime.View:
+        uri_no_fragment = urldefrag(uri).url
+        view.settings().set('lsp_uri', uri_no_fragment)
+        if r:
+            center_selection(view, r)
+        return view
+
+    def _on_text_document_content_async(
+        self, response: TextDocumentContentResult | Error, uri: DocumentUri, flags: sublime.NewFileFlags, group: int
+    ) -> Promise[sublime.View | None]:
+        if isinstance(response, Error):
+            return Promise.resolve(None)
+        title = urlparse(uri).path.split('/')[-1]
+        content = response['text'].replace('\r', '')
+        syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
+        return self.open_scratch_buffer(title, content, syntax, flags, group)  # pyright: ignore[reportReturnType]
+
+    def _on_text_document_content_refreshed(self, view: sublime.View, new_content: str) -> None:
+        content_region = entire_content_region(view)
+        selection_region = first_selection_region(view)
+        selection = view.sel()
+        selection.add(content_region)
+        with mutable(view):
+            view.run_command('insert', {'characters': new_content})
+        # Try to restore original selection if possible
+        if selection_region is not None and selection_region.begin() < view.size():
+            selection.clear()
+            selection.add(selection_region)
+
+    def _on_text_document_content_refreshed_async(
+        self, view: sublime.View, response: TextDocumentContentResult
+    ) -> None:
+        if not view.is_valid():
+            return
+        new_content = response['text'].replace('\r', '')
+        if new_content != entire_content(view):
+            sublime.set_timeout(lambda: self._on_text_document_content_refreshed(view, new_content))
 
     def open_location_async(
         self,
@@ -1634,21 +1711,28 @@ class Session(APIHandler, TransportCallbacks):
         label: str | None = None,
         is_refactoring: bool = False
     ) -> Promise[ApplyWorkspaceEditResult]:
+        created_files: list[FileCreate] = []
+        renamed_files: list[FileRename] = []
+        deleted_files: list[FileDelete] = []
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
         index = 0  # Assuming 0-based indexing for the ApplyWorkspaceEditResult.faildedChange value
         promise = self._apply_document_changes_recursive_async(
-            document_changes, change_annotations, index, label, auto_save)
+            document_changes, change_annotations, created_files, renamed_files, deleted_files, index, label, auto_save)
         promise \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
-            .then(lambda _: self._set_focused_sheet(active_sheet))
+            .then(lambda _: self._set_focused_sheet(active_sheet)) \
+            .then(lambda _: self._notify_after_resource_operations(created_files, renamed_files, deleted_files))
         return promise
 
     def _apply_document_changes_recursive_async(
         self,
         document_changes: list[TextDocumentEdit | CreateFile | RenameFile | DeleteFile],
         change_annotations: dict[ChangeAnnotationIdentifier, ChangeAnnotation],
+        created_files: list[FileCreate],
+        renamed_files: list[FileRename],
+        deleted_files: list[FileDelete],
         index: int,
         label: str | None,
         auto_save: str
@@ -1678,6 +1762,38 @@ class Session(APIHandler, TransportCallbacks):
                 return promise.then(lambda _: self._set_view_state(view_state_actions, view))  # pyright: ignore[reportReturnType]
             return promise
 
+        def create_file(path: str) -> Promise[str | None]:
+            try:
+                Path(path).open('x', encoding='utf-8').close()
+            except (FileExistsError, OSError) as ex:
+                return Promise.resolve(str(ex))
+            created_files.append({'uri': filename_to_uri(path)})
+            return Promise.resolve(None)
+
+        def rename_file(old_path: str, new_path: str) -> Promise[str | None]:
+            view = self.window.find_open_file(old_path) if os.path.isfile(old_path) else None
+            try:
+                Path(old_path).rename(new_path)
+            except (FileExistsError, IsADirectoryError, NotADirectoryError, OSError) as ex:
+                return Promise.resolve(str(ex))
+            old_uri = filename_to_uri(old_path)
+            new_uri = filename_to_uri(new_path)
+            if view:
+                view.retarget(new_path)
+                view.settings().set('lsp_uri', new_uri)
+            renamed_files.append({'oldUri': old_uri, 'newUri': new_uri})
+            return Promise.resolve(None)
+
+        def delete_file(path: str) -> Promise[None]:
+            # The delete_file command moves the given files into the recycle bin
+            self.window.run_command('delete_file', {'files': [path], 'prompt': False})
+            return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None), 1))
+
+        def delete_folder(path: str) -> Promise[None]:
+            # The delete_folder command moves the given folders into the recycle bin
+            self.window.run_command('delete_folder', {'dirs': [path], 'prompt': False})
+            return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None), 1))
+
         def _continue(failure_reason: str | None) -> Promise[ApplyWorkspaceEditResult]:
             if failure_reason:
                 printf(f'Error while applying WorkspaceEdit: {failure_reason}')
@@ -1687,7 +1803,15 @@ class Session(APIHandler, TransportCallbacks):
                     'failedChange': index
                 })
             return self._apply_document_changes_recursive_async(
-                document_changes, change_annotations, index + 1, label, auto_save)
+                document_changes,
+                change_annotations,
+                created_files,
+                renamed_files,
+                deleted_files,
+                index + 1,
+                label,
+                auto_save
+            )
 
         try:
             document_change = document_changes.pop(0)
@@ -1703,32 +1827,62 @@ class Session(APIHandler, TransportCallbacks):
                 lambda view: apply_text_document_edit(view, uri, document_change['edits'], version, view_state_actions)
             ).then(_continue)
         if is_create_file(document_change):
-            # TODO: add support for ResourceOperationKind.Create
-            return Promise.resolve({
-                'applied': False,
-                'failureReason': 'CreateFile not yet supported by client',
-                'failedChange': index
-            })
+            uri = document_change['uri']
+            options = document_change.get('options', {})
+            scheme, path = parse_uri(uri)
+            if scheme != 'file':
+                return _continue(f'CreateFile not supported for URI {uri}')
+            if os.path.isfile(path):
+                if options.get('overwrite'):
+                    return delete_file(path).then(lambda _: create_file(path)).then(_continue)
+                if options.get('ignoreIfExists'):
+                    return _continue(None)
+                return _continue(f'CreateFile failed because a file already exists at target {uri}')
+            if os.path.isdir(path):
+                # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
+                return _continue(f'CreateFile failed because a folder already exists at target {uri}')
+            return create_file(path).then(_continue)
         if is_rename_file(document_change):
-            # TODO: add support for ResourceOperationKind.Rename
-            return Promise.resolve({
-                'applied': False,
-                'failureReason': 'RenameFile not yet supported by client',
-                'failedChange': index
-            })
+            old_uri = document_change['oldUri']
+            new_uri = document_change['newUri']
+            options = document_change.get('options', {})
+            old_scheme, old_path = parse_uri(old_uri)
+            if old_scheme != 'file':
+                return _continue(f'RenameFile not supported for URI {old_uri}')
+            if not os.path.exists(old_path):
+                return _continue(f'RenameFile failed because {old_uri} does not exist')
+            new_scheme, new_path = parse_uri(new_uri)
+            if new_scheme != 'file':
+                return _continue(f'RenameFile not supported for URI {new_uri}')
+            if os.path.isfile(new_path):
+                if options.get('overwrite') and os.path.isfile(old_path):
+                    return delete_file(new_path).then(lambda _: rename_file(old_path, new_path)).then(_continue)
+                if options.get('ignoreIfExists'):
+                    return _continue(None)
+                return _continue(f'RenameFile failed because target {new_uri} already exists')
+            if os.path.isdir(new_path):
+                # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
+                return _continue(f'RenameFile failed because target {new_uri} already exists')
+            return rename_file(old_path, new_path).then(_continue)
         if is_delete_file(document_change):
-            # TODO: add support for ResourceOperationKind.Delete
-            return Promise.resolve({
-                'applied': False,
-                'failureReason': 'DeleteFile not yet supported by client',
-                'failedChange': index
-            })
+            uri = document_change['uri']
+            options = document_change.get('options', {})
+            scheme, path = parse_uri(uri)
+            if scheme != 'file':
+                return _continue(f'DeleteFile not supported for URI {uri}')
+            if os.path.isfile(path):
+                deleted_files.append({'uri': uri})
+                return delete_file(path).then(_continue)
+            if os.path.isdir(path):
+                if os.listdir() and not options.get('recursive'):
+                    return _continue(f'DeleteFile failed because folder {uri} is not empty')
+                deleted_files.append({'uri': uri})
+                return delete_folder(path).then(_continue)
+            if options.get('ignoreIfNotExists'):
+                return _continue(None)
+            return _continue(f'DeleteFile failed because {uri} does not exist')
         # Should be unreachable, but must return value on all code paths to satisfy type checker
-        return Promise.resolve({
-            'applied': False,
-            'failureReason': 'Unknown document change type',
-            'failedChange': index
-        })
+        return _continue('Unknown document change type')
 
     def apply_workspace_edit_async(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
@@ -1825,6 +1979,17 @@ class Session(APIHandler, TransportCallbacks):
     def _set_focused_sheet(self, sheet: sublime.Sheet | None) -> None:
         if sheet and sheet != self.window.active_sheet():
             self.window.focus_sheet(sheet)
+
+    def _notify_after_resource_operations(
+        self, created_files: list[FileCreate], renamed_files: list[FileRename], deleted_files: list[FileDelete]
+    ) -> None:
+        if mgr := self.manager():
+            if created_files:
+                mgr.notify_did_create_files(created_files)
+            if renamed_files:
+                mgr.notify_did_rename_files(renamed_files)
+            if deleted_files:
+                mgr.notify_did_delete_files(deleted_files)
 
     def decode_semantic_token(
         self,
@@ -1970,7 +2135,7 @@ class Session(APIHandler, TransportCallbacks):
         ).then(itemgetter(0))
 
     @request_handler('workspace/codeLens/refresh')
-    def on_workspace_code_lens_refresh(self, _: None) -> Promise[None]:
+    def on_workspace_code_lens_refresh(self, _: None) -> tuple[Promise[None], PostResponseCallback]:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -1979,11 +2144,10 @@ class Session(APIHandler, TransportCallbacks):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.CODE_LENS)
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        return (Promise.resolve(None), continue_after_response)
 
     @request_handler('workspace/semanticTokens/refresh')
-    def on_workspace_semantic_tokens_refresh(self, _: None) -> Promise[None]:
+    def on_workspace_semantic_tokens_refresh(self, _: None) -> tuple[Promise[None], PostResponseCallback]:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -1995,11 +2159,10 @@ class Session(APIHandler, TransportCallbacks):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        return (Promise.resolve(None), continue_after_response)
 
     @request_handler('workspace/inlayHint/refresh')
-    def on_workspace_inlay_hint_refresh(self, _: None) -> Promise[None]:
+    def on_workspace_inlay_hint_refresh(self, _: None) -> tuple[Promise[None], PostResponseCallback]:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -2011,13 +2174,11 @@ class Session(APIHandler, TransportCallbacks):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.INLAY_HINT)
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        return (Promise.resolve(None), continue_after_response)
 
     @request_handler('workspace/diagnostic/refresh')
-    def on_workspace_diagnostic_refresh(self, _: None) -> Promise[None]:
-        sublime.set_timeout_async(self._refresh_diagnostics)
-        return Promise.resolve(None)
+    def on_workspace_diagnostic_refresh(self, _: None) -> tuple[Promise[None], PostResponseCallback]:
+        return (Promise.resolve(None), self._refresh_diagnostics)
 
     def _refresh_diagnostics(self) -> None:
         visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -2026,6 +2187,21 @@ class Session(APIHandler, TransportCallbacks):
             session_buffer.do_document_diagnostic_async(view, view.change_count(), forced_update=True)
         for session_buffer in not_visible_session_buffers:
             session_buffer.set_pending_refresh(RequestFlags.DIAGNOSTIC)
+
+    @request_handler('workspace/textDocumentContent/refresh')
+    def on_workspace_text_document_content_refresh(self, params: TextDocumentContentRefreshParams) -> Promise[None]:
+        sublime.set_timeout_async(lambda: self._refresh_text_document_content_async(params['uri']))
+        return Promise.resolve(None)
+
+    def _refresh_text_document_content_async(self, uri: DocumentUri) -> None:
+        for view in self.window.views():
+            try:
+                if uri_from_view(view) == uri:
+                    request = Request('workspace/textDocumentContent', {'uri': uri})
+                    self.send_request_async(request, partial(self._on_text_document_content_refreshed_async, view))
+                    break
+            except MissingUriError:
+                continue
 
     @notification_handler('textDocument/publishDiagnostics')
     def on_text_document_publish_diagnostics(self, params: PublishDiagnosticsParams) -> None:
@@ -2053,7 +2229,7 @@ class Session(APIHandler, TransportCallbacks):
             mgr.on_diagnostics_updated()
 
     @request_handler('client/registerCapability')
-    def on_client_register_capability(self, params: RegistrationParams) -> Promise[None]:
+    def on_client_register_capability(self, params: RegistrationParams) -> tuple[Promise[None], PostResponseCallback]:
         new_diagnostics_provider = False
         new_workspace_diagnostics_provider = False
         for registration in params["registrations"]:
@@ -2099,8 +2275,7 @@ class Session(APIHandler, TransportCallbacks):
             if new_workspace_diagnostics_provider:
                 self.do_workspace_diagnostics_async()
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        return (Promise.resolve(None), continue_after_response)
 
     @request_handler('client/unregisterCapability')
     def on_client_unregister_capability(self, params: UnregistrationParams) -> Promise[None]:
@@ -2371,6 +2546,8 @@ class Session(APIHandler, TransportCallbacks):
     def send_response(self, response: Response[P]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)
         self.send_payload(response.to_payload())
+        if response.post_response_callback:
+            response.post_response_callback()
 
     def send_error_response(self, request_id: int | str, error: Error) -> None:
         self._logger.outgoing_error_response(request_id, error)

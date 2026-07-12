@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from ...protocol import DocumentFilter
 from ...protocol import DocumentSelector
 from ...protocol import DocumentUri
 from ...protocol import FileOperationFilter
 from ...protocol import FileOperationPatternKind
+from ...protocol import NotebookCellTextDocumentFilter
 from ...protocol import ServerCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextDocumentSyncOptions
@@ -27,6 +29,7 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Dict
+from typing import Final
 from typing import Generator
 from typing import Iterable
 from typing import List
@@ -36,6 +39,7 @@ from typing import TypeVar
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import override
+from typing_extensions import TypeGuard
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -47,7 +51,6 @@ import posixpath
 import re
 import sublime
 import time
-import weakref
 
 if TYPE_CHECKING:
     from .file_watcher import FileWatcherEventType
@@ -98,8 +101,10 @@ def basescope2languageid(base_scope: str) -> str:
 @contextlib.contextmanager
 def runtime(token: str) -> Generator[None, None, None]:
     t = time.time()
-    yield
-    debug(token, "running time:", int((time.time() - t) * 1000000), "μs")
+    try:
+        yield
+    finally:
+        debug(token, "running time:", int((time.time() - t) * 1000000), "μs")
 
 
 T = TypeVar("T")
@@ -179,26 +184,20 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
     runner(run, timeout_ms)
 
 
+@dataclass
+class SettingsStore:
+    settings: sublime.Settings
+    settings_path: str
+
+
 class SettingsRegistration:
-    __slots__ = ("settings", "settings_path", "__weakref__")  # pyright: ignore[reportUninitializedInstanceVariable]
+    __slots__ = ("settings", )
 
-    def __init__(
-        self, settings: sublime.Settings, settings_path: str, on_change: Callable[[SettingsRegistration], None]
-    ) -> None:
+    def __init__(self, settings: sublime.Settings, on_change: Callable[[], None]) -> None:
         self.settings = settings
-        self.settings_path = settings_path
-        weak_self = weakref.ref(self)
+        self.settings.add_on_change("LSP", on_change)
 
-        def on_change_handler() -> None:
-            if self_ := weak_self():
-                on_change(self_)
-
-        self.settings.add_on_change("LSP", on_change_handler)
-
-    def __del__(self) -> None:
-        # FIXME: Relying on reference counts and garbage collection timings for the change listener handling is a very
-        # bad idea, because instances of this class are dynamically passed between other object instances, and it can
-        # easily cause bugs like https://github.com/sublimelsp/LSP/pull/2867
+    def unregister(self) -> None:
         self.settings.clear_on_change("LSP")
 
 
@@ -451,6 +450,10 @@ class ClientStates:
     STOPPING = 2
 
 
+def is_notebook_cell_text_document_filter(document_filter: DocumentFilter) -> TypeGuard[NotebookCellTextDocumentFilter]:
+    return 'notebook' in document_filter
+
+
 class DocumentFilterMatcher:
     """
     A document filter denotes a document through properties like language, scheme or pattern.
@@ -502,7 +505,10 @@ class DocumentSelectorMatcher:
     __slots__ = ("filters",)
 
     def __init__(self, document_selector: DocumentSelector) -> None:
-        self.filters = [DocumentFilterMatcher(**cast("dict", document_filter)) for document_filter in document_selector]
+        self.filters = [
+            DocumentFilterMatcher(**cast("dict", document_filter)) for document_filter in document_selector
+            if not is_notebook_cell_text_document_filter(document_filter)
+        ]
 
     def __bool__(self) -> bool:
         return bool(self.filters)
@@ -540,6 +546,7 @@ _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
     'workspace/didChangeConfiguration': ('workspace.didChangeConfiguration', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
                                             'workspace.workspaceFolders.changeNotifications'),
+    'workspace/textDocumentContent': ('workspace.textDocumentContent', None),
     'textDocument/didOpen': ('textDocumentSync.didOpen', None),
     'textDocument/didClose': ('textDocumentSync.didClose', None),
     'textDocument/didChange': ('textDocumentSync.change', None),
@@ -766,6 +773,26 @@ class ClientConfig:
     file) are accessible through attribute access (`.foo`).
     """
 
+    CONFIG_KEYS: Final[set[str]] = {
+        'auto_complete_selector',
+        'command',
+        'diagnostics_mode',
+        'disabled_capabilities',
+        'enabled',
+        'env',
+        'experimental_capabilities',
+        'file_watcher',
+        'initialization_options',
+        'markdown_language_map',
+        'priority_selector',
+        'semantic_tokens',
+        'selector',
+        'settings',
+        'syntax_map',
+        'tcp_port',
+    }
+    """All server configuration keys that we recognize and have handling for."""
+
     def __init__(
         self,
         *,
@@ -786,9 +813,10 @@ class ClientConfig:
         semantic_tokens: dict[str, str] | None = None,
         diagnostics_mode: str = "all_files",
         markdown_language_map: MarkdownLangMapJson | None = None,
+        syntax_map: dict[str, str] | None = None,
         path_maps: list[PathMap] | None = None,
-        settings_registration: SettingsRegistration | None = None,
-        all_settings: dict[str, Any] | None = None
+        settings_store: SettingsStore | None = None,
+        custom_config_keys: dict[str, Any] | None = None
     ) -> None:
         """
         :param name: Unique identifier for this language server.
@@ -823,11 +851,13 @@ class ClientConfig:
             language tag. Each value is a two-element tuple: aliases and syntax paths or `scope:BASE_SCOPE`
             selectors. Follows the format of mdpopups' `sublime_user_lang_map` setting. `None` (the default)
             applies no extra mapping.
+        :param syntax_map: Optional mapping of custom URI schemes to Sublime Text syntaxes, used when fetching dynamic
+            document content from the server via `workspace/textDocumentContent` request.
         :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
             server (e.g. inside a container).
-        :param settings_registration: The `SettingsRegistration` instance holding resource path and `Settings` instance
+        :param settings_store: The `SettingsStore` instance holding resource path and `Settings` instance
             for the plugin settings. Present only for `ClientConfig`s created through `from_sublime_settings()`.
-        :param all_settings: The complete raw settings dictionary. Used as a fallback for attribute/key access for
+        :param custom_config_keys: The complete raw settings dictionary. Used as a fallback for attribute/key access for
             settings not explicitly modelled above.
         """
         self.name = name
@@ -853,26 +883,28 @@ class ClientConfig:
         # Transformed mapping that uses tuples instead of lists for mdpopups.
         self.resolved_markdown_language_map: MarkdownLangMap | None = None
         self.markdown_language_map = markdown_language_map  # use the setter to populate resolved_markdown_language_map
-        # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
-        self._settings_registration = settings_registration
-        if isinstance(all_settings, dict):
-            self._all_settings = all_settings
-            # Exclude 'settings' because it shouldn't be considered when ClientConfig is checked for equality
-            if 'settings' in self._all_settings:
-                del self._all_settings['settings']
+        self.syntax_map = syntax_map or {}
+        self._settings_store = settings_store
+        if isinstance(custom_config_keys, dict):
+            self._custom_config_keys = custom_config_keys
+            # Only retain server configuration keys that we don't have dedicated properties for.
+            for key in self.CONFIG_KEYS:
+                if key in self._custom_config_keys:
+                    del self._custom_config_keys[key]
         else:
-            self._all_settings = {}
+            self._custom_config_keys = {}
         self._view_status_handler = default_status_view_handler
 
     def __getattr__(self, name: str, /) -> Any:
         """Get property through attribute access (`.foo`) for properties that don't exist natively."""
-        if name in self._all_settings:
-            return self._all_settings[name]
+        if name in self._custom_config_keys:
+            return self._custom_config_keys[name]
         raise AttributeError(name)
 
     @property
     def root_settings(self) -> dict[str, Any]:
-        return self._all_settings
+        """Provides access to server configuration keys that are not explicitly exposed on ClientConfig."""
+        return self._custom_config_keys
 
     @property
     @deprecated('Use initialization_options instead')
@@ -887,9 +919,9 @@ class ClientConfig:
     def enabled(self, enabled: bool) -> None:
         if enabled == self._enabled:
             return
-        if self._settings_registration:
-            settings_basename = os.path.basename(self._settings_registration.settings_path)
-            self._settings_registration.settings.set("enabled", enabled)
+        if self._settings_store:
+            settings_basename = os.path.basename(self._settings_store.settings_path)
+            self._settings_store.settings.set("enabled", enabled)
             sublime.save_settings(settings_basename)
         self._enabled = enabled
 
@@ -917,7 +949,7 @@ class ClientConfig:
         return result
 
     @classmethod
-    def from_sublime_settings(cls, name: str, settings_registration: SettingsRegistration) -> ClientConfig:
+    def from_sublime_settings(cls, name: str, settings_store: SettingsStore) -> ClientConfig:
         """
         Create a ClientConfig from a Sublime Text `Settings` object.
 
@@ -925,10 +957,10 @@ class ClientConfig:
         overrides are layered on top from `Settings`.
 
         :param name: Unique server name.
-        :param settings_registration: The `SettingsRegistration` object for this client.
+        :param settings_store: The `SettingsStore` object for this client.
         """
-        s = settings_registration.settings
-        file = settings_registration.settings_path
+        s = settings_store.settings
+        file = settings_store.settings_path
         base = sublime.decode_value(sublime.load_resource(file))
         settings = DottedDict(deepcopy(base.get("settings", {})))  # defined by the plugin author
         settings.update(deepcopy(read_dict_setting(s, "settings", {})))  # overrides from the user
@@ -966,9 +998,10 @@ class ClientConfig:
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "all_files")),
             markdown_language_map=deepcopy(s.get("markdown_language_map")),
+            syntax_map=deepcopy(s.get("syntax_map")),
             path_maps=PathMap.parse(s.get("path_maps")),
-            settings_registration=settings_registration,
-            all_settings=deepcopy(s.to_dict())
+            settings_store=settings_store,
+            custom_config_keys=deepcopy(s.to_dict())
         )
 
     @classmethod
@@ -1003,8 +1036,9 @@ class ClientConfig:
             semantic_tokens=deepcopy(d.get("semantic_tokens", {})),
             diagnostics_mode=deepcopy(d.get("diagnostics_mode", "all_files")),
             markdown_language_map=deepcopy(d.get("markdown_language_map")),
+            syntax_map=deepcopy(d.get("syntax_map")),
             path_maps=PathMap.parse(d.get("path_maps")),
-            all_settings=deepcopy(d)
+            custom_config_keys=deepcopy(d)
         )
 
     @classmethod
@@ -1014,7 +1048,7 @@ class ClientConfig:
 
         Values present in `override` take precedence over those in `src_config`. Structured
         values (`initialization_options`, `settings`) are deep-merged rather than replaced wholesale. The raw
-        `_all_settings` dict is shallow-merged.
+        `_custom_config_keys` dict is shallow-merged.
 
         :param src_config: The base configuration to start from.
         :param override: Dictionary of values to override.
@@ -1045,9 +1079,10 @@ class ClientConfig:
             semantic_tokens=deepcopy(override.get("semantic_tokens", src_config.semantic_tokens)),
             diagnostics_mode=deepcopy(override.get("diagnostics_mode", src_config.diagnostics_mode)),
             markdown_language_map=deepcopy(override.get("markdown_language_map", src_config.markdown_language_map)),
+            syntax_map=deepcopy(override.get("syntax_map", src_config.syntax_map)),
             path_maps=PathMap.parse(override.get("path_maps")) or deepcopy(src_config.path_maps),
-            settings_registration=src_config._settings_registration,
-            all_settings=deepcopy({**src_config._all_settings, **override})
+            settings_store=src_config._settings_store,
+            custom_config_keys=deepcopy({**src_config._custom_config_keys, **override})
         )
 
     def create_transport_config(self) -> TransportConfig:
@@ -1185,9 +1220,12 @@ class ClientConfig:
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, ClientConfig):
-            return False
-        return self.name == other.name and self._all_settings == other._all_settings
+        return (
+            isinstance(other, ClientConfig)
+            and self._custom_config_keys == other._custom_config_keys
+            # "settings" are not considered when checking for equality
+            and all(k == 'settings' or getattr(self, k) == getattr(other, k) for k in self.CONFIG_KEYS)
+        )
 
     def __hash__(self) -> int:
         return hash(self.__repr__())

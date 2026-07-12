@@ -11,6 +11,7 @@ from ...protocol import TextDocumentEdit
 from ...protocol import TextEdit
 from ...protocol import WorkspaceEdit
 from .logging import debug
+from .logging import printf
 from .promise import Promise
 from .protocol import UINT_MAX
 from typing import Dict
@@ -100,11 +101,14 @@ def apply_text_edits(
     if not edits:
         return Promise.resolve(view)
     if not view.is_valid():
-        print('LSP: ignoring edits due to view not being open')
+        printf('ignoring edits due to view not being open')
         return Promise.resolve(None)
     if process_placeholders:
-        # TODO: remove rust-analyzer specific handling for placeholders in TextEdit, because SnippetTextEdit is now part
-        # of the LSP specs.
+        # Deprecated because SnippetTextEdit is now part of the LSP 3.18 specs.
+        printf(
+            'The "process_placeholders" argument for the apply_text_edits function is deprecated.',
+            'Convert the TextEdit into a SnippetTextEdit instead.'
+        )
         view.run_command(
             'lsp_apply_document_edit',
             {

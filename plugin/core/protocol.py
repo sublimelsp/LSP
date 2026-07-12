@@ -17,6 +17,7 @@ from typing_extensions import NotRequired
 from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:
+    from plugin.api import PostResponseCallback
     import sublime
 
 INT_MAX = 2**31 - 1
@@ -320,11 +321,14 @@ class Error(Exception):
 
 class Response(Generic[P]):
 
-    __slots__ = ('request_id', 'result')
+    __slots__ = ('request_id', 'result', 'post_response_callback')
 
-    def __init__(self, request_id: str | int, result: P) -> None:
+    def __init__(
+        self, request_id: str | int, result: P, post_response_callback: PostResponseCallback | None = None
+    ) -> None:
         self.request_id = request_id
         self.result = result
+        self.post_response_callback = post_response_callback
 
     def to_payload(self) -> ResponseMessage:
         return {
@@ -367,8 +371,16 @@ class Notification(Generic[P]):
         return Notification("textDocument/didClose", params)
 
     @classmethod
+    def didCreateFiles(cls, params: CreateFilesParams) -> Notification[CreateFilesParams]:
+        return Notification("workspace/didCreateFiles", params)
+
+    @classmethod
     def didRenameFiles(cls, params: RenameFilesParams) -> Notification[RenameFilesParams]:
         return Notification("workspace/didRenameFiles", params)
+
+    @classmethod
+    def didDeleteFiles(cls, params: DeleteFilesParams) -> Notification[DeleteFilesParams]:
+        return Notification("workspace/didDeleteFiles", params)
 
     @classmethod
     def didChangeConfiguration(cls, params: DidChangeConfigurationParams) -> Notification[DidChangeConfigurationParams]:

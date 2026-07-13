@@ -1001,7 +1001,9 @@ class SessionBuffer:
         region: sublime.Region,
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = None,
-        trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
+        trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic,
+        *,
+        progress: bool = False,
     ) -> Promise[list[Command | CodeAction] | Error | None]:
         context: CodeActionContext = {
             'diagnostics': diagnostics,
@@ -1014,7 +1016,7 @@ class SessionBuffer:
             'range': region_to_range(view, region),
             'context': context
         }
-        request = Request.codeAction(params, view)
+        request = Request.codeAction(params, view, progress=progress)
         return self.session.send_request_task(request)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------

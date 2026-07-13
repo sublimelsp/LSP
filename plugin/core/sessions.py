@@ -840,7 +840,9 @@ class SessionBufferProtocol(Protocol):
         region: sublime.Region,
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = ...,
-        trigger_kind: CodeActionTriggerKind = ...
+        trigger_kind: CodeActionTriggerKind = ...,
+        *,
+        progress: bool = False,
     ) -> Promise[list[Command | CodeAction] | Error | None]:
         ...
 

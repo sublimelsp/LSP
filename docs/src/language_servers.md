@@ -81,7 +81,10 @@ Follow installation instructions on [LSP-clangd](https://github.com/sublimelsp/L
                 "--autoLoadProjects",
                 "--stdio"
             ],
-            "selector": "source.cs"
+            "selector": "source.cs",
+            "syntax_map": {
+                "roslyn-source-generated": "C#.sublime-syntax"
+            }
         }
     }
     ```

@@ -528,7 +528,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
         if not view:
             return
         if (region := self._get_region(event)) is not None:
-            actions_manager.request_for_region_async(view, region, [], MENU_ACTIONS_KINDS, manual=True, progress=True)
+            actions_manager.request_for_region_async(view, region, [], MENU_ACTIONS_KINDS, manual=True)
 
 
 class LspRefactorCommand(LspMenuActionCommand):

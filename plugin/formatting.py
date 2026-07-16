@@ -207,21 +207,30 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             listener.purge_changes_async()
         if has_single_nonempty_selection(self.view):
             session = self.best_session(self.capability)
-            selection = first_selection_region(self.view)
-            if session and selection is not None:
-                request = text_document_range_formatting(self.view, selection)
-                session.send_request_task(request).then(self._handle_response_async)
+            selection_region = first_selection_region(self.view)
+            if session and selection_region is not None:
+                request = text_document_range_formatting(self.view, selection_region)
+                session.send_request_task(request).then(self._handle_response_async).then(
+                    lambda view: self._maybe_reset_selection_start_async(selection_region.a) if view else None
+                )
         elif self.view.has_non_empty_selection_region():
             if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
                 request = text_document_ranges_formatting(self.view)
                 session.send_request_task(request).then(self._handle_response_async)
 
-    def _handle_response_async(self, response: FormatResponse) -> None:
+    def _handle_response_async(self, response: FormatResponse) -> Promise[sublime.View | None]:
         if isinstance(response, Error):
             sublime.status_message(f'Formatting error: {response}')
-            return
-        if response:
-            apply_text_edits(self.view, response, label="Format Selection")
+            return Promise.resolve(None)
+        return apply_text_edits(self.view, response, label="Format Selection") if response else Promise.resolve(None)
+
+    def _maybe_reset_selection_start_async(self, offset: int) -> None:
+        # Issue https://github.com/sublimelsp/LSP/issues/2986
+        # Some servers return TextEdits that modify content outside of the range to format, which can cause the text
+        # selection to be updated in an unexpected way. In that case reset the start point of the selection to the
+        # initial start point before formatting. Only implemented for single-range formatting.
+        if self.view.is_valid() and (selection_region := self.view.sel()[0]).a != offset:
+            self.view.run_command('lsp_selection_set', {'regions': [(offset, selection_region.b)]})
 
 
 class LspFormatCommand(LspTextCommand):

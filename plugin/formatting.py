@@ -211,7 +211,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             if session and selection_region is not None:
                 request = text_document_range_formatting(self.view, selection_region)
                 session.send_request_task(request).then(self._handle_response_async).then(
-                    lambda view: self._maybe_reset_selection_start_async(selection_region.a) if view else None
+                    lambda view: self._maybe_reset_selection_start_async(selection_region.begin()) if view else None
                 )
         elif self.view.has_non_empty_selection_region():
             if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
@@ -229,8 +229,9 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         # Some servers return TextEdits that modify content outside of the range to format, which can cause the text
         # selection to be updated in an unexpected way. In that case reset the start point of the selection to the
         # initial start point before formatting. Only implemented for single-range formatting.
-        if self.view.is_valid() and (selection_region := self.view.sel()[0]).a != offset:
-            self.view.run_command('lsp_selection_set', {'regions': [(offset, selection_region.b)]})
+        if self.view.is_valid() and (region := self.view.sel()[0]).begin() != offset:
+            new_region = (offset, region.b) if region.a < region.b else (region.a, offset)
+            self.view.run_command('lsp_selection_set', {'regions': [new_region]})
 
 
 class LspFormatCommand(LspTextCommand):

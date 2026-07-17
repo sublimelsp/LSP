@@ -85,9 +85,9 @@ class Request(Generic[P, R]):
 
     @classmethod
     def codeAction(
-        cls, params: CodeActionParams, view: sublime.View
+        cls, params: CodeActionParams, view: sublime.View, progress: bool = False
     ) -> Request[CodeActionParams, list[Command | CodeAction] | None]:
-        return Request("textDocument/codeAction", params, view)
+        return Request("textDocument/codeAction", params, view, progress=progress)
 
     @classmethod
     def documentColor(

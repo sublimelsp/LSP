@@ -3,7 +3,6 @@ from __future__ import annotations
 from .constants import ST_PACKAGES_PATH
 from typing import Any
 import inspect
-import threading
 import traceback
 
 log_debug = False
@@ -20,18 +19,22 @@ def debug(*args: Any) -> None:
         printf(*args)
 
 
-def trace(print_callstack: bool = False, **values: Any) -> None:
+def trace(depth: int = 1, **values: Any) -> None:
+    """Set the depth to something large to print a stacktrace. Use the `values` kwargs to debug-print values."""
     current_frame = inspect.currentframe()
     if current_frame is None:
         debug("TRACE (unknown frame)")
         return
-    previous_frame = current_frame.f_back
-    file_name, line_number, function_name, _, _ = inspect.getframeinfo(previous_frame)  # type: ignore
-    file_name = file_name[len(ST_PACKAGES_PATH) + len("/LSP/") :]
-    debug(f"TRACE {threading.current_thread().name:<16} {function_name:<32} {file_name}:{line_number}")
-    if print_callstack:
-        for frame in traceback.extract_stack():
-            debug(f"TRACE {frame.filename}:{frame.lineno} in {frame.name}")
+    output: list[str] = []
+    while depth > 0:
+        depth -= 1
+        if current_frame := current_frame.f_back:
+            file_name, line_number, function_name, _, _ = inspect.getframeinfo(current_frame)
+            file_name = file_name[len(ST_PACKAGES_PATH) + len("/LSP/") :]
+            output.append(f'  {function_name:<32} {file_name}:{line_number}')
+        else:
+            break
+    print("TRACE\n" + '\n'.join(output))
     for k, v in values.items():
         debug(f"TRACE {k}={v}")
 

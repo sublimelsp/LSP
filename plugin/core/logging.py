@@ -3,6 +3,7 @@ from __future__ import annotations
 from .constants import ST_PACKAGES_PATH
 from typing import Any
 import inspect
+import threading
 import traceback
 
 log_debug = False
@@ -30,13 +31,13 @@ def trace(depth: int = 1, **values: Any) -> None:
         depth -= 1
         if current_frame := current_frame.f_back:
             file_name, line_number, function_name, _, _ = inspect.getframeinfo(current_frame)
-            file_name = file_name[len(ST_PACKAGES_PATH) + len("/LSP/") :]
+            if file_name.startswith(ST_PACKAGES_PATH):
+                file_name = file_name[len(ST_PACKAGES_PATH) + len("/LSP/") :]
             output.append(f'  {function_name:<32} {file_name}:{line_number}')
         else:
             break
-    print("TRACE\n" + '\n'.join(output))
-    for k, v in values.items():
-        debug(f"TRACE {k}={v}")
+    output.extend(f"    {k} = {v}" for k, v in values.items())
+    print(f"TRACE (current thread: {threading.current_thread().name})\n" + '\n'.join(output))
 
 
 def exception_log(message: str, ex: BaseException) -> None:

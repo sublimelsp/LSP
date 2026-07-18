@@ -1033,8 +1033,12 @@ class SessionBuffer(TaskContainer):
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = None,
         trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic,
+        *,
+        progress: bool = False,
     ) -> Promise[list[Command | CodeAction] | Error | None]:
-        if task := self.create_task(self.request_code_actions(view, region, diagnostics, kinds, trigger_kind)):
+        if task := self.create_task(
+            self.request_code_actions(view, region, diagnostics, kinds, trigger_kind, progress=progress)
+        ):
             return Promise.wrap_task(task)
         raise RuntimeError("unable to schedule task")
 
@@ -1044,7 +1048,9 @@ class SessionBuffer(TaskContainer):
         region: sublime.Region,
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = None,
-        trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
+        trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic,
+        *,
+        progress: bool = False,
     ) -> list[Command | CodeAction] | Error | None:
         context: CodeActionContext = {
             'diagnostics': diagnostics,
@@ -1057,7 +1063,7 @@ class SessionBuffer(TaskContainer):
             'range': region_to_range(view, region),
             'context': context
         }
-        return await self.session.request(Request.codeAction(params, view))
+        return await self.session.request(Request.codeAction(params, view, progress=progress))
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 

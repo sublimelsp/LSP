@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from .core.sessions import AbstractViewListener
     from .core.sessions import Session
 
-FormatResponse = Union[List[TextEdit], None]
+FormatResponse = Union[List[TextEdit], Error, None]
 
 
 def get_formatter(window: sublime.Window | None, base_scope: str) -> str | None:
@@ -44,7 +44,7 @@ def get_formatter(window: sublime.Window | None, base_scope: str) -> str | None:
         isinstance(project_data, dict) else window_manager.formatters.get(base_scope)
 
 
-async def format_document(text_command: LspTextCommand, formatter: str | None = None) -> FormatResponse | Error:
+async def format_document(text_command: LspTextCommand, formatter: str | None = None) -> FormatResponse:
     view = text_command.view
     if formatter:
         if session := text_command.session_by_name(formatter, LspFormatDocumentCommand.capability):
@@ -236,6 +236,34 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             await format_selection(self.get_listener())
         except Error as error:
             sublime.status_message(f'Formatting error: {error}')
+        if listener := self.get_listener():
+            await listener.purge_changes()
+        if has_single_nonempty_selection(self.view):
+            session = self.best_session(self.capability)
+            selection_region = first_selection_region(self.view)
+            if session and selection_region is not None:
+                if await self._handle_response_async(
+                    await session.request(text_document_range_formatting(self.view, selection_region))
+                ):
+                    self._maybe_reset_selection_start_async(selection_region.begin())
+        elif self.view.has_non_empty_selection_region():
+            if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
+                await self._handle_response_async(await session.request(text_document_ranges_formatting(self.view)))
+
+    async def _handle_response_async(self, response: FormatResponse) -> sublime.View | None:
+        if isinstance(response, Error):
+            sublime.status_message(f'Formatting error: {response}')
+            return None
+        return await apply_text_edits(self.view, response, label="Format Selection") if response else None
+
+    def _maybe_reset_selection_start_async(self, offset: int) -> None:
+        # Issue https://github.com/sublimelsp/LSP/issues/2986
+        # Some servers return TextEdits that modify content outside of the range to format, which can cause the text
+        # selection to be updated in an unexpected way. In that case reset the start point of the selection to the
+        # initial start point before formatting. Only implemented for single-range formatting.
+        if self.view.is_valid() and (region := self.view.sel()[0]).begin() != offset:
+            new_region = (offset, region.b) if region.a < region.b else (region.a, offset)
+            self.view.run_command('lsp_selection_set', {'regions': [new_region]})
 
 
 class LspFormatCommand(LspTextCommand):

@@ -98,7 +98,9 @@ class CodeActionsManager:
         region: sublime.Region,
         session_buffer_diagnostics: list[tuple[SessionBufferProtocol, list[Diagnostic]]],
         only_kinds: list[str | CodeActionKind] | None = None,
+        *,
         manual: bool = False,
+        progress: bool = False,
     ) -> Promise[list[CodeActionsByConfigName]]:
         """
         Requests code actions with provided diagnostics and specified region. If there are
@@ -129,7 +131,7 @@ class CodeActionsManager:
                     diagnostics = diags
                     break
             params = text_document_code_action_params(view, region, diagnostics, only_kinds, manual)
-            return Request.codeAction(params, view)
+            return Request.codeAction(params, view, progress=progress)
 
         def response_filter(sb: SessionBufferProtocol, actions: list[CodeActionOrCommand]) -> list[CodeActionOrCommand]:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
@@ -397,9 +399,9 @@ class LspCodeActionsCommand(LspTextCommand):
         if not listener:
             return
         session_buffer_diagnostics = listener.get_diagnostics_async(region)
-        actions_manager \
-            .request_for_region_async(view, region, session_buffer_diagnostics, only_kinds, manual=True) \
-            .then(lambda actions: sublime.set_timeout(lambda: self._handle_code_actions(actions)))
+        actions_manager.request_for_region_async(
+            view, region, session_buffer_diagnostics, only_kinds, manual=True, progress=True
+        ).then(lambda actions: sublime.set_timeout(lambda: self._handle_code_actions(actions)))
 
     def _handle_code_actions(self, response: list[CodeActionsByConfigName], run_first: bool = False) -> None:
         # Flatten response to a list of (config_name, code_action) tuples.
@@ -526,7 +528,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
         if not view:
             return
         if (region := self._get_region(event)) is not None:
-            actions_manager.request_for_region_async(view, region, [], MENU_ACTIONS_KINDS, True)
+            actions_manager.request_for_region_async(view, region, [], MENU_ACTIONS_KINDS, manual=True)
 
 
 class LspRefactorCommand(LspMenuActionCommand):

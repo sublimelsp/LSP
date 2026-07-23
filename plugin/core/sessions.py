@@ -132,7 +132,9 @@ from .protocol import ClientResponse
 from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
+from .protocol import P_contra
 from .protocol import Point
+from .protocol import R
 from .protocol import Request
 from .protocol import ResolvedCodeLens
 from .protocol import Response
@@ -182,7 +184,6 @@ from typing import Literal
 from typing import overload
 from typing import Protocol
 from typing import TYPE_CHECKING
-from typing import TypeVar
 from typing import Union
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
@@ -201,8 +202,6 @@ if TYPE_CHECKING:
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
-P = TypeVar('P', bound=LSPAny)
-R = TypeVar('R', bound=LSPAny)
 
 
 class ViewStateActions(IntFlag):
@@ -840,7 +839,9 @@ class SessionBufferProtocol(Protocol):
         region: sublime.Region,
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = ...,
-        trigger_kind: CodeActionTriggerKind = ...
+        trigger_kind: CodeActionTriggerKind = ...,
+        *,
+        progress: bool = False,
     ) -> Promise[list[Command | CodeAction] | Error | None]:
         ...
 
@@ -2479,7 +2480,7 @@ class Session(APIHandler, TransportCallbacks):
 
     def send_request_async(
             self,
-            request: Request[P, R],
+            request: Request[P_contra, R],
             on_result: Callable[[R], None],
             on_error: Callable[[ResponseError], None] | None = None
     ) -> int:
@@ -2498,27 +2499,27 @@ class Session(APIHandler, TransportCallbacks):
         elif self._plugin:
             client_request = cast('ClientRequest', cast('object', {'method': request.method, 'params': request.params}))
             self._plugin.on_pre_send_request_async(client_request, request.view)
-            request.params = cast('P', client_request['params'])
+            request.params = cast('P_contra', client_request['params'])
         self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
         return request_id
 
     def send_request(
             self,
-            request: Request[P, R],
+            request: Request[P_contra, R],
             on_result: Callable[[R], None],
             on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
         sublime.set_timeout_async(partial(self.send_request_async, request, on_result, on_error))
 
-    def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:
+    def send_request_task(self, request: Request[P_contra, R]) -> Promise[R | Error]:
         task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 
-    def send_request_task_2(self, request: Request[P, R]) -> tuple[Promise[R | Error], int]:
+    def send_request_task_2(self, request: Request[P_contra, R]) -> tuple[Promise[R | Error], int]:
         task: PackagedTask[R | Error] = Promise.packaged_task()
         promise, resolver = task
         request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
@@ -2532,18 +2533,18 @@ class Session(APIHandler, TransportCallbacks):
             self._invoke_views(request, "on_request_canceled_async", request_id)
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
-    def send_notification(self, notification: Notification[P]) -> None:
+    def send_notification(self, notification: Notification[P_contra]) -> None:
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_notification_async(notification)
         elif self._plugin:
             client_notification = cast('ClientNotification',
                                        cast('object', {'method': notification.method, 'params': notification.params}))
             self._plugin.on_pre_send_notification_async(client_notification)
-            notification.params = cast('P', client_notification['params'])
+            notification.params = cast('P_contra', client_notification['params'])
         self._logger.outgoing_notification(notification.method, notification.params)
         self.send_payload(notification.to_payload())
 
-    def send_response(self, response: Response[P]) -> None:
+    def send_response(self, response: Response[R]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)
         self.send_payload(response.to_payload())
         if response.post_response_callback:

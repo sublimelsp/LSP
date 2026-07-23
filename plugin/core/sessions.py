@@ -141,6 +141,7 @@ from .protocol import JSONRPCMessage
 from .protocol import Notification
 from .protocol import P_contra
 from .protocol import Point
+from .protocol import R
 from .protocol import Request
 from .protocol import ResolvedCodeLens
 from .protocol import Response
@@ -209,9 +210,10 @@ if TYPE_CHECKING:
     from .collections import DottedDict
 
 
-InitCallback: TypeAlias = Callable[['Session', bool], None]
-R = TypeVar('R', bound=LSPAny)
 T = TypeVar('T')
+
+
+InitCallback: TypeAlias = Callable[['Session', bool], None]
 
 
 class ViewStateActions(IntFlag):

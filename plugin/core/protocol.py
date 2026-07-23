@@ -330,6 +330,7 @@ class Error(Exception):
 
 
 class Response(Generic[R]):
+
     __slots__ = ('request_id', 'result', 'post_response_callback')
 
     def __init__(

@@ -313,6 +313,7 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "text.html.markdown.rmarkdown": LanguageKind.R,  # https://github.com/REditorSupport/sublime-ide-r
     "text.html.rails": "erb",
     "text.html.vue": "vue",
+    "text.html.svelte": "svelte",
     "text.jinja": LanguageKind.HTML,  # https://github.com/Sublime-Instincts/BetterJinja
     "text.plain": "plaintext",
     "text.plist": LanguageKind.XML,  # https://bitbucket.org/fschwehn/sublime_plist

@@ -694,6 +694,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
     async def on_query_completions(self, prefix: str, locations: list[int]) -> sublime.CompletionList:
+        # Note: cancellation is initiated by sublime_aio.ViewEventListener (by cancelling the asyncio.Task representing
+        # on_query_completions).
         clist = sublime.CompletionList()
         triggered_manually = self._auto_complete_triggered_manually
         self._auto_complete_triggered_manually = False  # reset state for next completion popup

@@ -203,6 +203,7 @@ import itertools
 import mdpopups
 import os
 import sublime
+import threading
 import weakref
 
 if TYPE_CHECKING:
@@ -1161,6 +1162,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._is_executing_refactoring_command = False
         self._logged_unsupported_commands: set[str] = set()
         self._maybe_end_task: asyncio.Task | None = None
+        # TODO: Remove the below field when the deprecated methods
+        # send_request_async/send_request/send_request_task/send_request_task_2 have been removed.
+        self._threading_condition = threading.Condition()
         super().__init__()
 
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
@@ -2677,35 +2681,56 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.create_task(self.send_payload(r.to_payload(request_id)))
         return result
 
-    @deprecated("use Session.request or Session.stream instead")
+    @deprecated("use Session.request instead")
     def send_request_async(
         self,
         request: Request[P_contra, R],
         on_result: Callable[[R], None],
         on_error: Callable[[ResponseError], None] | None = None
     ) -> int:
-        """You must call this method from the asyncio loop thread. Callbacks will run in the asyncio thread."""
-        result = self.request(request)
+        """You can call this method from any thread. Callbacks will run in the asyncio thread."""
 
-        def on_done(future: asyncio.Future[R | Error]) -> None:
-            if future.cancelled():
-                return
-            if ex := future.exception():
-                exception_log(f"Unhandled exception during request {request.method}", ex)
-                return
-            result = future.result()
-            if isinstance(result, Error):
-                if callable(on_error):
-                    on_error(result.to_lsp())
+        def do_request() -> int:
+            result = self.request(request)
+
+            def on_done(future: asyncio.Future[R | Error]) -> None:
+                if future.cancelled():
+                    return
+                if ex := future.exception():
+                    exception_log(f"Unhandled exception during request {request.method}", ex)
+                    return
+                result = future.result()
+                if isinstance(result, Error):
+                    if callable(on_error):
+                        on_error(result.to_lsp())
+                    else:
+                        exception_log("Response error is ignored", result)
                 else:
-                    exception_log("Response error is ignored", result)
-            else:
-                on_result(result)
+                    on_result(result)
 
-        result._future.add_done_callback(on_done)
-        return result.id
+            result._future.add_done_callback(on_done)
+            return result.id
 
-    @deprecated("use Session.request or Session.stream instead")
+        try:
+            # Throws RuntimeError if not in an asyncio event loop.
+            asyncio.get_running_loop()
+            return do_request()
+        except RuntimeError:
+            pass
+        request_id: int | None = None
+
+        def set_request_id() -> None:
+            nonlocal request_id
+            with self._threading_condition:
+                request_id = do_request()
+                self._threading_condition.notify()
+
+        with self._threading_condition:
+            run_on_asyncio_thread(set_request_id)
+            self._threading_condition.wait_for(lambda: request_id is not None)
+        return request_id  # pyright: ignore[reportReturnType]
+
+    @deprecated("use Session.request instead")
     def send_request(
         self,
         request: Request[P_contra, R],
@@ -2715,14 +2740,14 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         """You can call this method from any thread. Callbacks will run in the asyncio thread."""
         run_on_asyncio_thread(lambda: self.send_request_async(request, on_result, on_error))
 
-    @deprecated("use Session.request or Session.stream instead")
+    @deprecated("use Session.request instead")
     def send_request_task(self, request: Request[P_contra, R]) -> Promise[R | Error]:
         task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
         self.send_request(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 
-    @deprecated("use Session.request or Session.stream instead")
+    @deprecated("use Session.request instead")
     def send_request_task_2(self, request: Request[P_contra, R]) -> tuple[Promise[R | Error], int]:
         task: PackagedTask[R | Error] = Promise.packaged_task()
         promise, resolver = task

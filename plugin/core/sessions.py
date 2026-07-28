@@ -2711,11 +2711,16 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             result._future.add_done_callback(on_done)
             return result.id
 
+        # Quite an involved method body, but it's necessary as this method may be called from sublime's worker thread in
+        # some LSP-* packages (and in this package itself are also still call sites, although those call sites guarantee
+        # it's invoked from the asyncio thread).
         try:
-            # Throws RuntimeError if not in an asyncio event loop.
+            # Check if we're already running inside the asyncio thread. If not, this call will throw RuntimeError.
             asyncio.get_running_loop()
+            # We're already running inside the asyncio thread, so we can just go ahead and do the request directly.
             return do_request()
         except RuntimeError:
+            # We're not running in the asyncio thread, so we have to use a complicated threading condition variable.
             pass
         request_id: int | None = None
 

@@ -1126,6 +1126,10 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     _MAX_WAIT_ATTEMPTS = 40
+    """
+    Number of times to sleep for 100ms and wait for a file/folder to be actually deleted during a CreateFile, DeleteFile
+    or RenameFile document change.
+    """
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,

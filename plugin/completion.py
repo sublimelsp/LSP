@@ -47,8 +47,8 @@ import sublime
 import webbrowser
 
 if TYPE_CHECKING:
-    from plugin.core.sessions import CancellableInflightRequest
-    from plugin.core.sessions import CancellableRequest
+    from .core.sessions import CancellableInflightRequest
+    from .core.sessions import CancellableRequest
 
 SessionName: TypeAlias = str
 CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, None]

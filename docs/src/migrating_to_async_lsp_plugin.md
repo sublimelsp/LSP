@@ -37,7 +37,7 @@ All of these methods are superseded by the `request` method. You can read the do
 
 Because `Session.request` is an `async` method, it is _required_ to be invoked from another `async` function/method. One way to accomplish this is to replace various methods of LspPlugin with their async counterparts, or use one of the two utility functions described in the next section.
 
-### Replace `sublime.set_timeout_async` with `run_coroutine` or `run_in_asyncio_thread`.
+### Replace `sublime.set_timeout_async` with `run_coroutine` or `run_on_asyncio_thread`.
 
 Before the LSP package used `asyncio` and `async` functions, the common pattern to use a `Session` object and its methods was to run code on Sublime's "async", or "worker" thread.
 
@@ -102,10 +102,10 @@ There are two ways to "get on the asyncio thread":
     ```python
     from LSP.plugin import run_on_asyncio_thread
 
-    def some_func_that_is_not_async_but_has_to_run_in_asyncio_context():
+    def some_func_that_is_not_async_but_has_to_run_on_asyncio_context():
         pass
 
-    run_on_asyncio_thread(some_func_that_is_not_async_but_has_to_run_in_asyncio_context)
+    run_on_asyncio_thread(some_func_that_is_not_async_but_has_to_run_on_asyncio_context)
     ```
 
 !!! note
@@ -205,9 +205,9 @@ The `on_pre_start_async` method of LspPlugin is supposed to download and unzip a
 
 There exist asynchronous counterparts to these functions, but they're not trivial to replace. Here is a non-exhaustive replacement list:
 
-- Downloading a file asynchronously can be done with the [httpx](https://www.python-httpx.org) third-party package. Package Control can download this library.
-- Unzipping/untarring: use `LSP.plugin.run_on_threadpool`.
-- Running a tool: use `asyncio.subprocess`.
+- Downloading a file asynchronously can be done with the [aiosonic](https://aiosonic.readthedocs.io/en/latest/examples.html#download-file) library. To use aiosonic in ST, follow the instructions [in this git commit of packagecontrol/channel](https://github.com/packagecontrol/channel/commit/e433f8bbc42d2a318f1e2073c2e0f8473d6680ec).
+- Unzipping/untarring: use the `tarfile` or `zipfile` module like you normally would, but invoke them via `LSP.plugin.run_on_threadpool`.
+- Running a tool: use [`asyncio.subprocess`](https://docs.python.org/3/library/asyncio-subprocess.html).
 
 The best practices for replacing these blocking functions with asynchronous counterparts are still in flux, so we suggest to delay this refactoring. Also note:
 

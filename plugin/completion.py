@@ -274,10 +274,11 @@ class LspResolveDocsCommand(LspTextCommand):
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
         language_map: MarkdownLangMap | None = None
-        if session := self.session_by_name(session_name, 'completionProvider.resolveProvider'):
+        if session := self.session_by_name(session_name):
             language_map = session.markdown_language_id_to_st_syntax_map()
-            resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
-            item = resolved_item if not isinstance(resolved_item, Error) else item
+            if session.has_capability('completionProvider.resolveProvider', check_views=True):
+                resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
+                item = resolved_item if not isinstance(resolved_item, Error) else item
         detail = ""
         documentation = ""
         if item:

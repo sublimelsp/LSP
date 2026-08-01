@@ -1125,7 +1125,7 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 class Session(APIHandler, TransportCallbacks, TaskContainer):
 
-    _MAX_WAIT_ATTEMPTS = 40
+    _FILE_DELETED_MAX_CHECK_ATTEMPTS = 40
     """
     Number of times to sleep for 100ms and wait for a file/folder to be actually deleted during a CreateFile, DeleteFile
     or RenameFile document change.
@@ -1893,10 +1893,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
         async def wait_for_path_deletion(path: str) -> None:
             attempts = 0
-            while os.path.exists(path) and attempts < self._MAX_WAIT_ATTEMPTS:  # noqa: ASYNC240
+            while os.path.exists(path) and attempts < self._FILE_DELETED_MAX_CHECK_ATTEMPTS:  # noqa: ASYNC240
                 await asyncio.sleep(0.1)
                 attempts += 1
-            if attempts >= self._MAX_WAIT_ATTEMPTS:
+            if attempts >= self._FILE_DELETED_MAX_CHECK_ATTEMPTS:
                 raise asyncio.TimeoutError(f"Timeout waiting for deletion of {path}")
 
         async def delete_file(path: str) -> None:

@@ -17,6 +17,7 @@ with expected notification method in params['method'] and params in params['para
 Tests can await this request to make sure that they receive notification before code
 resumes (since response to request will arrive after requested notification).
 
+To make the server do a request when running a Command, send the $test/setupCommandAction request.
 """
 from __future__ import annotations
 
@@ -174,6 +175,7 @@ class Session:
         self._responses: list[tuple[str, PayloadLike]] = []
         self._received: dict[str, PayloadLike] = {}
         self._received_cv = asyncio.Condition()
+        self._command_actions: dict[str, PayloadLike] = {}
 
         self._install_handlers()
 
@@ -323,6 +325,7 @@ class Session:
 
     def _install_handlers(self) -> None:
         self._on_request("initialize", self._initialize)
+        self._on_request("workspace/executeCommand", self._execute_command)
         self._on_request("shutdown", self._shutdown)
         self._on_notification("exit", self._on_exit)
 
@@ -330,6 +333,8 @@ class Session:
         self._on_request("$test/fakeRequest", self._fake_request)
         self._on_request("$test/sendNotification", self._send_notification)
         self._on_request("$test/setResponses", self._set_responses)
+        self._on_request("$test/getAndClearUnusedMockResponses", self._get_and_clear_unused_mock_responses)
+        self._on_request("$test/setupCommandAction", self._setup_command_action)
         self._on_notification("$test/setResponse", self._on_set_response)
 
     async def _on_set_response(self, params: PayloadLike) -> None:
@@ -346,6 +351,42 @@ class Session:
 
         self._responses.extend([(param['method'], param['response']) for param in params])
         return None
+
+    async def _get_and_clear_unused_mock_responses(self, params: PayloadLike) -> PayloadLike:
+        responses = list(self._responses)
+        command_actions = dict(self._command_actions)
+        self._responses = []
+        self._command_actions = {}
+        return {"responses": responses, "commandActions": command_actions}
+
+    async def _execute_command(self, params: PayloadLike) -> PayloadLike:
+        if not isinstance(params, dict):
+            raise Error(ErrorCode.InvalidParams, "expected params to be a dictionary")
+        command_name = params.get("command")
+        if command_name is None:
+            raise Error(ErrorCode.InvalidParams, 'expected "command" key')
+        action = self._command_actions.pop(command_name, None)
+        if isinstance(action, dict):
+            request_method = action.get("method")
+            if not isinstance(request_method, str):
+                raise Error(ErrorCode.InvalidParams, 'expected action to have a "method" key')
+            return await self.request(request_method, action.get("params"))
+        mocked = self._get_mocked_response("workspace/executeCommand")
+        if not isinstance(mocked, bool):
+            return mocked
+        return None
+
+    async def _setup_command_action(self, params: PayloadLike) -> PayloadLike:
+        if not isinstance(params, dict):
+            raise Error(ErrorCode.InvalidParams, 'params must be a dict')
+        command_name = params.pop("commandName")
+        if command_name in self._command_actions:
+            raise Error(ErrorCode.InvalidParams, f"command action for command \"{command_name}\" is already set up")
+        if "method" not in params:
+            raise Error(ErrorCode.InvalidParams, 'params must contain a "method" key')
+        if "params" not in params:
+            raise Error(ErrorCode.InvalidParams, 'params msut contain a "params" key')
+        self._command_actions[command_name] = params
 
     async def _send_notification(self, params: PayloadLike) -> PayloadLike:
         method, payload = self._validate_request_params(params)

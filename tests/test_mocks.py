@@ -29,6 +29,9 @@ basic_responses = {
             'workspace': {
                 'workspaceFolders': {
                     'supported': True
+                },
+                'textDocumentContent': {
+                    'schemes': ['r2d2']
                 }
             }
         }

@@ -2,6 +2,9 @@
 
 The LSP package uses `asyncio` now, and many methods have been refactored to use `async` constructs. Your LspPlugin also gains `async` capabilities.
 
+!!! note
+    This is a migration guide for packages that are using the `LspPlugin` class instead of the `AbstractPlugin` class. For migrating from `AbstractPlugin` to `LspPlugin`, please follow [this guide first](migrating_to_lsp_plugin.md).
+
 ## Overview of changes
 
 Various methods of LspPlugin now have `async` counterparts. Each `async` counterpart can be opted into **individually**. There is no need to switch all methods all at once. Below is a table of the new `async` counterparts.

@@ -261,16 +261,16 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
         yield from self.await_promise(promise)
 
-    def mock_command_action(self, command_name: str, action: ServerRequest) -> Generator:
+    def set_command_response_action(self, command_name: str, action: ServerRequest) -> Generator:
         """
         Make the fake server send a request when workspace/executeCommand is received.
 
         Examples:
-            await self.mock_command_action("myCommand", {
+            yield from self.set_command_response_action("myCommand", {
                 "method": "window/showDocument",
                 "params": {"uri": "file:///test.txt", "takeFocus": True}
             })
-            await self.mock_command_action("rename", {
+            yield from self.set_command_response_action("rename", {
                 "method": "workspace/applyEdit",
                 "params": {"edit": {"changes": {...}}}
             })

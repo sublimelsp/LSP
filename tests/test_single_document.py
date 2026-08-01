@@ -335,7 +335,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
 
     def test_complex_request_chain_with_command(self) -> Generator:
         # Setup mocks.
-        yield from self.mock_command_action(
+        yield from self.set_command_response_action(
             "fooooobar",
             {"method": "window/showDocument", "params": {"uri": "r2d2:some-decompiled-file-from-a-jar-or-dll"}},
         )

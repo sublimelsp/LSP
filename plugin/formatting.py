@@ -3,7 +3,7 @@ from __future__ import annotations
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextEdit
 from .code_actions import CodeActionsOnFormatTask
-from .core.aio import run_coroutine
+from .core.aio import show_quick_panel
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
 from .core.logging import exception_log
@@ -20,7 +20,6 @@ from .core.views import text_document_ranges_formatting
 from .core.views import will_save_wait_until
 from .lsp_task import LspTask
 from .lsp_task import LspTextCommandWithTasks
-from functools import partial
 from typing import Any
 from typing import List
 from typing import TYPE_CHECKING
@@ -163,7 +162,7 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
             return
         base_scope = syntax.scope
         if select:
-            self.select_formatter(base_scope, session_names)
+            await self.select_formatter(base_scope, session_names)
             return
         if listener := self.get_listener():
             await listener.purge_changes()
@@ -176,7 +175,7 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
                         return
                     await self._apply_text_edits(text_edits, label=self.label)
                     return
-            self.select_formatter(base_scope, session_names)
+            await self.select_formatter(base_scope, session_names)
         else:
             text_edits = await format_document(self)
             if isinstance(text_edits, Error):
@@ -191,42 +190,35 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
         except Exception as ex:
             sublime.status_message(f"Failed to {label}: {ex}")
 
-    def select_formatter(self, base_scope: str, session_names: list[str]) -> None:
-        if window := self.view.window():
-            window.show_quick_panel(
-                session_names,
-                partial(self.on_select_formatter, base_scope, session_names),
-                placeholder="Select Formatter"
-            )
-
-    def on_select_formatter(self, base_scope: str, session_names: list[str], index: int) -> None:
+    async def select_formatter(self, base_scope: str, session_names: list[str]) -> None:
+        window = self.view.window()
+        if not window:
+            return
+        window_manager = windows.lookup(window)
+        if not window_manager:
+            return
+        index = await show_quick_panel(window, session_names, placeholder="Select Formatter")
         if index == -1:
             return
         session_name = session_names[index]
-        if window_manager := windows.lookup(self.view.window()):
-            window = window_manager.window
-            project_data = window.project_data()
-            if isinstance(project_data, dict):
-                project_settings = project_data.setdefault('settings', {})
-                project_lsp_settings = project_settings.setdefault('LSP', {})
-                project_formatter_settings = project_lsp_settings.setdefault('formatters', {})
-                project_formatter_settings[base_scope] = session_name
-                window_manager.suppress_sessions_restart_on_project_update = True
-                window.set_project_data(project_data)
-            else:  # Save temporarily for this window
-                window_manager.formatters[base_scope] = session_name
-
-            async def do_format() -> None:
-                if session := self.session_by_name(session_name, self.capability):
-                    if listener := self.get_listener():
-                        await listener.purge_changes()
-                        result = await session.request(text_document_formatting(self.view))
-                        if isinstance(result, Error):
-                            exception_log("failed to apply formatting", result)
-                        else:
-                            await self._apply_text_edits(result, label=self.label)
-
-            run_coroutine(do_format())
+        project_data = window.project_data()
+        if isinstance(project_data, dict):
+            project_settings = project_data.setdefault('settings', {})
+            project_lsp_settings = project_settings.setdefault('LSP', {})
+            project_formatter_settings = project_lsp_settings.setdefault('formatters', {})
+            project_formatter_settings[base_scope] = session_name
+            window_manager.suppress_sessions_restart_on_project_update = True
+            window.set_project_data(project_data)
+        else:  # Save temporarily for this window
+            window_manager.formatters[base_scope] = session_name
+        if session := self.session_by_name(session_name, self.capability):
+            if listener := self.get_listener():
+                await listener.purge_changes()
+                result = await session.request(text_document_formatting(self.view))
+                if isinstance(result, Error):
+                    exception_log("failed to apply formatting", result)
+                else:
+                    await self._apply_text_edits(result, label=self.label)
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
@@ -243,10 +235,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             return True
         return False
 
-    def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
-        run_coroutine(self._run())
-
-    async def _run(self) -> None:
+    async def run(self, event: dict | None = None) -> None:
         if (potential_error := await format_selection(self.get_listener())) and isinstance(potential_error, Error):
             sublime.status_message(f'Formatting error: {potential_error}')
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine
+from .core.aio import show_quick_panel
 from .core.constants import CODE_LENS_ENABLED_KEY
 from .core.protocol import Error
 from .core.protocol import Request
@@ -128,12 +128,9 @@ class LspToggleCodeLensesCommand(LspWindowCommand):
     def is_checked(self) -> bool:
         return self.are_enabled(self.window)
 
-    def run(self) -> None:
+    async def run(self) -> None:
         enable = not self.is_checked()
         self.window.settings().set(CODE_LENS_ENABLED_KEY, enable)
-        run_coroutine(self._update_views(enable))
-
-    async def _update_views(self, enable: bool) -> None:
         window_manager = windows.lookup(self.window)
         if not window_manager:
             return
@@ -149,7 +146,7 @@ class LspCodeLensCommand(LspTextCommand):
 
     capability = 'codeLensProvider'
 
-    def run(self, edit: sublime.Edit) -> None:
+    async def run(self) -> None:
         listener = windows.listener_for_view(self.view)
         if not listener:
             return
@@ -160,20 +157,16 @@ class LspCodeLensCommand(LspTextCommand):
                 commands.extend((session_name, command) for command in sv.get_code_lenses_for_region(region))
         if not commands:
             return
-        if len(commands) == 1:
-            self.on_select(commands, 0)
-        elif window := self.view.window():
-            window.show_quick_panel(
-                [sublime.QuickPanelItem(cmd["title"], annotation=session_name) for session_name, cmd in commands],
-                lambda index: self.on_select(commands, index)
+        index = 0
+        if len(commands) > 1:
+            if not (window := self.view.window()):
+                return
+            index = await show_quick_panel(
+                window,
+                [sublime.QuickPanelItem(cmd["title"], annotation=session_name) for session_name, cmd in commands]
             )
-
-    def want_event(self) -> bool:
-        return False
-
-    def on_select(self, commands: list[tuple[str, Command]], index: int) -> None:
-        if index == -1:
-            return
+            if index == -1:
+                return
         session_name, command = commands[index]
         args = {
             "session_name": session_name,
@@ -181,3 +174,6 @@ class LspCodeLensCommand(LspTextCommand):
             "command_args": command.get("arguments")
         }
         self.view.run_command("lsp_execute", args)
+
+    def want_event(self) -> bool:
+        return False

@@ -1559,7 +1559,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         view: sublime.View | None = None,
         is_refactoring: bool = False,
     ) -> Promise[LSPAny | Error]:
-        if task := self.create_task(
+        if task := self.create_task_threadsafe(
             self.run_command(command, progress=progress, view=view, is_refactoring=is_refactoring)
         ):
             return Promise.wrap_task(task)
@@ -1598,7 +1598,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     def run_code_action_async(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
     ) -> Promise[Error | None]:
-        return Promise.wrap_coroutine(self.run_code_action(code_action, progress, view))
+        if task := self.create_task_threadsafe(
+            self.run_code_action(code_action, progress, view)
+        ):
+            return Promise.wrap_task(task)
+        raise RuntimeError("unable to schedule task")
 
     async def open_uri(
         self,

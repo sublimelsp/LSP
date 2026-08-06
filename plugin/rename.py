@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .core.aio import run_coroutine
 from .core.edit import show_summary_message
 from .core.protocol import Request
 from .core.registry import get_position
@@ -102,7 +103,11 @@ class LspSymbolRenameCommand(LspTextCommand):
         point: int | None = None
     ) -> None:
         if listener := self.get_listener():
-            listener.purge_changes_async()
+
+            async def purge() -> None:
+                await listener.purge_changes()
+
+            run_coroutine(purge())
         location = get_position(self.view, event, point)
         session = self._get_prepare_rename_session(point, session_name)
         if new_name or placeholder or not session:
@@ -148,8 +153,8 @@ class LspSymbolRenameCommand(LspTextCommand):
         self, weak_session: weakref.ref[Session], response: WorkspaceEdit, accepted: bool
     ) -> None:
         if accepted and (session := weak_session()):
-            session.apply_workspace_edit_async(response, is_refactoring=True) \
-                .then(lambda tup: show_summary_message(session.window, *tup))
+            future = run_coroutine(session.apply_workspace_edit(response, is_refactoring=True))
+            future.add_done_callback(lambda f: show_summary_message(session.window, *f.result()))
 
     def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:

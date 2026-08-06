@@ -4,24 +4,25 @@ from .progress import ProgressReporter
 from .progress import ViewProgressReporter
 from .progress import WindowProgressReporter
 from typing import Any
+from typing import Coroutine
 from typing import TYPE_CHECKING
 from weakref import ref
 import sublime
 
 if TYPE_CHECKING:
     from .protocol import Request
+    from .sessions import CancellableRequest
     from .sessions import SessionViewProtocol
 
 
 class ActiveRequest:
     """Holds state per request."""
 
-    def __init__(self, sv: SessionViewProtocol, request_id: int, request: Request[Any, Any]) -> None:
+    def __init__(self, sv: SessionViewProtocol, cancellable: CancellableRequest, request: Request[Any, Any]) -> None:
         # sv is the parent object; there is no need to keep it alive explicitly.
         self.weaksv = ref(sv)
-        self.request_id = request_id
+        self.cancellable = cancellable
         self.request = request
-        self.canceled = False
         self.progress: ProgressReporter | None = None
         # `request.progress` is either a boolean or a string. If it's a boolean, then that signals that the server does
         # not support client-initiated progress. However, for some requests we still want to notify some kind of
@@ -47,8 +48,10 @@ class ActiveRequest:
 
             sublime.set_timeout_async(show, 200)
 
+    def cancel(self) -> Coroutine[None, None, int | None]:
+        return self.cancellable.cancel()
+
     def on_request_canceled_async(self) -> None:
-        self.canceled = True
         self.progress = None
 
     def _start_progress_reporter_async(
@@ -58,16 +61,16 @@ class ActiveRequest:
         percentage: float | None = None
     ) -> ProgressReporter | None:
         sv = self.weaksv()
-        if not sv:
+        if not sv or self.cancellable.cancelled:
             return None
         if self.request.view is not None:
-            key = f"lspprogressview-{sv.session.config.name}-{self.request.view.id()}-{self.request_id}"
+            key = f"lspprogressview-{sv.session.config.name}-{self.request.view.id()}-{self.cancellable.id}"
             return ViewProgressReporter(self.request.view, key, title, message, percentage)
-        key = f"lspprogresswindow-{sv.session.config.name}-{sv.session.window.id()}-{self.request_id}"
+        key = f"lspprogresswindow-{sv.session.config.name}-{sv.session.window.id()}-{self.cancellable.id}"
         return WindowProgressReporter(sv.session.window, key, title, message, percentage)
 
     def update_progress_async(self, params: dict[str, Any]) -> None:
-        if self.canceled:
+        if self.cancellable.cancelled:
             return
         value = params['value']
         kind = value['kind']

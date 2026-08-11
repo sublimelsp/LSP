@@ -28,6 +28,7 @@
 | `register_plugin(MyPlugin)` / `unregister_plugin(MyPlugin)` | `MyPlugin.register()` / `MyPlugin.unregister()` - no standalone import needed |
 | *(not present)* | `on_initialized_async()` |
 | *(not present)* | `on_pre_send_response_async(response)` |
+| *(not present)* | `on_transport_ready(reader, writer)` |
 
 The methods `on_selection_modified_async` and `on_session_end_async` are available in `LspPlugin` with the same name and the same signature. `on_pre_send_notification_async` and `on_server_notification_async` keep the same names but use more specific argument types — see step 11.
 

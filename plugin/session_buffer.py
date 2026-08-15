@@ -50,7 +50,7 @@ from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
-from .core.sessions import CancellableRequest
+from .core.sessions import RequestController
 from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
@@ -130,7 +130,7 @@ class PendingChanges:
 @dataclass
 class PendingDocumentDiagnosticRequest:
     version: int
-    request: CancellableRequest
+    request: RequestController
 
 
 class SemanticTokensData:
@@ -144,7 +144,7 @@ class SemanticTokensData:
         self.active_region_keys: set[int] = set()
         self.tokens: list[SemanticToken] = []
         self.view_change_count = 0
-        self.pending_response: CancellableRequest | None = None
+        self.pending_response: RequestController | None = None
 
     async def cancel(self) -> None:
         if self.pending_response:

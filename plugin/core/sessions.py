@@ -1009,8 +1009,8 @@ class Logger(ABC):
         pass
 
 
-class CancellableRequest:
-    """A request that is cancellable."""
+class RequestController:
+    """Controller for a pending request."""
 
     _id: int | None
     _weaksession: weakref.ref[Session]
@@ -1042,7 +1042,7 @@ class CancellableRequest:
         return self._id is None
 
 
-class CancellableInflightRequest(CancellableRequest, Generic[R]):
+class CancellableInflightRequest(RequestController, Generic[R]):
     """A request that is in flight. The result can be awaited."""
 
     _future: asyncio.Future[R | Error]
@@ -1147,7 +1147,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
-        self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, CancellableRequest | None] = {}
+        self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, RequestController | None] = {}
         self.exiting = False
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0

@@ -11,14 +11,14 @@ import sublime
 
 if TYPE_CHECKING:
     from .protocol import Request
-    from .sessions import CancellableRequest
+    from .sessions import RequestController
     from .sessions import SessionViewProtocol
 
 
 class ActiveRequest:
     """Holds state per request."""
 
-    def __init__(self, sv: SessionViewProtocol, cancellable: CancellableRequest, request: Request[Any, Any]) -> None:
+    def __init__(self, sv: SessionViewProtocol, cancellable: RequestController, request: Request[Any, Any]) -> None:
         # sv is the parent object; there is no need to keep it alive explicitly.
         self.weaksv = ref(sv)
         self.cancellable = cancellable

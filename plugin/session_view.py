@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from .core.protocol import Request
     from .core.protocol import ResolvedCodeLens
     from .core.sessions import AbstractViewListener
-    from .core.sessions import CancellableRequest
+    from .core.sessions import RequestController
     from .core.sessions import Session
 
 
@@ -351,7 +351,7 @@ class SessionView:
             else:
                 self.view.erase_regions(data.key)
 
-    def on_request_started_async(self, cancellable: CancellableRequest, request: Request[Any, Any]) -> None:
+    def on_request_started_async(self, cancellable: RequestController, request: Request[Any, Any]) -> None:
         self._active_requests[cancellable.id] = ActiveRequest(self, cancellable, request)
 
     def on_request_finished_async(self, request_id: int) -> None:

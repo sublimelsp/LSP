@@ -47,7 +47,7 @@ import sublime
 import webbrowser
 
 if TYPE_CHECKING:
-    from .core.sessions import CancellableInflightRequest
+    from .core.sessions import CancellableRequest
     from .core.sessions import RequestController
 
 SessionName: TypeAlias = str
@@ -207,7 +207,7 @@ class QueryCompletionsTask:
             )
         )
 
-    def _create_completion_request_async(self, session: Session) -> CancellableInflightRequest[CompletionResponse]:
+    def _create_completion_request_async(self, session: Session) -> CancellableRequest[CompletionResponse]:
         params = cast('CompletionParams', text_document_position_params(self._view, self._location))
         request = Request.complete(params, self._view)
         future = session.request(request)

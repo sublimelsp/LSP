@@ -1042,7 +1042,7 @@ class RequestController:
         return self._id is None
 
 
-class CancellableInflightRequest(RequestController, Generic[R]):
+class CancellableRequest(RequestController, Generic[R]):
     """A request that is in flight. The result can be awaited."""
 
     _future: asyncio.Future[R | Error]
@@ -2643,7 +2643,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     # --- RPC message handling ----------------------------------------------------------------------------------------
 
-    def request(self, r: Request[P_contra, R]) -> CancellableInflightRequest[R]:
+    def request(self, r: Request[P_contra, R]) -> CancellableRequest[R]:
         """
         Make a request to the language server.
 
@@ -2661,7 +2661,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         request_id = self.request_id
         loop = asyncio.get_running_loop()
         future = loop.create_future()
-        result = CancellableInflightRequest(future, request_id, self)
+        result = CancellableRequest(future, request_id, self)
         if r.progress and isinstance(r.params, dict):
             r.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         if r.on_partial_result and isinstance(r.params, dict):

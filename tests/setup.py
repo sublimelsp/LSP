@@ -28,7 +28,7 @@ import asyncio
 import sublime
 
 if TYPE_CHECKING:
-    from LSP.plugin.core.sessions import CancellableInflightRequest
+    from LSP.plugin.core.sessions import CancellableRequest
     from LSP.plugin.core.sessions import Session
     from LSP.plugin.core.windows import WindowManager
     from LSP.protocol import CodeAction
@@ -224,7 +224,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
             await tick()
 
     @classmethod
-    def await_message(cls, method: str) -> CancellableInflightRequest[LSPAny]:
+    def await_message(cls, method: str) -> CancellableRequest[LSPAny]:
         """
         Awaits until server receives a request with a specified method.
 
@@ -241,7 +241,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
         return cls.session.request(Request("$test/getReceived", {"method": method}))
 
     @classmethod
-    def make_server_do_fake_request(cls, method: str, params: LSPAny) -> CancellableInflightRequest[LSPAny]:
+    def make_server_do_fake_request(cls, method: str, params: LSPAny) -> CancellableRequest[LSPAny]:
         """Make the fake server do an arbitrary request."""
         assert cls.session
         return cls.session.request(Request("$test/fakeRequest", {"method": method, "params": params}))

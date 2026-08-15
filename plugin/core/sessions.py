@@ -2209,7 +2209,11 @@ class Session(APIHandler, TransportCallbacks):
         self.handle_diagnostics_async(params['uri'], None, None, params['diagnostics'])
 
     def handle_diagnostics_async(
-        self, uri: DocumentUri, identifier: DiagnosticsIdentifier, version: int | None, diagnostics: list[Diagnostic]
+        self,
+        uri: DocumentUri,
+        identifier: DiagnosticsIdentifier,
+        version: int | None,
+        diagnostics: list[Diagnostic] | None
     ) -> None:
         mgr = self.manager()
         if not mgr:
@@ -2218,8 +2222,11 @@ class Session(APIHandler, TransportCallbacks):
         if isinstance(reason, str):
             debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
             return
-        self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
-        mgr.on_diagnostics_updated()
+        if diagnostics is not None:
+            # `None` means we received an UnchangedDocumentDiagnosticReport, in which case we still have to redraw
+            # diagnostic regions in the view to maintain the original positions.
+            self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
+            mgr.on_diagnostics_updated()
         if session_buffer := self.get_session_buffer_for_uri_async(uri):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)

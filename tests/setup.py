@@ -20,6 +20,8 @@ import sublime
 if TYPE_CHECKING:
     from collections.abc import Generator
     from LSP.plugin.core.promise import Promise
+    from LSP.plugin.core.protocol import ServerRequest
+
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
@@ -257,6 +259,35 @@ class TextDocumentTestCase(DeferrableTestCase):
 
         payload = [{"method": method, "response": responses} for method, responses in responses]
         self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
+        yield from self.await_promise(promise)
+
+    def set_command_response_action(self, command_name: str, action: ServerRequest) -> Generator:
+        """
+        Make the fake server send a request when workspace/executeCommand is received.
+
+        Examples:
+            yield from self.set_command_response_action("myCommand", {
+                "method": "window/showDocument",
+                "params": {"uri": "file:///test.txt", "takeFocus": True}
+            })
+            yield from self.set_command_response_action("rename", {
+                "method": "workspace/applyEdit",
+                "params": {"edit": {"changes": {...}}}
+            })
+        """
+        assert self.session
+        promise = YieldPromise()
+
+        def handler(params: Any) -> None:
+            promise.fulfill(params)
+
+        def error_handler(params: Any) -> None:
+            print("Got error:", params, "awaiting timeout :(")
+
+        self.session.send_request(Request("$test/setupCommandAction", {
+            "commandName": command_name,
+            **action
+        }), handler, error_handler)
         yield from self.await_promise(promise)
 
     def await_client_notification(self, method: str, params: Any = None) -> Generator:

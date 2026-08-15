@@ -50,8 +50,8 @@ from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
-from .core.sessions import RequestController
 from .core.sessions import is_diagnostic_server_cancellation_data
+from .core.sessions import RequestController
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs

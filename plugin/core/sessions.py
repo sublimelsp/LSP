@@ -2223,10 +2223,11 @@ class Session(APIHandler, TransportCallbacks):
             debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
             return
         if diagnostics is not None:
-            # `None` means we received an UnchangedDocumentDiagnosticReport, in which case we still have to redraw
-            # diagnostic regions in the view to maintain the original positions.
             self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
             mgr.on_diagnostics_updated()
+        # Even if we received an UnchangedDocumentDiagnosticReport (represented by the diagnostics argument being None)
+        # we still have to redraw the diagnostic regions in the view to ensure they keep their original positions after
+        # a buffer change.
         if session_buffer := self.get_session_buffer_for_uri_async(uri):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)

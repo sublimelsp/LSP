@@ -353,9 +353,8 @@ class LspCodeActionsCommand(LspTextCommand):
             return self.is_enabled(event, point)
         return True
 
-    def run(
+    async def run(
         self,
-        edit: sublime.Edit,
         event: dict | None = None,
         only_kinds: list[str | CodeActionKind] | None = None,
         code_actions_by_config: list[CodeActionsByConfigName] | None = None
@@ -363,9 +362,6 @@ class LspCodeActionsCommand(LspTextCommand):
         if code_actions_by_config:
             self._handle_code_actions(code_actions_by_config, run_first=True)
             return
-        run_coroutine(self._run(only_kinds))
-
-    async def _run(self, only_kinds: list[str | CodeActionKind] | None = None) -> None:
         view = self.view
         region = first_selection_region(view)
         if region is None:
@@ -465,10 +461,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
     def want_event(self) -> bool:
         return True
 
-    def run(self, index: int, event: dict | None = None) -> None:
-        run_coroutine(self._run(index, event))
-
-    async def _run(self, index: int, event: dict | None) -> None:
+    async def run(self, index: int, event: dict | None = None) -> None:
         if self._is_cache_valid(event):
             config_name, action = self.actions_cache[index]
             if session := self.session_by_name(config_name):

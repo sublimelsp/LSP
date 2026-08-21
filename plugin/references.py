@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from .core.constants import RegionKey
-from .core.protocol import Point
 from .core.protocol import Request
+from .core.protocol import TextPosition
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
@@ -181,7 +181,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         placeholder = "References to " + word
         kind = get_symbol_kind_from_scope(self.view.scope_name(position))
         index = 0
-        locations.sort(key=lambda location: (location['uri'], Point.from_lsp(location['range']['start'])))
+        locations.sort(key=lambda location: (location['uri'], TextPosition.from_lsp(location['range']['start'])))
         if len(selection):
             pt = selection[0].b
             view_filename = self.view.file_name()
@@ -244,13 +244,13 @@ def _group_locations_by_uri(
     window: sublime.Window,
     config: ClientConfig,
     locations: list[Location]
-) -> dict[str, list[tuple[Point, str]]]:
+) -> dict[str, list[tuple[TextPosition, str]]]:
     """Return a dictionary that groups locations by the URI it belongs."""
-    grouped_locations: dict[str, list[tuple[Point, str]]] = {}
+    grouped_locations: dict[str, list[tuple[TextPosition, str]]] = {}
     for location in locations:
         uri, position = get_uri_and_position_from_location(location)
         file_path = config.map_server_uri_to_client_path(uri)
-        point = Point.from_lsp(position)
+        point = TextPosition.from_lsp(position)
         # get line of the reference, to showcase its use
         reference_line = get_line(window, file_path, point.row)
         if grouped_locations.get(file_path) is None:

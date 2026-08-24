@@ -671,14 +671,14 @@ class SessionBuffer:
         self._diagnostics_versions[identifier] = version
         self._document_diagnostic_pending_requests[identifier] = None
         self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
-        if is_related_full_document_diagnostic_report(response):
-            self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])
+        diagnostics = response['items'] if is_related_full_document_diagnostic_report(response) else None
+        self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, diagnostics)
         if related_documents := response.get('relatedDocuments'):
-            for uri, diagnostic_report in related_documents.items():
+            for uri, report in related_documents.items():
                 uri = normalize_uri(uri)
-                self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-                if is_full_document_diagnostic_report(diagnostic_report):
-                    self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
+                self.session.diagnostics_result_ids[(uri, identifier)] = report.get('resultId')
+                diagnostics = report['items'] if is_full_document_diagnostic_report(report) else None
+                self.session.handle_diagnostics_async(uri, identifier, None, diagnostics)
 
     def _on_document_diagnostic_error_async(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, error: ResponseError

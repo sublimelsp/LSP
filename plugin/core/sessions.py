@@ -2059,16 +2059,16 @@ class Session(APIHandler, TransportCallbacks):
     ) -> None:
         if reset_pending_response:
             self.workspace_diagnostics_pending_responses[identifier] = None
-        for diagnostic_report in response['items']:
-            uri = normalize_uri(diagnostic_report['uri'])
-            version = diagnostic_report['version']
+        for report in response['items']:
+            uri = normalize_uri(report['uri'])
+            version = report['version']
             # Skip if outdated
             if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri_async(uri)) and \
                     version < session_buffer.last_synced_version:
                 continue
-            self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-            if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
+            self.diagnostics_result_ids[(uri, identifier)] = report.get('resultId')
+            diagnostics = report['items'] if is_workspace_full_document_diagnostic_report(report) else None
+            self.handle_diagnostics_async(uri, identifier, version, diagnostics)
 
     def _on_workspace_diagnostics_error_async(self, identifier: DiagnosticsIdentifier, error: ResponseError) -> None:
         if error['code'] == LSPErrorCodes.ServerCancelled:
@@ -2209,7 +2209,11 @@ class Session(APIHandler, TransportCallbacks):
         self.handle_diagnostics_async(params['uri'], None, None, params['diagnostics'])
 
     def handle_diagnostics_async(
-        self, uri: DocumentUri, identifier: DiagnosticsIdentifier, version: int | None, diagnostics: list[Diagnostic]
+        self,
+        uri: DocumentUri,
+        identifier: DiagnosticsIdentifier,
+        version: int | None,
+        diagnostics: list[Diagnostic] | None
     ) -> None:
         mgr = self.manager()
         if not mgr:
@@ -2218,8 +2222,12 @@ class Session(APIHandler, TransportCallbacks):
         if isinstance(reason, str):
             debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
             return
-        self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
-        mgr.on_diagnostics_updated()
+        if diagnostics is not None:
+            self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
+            mgr.on_diagnostics_updated()
+        # Even if we received an UnchangedDocumentDiagnosticReport (represented by the diagnostics argument being None)
+        # we still have to redraw the diagnostic regions in the view to ensure they keep their original positions after
+        # a buffer change.
         if session_buffer := self.get_session_buffer_for_uri_async(uri):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)

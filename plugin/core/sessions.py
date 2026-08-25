@@ -1594,16 +1594,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return code_action_or_error
         return await self._apply_code_action(code_action_or_error, view)
 
-    @deprecated("use Session.run_code_action instead")
-    def run_code_action_async(
-        self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
-    ) -> Promise[Error | None]:
-        if task := self.create_task_threadsafe(
-            self.run_code_action(code_action, progress, view)
-        ):
-            return Promise.wrap_task(task)
-        raise RuntimeError("unable to schedule task")
-
     async def open_uri(
         self,
         uri: DocumentUri,

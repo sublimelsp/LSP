@@ -107,9 +107,9 @@ def run_on_worker_thread(f: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -
     return _run_on_st_thread(sublime.set_timeout_async, f, *args, **kwargs)
 
 
-def tick(n: int = 1) -> asyncio.Future[None]:
+def tick() -> asyncio.Future[None]:
     """
-    Wait until n ticks have occurred on the main thread.
+    Wait until at least 1 tick has occurred on the main thread.
 
     Must be called from the asyncio thread. You must await the returned future.
     """
@@ -121,15 +121,7 @@ def tick(n: int = 1) -> asyncio.Future[None]:
         if not future.done():
             future.set_result(None)
 
-    def iterate() -> None:
-        nonlocal n
-        n -= 1
-        if n > 0:
-            sublime.set_timeout(iterate)
-        else:
-            loop.call_soon_threadsafe(on_done)
-
-    sublime.set_timeout(iterate)
+    sublime.set_timeout(lambda: loop.call_soon_threadsafe(on_done))
     return future
 
 

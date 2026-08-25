@@ -60,11 +60,12 @@ async def open_file_uri(
     window: sublime.Window, uri: DocumentUri, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1
 ) -> sublime.View | None:
     decoded_uri = unquote(uri)  # decode percent-encoded characters
-    view = await open_file(window, decoded_uri, flags, group)
-    if view:
-        if fragment := urlparse(decoded_uri).fragment:
-            if selection := lsp_range_from_uri_fragment(fragment):
-                center_selection(view, selection)
+    if (
+        (view := await open_file(window, decoded_uri, flags, group))
+        and (fragment := urlparse(decoded_uri).fragment)
+        and (selection := lsp_range_from_uri_fragment(fragment))
+    ):
+        center_selection(view, selection)
     return view
 
 

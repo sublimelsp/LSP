@@ -38,11 +38,11 @@ class LspExecuteCommand(LspTextCommand):
             run_coroutine(self._run(session, command_name, params))
 
     async def _run(self, session: Session, command_name: str, params: ExecuteCommandParams) -> None:
-        try:
-            result: LSPAny = await session.run_command(params, progress=True, view=self.view)
+        result: LSPAny | Error = await session.run_command(params, progress=True, view=self.view)
+        if isinstance(result, Error):
+            self.handle_error_async(result, command_name)
+        else:
             self.handle_success_async(result, command_name)
-        except Error as error:
-            self.handle_error_async(error, command_name)
 
     def handle_success_async(self, result: Any, command_name: str) -> None:
         """

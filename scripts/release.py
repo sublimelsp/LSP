@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Generator
 import argparse
+import http.client
 import json
 import os
 import re
@@ -143,9 +144,8 @@ def publish_release(args: argparse.Namespace) -> None:
         "draft": False,
         "prerelease": False
     })
+    client = http.client.HTTPSConnection('api.github.com')
     try:
-        import http.client
-        client = http.client.HTTPSConnection('api.github.com')
         client.request('POST', post_url, body=data, headers=headers)
         response = client.getresponse()
         print(f"Release {version_with_prefix} published!"

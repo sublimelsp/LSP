@@ -5,7 +5,6 @@ from ..protocol import CodeActionContext
 from ..protocol import CodeActionKind
 from ..protocol import CodeActionParams
 from ..protocol import CodeActionTriggerKind
-from ..protocol import CodeLens
 from ..protocol import ColorInformation
 from ..protocol import Command
 from ..protocol import Diagnostic
@@ -19,12 +18,14 @@ from ..protocol import DocumentOnTypeFormattingOptions
 from ..protocol import DocumentOnTypeFormattingParams
 from ..protocol import DocumentUri
 from ..protocol import FullDocumentDiagnosticReport
-from ..protocol import InlayHint
 from ..protocol import InlayHintParams
 from ..protocol import LSPErrorCodes
 from ..protocol import RelatedFullDocumentDiagnosticReport
 from ..protocol import SemanticTokens
 from ..protocol import SemanticTokensDelta
+from ..protocol import SemanticTokensDeltaParams
+from ..protocol import SemanticTokensParams
+from ..protocol import SemanticTokensRangeParams
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
 from ..protocol import UnchangedDocumentDiagnosticReport
@@ -44,12 +45,13 @@ from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.constants import SEMANTIC_TOKENS_MAP
 from .core.constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .core.edit import apply_text_edits
+from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
-from .core.protocol import ResponseError
 from .core.sessions import is_diagnostic_server_cancellation_data
+from .core.sessions import RequestController
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
@@ -79,7 +81,6 @@ from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
 from .inlay_hint import inlay_hint_to_phantom
 from dataclasses import dataclass
-from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -129,7 +130,7 @@ class PendingChanges:
 @dataclass
 class PendingDocumentDiagnosticRequest:
     version: int
-    request_id: int
+    request: RequestController
 
 
 class SemanticTokensData:
@@ -143,7 +144,12 @@ class SemanticTokensData:
         self.active_region_keys: set[int] = set()
         self.tokens: list[SemanticToken] = []
         self.view_change_count = 0
-        self.pending_response: int | None = None
+        self.pending_response: RequestController | None = None
+
+    async def cancel(self) -> None:
+        if self.pending_response:
+            self.pending_response, pending_response = None, self.pending_response
+            await pending_response.cancel()
 
 
 class SessionBuffer(TaskContainer):
@@ -239,10 +245,10 @@ class SessionBuffer(TaskContainer):
                 self._do_color_boxes_async(view, version)
             self.create_task(self.do_document_diagnostic(view, version))
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
-                self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
+                self.create_task(self.do_semantic_tokens(view, view.size() > HUGE_FILE_SIZE))
             if request_flags & RequestFlags.INLAY_HINT:
-                self.do_inlay_hints_async(view)
-            self.do_code_lenses_async(view)
+                self.create_task(self.do_inlay_hints(view))
+            self.create_task(self.do_code_lenses(view))
             if userprefs().link_highlight_style == 'underline':
                 self._do_document_link_async(view, version)
             await self.session.notify_plugin_on_session_buffer_change(self)
@@ -329,7 +335,7 @@ class SessionBuffer(TaskContainer):
                     self.create_task(self.do_document_diagnostic(view, view.change_count()))
             elif capability_path.startswith("codeLensProvider"):
                 if not suppress_requests:
-                    self.do_code_lenses_async(view)
+                    self.create_task(self.do_code_lenses(view))
             elif capability_path == "executeCommandProvider":
                 self._dynamically_registered_commands[registration_id] = options['commands']
                 self._update_supported_commands()
@@ -401,7 +407,7 @@ class SessionBuffer(TaskContainer):
             purge = True
         if not purge:
             return
-        self._cancel_pending_requests_async()
+        self.create_task(self._cancel_pending_requests())
         if (
             userprefs().format_on_type
             and last_change.len_utf16 == 0
@@ -410,15 +416,13 @@ class SessionBuffer(TaskContainer):
 
             async def purge_changes_and_do_on_type_formatting() -> None:
                 await self.purge_changes(view)
-                try:
-                    if (
-                        (result := await self.session.request(Request.onTypeFormatting(params, view)))
-                        and view.is_valid()
-                        and change_count == view.change_count()
-                    ):
-                        await apply_text_edits(view, result)
-                except Error:
-                    pass
+                if (
+                    (result := await self.session.request(Request.onTypeFormatting(params, view)))
+                    and not isinstance(result, Error)
+                    and view.is_valid()
+                    and change_count == view.change_count()
+                ):
+                    await apply_text_edits(view, result)
 
             self.create_task(purge_changes_and_do_on_type_formatting())
         else:
@@ -430,14 +434,13 @@ class SessionBuffer(TaskContainer):
 
             self.create_task(maybe_purge_later())
 
-    def _cancel_pending_requests_async(self) -> None:
-        for identifier, pending_request in self._document_diagnostic_pending_requests.items():
-            if pending_request:
-                self.session.cancel_request_async(pending_request.request_id)
+    async def _cancel_pending_requests(self) -> None:
+        for identifier, pending in self._document_diagnostic_pending_requests.items():
+            if pending:
+                await pending.request.cancel()
                 self._document_diagnostic_pending_requests[identifier] = None
         if self.semantic_tokens.pending_response:
-            self.session.cancel_request_async(self.semantic_tokens.pending_response)
-            self.semantic_tokens.pending_response = None
+            await self.semantic_tokens.cancel()
 
     async def on_revert(self, view: sublime.View) -> None:
         self._pending_changes = None  # Don't bother with pending changes
@@ -482,12 +485,12 @@ class SessionBuffer(TaskContainer):
                 self._do_color_boxes_async(view, version)
             self.create_task(self.do_document_diagnostic(view, version))
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
-                self.do_semantic_tokens_async(view)
+                self.create_task(self.do_semantic_tokens(view))
             if userprefs().link_highlight_style == 'underline':
                 self._do_document_link_async(view, version)
             if request_flags & RequestFlags.INLAY_HINT:
-                self.do_inlay_hints_async(view)
-            self.do_code_lenses_async(view)
+                self.create_task(self.do_inlay_hints(view))
+            self.create_task(self.do_code_lenses(view))
         except MissingUriError:
             pass
 
@@ -692,44 +695,42 @@ class SessionBuffer(TaskContainer):
     ) -> None:
         if version == self._diagnostics_versions.get(identifier, -1) and not forced_update:
             return
-        if pending_request := self._document_diagnostic_pending_requests.get(identifier):
-            if pending_request.version == version and not forced_update:
+        if pending := self._document_diagnostic_pending_requests.get(identifier):
+            if pending.version == version and not forced_update:
                 return
-            self.session.cancel_request_async(pending_request.request_id)
+            if not pending.request.cancelled:
+                await pending.request.cancel()
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
         if identifier:
             params['identifier'] = identifier
         if (result_id := self.session.diagnostics_result_ids.get((self._last_known_uri, identifier))) is not None:
             params['previousResultId'] = result_id
         req = self.session.request(Request.documentDiagnostic(params, view))
-        self._document_diagnostic_pending_requests[identifier] = PendingDocumentDiagnosticRequest(version, req.id)
+        self._document_diagnostic_pending_requests[identifier] = PendingDocumentDiagnosticRequest(version, req)
         error: Error | None = None
-        try:
-            response = await req
+        response = await req
+        if isinstance(response, Error):
+            if response.code == LSPErrorCodes.ServerCancelled:
+                error = response
+            elif response.code != LSPErrorCodes.RequestCancelled:
+                debug(f"error loading diagnostics: {response}")
+        else:
             self._diagnostics_versions[identifier] = version
             self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
-            if is_related_full_document_diagnostic_report(response):
-                self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])
+            diagnostics = response['items'] if is_related_full_document_diagnostic_report(response) else None
+            self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, diagnostics)
             if related_documents := response.get('relatedDocuments'):
-                for uri, diagnostic_report in related_documents.items():
+                for uri, report in related_documents.items():
                     uri = normalize_uri(uri)
-                    self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-                    if is_full_document_diagnostic_report(diagnostic_report):
-                        self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
-        except Error as e:
-            error = e
-        finally:
-            self._document_diagnostic_pending_requests[identifier] = None
-        if (
-            error
-            and error.code == LSPErrorCodes.ServerCancelled
-            and is_diagnostic_server_cancellation_data(error.data)
-            and error.data['retriggerRequest']
-        ):
+                    self.session.diagnostics_result_ids[(uri, identifier)] = report.get('resultId')
+                    diagnostics = report['items'] if is_full_document_diagnostic_report(report) else None
+                    self.session.handle_diagnostics_async(uri, identifier, None, diagnostics)
+        self._document_diagnostic_pending_requests[identifier] = None
+        if error and is_diagnostic_server_cancellation_data(error.data) and error.data['retriggerRequest']:
             # Retrigger the request after a short delay, but only if there are no additional changes to the
             # buffer in the meanwhile, because in that case a new request will be sent automatically after the
             # didChange notification.
-            await asyncio.sleep(DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY)
+            await asyncio.sleep(DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY / 1000.0)
             if version == view.change_count():
                 self.create_task(self._do_document_diagnostic(view, identifier, version))
 
@@ -845,7 +846,7 @@ class SessionBuffer(TaskContainer):
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 
-    def do_semantic_tokens_async(self, view: sublime.View, only_viewport: bool = False) -> None:
+    async def do_semantic_tokens(self, view: sublime.View, only_viewport: bool = False) -> None:
         if not userprefs().semantic_highlighting:
             return
         if not self.has_capability("semanticTokensProvider"):
@@ -853,51 +854,58 @@ class SessionBuffer(TaskContainer):
         if not self._semantic_highlighting_supported_by_color_scheme:
             return
         if self.semantic_tokens.pending_response:
-            self.session.cancel_request_async(self.semantic_tokens.pending_response)
+            pending_response, self.semantic_tokens.pending_response = self.semantic_tokens.pending_response, None
+            await pending_response.cancel()
         self.semantic_tokens.view_change_count = view.change_count()
-        if only_viewport and self.has_capability("semanticTokensProvider.range"):
-            request = Request.semanticTokensRange({
-                "textDocument": text_document_identifier(view),
-                "range": region_to_range(view, view.visible_region())
-            }, view)
-            self.semantic_tokens.pending_response = self.session.send_request_async(
-                request, partial(self._on_semantic_tokens_viewport_async, view), self._on_semantic_tokens_error_async)
-        elif self.semantic_tokens.result_id and self.has_capability("semanticTokensProvider.full.delta"):
-            request = Request.semanticTokensFullDelta({
-                "textDocument": text_document_identifier(view),
-                "previousResultId": self.semantic_tokens.result_id
-            }, view)
-            self.semantic_tokens.pending_response = self.session.send_request_async(
-                request, self._on_semantic_tokens_delta_async, self._on_semantic_tokens_error_async)
-        elif self.has_capability("semanticTokensProvider.full"):
-            request = Request.semanticTokensFull({
-                "textDocument": text_document_identifier(view),
-            }, view)
-            self.semantic_tokens.pending_response = self.session.send_request_async(
-                request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
-        elif self.has_capability("semanticTokensProvider.range"):
-            request = Request.semanticTokensRange({
-                "textDocument": text_document_identifier(view),
-                "range": entire_content_range(view)
-            }, view)
-            self.semantic_tokens.pending_response = self.session.send_request_async(
-                request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
         self._reset_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
+        try:
+            if only_viewport and self.has_capability("semanticTokensProvider.range"):
+                await self._do_semantic_tokens(view, Request.semanticTokensRange({
+                    "textDocument": text_document_identifier(view),
+                    "range": region_to_range(view, view.visible_region())
+                }, view), only_viewport)
+            elif self.semantic_tokens.result_id and self.has_capability("semanticTokensProvider.full.delta"):
+                await self._do_semantic_tokens_delta(Request.semanticTokensFullDelta({
+                    "textDocument": text_document_identifier(view),
+                    "previousResultId": self.semantic_tokens.result_id
+                }, view))
+            elif self.has_capability("semanticTokensProvider.full"):
+                await self._do_semantic_tokens(view, Request.semanticTokensFull({
+                    "textDocument": text_document_identifier(view),
+                }, view))
+            elif self.has_capability("semanticTokensProvider.range"):
+                await self._do_semantic_tokens(view, Request.semanticTokensRange({
+                    "textDocument": text_document_identifier(view),
+                    "range": entire_content_range(view)
+                }, view))
+        except BaseException:
+            self.semantic_tokens.result_id = None
+            raise
 
-    def _on_semantic_tokens_async(self, response: SemanticTokens | None) -> None:
-        self.semantic_tokens.pending_response = None
-        if response:
+    async def _do_semantic_tokens(
+        self,
+        view: sublime.View,
+        request: Request[SemanticTokensParams, SemanticTokens | None]
+        | Request[SemanticTokensRangeParams, SemanticTokens | None],
+        only_viewport: bool = False,
+    ) -> None:
+        self.semantic_tokens.pending_response = self.session.request(request)
+        if (response := await self.semantic_tokens.pending_response) and not isinstance(response, Error):
+            self.semantic_tokens.pending_response = None
             self.semantic_tokens.result_id = response.get("resultId")
             self.semantic_tokens.data = response["data"]
             self._draw_semantic_tokens_async()
+            if only_viewport:
+                # now request semantic tokens for the full file
+                self.create_task(self.do_semantic_tokens(view))
 
-    def _on_semantic_tokens_viewport_async(self, view: sublime.View, response: SemanticTokens | None) -> None:
-        self._on_semantic_tokens_async(response)
-        self.do_semantic_tokens_async(view)  # now request semantic tokens for the full file
-
-    def _on_semantic_tokens_delta_async(self, response: SemanticTokens | SemanticTokensDelta | None) -> None:
-        self.semantic_tokens.pending_response = None
-        if response:
+    async def _do_semantic_tokens_delta(
+        self,
+        request: Request[SemanticTokensDeltaParams, SemanticTokens | SemanticTokensDelta | None]
+    ) -> None:
+        self.semantic_tokens.pending_response = self.session.request(request)
+        if (response := await self.semantic_tokens.pending_response) and not isinstance(response, Error):
+            self.semantic_tokens.pending_response = None
             self.semantic_tokens.result_id = response.get("resultId")
             if "edits" in response:  # response is of type SemanticTokensDelta
                 for semantic_tokens_edit in response["edits"]:
@@ -910,10 +918,6 @@ class SessionBuffer(TaskContainer):
             elif "data" in response:  # response is of type SemanticTokens
                 self.semantic_tokens.data = response["data"]
             self._draw_semantic_tokens_async()
-
-    def _on_semantic_tokens_error_async(self, _: ResponseError) -> None:
-        self.semantic_tokens.pending_response = None
-        self.semantic_tokens.result_id = None
 
     def _draw_semantic_tokens_async(self) -> None:
         view = self.some_view()
@@ -984,7 +988,7 @@ class SessionBuffer(TaskContainer):
 
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 
-    def do_inlay_hints_async(self, view: sublime.View) -> None:
+    async def do_inlay_hints(self, view: sublime.View) -> None:
         if not self.has_capability("inlayHintProvider"):
             return
         window = view.window()
@@ -997,14 +1001,10 @@ class SessionBuffer(TaskContainer):
             "textDocument": text_document_identifier(view),
             "range": entire_content_range(view)
         }
-        self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
         self._reset_pending_refresh(RequestFlags.INLAY_HINT)
-
-    def _on_inlay_hints_async(self, response: list[InlayHint] | None) -> None:
-        if response:
-            view = self.some_view()
-            if not view:
-                return
+        if (response := await self.session.request(Request.inlayHint(params, view))) and not isinstance(
+            response, Error
+        ):
             phantoms = [inlay_hint_to_phantom(view, inlay_hint, self.session) for inlay_hint in response]
             sublime.set_timeout(lambda: self.present_inlay_hints(phantoms))
         else:
@@ -1033,8 +1033,12 @@ class SessionBuffer(TaskContainer):
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = None,
         trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic,
-    ) -> Promise[list[Command | CodeAction] | BaseException | None]:
-        if task := self.create_task(self.request_code_actions(view, region, diagnostics, kinds, trigger_kind)):
+        *,
+        progress: bool = False,
+    ) -> Promise[list[Command | CodeAction] | Error | None]:
+        if task := self.create_task(
+            self.request_code_actions(view, region, diagnostics, kinds, trigger_kind, progress=progress)
+        ):
             return Promise.wrap_task(task)
         raise RuntimeError("unable to schedule task")
 
@@ -1044,8 +1048,10 @@ class SessionBuffer(TaskContainer):
         region: sublime.Region,
         diagnostics: list[Diagnostic],
         kinds: list[str | CodeActionKind] | None = None,
-        trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
-    ) -> list[Command | CodeAction] | None:
+        trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic,
+        *,
+        progress: bool = False,
+    ) -> list[Command | CodeAction] | Error | None:
         context: CodeActionContext = {
             'diagnostics': diagnostics,
             'triggerKind': trigger_kind
@@ -1057,37 +1063,45 @@ class SessionBuffer(TaskContainer):
             'range': region_to_range(view, region),
             'context': context
         }
-        return await self.session.request(Request.codeAction(params, view))
+        return await self.session.request(Request.codeAction(params, view, progress=progress))
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
-    def do_code_lenses_async(self, view: sublime.View) -> None:
+    async def do_code_lenses(self, view: sublime.View) -> None:
         if not self.has_capability('codeLensProvider'):
             return
         if not LspToggleCodeLensesCommand.are_enabled(view.window()):
             return
         for sv in self.session_views:
             if sv.view == view:
-                for request_id, data in sv.active_requests.items():
-                    if data.request.method == 'codeLens/resolve':
-                        self.session.cancel_request_async(request_id)
+                await asyncio.gather(
+                    *(
+                        data.cancel()
+                        for data in sv.active_requests.values()
+                        if data.request.method == 'codeLens/resolve'
+                    )
+                )
                 break
-        request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
-        self.session.send_request_async(request, partial(self._on_code_lenses_async, view))
         self._reset_pending_refresh(RequestFlags.CODE_LENS)
+        code_lenses = await self.session.request(
+            Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
+        )
+        if not isinstance(code_lenses, Error):
+            self._code_lenses.handle_response_async(code_lenses or [])
+            await self.resolve_visible_code_lenses(view)
 
-    def _on_code_lenses_async(self, view: sublime.View, response: list[CodeLens] | None) -> None:
-        self._code_lenses.handle_response_async(response or [])
-        self.resolve_visible_code_lenses_async(view)
-
-    def resolve_visible_code_lenses_async(self, view: sublime.View) -> None:
-        promises: list[Promise[None]] = []
+    async def resolve_visible_code_lenses(self, view: sublime.View) -> None:
         if self.has_capability('codeLensProvider.resolveProvider'):
-            for code_lens in self._code_lenses.unresolved_visible_code_lenses(view):
-                request = Request('codeLens/resolve', code_lens.data, view)
-                promise = self.session.send_request_task(request).then(code_lens.on_resolve)
-                promises.append(promise)
-        Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async())
+            _ = await asyncio.gather(
+                *(
+                    code_lens.resolve(self.session, view)
+                    for code_lens in self._code_lenses.unresolved_visible_code_lenses(view)
+                ),
+                return_exceptions=True,
+            )
+        supported_code_lenses = self._filter_supported_code_lenses()
+        for sv in self.session_views:
+            sv.handle_code_lenses_async(supported_code_lenses)
 
     def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
         code_lenses_with_command = self._code_lenses.code_lenses_with_command()
@@ -1105,11 +1119,6 @@ class SessionBuffer(TaskContainer):
             else:
                 self.session.check_log_unsupported_command(command_name)
         return supported_code_lenses
-
-    def _on_visible_code_lenses_resolved_async(self) -> None:
-        supported_code_lenses = self._filter_supported_code_lenses()
-        for sv in self.session_views:
-            sv.handle_code_lenses_async(supported_code_lenses)
 
     # ------------------------------------------------------------------------------------------------------------------
 

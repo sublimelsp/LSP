@@ -55,8 +55,8 @@ class DottedDict:
         current: Any = self._d
         keys = path.split('.')
         for key in keys:
-            if isinstance(current, dict):
-                current = current.get(key)
+            if isinstance(current, dict) and key in current:
+                current = current[key]
             else:
                 return default
         return current

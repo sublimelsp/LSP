@@ -34,8 +34,10 @@ from .plugin.core.settings import unload_settings
 from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
+from .plugin.core.tree_view import LspActivateTreeItemCommand
 from .plugin.core.tree_view import LspCollapseTreeItemCommand
 from .plugin.core.tree_view import LspExpandTreeItemCommand
+from .plugin.core.tree_view import LspHandleTreeViewActionCommand
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener
@@ -104,6 +106,7 @@ if TYPE_CHECKING:
 __all__ = (
     "DocumentSyncListener",
     "Listener",
+    "LspActivateTreeItemCommand",
     "LspApplyDocumentEditCommand",
     "LspApplyTextDocumentEditCommand",
     "LspApplyWorkspaceEditCommand",
@@ -135,6 +138,7 @@ __all__ = (
     "LspFormatDocumentCommand",
     "LspFormatDocumentRangeCommand",
     "LspGotoDiagnosticCommand",
+    "LspHandleTreeViewActionCommand",
     "LspHierarchyToggleCommand",
     "LspHoverCommand",
     "LspInlayHintClickCommand",
@@ -206,8 +210,7 @@ def _register_all_plugins() -> None:
 
 def _unregister_all_plugins() -> None:
     g_plugins.clear()
-    client_configs.external.clear()
-    client_configs.all.clear()
+    client_configs.remove_all_configs()
 
 
 def plugin_loaded() -> None:
@@ -229,6 +232,10 @@ def plugin_loaded() -> None:
 def plugin_unloaded() -> None:
     _unregister_all_plugins()
     run_coroutine(windows.disable())
+    for listeners in sublime_plugin.view_event_listeners.values():
+        for listener in listeners:
+            if isinstance(listener, DocumentSyncListener):
+                listener.before_destroy()
     unload_settings()
 
 

@@ -153,7 +153,7 @@ class WindowConfigManager:
             if changed := changes['settings_changed']:
                 for listener in self._change_listeners:
                     listener.on_server_settings_changed(changed)
-            if changed := changes['root_changed'] + changes['removed']:
+            if changed := changes['root_changed'] + changes['removed'] + changes['added']:
                 for listener in self._change_listeners:
                     listener.on_configs_changed(changed)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..protocol import LSPAny
+from .core.aio import run_on_threadpool
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
 from .core.protocol import Response
@@ -23,7 +24,6 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 from typing_extensions import deprecated
-import asyncio
 import inspect
 import sublime
 
@@ -300,14 +300,13 @@ def uri_handler(scheme: str) -> Callable[[UriHandlerForDecorator], UriHandlerFor
     """
     Decorator to mark a method as a handler for URIs with a specific scheme.
 
-    The decorated method receives the full URI and a `sublime.NewFileFlags` bitflag and must return a `Promise`
-    resolved with the opened `sublime.Sheet`, or `None` if the URI could not be opened.
-    Decorated method is called on the async thread.
+    The decorated async method receives the full URI and a `sublime.NewFileFlags` bitflag and must return an opened
+    `sublime.Sheet`, or `None` if the URI could not be opened.
 
     Usage:
         ```py
         @uri_handler('foo')
-        def on_open_foo_uri(self, uri: DocumentUri, flags: sublime.NewFileFlags) -> Promise[sublime.Sheet | None]:
+        async def on_open_foo_uri(self, uri: DocumentUri, flags: sublime.NewFileFlags) -> sublime.Sheet | None:
             ...
         ```
 
@@ -483,7 +482,7 @@ class LspPlugin(APIHandler):
         # We don't want to use Sublime's worker thread for this any longer.
         # Utilize the default thread pool instead.
         # https://docs.python.org/3/library/asyncio-dev.html#running-blocking-code
-        await asyncio.get_running_loop().run_in_executor(None, cls.on_pre_start_async, context)
+        await run_on_threadpool(cls.on_pre_start_async, context)
 
     def __init__(self, weaksession: ref[Session]) -> None:
         """

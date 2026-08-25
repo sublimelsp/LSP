@@ -150,8 +150,7 @@ async def gather_and_flatten_exceptions(*coros: Coroutine[Any, Any, list[Excepti
     flattened list of Exceptions that occurred for each coroutine. BaseExceptions are filtered out.
     """
     exceptions: list[Exception] = []
-    items: list[BaseException | list[Exception]] = await asyncio.gather(*coros, return_exceptions=True)
-    for item in items:
+    for item in await asyncio.gather(*coros, return_exceptions=True):
         # Only keep exceptions derived from Exception. Exceptions derived from BaseException, but not derived from
         # Exception are things like asyncio.CancelledError or SystemExit and should be ignored.
         if isinstance(item, Exception):

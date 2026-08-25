@@ -18,10 +18,10 @@ if TYPE_CHECKING:
 class ActiveRequest:
     """Holds state per request."""
 
-    def __init__(self, sv: SessionViewProtocol, cancellable: RequestController, request: Request[Any, Any]) -> None:
+    def __init__(self, sv: SessionViewProtocol, controller: RequestController, request: Request[Any, Any]) -> None:
         # sv is the parent object; there is no need to keep it alive explicitly.
         self.weaksv = ref(sv)
-        self.cancellable = cancellable
+        self.controller = controller
         self.request = request
         self.progress: ProgressReporter | None = None
         # `request.progress` is either a boolean or a string. If it's a boolean, then that signals that the server does
@@ -49,7 +49,7 @@ class ActiveRequest:
             sublime.set_timeout_async(show, 200)
 
     def cancel(self) -> Coroutine[None, None, int | None]:
-        return self.cancellable.cancel()
+        return self.controller.cancel()
 
     def on_request_canceled_async(self) -> None:
         self.progress = None
@@ -61,16 +61,16 @@ class ActiveRequest:
         percentage: float | None = None
     ) -> ProgressReporter | None:
         sv = self.weaksv()
-        if not sv or self.cancellable.cancelled:
+        if not sv or self.controller.cancelled:
             return None
         if self.request.view is not None:
-            key = f"lspprogressview-{sv.session.config.name}-{self.request.view.id()}-{self.cancellable.id}"
+            key = f"lspprogressview-{sv.session.config.name}-{self.request.view.id()}-{self.controller.id}"
             return ViewProgressReporter(self.request.view, key, title, message, percentage)
-        key = f"lspprogresswindow-{sv.session.config.name}-{sv.session.window.id()}-{self.cancellable.id}"
+        key = f"lspprogresswindow-{sv.session.config.name}-{sv.session.window.id()}-{self.controller.id}"
         return WindowProgressReporter(sv.session.window, key, title, message, percentage)
 
     def update_progress_async(self, params: dict[str, Any]) -> None:
-        if self.cancellable.cancelled:
+        if self.controller.cancelled:
             return
         value = params['value']
         kind = value['kind']

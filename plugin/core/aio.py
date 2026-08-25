@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from .logging import debug
 from .logging import exception_log
-from enum import IntFlag
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -24,35 +23,20 @@ if TYPE_CHECKING:
     P = ParamSpec("P")
 
 
-class ExceptionPolicy(IntFlag):
-    IGNORE = 0
-    STACKTRACE = 1
-    MESSAGEBOX = 2
-
-
 _futures: set[concurrent.futures.Future] = set()
 
 
-def _on_future_done(exception_policy: ExceptionPolicy, fut: concurrent.futures.Future[Any]) -> None:
+def _on_future_done(fut: concurrent.futures.Future[Any]) -> None:
     _futures.discard(fut)
     if not fut.cancelled() and (ex := fut.exception()):
-        if exception_policy & ExceptionPolicy.STACKTRACE:
-            exception_log("coroutine finished with exception", ex)
-        if exception_policy & ExceptionPolicy.MESSAGEBOX:
-            message = f"Error: {ex}"
-            if exception_policy & ExceptionPolicy.STACKTRACE:
-                message += "\n\n(See the Console for more information)"
-            sublime.error_message(message)
+        exception_log("coroutine finished with exception", ex)
 
 
-def run_coroutine(
-    coroutine: Coroutine[object, object, T], *, exception_policy: ExceptionPolicy = ExceptionPolicy.STACKTRACE
-) -> concurrent.futures.Future[T]:
+def run_coroutine(coroutine: Coroutine[object, object, T]) -> concurrent.futures.Future[T]:
     """
     Start the execution of a coroutine in the asyncio thread, from any thread.
 
     :param coroutine: a coroutine to run.
-    :param exception_policy: what to do when the coroutine finishes with an uncaught exception.
     :return: a handle to a concurrent future object.
 
     When you are certain you are already in the asyncio thread, then use one of:
@@ -64,7 +48,7 @@ def run_coroutine(
       `asyncio.create_task`, keeps a (strong) reference to the Task object.
     """
     future = sublime_aio.run_coroutine(coroutine)
-    future.add_done_callback(partial(_on_future_done, exception_policy))
+    future.add_done_callback(_on_future_done)
     _futures.add(future)
     return future
 

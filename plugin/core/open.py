@@ -115,14 +115,12 @@ async def open_file(
                 g_opening_files[file] = future
 
             def on_main_thread() -> None:
-
                 # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's
                 # supposed to open as a separate view).
                 view = _find_open_file(window, file)
                 if view and _return_existing_view(flags, window.get_view_index(view)[0], window.active_group(), group):
                     loop.call_soon_threadsafe(lambda: resolve_right_now(view))
                     return
-
                 was_already_open = view is not None
                 if not was_already_open and not os.path.isfile(file):
                     # window.open_file creates a new view with empty content if the path from the given URI doesn't
@@ -130,7 +128,6 @@ async def open_file(
                     # file for a given URI, it must use the CreateFile resource operation in a WorkspaceEdit.
                     loop.call_soon_threadsafe(lambda: resolve_right_now(view))
                     return
-
                 view = window.open_file(file, flags, group)
                 if not view.is_loading():
                     if was_already_open and (flags & sublime.NewFileFlags.SEMI_TRANSIENT):
@@ -139,7 +136,6 @@ async def open_file(
                         sublime_plugin.check_view_event_listeners(view)  # type: ignore
                     # It's already loaded. Possibly already open in a tab.
                     loop.call_soon_threadsafe(lambda: resolve_right_now(view))
-
                 loop.call_soon_threadsafe(resolve_later)
 
             await run_on_main_thread(on_main_thread)

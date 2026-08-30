@@ -2629,6 +2629,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.exiting = True
         self.state = ClientStates.STOPPING
         self.transport = None
+        for _request, _result_handler, error_handler in self._response_handlers.values():
+            error_handler(Error(ErrorCodes.InternalError, "transport closed").to_lsp())
         self._response_handlers.clear()
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):

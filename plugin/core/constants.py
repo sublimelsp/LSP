@@ -307,7 +307,6 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "text.advanced_csv": "csv",  # https://github.com/SublimeText/AFileIcon
     "text.django": LanguageKind.HTML,  # https://github.com/willstott101/django-sublime-syntax
     "text.git.commit": LanguageKind.GitCommit,
-    "text.git.commit-message": LanguageKind.GitCommit,
     "text.git.rebase": LanguageKind.GitRebase,
     "text.html.handlebars": LanguageKind.Handlebars,
     "text.html.markdown": LanguageKind.Markdown,

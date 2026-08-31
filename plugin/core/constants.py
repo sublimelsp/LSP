@@ -287,8 +287,6 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "source.cs": LanguageKind.CSharp,
     "source.dosbatch": LanguageKind.WindowsBat,
     "source.fixedform-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
-    "source.git.commit": LanguageKind.GitCommit,
-    "source.git.rebase": LanguageKind.GitRebase,
     "source.js": LanguageKind.JavaScript,
     "source.js.react": LanguageKind.JavaScriptReact,  # https://github.com/Thom1729/Sublime-JS-Custom
     "source.json-tmlanguage": "jsonc",  # https://github.com/SublimeText/PackageDev
@@ -308,6 +306,9 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "source.yaml.helm": 'helm',  # https://github.com/SublimeText/YamlPipelines
     "text.advanced_csv": "csv",  # https://github.com/SublimeText/AFileIcon
     "text.django": LanguageKind.HTML,  # https://github.com/willstott101/django-sublime-syntax
+    "text.git.commit": LanguageKind.GitCommit,
+    "text.git.commit-message": LanguageKind.GitCommit,
+    "text.git.rebase": LanguageKind.GitRebase,
     "text.html.handlebars": LanguageKind.Handlebars,
     "text.html.markdown": LanguageKind.Markdown,
     "text.html.markdown.rmarkdown": LanguageKind.R,  # https://github.com/REditorSupport/sublime-ide-r

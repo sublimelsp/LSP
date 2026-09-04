@@ -74,9 +74,9 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
         await self.on_before_tasks()
         self._tasks_runner = asyncio.create_task(self._run_tasks())
         try:
-            await asyncio.wait_for(self._tasks_runner, timeout=userprefs().on_save_task_timeout_ms / 1000)
-        except asyncio.exceptions.TimeoutError:
-            sublime.status_message('Running "on save" tasks took too long!')
+            await self._tasks_runner
+        except TimeoutError as ex:
+            sublime.status_message(str(ex))
         except Exception as ex:
             sublime.status_message("Error running save tasks. See the Console for more information.")
             exception_log("Error running save tasks", ex)
@@ -86,4 +86,7 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
     async def _run_tasks(self) -> None:
         for task in self.tasks:
             if task.is_applicable(self.view):
-                await task(self).run()
+                try:
+                    await asyncio.wait_for(task(self).run(), timeout=userprefs().on_save_task_timeout_ms / 1000)
+                except asyncio.TimeoutError as ex:
+                    raise TimeoutError(f'Timeout processing {task.__name__}') from ex

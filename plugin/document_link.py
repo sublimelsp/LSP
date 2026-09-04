@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from .core.aio import run_coroutine
+from .core.logging import exception_log
 from .core.open import open_file_uri
 from .core.open import open_in_browser
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
@@ -42,12 +44,17 @@ class LspOpenLinkCommand(LspTextCommand):
                 response = await session.request(
                     Request.documentLink({'textDocument': text_document_identifier(self.view)}, self.view)
                 )
+                if isinstance(response, Error):
+                    return
                 for link in response or []:
                     if range_to_region(link['range'], self.view).contains(position):
                         if (uri := link.get('target')) is not None:
                             await self._open_uri(session, uri)
                         elif session.has_capability('documentLinkProvider.resolveProvider'):
                             link = await session.request(Request.resolveDocumentLink(link, self.view))
+                            if isinstance(link, Error):
+                                exception_log("error resolving link", link)
+                                continue
                             if uri := link.get('target'):
                                 await self._open_uri(session, uri)
                         return

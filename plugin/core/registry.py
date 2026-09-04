@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .aio import run_coroutine
+from .settings import userprefs
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
@@ -250,7 +251,9 @@ class LspCheckApplicableCommand(sublime_plugin.TextCommand):
             await wm.recheck_is_applicable(self.view, session_name)
 
 
-def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = True) -> None:
+def navigate_diagnostics(
+    view: sublime.View, point: int | None, severity_level: int | None, *, forward: bool = True
+) -> None:
     try:
         uri = uri_from_view(view)
     except MissingUriError:
@@ -258,9 +261,11 @@ def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = 
     wm = windows.lookup(view.window())
     if not wm:
         return
+    if severity_level is None:
+        severity_level = userprefs().show_diagnostics_severity_level
     diagnostics: list[Diagnostic] = []
     for session in wm.get_sessions():
-        diagnostics.extend(session.diagnostics.get_diagnostics_for_uri(uri))
+        diagnostics.extend(session.diagnostics.get_diagnostics_for_uri(uri, severity_level))
     if not diagnostics:
         return
     # Sort diagnostics by location
@@ -291,8 +296,8 @@ def _show_diagnostic_popup(view: sublime.View, point: int) -> None:
 
 class LspNextDiagnosticCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, point: int | None = None) -> None:
-        navigate_diagnostics(self.view, point, forward=True)
+    def run(self, edit: sublime.Edit, point: int | None = None, severity_level: int | None = None) -> None:
+        navigate_diagnostics(self.view, point, severity_level, forward=True)
 
     def want_event(self) -> bool:
         return False
@@ -300,8 +305,8 @@ class LspNextDiagnosticCommand(LspTextCommand):
 
 class LspPrevDiagnosticCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, point: int | None = None) -> None:
-        navigate_diagnostics(self.view, point, forward=False)
+    def run(self, edit: sublime.Edit, point: int | None = None, severity_level: int | None = None) -> None:
+        navigate_diagnostics(self.view, point, severity_level, forward=False)
 
     def want_event(self) -> bool:
         return False

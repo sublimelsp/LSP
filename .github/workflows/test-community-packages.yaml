@@ -11,18 +11,28 @@ jobs:
     runs-on: macOS-latest
     steps:
       - name: Check out PR branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: LSP
 
       - name: Check out lsp_maintainers
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: sublimelsp/lsp_maintainers
           path: lsp_maintainers
 
       - name: Check out community package repositories
-        run: python3 scripts/checkout-repos.py --preferred-branch ${{ github.head_ref }} --exclude LSP --exclude LSP-pyvoice --exclude WolframLanguage
+        run: |
+          python3 scripts/checkout-repos.py \
+            --preferred-branch ${{ github.head_ref }} \
+            --exclude Chialisp \
+            --exclude LSP \
+            --exclude LSP-aurelia \
+            --exclude LSP-gnols \
+            --exclude LSP-MaaFramework \
+            --exclude LSP-pyvoice \
+            --exclude LSP-vale-ls \
+            --exclude WolframLanguage
         working-directory: lsp_maintainers
 
       - name: Use checkout of LSP from PR
@@ -32,7 +42,7 @@ jobs:
           mv ${{ github.workspace }}/LSP lsp_maintainers/repositories
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v8.2.0
+        uses: astral-sh/setup-uv@v10.0.1
 
       - name: Sync venv and type check
         run: |

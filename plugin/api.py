@@ -300,14 +300,13 @@ def uri_handler(scheme: str) -> Callable[[UriHandlerForDecorator], UriHandlerFor
     """
     Decorator to mark a method as a handler for URIs with a specific scheme.
 
-    The decorated method receives the full URI and a `sublime.NewFileFlags` bitflag and must return a `Promise`
-    resolved with the opened `sublime.Sheet`, or `None` if the URI could not be opened.
-    Decorated method is called on the async thread.
+    The decorated async method receives the full URI and a `sublime.NewFileFlags` bitflag and must return an opened
+    `sublime.Sheet`, or `None` if the URI could not be opened.
 
     Usage:
         ```py
         @uri_handler('foo')
-        def on_open_foo_uri(self, uri: DocumentUri, flags: sublime.NewFileFlags) -> Promise[sublime.Sheet | None]:
+        async def on_open_foo_uri(self, uri: DocumentUri, flags: sublime.NewFileFlags) -> sublime.Sheet | None:
             ...
         ```
 

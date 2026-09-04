@@ -50,8 +50,8 @@ from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
-from .core.sessions import CancellableRequest
 from .core.sessions import is_diagnostic_server_cancellation_data
+from .core.sessions import RequestController
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
@@ -130,7 +130,7 @@ class PendingChanges:
 @dataclass
 class PendingDocumentDiagnosticRequest:
     version: int
-    request: CancellableRequest
+    request: RequestController
 
 
 class SemanticTokensData:
@@ -144,7 +144,7 @@ class SemanticTokensData:
         self.active_region_keys: set[int] = set()
         self.tokens: list[SemanticToken] = []
         self.view_change_count = 0
-        self.pending_response: CancellableRequest | None = None
+        self.pending_response: RequestController | None = None
 
     async def cancel(self) -> None:
         if self.pending_response:
@@ -717,14 +717,14 @@ class SessionBuffer(TaskContainer):
         else:
             self._diagnostics_versions[identifier] = version
             self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
-            if is_related_full_document_diagnostic_report(response):
-                self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])
+            diagnostics = response['items'] if is_related_full_document_diagnostic_report(response) else None
+            self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, diagnostics)
             if related_documents := response.get('relatedDocuments'):
-                for uri, diagnostic_report in related_documents.items():
+                for uri, report in related_documents.items():
                     uri = normalize_uri(uri)
-                    self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-                    if is_full_document_diagnostic_report(diagnostic_report):
-                        self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
+                    self.session.diagnostics_result_ids[(uri, identifier)] = report.get('resultId')
+                    diagnostics = report['items'] if is_full_document_diagnostic_report(report) else None
+                    self.session.handle_diagnostics_async(uri, identifier, None, diagnostics)
         self._document_diagnostic_pending_requests[identifier] = None
         if error and is_diagnostic_server_cancellation_data(error.data) and error.data['retriggerRequest']:
             # Retrigger the request after a short delay, but only if there are no additional changes to the

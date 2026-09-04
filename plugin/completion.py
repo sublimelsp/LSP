@@ -47,8 +47,8 @@ import sublime
 import webbrowser
 
 if TYPE_CHECKING:
-    from .core.sessions import CancellableInflightRequest
     from .core.sessions import CancellableRequest
+    from .core.sessions import RequestController
 
 SessionName: TypeAlias = str
 CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, None]
@@ -192,7 +192,7 @@ class QueryCompletionsTask:
         self._view = view
         self._location = location
         self._triggered_manually = triggered_manually
-        self._pending_completion_requests: dict[int, CancellableRequest] = {}
+        self._pending_completion_requests: dict[int, RequestController] = {}
 
     async def query_completions(
         self, sessions: list[Session]
@@ -207,7 +207,7 @@ class QueryCompletionsTask:
             )
         )
 
-    def _create_completion_request_async(self, session: Session) -> CancellableInflightRequest[CompletionResponse]:
+    def _create_completion_request_async(self, session: Session) -> CancellableRequest[CompletionResponse]:
         params = cast('CompletionParams', text_document_position_params(self._view, self._location))
         request = Request.complete(params, self._view)
         future = session.request(request)
@@ -274,10 +274,11 @@ class LspResolveDocsCommand(LspTextCommand):
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
         language_map: MarkdownLangMap | None = None
-        if session := self.session_by_name(session_name, 'completionProvider.resolveProvider'):
+        if session := self.session_by_name(session_name):
             language_map = session.markdown_language_id_to_st_syntax_map()
-            resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
-            item = resolved_item if not isinstance(resolved_item, Error) else item
+            if session.has_capability('completionProvider.resolveProvider', check_views=True):
+                resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
+                item = resolved_item if not isinstance(resolved_item, Error) else item
         detail = ""
         documentation = ""
         if item:

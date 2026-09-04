@@ -127,11 +127,9 @@ def apply_text_edits(
 
 
 def show_summary_message(
-    window: sublime.Window, result: ApplyWorkspaceEditResult, summary: WorkspaceEditSummary | BaseException
+    window: sublime.Window, result: ApplyWorkspaceEditResult, summary: WorkspaceEditSummary
 ) -> None:
-    if isinstance(summary, BaseException):
-        message = f"Error: {summary}"
-    elif result['applied']:
+    if result['applied']:
         message = f"Applied {summary['total_changes']} changes in {summary['edited_files']} files"
     else:
         message = "Error while applying WorkspaceEdit"

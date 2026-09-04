@@ -6,7 +6,8 @@
             "orjson",
             "sublime_aio",
             "typing_extensions",
-            "wcmatch"
+            "wcmatch",
+            "websockets"
         ]
     }
 }

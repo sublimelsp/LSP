@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 from typing_extensions import deprecated
-import asyncio
 import inspect
 import sublime
 
@@ -47,6 +46,7 @@ if TYPE_CHECKING:
     from .core.types import ClientConfig
     from .core.workspace import WorkspaceFolder
     from weakref import ref
+    import asyncio
 
 
 HANDLER_MARKER = '__HANDLER_MARKER'

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .aio import run_on_async_thread
+from .aio import TaskContainer
 from .constants import ST_PLATFORM
 from .logging import debug
 from .logging import exception_log
@@ -288,10 +288,12 @@ async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str]:
         for line in headers_bytes.split("\r\n"):
             key, value = line.split(":", 1)
             headers[key.lower()] = value
-    except asyncio.exceptions.IncompleteReadError:
+    except asyncio.IncompleteReadError as ex:
         # May happen when shutting down. parse_content_length will then return None,
         # which will cause the read loop to stop.
-        pass
+        if ex.partial:
+            # Propagate server's output to the UI.
+            raise
     return headers
 
 
@@ -312,7 +314,6 @@ class StreamTransport(Transport):
         super().__init__(encoder, decoder)
         self._reader = reader
         self._writer = writer
-        self._writer_lock = asyncio.Lock()
 
     @override
     async def read(self) -> JSONRPCMessage:
@@ -321,21 +322,20 @@ class StreamTransport(Transport):
             raise StopLoopError
         body = await self._reader.readexactly(content_length)
         try:
-            return await run_on_async_thread(self._decoder, body)
+            return self._decoder(body)
         except Exception as ex:
             raise Exception(f"JSON decode error: {ex}") from ex
 
     @override
     async def write(self, payload: JSONRPCMessage) -> None:
-        async with self._writer_lock:
-            body = await run_on_async_thread(self._encoder, payload)
-            self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
-            try:
-                await self._writer.drain()
-            except ConnectionResetError:
-                # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
-                # there's other logic that will make the transport shut down.
-                pass
+        body = self._encoder(payload)
+        self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
+        try:
+            await self._writer.drain()
+        except ConnectionResetError:
+            # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
+            # there's other logic that will make the transport shut down.
+            pass
 
     @override
     async def write_bytes(self, payload: bytes) -> None:
@@ -352,7 +352,7 @@ class StreamTransport(Transport):
 
 
 @final
-class TransportWrapper:
+class TransportWrapper(TaskContainer):
     """
     Double dispatch-like class that takes a (subclass of) Transport, and provides to a (subclass of) TransportCallbacks
     appropriately decoded messages. The TransportWrapper is also responsible for keeping the spawned child
@@ -368,6 +368,7 @@ class TransportWrapper:
         process_args: list[str] | None,
         error_reader: ErrorReader | None,
     ) -> None:
+        TaskContainer.__init__(self)
         self._callback_object = weakref.ref(callback_object)
         self._transport: Transport | None = transport
         self._process = process
@@ -392,6 +393,7 @@ class TransportWrapper:
             await self._transport.write_bytes(payload)
 
     async def close(self) -> None:
+        await self.cancel_all_tasks()
         if self._error_reader:
             self._error_reader.on_transport_close()
             self._error_reader = None
@@ -406,13 +408,13 @@ class TransportWrapper:
                 if (payload := await self._transport.read()) is None:
                     continue
                 if callback_object := self._callback_object():
-                    await callback_object.on_payload(payload)
-        except (AttributeError, BrokenPipeError, StopLoopError, TypeError):
-            # TypeError happens when `callback_object` becomes None.
-            # It can become `None` even when the if-condition above that passes.
+                    # Don't block the read loop on handler execution. Otherwise, a request handler that sends its own
+                    # request to the server and awaits the response would deadlock: the read loop is stuck waiting for
+                    # the handler, but the handler is waiting for a response that can only be read by the read loop.
+                    self.create_task(callback_object.on_payload(payload))
+        except (AttributeError, BrokenPipeError, StopLoopError):
             pass
         except Exception as ex:
-            exception_log("unexpected exception while stopping transport", ex)
             exception = ex
         exit_code: int | None = None
         if self._process:

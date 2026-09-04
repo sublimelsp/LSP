@@ -213,7 +213,7 @@
         "command": "lsp_symbol_references"
       },
       {
-        "caption": "LSP: Follow Link",
+        "caption": "LSP: Open Link",
         "command": "lsp_open_link"
       }
     ]

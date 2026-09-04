@@ -31,14 +31,14 @@ async def verify(
     expected_output_params: Any,
     expected_error_code: ErrorCodes | None = None,
 ) -> None:
-    try:
-        result = await testcase.make_server_do_fake_request(method, input_params)
-        testcase.assertEqual(result, expected_output_params)
-    except Error as error:
+    result = await testcase.make_server_do_fake_request(method, input_params)
+    if isinstance(result, Error):
         if expected_error_code is not None:
-            testcase.assertEqual(error.code, expected_error_code)
+            testcase.assertEqual(result.code, expected_error_code)
         else:
-            testcase.fail(f"method {method} returned error {error}")
+            testcase.fail(f"method {method} returned error {result}")
+    else:
+        testcase.assertEqual(result, expected_output_params)
 
 
 class ServerRequests(TextDocumentTestCase):

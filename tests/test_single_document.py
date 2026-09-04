@@ -324,7 +324,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         await self.mock_response("workspace/executeCommand", {"canReturnAnythingHere": "asdf"})
         command: Command = {"command": "foo", "arguments": ["hello", "there", "general", "kenobi"]}
         assert self.session
-        result = await self.session.execute_command(command, progress=False)
+        result = await self.session.run_command(command, progress=False)
         await self.await_message("workspace/executeCommand")
         self.assertEqual(result, {"canReturnAnythingHere": "asdf"})
 

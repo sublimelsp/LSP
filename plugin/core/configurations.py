@@ -16,6 +16,7 @@ from typing import Generator
 from typing import Literal
 from typing import TYPE_CHECKING
 from weakref import WeakSet
+import asyncio
 
 if TYPE_CHECKING:
     import sublime
@@ -153,7 +154,7 @@ class WindowConfigManager:
             if changed := changes['settings_changed']:
                 for listener in self._change_listeners:
                     listener.on_server_settings_changed(changed)
-            if changed := changes['root_changed'] + changes['removed']:
+            if changed := changes['root_changed'] + changes['removed'] + changes['added']:
                 for listener in self._change_listeners:
                     listener.on_configs_changed(changed)
 
@@ -183,6 +184,8 @@ class WindowConfigManager:
         crash_count = len([crash for crash in self._crashes[config_name] if crash > timeout])
         printf(f"{config_name} crashed ({crash_count} / {RETRY_MAX_COUNT} times in the last "
                f"{RETRY_COUNT_TIMEDELTA.total_seconds()} seconds), exit code {exit_code}, exception: {exception}")
+        if isinstance(exception, asyncio.IncompleteReadError):
+            printf(f"server's output:\n{exception.partial.decode()}")
         return crash_count < RETRY_MAX_COUNT
 
     def _reenable_disabled_for_session(self, config_name: str) -> bool:

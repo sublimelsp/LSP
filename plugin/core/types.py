@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from ...protocol import DocumentFilter
 from ...protocol import DocumentSelector
 from ...protocol import DocumentUri
 from ...protocol import FileOperationFilter
 from ...protocol import FileOperationPatternKind
+from ...protocol import NotebookCellTextDocumentFilter
 from ...protocol import ServerCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextDocumentSyncOptions
@@ -39,6 +41,7 @@ from typing import TypeVar
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import override
+from typing_extensions import TypeGuard
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -102,8 +105,10 @@ def basescope2languageid(base_scope: str) -> str:
 @contextlib.contextmanager
 def runtime(token: str) -> Generator[None, None, None]:
     t = time.time()
-    yield
-    debug(token, "running time:", int((time.time() - t) * 1000000), "μs")
+    try:
+        yield
+    finally:
+        debug(token, "running time:", int((time.time() - t) * 1000000), "μs")
 
 
 T = TypeVar("T")
@@ -172,8 +177,6 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
     :param      f:             The function to possibly run. Its return type is discarded.
     :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
     :param      condition:     The condition that must evaluate to True in order to run the function
-    :param      async_thread:  If true, run the function on the async worker thread, otherwise run the function on the
-                               main thread
     """
 
     async def run() -> None:
@@ -184,26 +187,20 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
     run_coroutine(run())
 
 
+@dataclass
+class SettingsStore:
+    settings: sublime.Settings
+    settings_path: str
+
+
 class SettingsRegistration:
-    __slots__ = ("settings", "settings_path", "__weakref__")  # pyright: ignore[reportUninitializedInstanceVariable]
+    __slots__ = ("settings", )
 
-    def __init__(
-        self, settings: sublime.Settings, settings_path: str, on_change: Callable[[SettingsRegistration], None]
-    ) -> None:
+    def __init__(self, settings: sublime.Settings, on_change: Callable[[], None]) -> None:
         self.settings = settings
-        self.settings_path = settings_path
-        weak_self = weakref.ref(self)
+        self.settings.add_on_change("LSP", on_change)
 
-        def on_change_handler() -> None:
-            if self_ := weak_self():
-                on_change(self_)
-
-        self.settings.add_on_change("LSP", on_change_handler)
-
-    def __del__(self) -> None:
-        # FIXME: Relying on reference counts and garbage collection timings for the change listener handling is a very
-        # bad idea, because instances of this class are dynamically passed between other object instances, and it can
-        # easily cause bugs like https://github.com/sublimelsp/LSP/pull/2867
+    def unregister(self) -> None:
         self.settings.clear_on_change("LSP")
 
 
@@ -218,7 +215,7 @@ class DebouncerNonThreadSafe:
     """
 
     def __init__(self, task_container: TaskContainer) -> None:
-        self._task_container = task_container
+        self._task_container = weakref.ref(task_container)
         self._current_id = -1
         self._next_id = 0
 
@@ -232,6 +229,9 @@ class DebouncerNonThreadSafe:
         :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
         :param      condition:     The condition that must evaluate to True in order to run the function
         """
+        task_container = self._task_container()
+        if not task_container:
+            return
 
         async def run(debounce_id: int) -> None:
             await asyncio.sleep(timeout_ms / 1000.0)
@@ -242,7 +242,7 @@ class DebouncerNonThreadSafe:
 
         current_id = self._current_id = self._next_id
         self._next_id += 1
-        self._task_container.create_task(run(current_id))
+        task_container.create_task(run(current_id))
 
     def cancel_pending(self) -> None:
         self._current_id = -1
@@ -455,6 +455,10 @@ class ClientStates:
     STOPPING = 2
 
 
+def is_notebook_cell_text_document_filter(document_filter: DocumentFilter) -> TypeGuard[NotebookCellTextDocumentFilter]:
+    return 'notebook' in document_filter
+
+
 class DocumentFilterMatcher:
     """
     A document filter denotes a document through properties like language, scheme or pattern.
@@ -506,7 +510,10 @@ class DocumentSelectorMatcher:
     __slots__ = ("filters",)
 
     def __init__(self, document_selector: DocumentSelector) -> None:
-        self.filters = [DocumentFilterMatcher(**cast("dict", document_filter)) for document_filter in document_selector]
+        self.filters = [
+            DocumentFilterMatcher(**cast("dict", document_filter)) for document_filter in document_selector
+            if not is_notebook_cell_text_document_filter(document_filter)
+        ]
 
     def __bool__(self) -> bool:
         return bool(self.filters)
@@ -544,6 +551,7 @@ _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
     'workspace/didChangeConfiguration': ('workspace.didChangeConfiguration', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
                                             'workspace.workspaceFolders.changeNotifications'),
+    'workspace/textDocumentContent': ('workspace.textDocumentContent', None),
     'textDocument/didOpen': ('textDocumentSync.didOpen', None),
     'textDocument/didClose': ('textDocumentSync.didClose', None),
     'textDocument/didChange': ('textDocumentSync.change', None),
@@ -785,6 +793,7 @@ class ClientConfig:
         'semantic_tokens',
         'selector',
         'settings',
+        'syntax_map',
         'tcp_port',
     }
     """All server configuration keys that we recognize and have handling for."""
@@ -809,8 +818,9 @@ class ClientConfig:
         semantic_tokens: dict[str, str] | None = None,
         diagnostics_mode: str = "all_files",
         markdown_language_map: MarkdownLangMapJson | None = None,
+        syntax_map: dict[str, str] | None = None,
         path_maps: list[PathMap] | None = None,
-        settings_registration: SettingsRegistration | None = None,
+        settings_store: SettingsStore | None = None,
         custom_config_keys: dict[str, Any] | None = None
     ) -> None:
         """
@@ -846,9 +856,11 @@ class ClientConfig:
             language tag. Each value is a two-element tuple: aliases and syntax paths or `scope:BASE_SCOPE`
             selectors. Follows the format of mdpopups' `sublime_user_lang_map` setting. `None` (the default)
             applies no extra mapping.
+        :param syntax_map: Optional mapping of custom URI schemes to Sublime Text syntaxes, used when fetching dynamic
+            document content from the server via `workspace/textDocumentContent` request.
         :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
             server (e.g. inside a container).
-        :param settings_registration: The `SettingsRegistration` instance holding resource path and `Settings` instance
+        :param settings_store: The `SettingsStore` instance holding resource path and `Settings` instance
             for the plugin settings. Present only for `ClientConfig`s created through `from_sublime_settings()`.
         :param custom_config_keys: The complete raw settings dictionary. Used as a fallback for attribute/key access for
             settings not explicitly modelled above.
@@ -876,7 +888,8 @@ class ClientConfig:
         # Transformed mapping that uses tuples instead of lists for mdpopups.
         self.resolved_markdown_language_map: MarkdownLangMap | None = None
         self.markdown_language_map = markdown_language_map  # use the setter to populate resolved_markdown_language_map
-        self._settings_registration = settings_registration
+        self.syntax_map = syntax_map or {}
+        self._settings_store = settings_store
         if isinstance(custom_config_keys, dict):
             self._custom_config_keys = custom_config_keys
             # Only retain server configuration keys that we don't have dedicated properties for.
@@ -911,9 +924,9 @@ class ClientConfig:
     def enabled(self, enabled: bool) -> None:
         if enabled == self._enabled:
             return
-        if self._settings_registration:
-            settings_basename = os.path.basename(self._settings_registration.settings_path)
-            self._settings_registration.settings.set("enabled", enabled)
+        if self._settings_store:
+            settings_basename = os.path.basename(self._settings_store.settings_path)
+            self._settings_store.settings.set("enabled", enabled)
             sublime.save_settings(settings_basename)
         self._enabled = enabled
 
@@ -941,7 +954,7 @@ class ClientConfig:
         return result
 
     @classmethod
-    def from_sublime_settings(cls, name: str, settings_registration: SettingsRegistration) -> ClientConfig:
+    def from_sublime_settings(cls, name: str, settings_store: SettingsStore) -> ClientConfig:
         """
         Create a ClientConfig from a Sublime Text `Settings` object.
 
@@ -949,10 +962,10 @@ class ClientConfig:
         overrides are layered on top from `Settings`.
 
         :param name: Unique server name.
-        :param settings_registration: The `SettingsRegistration` object for this client.
+        :param settings_store: The `SettingsStore` object for this client.
         """
-        s = settings_registration.settings
-        file = settings_registration.settings_path
+        s = settings_store.settings
+        file = settings_store.settings_path
         base = sublime.decode_value(sublime.load_resource(file))
         settings = DottedDict(deepcopy(base.get("settings", {})))  # defined by the plugin author
         settings.update(deepcopy(read_dict_setting(s, "settings", {})))  # overrides from the user
@@ -990,8 +1003,9 @@ class ClientConfig:
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "all_files")),
             markdown_language_map=deepcopy(s.get("markdown_language_map")),
+            syntax_map=deepcopy(s.get("syntax_map")),
             path_maps=PathMap.parse(s.get("path_maps")),
-            settings_registration=settings_registration,
+            settings_store=settings_store,
             custom_config_keys=deepcopy(s.to_dict())
         )
 
@@ -1027,6 +1041,7 @@ class ClientConfig:
             semantic_tokens=deepcopy(d.get("semantic_tokens", {})),
             diagnostics_mode=deepcopy(d.get("diagnostics_mode", "all_files")),
             markdown_language_map=deepcopy(d.get("markdown_language_map")),
+            syntax_map=deepcopy(d.get("syntax_map")),
             path_maps=PathMap.parse(d.get("path_maps")),
             custom_config_keys=deepcopy(d)
         )
@@ -1069,8 +1084,9 @@ class ClientConfig:
             semantic_tokens=deepcopy(override.get("semantic_tokens", src_config.semantic_tokens)),
             diagnostics_mode=deepcopy(override.get("diagnostics_mode", src_config.diagnostics_mode)),
             markdown_language_map=deepcopy(override.get("markdown_language_map", src_config.markdown_language_map)),
+            syntax_map=deepcopy(override.get("syntax_map", src_config.syntax_map)),
             path_maps=PathMap.parse(override.get("path_maps")) or deepcopy(src_config.path_maps),
-            settings_registration=src_config._settings_registration,
+            settings_store=src_config._settings_store,
             custom_config_keys=deepcopy({**src_config._custom_config_keys, **override})
         )
 

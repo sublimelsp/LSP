@@ -4,9 +4,9 @@ from .async_test_case import AsyncTestCase
 from .async_test_case import FutureLike
 from .test_mocks import basic_responses
 from functools import partial
-from LSP.plugin.core.aio import next_frame
 from LSP.plugin.core.aio import run_coroutine
 from LSP.plugin.core.aio import run_on_asyncio_thread
+from LSP.plugin.core.aio import tick
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.open import open_file
 from LSP.plugin.core.protocol import Notification
@@ -28,7 +28,7 @@ import asyncio
 import sublime
 
 if TYPE_CHECKING:
-    from LSP.plugin.core.sessions import CancellableInflightRequest
+    from LSP.plugin.core.sessions import CancellableRequest
     from LSP.plugin.core.sessions import Session
     from LSP.plugin.core.windows import WindowManager
     from LSP.protocol import CodeAction
@@ -180,6 +180,12 @@ class TextDocumentTestCase(SublimeAioTestCase):
             else:
                 raise AssertionError(f"unable to open file {filename}")
 
+    async def tearDown(self) -> None:
+        self.assertIsNotNone(self.session)
+        assert self.session
+        for response in await self.get_and_clear_unused_mock_responses():
+            print(f"WARNING: unused mock response: {response}")
+
     @classmethod
     def get_test_name(cls) -> str:
         return "testfile"
@@ -215,10 +221,10 @@ class TextDocumentTestCase(SublimeAioTestCase):
     async def wait_until(condition: Callable[[], bool]) -> None:
         """Returns when the given state has been reached."""
         while not condition():
-            await next_frame()
+            await tick()
 
     @classmethod
-    def await_message(cls, method: str) -> CancellableInflightRequest[LSPAny]:
+    def await_message(cls, method: str) -> CancellableRequest[LSPAny]:
         """
         Awaits until server receives a request with a specified method.
 
@@ -235,7 +241,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
         return cls.session.request(Request("$test/getReceived", {"method": method}))
 
     @classmethod
-    def make_server_do_fake_request(cls, method: str, params: LSPAny) -> CancellableInflightRequest[LSPAny]:
+    def make_server_do_fake_request(cls, method: str, params: LSPAny) -> CancellableRequest[LSPAny]:
         """Make the fake server do an arbitrary request."""
         assert cls.session
         return cls.session.request(Request("$test/fakeRequest", {"method": method, "params": params}))
@@ -264,6 +270,9 @@ class TextDocumentTestCase(SublimeAioTestCase):
         assert self.session
         await self.session.request(Request("$test/sendNotification", {"method": method, "params": params}))
         return params
+
+    async def get_and_clear_unused_mock_responses(self) -> list[tuple[str, LSPAny]]:
+        return await self.session.request(Request("$test/getAndClearUnusedMockResponses"))
 
     async def await_clear_view_and_save(self) -> None:
         assert isinstance(self.view, sublime.View)

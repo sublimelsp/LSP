@@ -5,6 +5,7 @@ from .api import LspPlugin
 from .api import OnPreStartContext
 from .api import PluginStartError
 from .core.aio import run_coroutine
+from .core.aio import run_on_threadpool
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
@@ -509,7 +510,6 @@ class ServerTestRunner(TransportCallbacks):
         view = self._initiating_view
         file_path = view.file_name() or ''
         config = ClientConfig.from_config(self._config, {})
-        loop = asyncio.get_running_loop()
 
         try:
             workspace = ProjectFolders(self._window)
@@ -521,14 +521,7 @@ class ServerTestRunner(TransportCallbacks):
             if plugin_class:
                 # TODO: We should share this common code with WindowManager.start
                 if issubclass(plugin_class, LspPlugin):
-                    if plugin_class.use_asyncio:
-                        await plugin_class.on_pre_start(context)
-                    else:
-                        # Historically these methods tended to run relatively slow.
-                        # We don't want to use Sublime's worker thread for this any longer.
-                        # Utilize the default thread pool instead.
-                        # https://docs.python.org/3/library/asyncio-dev.html#running-blocking-code
-                        await loop.run_in_executor(None, plugin_class.on_pre_start_async, context)
+                    await plugin_class.on_pre_start(context)
                     cwd = context.working_directory
                 else:
                     if plugin_class.needs_update_or_installation():
@@ -536,7 +529,7 @@ class ServerTestRunner(TransportCallbacks):
                         # We don't want to use Sublime's worker thread for this any longer.
                         # Utilize the default thread pool instead.
                         # https://docs.python.org/3/library/asyncio-dev.html#running-blocking-code
-                        await loop.run_in_executor(None, plugin_class.install_or_update)
+                        run_on_threadpool(plugin_class.install_or_update)
                     additional_variables = plugin_class.additional_variables()
                     if isinstance(additional_variables, dict):
                         variables.update(additional_variables)

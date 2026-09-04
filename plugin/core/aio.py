@@ -6,52 +6,38 @@ from .logging import debug
 from .logging import exception_log
 from functools import partial
 from typing import Any
-from typing import AsyncIterator
 from typing import Callable
 from typing import Coroutine
-from typing import Protocol
 from typing import TYPE_CHECKING
-from typing import TypeVar
 import asyncio
-import contextlib
 import sublime
 import sublime_aio
-import sys
 
 if TYPE_CHECKING:
     from contextvars import Context
+    from sublime_aio import T
+    from sublime_aio import Ts
+    from typing_extensions import ParamSpec
+    from typing_extensions import Unpack
     import concurrent.futures
-
-
-class SupportsAclose(Protocol):
-    async def aclose(self) -> None: ...
-
-
-T = TypeVar("T")
-S = TypeVar("S", bound="SupportsAclose")
-
-
-# `async with aclosing(stream(...))`. This function in the contextlib module is available since python 3.10, but we also
-# need to support python 3.8.
-# See: https://docs.python.org/3/library/contextlib.html#contextlib.aclosing
-if sys.version_info >= (3, 10, 0):
-    aclosing = contextlib.aclosing
-else:
-
-    @contextlib.asynccontextmanager
-    async def aclosing(thing: S) -> AsyncIterator[S]:
-        try:
-            yield thing
-        finally:
-            await thing.aclose()
+    P = ParamSpec("P")
 
 
 _futures: set[concurrent.futures.Future] = set()
 
 
+def _on_future_done(fut: concurrent.futures.Future[Any]) -> None:
+    _futures.discard(fut)
+    if not fut.cancelled() and (ex := fut.exception()):
+        exception_log("coroutine finished with exception", ex)
+
+
 def run_coroutine(coroutine: Coroutine[object, object, T]) -> concurrent.futures.Future[T]:
     """
     Start the execution of a coroutine in the asyncio thread, from any thread.
+
+    :param coroutine: a coroutine to run.
+    :return: a handle to a concurrent future object.
 
     When you are certain you are already in the asyncio thread, then use one of:
 
@@ -62,39 +48,48 @@ def run_coroutine(coroutine: Coroutine[object, object, T]) -> concurrent.futures
       `asyncio.create_task`, keeps a (strong) reference to the Task object.
     """
     future = sublime_aio.run_coroutine(coroutine)
-
-    def on_done(fut: concurrent.futures.Future[T]) -> None:
-        _futures.discard(fut)
-        if not fut.cancelled() and (ex := fut.exception()):
-            exception_log("coroutine finished with exception", ex)
-
-    future.add_done_callback(on_done)
+    future.add_done_callback(_on_future_done)
     _futures.add(future)
     return future
 
 
-def run_on_asyncio_thread(f: Callable[..., Any], *args: Any, context: Context | None = None) -> asyncio.Handle:
+def run_on_asyncio_thread(
+    f: Callable[[Unpack[Ts]], Any], *args: Unpack[Ts], context: Context | None = None
+) -> asyncio.Handle:
     """Invoke a function in the asyncio thread, from any thread."""
     return sublime_aio.call_soon_threadsafe(f, *args, context=context)
 
 
+def run_on_threadpool(f: Callable[[Unpack[Ts]], T], *args: Unpack[Ts]) -> asyncio.Future[T]:
+    """Invoke a function on the loop's default thread pool. Must be invoked from the asyncio thread."""
+    return sublime_aio.run_in_worker(f, *args)
+
+
 def _run_on_st_thread(
-    dispatch_func: Callable[[Callable[[], None]], None], f: Callable[..., T], *args: Any, **kwargs: Any
+    dispatch_func: Callable[[Callable[[], None]], None], f: Callable[P, T], *args: P.args, **kwargs: P.kwargs
 ) -> asyncio.Future[T]:
     loop = asyncio.get_running_loop()
     future = loop.create_future()
 
+    def on_done(result: T) -> None:
+        if not future.done():
+            future.set_result(result)
+
+    def on_exception(ex: BaseException) -> None:
+        if not future.done():
+            future.set_exception(ex)
+
     def wrap() -> None:
         try:
-            loop.call_soon_threadsafe(future.set_result, f(*args, **kwargs))
+            loop.call_soon_threadsafe(on_done, f(*args, **kwargs))
         except BaseException as ex:
-            loop.call_soon_threadsafe(future.set_exception, ex)
+            loop.call_soon_threadsafe(on_exception, ex)
 
     dispatch_func(wrap)
     return future
 
 
-def run_on_main_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
+def run_on_main_thread(f: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> asyncio.Future[T]:
     """
     Run a function in Sublime's main (UI) thread.
 
@@ -103,7 +98,7 @@ def run_on_main_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asynci
     return _run_on_st_thread(sublime.set_timeout, f, *args, **kwargs)
 
 
-def run_on_async_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> asyncio.Future[T]:
+def run_on_worker_thread(f: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> asyncio.Future[T]:
     """
     Run a function in Sublime's async, or worker, thread.
 
@@ -112,13 +107,22 @@ def run_on_async_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> async
     return _run_on_st_thread(sublime.set_timeout_async, f, *args, **kwargs)
 
 
-def next_frame() -> asyncio.Future[None]:
-    """Wait until (at least one) UI frame has passed."""
+def tick() -> asyncio.Future[None]:
+    """
+    Wait until at least 1 tick has occurred on the main thread.
 
-    def noop() -> None:
-        pass
+    Must be called from the asyncio thread. You must await the returned future.
+    """
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
 
-    return run_on_main_thread(noop)
+    def on_done() -> None:
+        # Future may have been cancelled.
+        if not future.done():
+            future.set_result(None)
+
+    sublime.set_timeout(lambda: loop.call_soon_threadsafe(on_done))
+    return future
 
 
 def get_clipboard() -> asyncio.Future[str]:
@@ -127,7 +131,8 @@ def get_clipboard() -> asyncio.Future[str]:
 
     Must be called from the asyncio thread. You must await the returned future.
     """
-    future = asyncio.get_running_loop().create_future()
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
 
     def on_done(content: str) -> None:
         # Future may have been cancelled.
@@ -135,7 +140,7 @@ def get_clipboard() -> asyncio.Future[str]:
             future.set_result(content)
 
     # See: https://github.com/sublimehq/sublime_text/issues/6920
-    sublime.get_clipboard_async(partial(run_on_asyncio_thread, on_done))  # type: ignore
+    sublime.get_clipboard_async(partial(loop.call_soon_threadsafe, on_done))  # type: ignore
     return future
 
 
@@ -145,8 +150,7 @@ async def gather_and_flatten_exceptions(*coros: Coroutine[Any, Any, list[Excepti
     flattened list of Exceptions that occurred for each coroutine. BaseExceptions are filtered out.
     """
     exceptions: list[Exception] = []
-    items: list[BaseException | list[Exception]] = await asyncio.gather(*coros, return_exceptions=True)
-    for item in items:
+    for item in await asyncio.gather(*coros, return_exceptions=True):
         # Only keep exceptions derived from Exception. Exceptions derived from BaseException, but not derived from
         # Exception are things like asyncio.CancelledError or SystemExit and should be ignored.
         if isinstance(item, Exception):
@@ -178,6 +182,7 @@ class TaskContainer:
         tasks = list(self._tasks)
         for task in tasks:
             task.cancel()
+
         return [x for x in await asyncio.gather(*self._tasks, return_exceptions=True) if isinstance(x, Exception)]
 
     def create_task(self, coro: Coroutine[object, object, object], name: str | None = None) -> asyncio.Task | None:

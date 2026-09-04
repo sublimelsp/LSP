@@ -58,6 +58,41 @@ Follow installation instructions on [LSP-clangd](https://github.com/sublimelsp/L
 
 ## C\#
 
+### roslyn-language-server
+
+1. Make sure you have .NET 10 or later installed.
+2. Make sure you have the `dotnet` CLI tool available.
+3. Install the [roslyn-language-server](https://github.com/dotnet/roslyn/blob/main/src/LanguageServer/Microsoft.CodeAnalysis.LanguageServer/README.md) from a command prompt using the following command:
+
+    ```sh
+    dotnet tool install --global roslyn-language-server --prerelease
+    ```
+
+4. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"roslyn"` configuration:
+
+    ```jsonc
+    {
+        "roslyn": {
+            "enabled": true,
+            "command": [
+                "${home}/.dotnet/tools/roslyn-language-server",
+                "--logLevel",
+                "Warning",
+                "--autoLoadProjects",
+                "--stdio"
+            ],
+            "selector": "source.cs",
+            "syntax_map": {
+                "roslyn-source-generated": "C#.sublime-syntax"
+            }
+        }
+    }
+    ```
+
+!!! warning "The `--autoLoadProjects` command-line flag is important. When not given, much of the functionality is malfunctioning."
+
+### OmniSharp
+
 Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimelsp/LSP-OmniSharp).
 
 ## Civet
@@ -326,11 +361,20 @@ JETLS requires Julia 1.12 or higher.
             "command": ["jetls", "serve", "--socket=${port}"],
             "tcp_port": 0,
             "selector": "source.julia",
+            "syntax_map": {
+                "jetls-macro-expansion": "Julia.sublime-syntax",
+                "jetls-type-annotation": "Julia.sublime-syntax"
+            },
             // For all configuration options see https://aviatesk.github.io/JETLS.jl/configuration/
             "settings": {
                 // "jetls.full_analysis.debounce": 1.0,
                 // "jetls.full_analysis.auto_instantiate": true,
                 // "jetls.diagnostic.all_files": true,
+                // "jetls.code_lens.references": false,
+                // "jetls.code_lens.testrunner": true,
+                // "jetls.inlay_hint.types.enabled": true,
+                // "jetls.inlay_hint.block_end.enabled": true,
+                // "jetls.inlay_hint.block_end.min_lines": 25,
             }
         }
     }
@@ -1015,3 +1059,7 @@ Follow installation instructions on [LSP-lemminx](https://github.com/sublimelsp/
 ## YAML
 
 Follow installation instructions on [LSP-yaml](https://github.com/sublimelsp/LSP-yaml).
+
+## Zig
+
+Follow instructions on [Sublime Text - zigtools](https://zigtools.org/zls/editors/sublime-text/).

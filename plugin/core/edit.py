@@ -10,8 +10,9 @@ from ...protocol import SnippetTextEdit
 from ...protocol import TextDocumentEdit
 from ...protocol import TextEdit
 from ...protocol import WorkspaceEdit
-from .aio import next_frame
 from .logging import debug
+from .logging import printf
+from .promise import Promise
 from .protocol import UINT_MAX
 from typing import Dict
 from typing import List
@@ -89,23 +90,25 @@ def parse_lsp_position(position: Position) -> tuple[int, int]:
     return position['line'], min(UINT_MAX, position['character'])
 
 
-async def apply_text_edits(
+def apply_text_edits(
     view: sublime.View,
     edits: Sequence[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
     *,
     label: str | None = None,
     process_placeholders: bool = False,
     required_view_version: int | None = None
-) -> sublime.View | None:
+) -> Promise[sublime.View | None]:
     if not edits:
-        return view
+        return Promise.resolve(view)
     if not view.is_valid():
-        print('LSP: ignoring edits due to view not being open')
-        return None
+        printf('ignoring edits due to view not being open')
+        return Promise.resolve(None)
     if process_placeholders:
-        # TODO: remove rust-analyzer specific handling for placeholders in TextEdit, because SnippetTextEdit is now part
-        # of the LSP specs.
-        # TODO: Communicate results back.
+        # Deprecated because SnippetTextEdit is now part of the LSP 3.18 specs.
+        printf(
+            'The "process_placeholders" argument for the apply_text_edits function is deprecated.',
+            'Convert the TextEdit into a SnippetTextEdit instead.'
+        )
         view.run_command(
             'lsp_apply_document_edit',
             {
@@ -120,16 +123,13 @@ async def apply_text_edits(
         view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': label})
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
     # thread, and that we've received view changes in the asynchronous thread.
-    await next_frame()
-    return view if view.is_valid() else None
+    return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(view if view.is_valid() else None)))
 
 
 def show_summary_message(
-    window: sublime.Window, result: ApplyWorkspaceEditResult, summary: WorkspaceEditSummary | BaseException
+    window: sublime.Window, result: ApplyWorkspaceEditResult, summary: WorkspaceEditSummary
 ) -> None:
-    if isinstance(summary, BaseException):
-        message = f"Error: {summary}"
-    elif result['applied']:
+    if result['applied']:
         message = f"Applied {summary['total_changes']} changes in {summary['edited_files']} files"
     else:
         message = "Error while applying WorkspaceEdit"

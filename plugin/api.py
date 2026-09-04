@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 from typing_extensions import deprecated
+import asyncio
 import inspect
 import sublime
 

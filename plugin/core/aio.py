@@ -6,6 +6,7 @@ from .logging import debug
 from .logging import exception_log
 from functools import partial
 from typing import Any
+from typing import Awaitable
 from typing import Callable
 from typing import Coroutine
 from typing import TYPE_CHECKING
@@ -158,6 +159,19 @@ async def gather_and_flatten_exceptions(*coros: Coroutine[Any, Any, list[Excepti
         elif isinstance(item, list):
             exceptions.extend(item)
     return exceptions
+
+
+async def guard(untrusted: Awaitable[T], message: str = "Error calling async function") -> T | None:
+    """
+    Run a coroutine that's not trusted.
+
+    Any exception is caught and logged. The only exception types this function may raise are of type BaseException.
+    """
+    try:
+        return await untrusted
+    except Exception as ex:
+        exception_log(message, ex)
+    return None
 
 
 class TaskContainer:

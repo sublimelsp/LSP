@@ -71,7 +71,7 @@ import asyncio
 import functools
 import json
 import sublime
-import websockets.asyncio.server
+import websockets.asyncio.server  # pyright: ignore[reportMissingImports]
 
 if TYPE_CHECKING:
     from .tree_view import TreeViewSheet

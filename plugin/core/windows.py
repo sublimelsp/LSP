@@ -292,7 +292,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
             try:
                 config.set_view_status(listener.view, "initializing...")
-                await session.initialize(variables=variables, transport=transport, working_directory=cwd)
+                initialize_result = await session.initialize(
+                    variables=variables, transport=transport, working_directory=cwd
+                )
+                if isinstance(initialize_result, Error):
+                    raise initialize_result
                 self._sessions.add(session)
                 # Do not let an exception in listener.on_session_initialized_async cause a failure in this method.
                 asyncio.get_running_loop().call_soon(listener.on_session_initialized_async, session)

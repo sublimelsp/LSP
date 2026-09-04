@@ -258,10 +258,12 @@ async def _parse_headers(reader: asyncio.StreamReader) -> dict[str, str]:
         for line in headers_bytes.split("\r\n"):
             key, value = line.split(":", 1)
             headers[key.lower()] = value
-    except asyncio.exceptions.IncompleteReadError:
+    except asyncio.IncompleteReadError as ex:
         # May happen when shutting down. parse_content_length will then return None,
         # which will cause the read loop to stop.
-        pass
+        if ex.partial:
+            # Propagate server's output to the UI.
+            raise
     return headers
 
 
@@ -393,7 +395,6 @@ class TransportWrapper(TaskContainer):
         except (AttributeError, BrokenPipeError, StopLoopError):
             pass
         except Exception as ex:
-            exception_log("unexpected exception while stopping transport", ex)
             exception = ex
         exit_code: int | None = None
         if self._process:

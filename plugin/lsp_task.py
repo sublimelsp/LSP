@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine
 from .core.logging import exception_log
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
@@ -57,10 +56,7 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
         """Override this to execute code when all tasks are completed."""
 
     @override
-    def run(self, edit: sublime.Edit, **kwargs: dict[str, Any]) -> None:
-        run_coroutine(self._run(**kwargs))
-
-    async def _run(self, **kwargs: dict[str, Any]) -> None:
+    async def run(self, **kwargs: dict[str, Any]) -> None:
         if self._tasks_runner:
             # Request to cancel the task.
             if self._tasks_runner.cancel():

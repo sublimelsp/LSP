@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine
 from .core.constants import ChangeEventAction
 from .core.edit import is_snippet_text_edit
 from .core.edit import parse_lsp_position
@@ -93,12 +92,7 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
 
 class LspApplyWorkspaceEditCommand(LspWindowCommand):
 
-    def run(
-        self, session_name: str, edit: WorkspaceEdit, label: str | None = None, is_refactoring: bool = False
-    ) -> None:
-        run_coroutine(self._run(session_name, edit, label, is_refactoring))
-
-    async def _run(
+    async def run(
         self, session_name: str, edit: WorkspaceEdit, label: str | None = None, is_refactoring: bool = False
     ) -> None:
         if session := self.session_by_name(session_name):

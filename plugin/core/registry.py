@@ -15,7 +15,7 @@ from typing import Iterable
 from typing import TYPE_CHECKING
 import operator
 import sublime
-import sublime_plugin
+import sublime_aio
 
 if TYPE_CHECKING:
     from ...protocol import Diagnostic
@@ -52,7 +52,7 @@ def get_position(view: sublime.View, event: dict | None = None, point: int | Non
         return None
 
 
-class LspWindowCommand(sublime_plugin.WindowCommand):
+class LspWindowCommand(sublime_aio.WindowCommand):
     """
     Inherit from this class to define requests which are not bound to a particular view. This allows to run requests
     for example from links in HtmlSheets or when an unrelated file has focus.
@@ -115,7 +115,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         return windows.lookup(self.window)
 
 
-class LspTextCommand(sublime_plugin.TextCommand):
+class LspTextCommand(sublime_aio.ViewCommand):
     """
     Inherit from this class to define your requests that should be triggered via the command palette and/or a
     keybinding.
@@ -188,7 +188,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 class LspOpenLocationCommand(LspWindowCommand):
     """A command to be used by third-party ST packages that need to open an URI with some abstract scheme."""
 
-    def run(
+    async def run(
         self,
         location: Location | LocationLink,
         session_name: str | None = None,
@@ -202,19 +202,14 @@ class LspOpenLocationCommand(LspWindowCommand):
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
                 elif 'shift' in modifier_keys:
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
-        run_coroutine(self._run(location, session_name, flags, group))
-
-    def want_event(self) -> bool:
-        return True
-
-    async def _run(
-        self, location: Location | LocationLink, session_name: str | None, flags: sublime.NewFileFlags, group: int
-    ) -> None:
         if session := self.session_by_name(session_name) if session_name else self.session():
             if not await session.open_location(location, flags, group):
                 uri, _ = get_uri_and_position_from_location(location)
                 message = f"Failed to open {uri}"
                 sublime.status_message(message)
+
+    def want_event(self) -> bool:
+        return True
 
 
 class LspRestartServerCommand(LspTextCommand):
@@ -241,12 +236,9 @@ class LspRestartServerCommand(LspTextCommand):
         run_coroutine(wm.restart_sessions([self._config_names[index]]))
 
 
-class LspCheckApplicableCommand(sublime_plugin.TextCommand):
+class LspCheckApplicableCommand(sublime_aio.ViewCommand):
 
-    def run(self, edit: sublime.Edit, session_name: str) -> None:
-        run_coroutine(self._run(session_name))
-
-    async def _run(self, session_name: str) -> None:
+    async def run(self, session_name: str) -> None:
         if wm := windows.lookup(self.view.window()):
             await wm.recheck_is_applicable(self.view, session_name)
 

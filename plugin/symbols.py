@@ -8,7 +8,6 @@ from ..protocol import SymbolInformation
 from ..protocol import SymbolKind
 from ..protocol import SymbolTag
 from ..protocol import WorkspaceSymbol
-from .core.aio import run_coroutine
 from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler
@@ -328,10 +327,7 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
 
     capability = 'workspaceSymbolProvider'
 
-    def run(self, symbol: WorkspaceSymbolValue) -> None:
-        run_coroutine(self._run(symbol))
-
-    async def _run(self, symbol: WorkspaceSymbolValue) -> None:
+    async def run(self, symbol: WorkspaceSymbolValue) -> None:
         session_name = symbol['session']
         if session := self.session_by_name(session_name):
             if location := symbol.get('location'):

@@ -241,10 +241,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             return True
         return False
 
-    def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
-        run_coroutine(self._run())
-
-    async def _run(self) -> None:
+    async def run(self, event: dict | None = None) -> None:
         if (potential_error := await format_selection(self.get_listener())) and isinstance(potential_error, Error):
             sublime.status_message(f'Formatting error: {potential_error}')
 

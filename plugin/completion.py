@@ -267,10 +267,7 @@ class QueryCompletionsTask:
 
 class LspResolveDocsCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, index: int, session_name: str, event: dict | None = None) -> None:
-        run_coroutine(self._run(index, session_name, event))
-
-    async def _run(self, index: int, session_name: str, event: dict | None = None) -> None:
+    async def run(self, index: int, session_name: str, event: dict | None = None) -> None:
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
         language_map: MarkdownLangMap | None = None

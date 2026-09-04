@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine
 from .core.constants import CODE_LENS_ENABLED_KEY
 from .core.protocol import Error
 from .core.protocol import Request
@@ -128,12 +127,9 @@ class LspToggleCodeLensesCommand(LspWindowCommand):
     def is_checked(self) -> bool:
         return self.are_enabled(self.window)
 
-    def run(self) -> None:
+    async def run(self) -> None:
         enable = not self.is_checked()
         self.window.settings().set(CODE_LENS_ENABLED_KEY, enable)
-        run_coroutine(self._update_views(enable))
-
-    async def _update_views(self, enable: bool) -> None:
         window_manager = windows.lookup(self.window)
         if not window_manager:
             return

@@ -47,8 +47,8 @@ import sublime
 import webbrowser
 
 if TYPE_CHECKING:
-    from plugin.core.sessions import CancellableInflightRequest
-    from plugin.core.sessions import CancellableRequest
+    from .core.sessions import CancellableRequest
+    from .core.sessions import RequestController
 
 SessionName: TypeAlias = str
 CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, None]
@@ -181,15 +181,7 @@ def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItem
 
 
 class QueryCompletionsTask:
-    """
-    Represents pending completion requests.
-
-    Can be canceled while in progress in which case the "on_done_async" callback will get immediately called with empty
-    list and the pending response from the server(s) will be canceled and results ignored.
-
-    All public methods must only be called on the async thread and the "on_done_async" callback will also be called
-    on the async thread.
-    """
+    """Represents pending completion requests."""
 
     def __init__(
         self,
@@ -200,7 +192,7 @@ class QueryCompletionsTask:
         self._view = view
         self._location = location
         self._triggered_manually = triggered_manually
-        self._pending_completion_requests: dict[int, CancellableRequest] = {}
+        self._pending_completion_requests: dict[int, RequestController] = {}
 
     async def query_completions(
         self, sessions: list[Session]
@@ -215,7 +207,7 @@ class QueryCompletionsTask:
             )
         )
 
-    def _create_completion_request_async(self, session: Session) -> CancellableInflightRequest[CompletionResponse]:
+    def _create_completion_request_async(self, session: Session) -> CancellableRequest[CompletionResponse]:
         params = cast('CompletionParams', text_document_position_params(self._view, self._location))
         request = Request.complete(params, self._view)
         future = session.request(request)
@@ -281,18 +273,12 @@ class LspResolveDocsCommand(LspTextCommand):
     async def _run(self, index: int, session_name: str, event: dict | None = None) -> None:
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
-        if session := self.session_by_name(session_name, 'completionProvider.resolveProvider'):
+        language_map: MarkdownLangMap | None = None
+        if session := self.session_by_name(session_name):
             language_map = session.markdown_language_id_to_st_syntax_map()
-            resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
-            if isinstance(resolved_item, Error):
-                self._handle_resolve_response_async(None, item)
-            else:
-                # TODO: why do we only pass the language_map when the langserver is a resolveProvider?
-                self._handle_resolve_response_async(language_map, resolved_item)
-        else:
-            self._handle_resolve_response_async(None, item)
-
-    def _handle_resolve_response_async(self, language_map: MarkdownLangMap | None, item: CompletionItem) -> None:
+            if session.has_capability('completionProvider.resolveProvider', check_views=True):
+                resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
+                item = resolved_item if not isinstance(resolved_item, Error) else item
         detail = ""
         documentation = ""
         if item:

@@ -97,7 +97,9 @@ class CodeActionsManager:
         region: sublime.Region,
         session_buffer_diagnostics: list[tuple[SessionBufferProtocol, list[Diagnostic]]],
         only_kinds: list[str | CodeActionKind] | None = None,
+        *,
         manual: bool = False,
+        progress: bool = False,
     ) -> asyncio.Future[list[CodeActionsByConfigName]]:
         """
         Requests code actions with provided diagnostics and specified region. If there are
@@ -130,7 +132,7 @@ class CodeActionsManager:
                     diagnostics = diags
                     break
             params = text_document_code_action_params(view, region, diagnostics, only_kinds, manual)
-            return Request.codeAction(params, view)
+            return Request.codeAction(params, view, progress=progress)
 
         def response_filter(sb: SessionBufferProtocol, actions: list[CodeActionOrCommand]) -> list[CodeActionOrCommand]:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
@@ -373,7 +375,7 @@ class LspCodeActionsCommand(LspTextCommand):
             return
         session_buffer_diagnostics = listener.get_diagnostics_async(region)
         actions = await actions_manager.request_for_region(
-            view, region, session_buffer_diagnostics, only_kinds, manual=True
+            view, region, session_buffer_diagnostics, only_kinds, manual=True, progress=True
         )
         sublime.set_timeout(lambda: self._handle_code_actions(actions))
 
@@ -502,7 +504,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
         if not view:
             return
         if (region := self._get_region(event)) is not None:
-            await actions_manager.request_for_region(view, region, [], MENU_ACTIONS_KINDS, True)
+            await actions_manager.request_for_region(view, region, [], MENU_ACTIONS_KINDS, manual=True)
 
 
 class LspRefactorCommand(LspMenuActionCommand):

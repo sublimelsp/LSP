@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from .logging import debug
 from .logging import exception_log
-from enum import IntFlag
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -24,35 +23,20 @@ if TYPE_CHECKING:
     P = ParamSpec("P")
 
 
-class ExceptionPolicy(IntFlag):
-    IGNORE = 0
-    STACKTRACE = 1
-    MESSAGEBOX = 2
-
-
 _futures: set[concurrent.futures.Future] = set()
 
 
-def _on_future_done(exception_policy: ExceptionPolicy, fut: concurrent.futures.Future[Any]) -> None:
+def _on_future_done(fut: concurrent.futures.Future[Any]) -> None:
     _futures.discard(fut)
     if not fut.cancelled() and (ex := fut.exception()):
-        if exception_policy & ExceptionPolicy.STACKTRACE:
-            exception_log("coroutine finished with exception", ex)
-        if exception_policy & ExceptionPolicy.MESSAGEBOX:
-            message = f"Error: {ex}"
-            if exception_policy & ExceptionPolicy.STACKTRACE:
-                message += "\n\n(See the Console for more information)"
-            sublime.error_message(message)
+        exception_log("coroutine finished with exception", ex)
 
 
-def run_coroutine(
-    coroutine: Coroutine[object, object, T], *, exception_policy: ExceptionPolicy = ExceptionPolicy.STACKTRACE
-) -> concurrent.futures.Future[T]:
+def run_coroutine(coroutine: Coroutine[object, object, T]) -> concurrent.futures.Future[T]:
     """
     Start the execution of a coroutine in the asyncio thread, from any thread.
 
     :param coroutine: a coroutine to run.
-    :param exception_policy: what to do when the coroutine finishes with an uncaught exception.
     :return: a handle to a concurrent future object.
 
     When you are certain you are already in the asyncio thread, then use one of:
@@ -64,7 +48,7 @@ def run_coroutine(
       `asyncio.create_task`, keeps a (strong) reference to the Task object.
     """
     future = sublime_aio.run_coroutine(coroutine)
-    future.add_done_callback(partial(_on_future_done, exception_policy))
+    future.add_done_callback(_on_future_done)
     _futures.add(future)
     return future
 
@@ -123,9 +107,9 @@ def run_on_worker_thread(f: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -
     return _run_on_st_thread(sublime.set_timeout_async, f, *args, **kwargs)
 
 
-def tick(n: int = 1) -> asyncio.Future[None]:
+def tick() -> asyncio.Future[None]:
     """
-    Wait until n ticks have occurred on the main thread.
+    Wait until at least 1 tick has occurred on the main thread.
 
     Must be called from the asyncio thread. You must await the returned future.
     """
@@ -137,15 +121,7 @@ def tick(n: int = 1) -> asyncio.Future[None]:
         if not future.done():
             future.set_result(None)
 
-    def iterate() -> None:
-        nonlocal n
-        n -= 1
-        if n > 0:
-            sublime.set_timeout(iterate)
-        else:
-            loop.call_soon_threadsafe(on_done)
-
-    sublime.set_timeout(iterate)
+    sublime.set_timeout(lambda: loop.call_soon_threadsafe(on_done))
     return future
 
 
@@ -174,8 +150,7 @@ async def gather_and_flatten_exceptions(*coros: Coroutine[Any, Any, list[Excepti
     flattened list of Exceptions that occurred for each coroutine. BaseExceptions are filtered out.
     """
     exceptions: list[Exception] = []
-    items: list[BaseException | list[Exception]] = await asyncio.gather(*coros, return_exceptions=True)
-    for item in items:
+    for item in await asyncio.gather(*coros, return_exceptions=True):
         # Only keep exceptions derived from Exception. Exceptions derived from BaseException, but not derived from
         # Exception are things like asyncio.CancelledError or SystemExit and should be ignored.
         if isinstance(item, Exception):

@@ -69,6 +69,7 @@ class LspFoldCommand(LspTextCommand):
         point: int | None = None
     ) -> bool:
         if not prefetch:
+
             return True
         # There should be a single empty selection in the view, otherwise this functionality would be misleading
         selection = self.view.sel()
@@ -85,7 +86,7 @@ class LspFoldCommand(LspTextCommand):
             session = self.best_session(self.capability)
             if session:
                 params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
-                session.send_request_async(
+                session.send_request(
                     Request.foldingRange(params, self.view),
                     partial(self._handle_response_async, view_change_count)
                 )
@@ -156,7 +157,7 @@ class LspFoldCommand(LspTextCommand):
                 pt = selection[0].b
             if session := self.best_session(self.capability):
                 params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
-                session.send_request_async(
+                session.send_request(
                     Request.foldingRange(params, self.view),
                     partial(self._handle_response_manual_async, pt, strict)
                 )
@@ -181,7 +182,7 @@ class LspFoldAllCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, kind: str | None = None, event: dict | None = None) -> None:
         if session := self.best_session(self.capability):
             params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
-            session.send_request_async(
+            session.send_request(
                 Request.foldingRange(params, self.view), partial(self._handle_response_async, kind))
 
     def _handle_response_async(self, kind: str | None, response: list[FoldingRange] | None) -> None:

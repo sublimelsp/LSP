@@ -3,6 +3,7 @@ from __future__ import annotations
 from ...protocol import SignatureHelp
 from ...protocol import SignatureHelpTriggerKind
 from ...protocol import SignatureInformation
+from .aio import run_coroutine
 from .logging import debug
 from .registry import LspTextCommand
 from .views import FORMAT_MARKUP_CONTENT
@@ -13,10 +14,10 @@ from typing import TYPE_CHECKING
 from typing import TypedDict
 import html
 import re
-import sublime
 
 if TYPE_CHECKING:
     from .constants import MarkdownLangMap
+    import sublime
 
 
 class SignatureHelpStyle(TypedDict):
@@ -45,7 +46,7 @@ class LspSignatureHelpShowCommand(LspTextCommand):
 
     def run(self, _: sublime.Edit) -> None:
         if listener := self.get_listener():
-            sublime.set_timeout_async(lambda: listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked))
+            run_coroutine(listener.do_signature_help(SignatureHelpTriggerKind.Invoked))
 
 
 class SigHelp:

@@ -1875,7 +1875,7 @@ class Session(APIHandler, TransportCallbacks):
                 deleted_files.append({'uri': uri})
                 return delete_file(path).then(_continue)
             if os.path.isdir(path):
-                if os.listdir() and not options.get('recursive'):
+                if os.listdir(path) and not options.get('recursive'):
                     return _continue(f'DeleteFile failed because folder {uri} is not empty')
                 deleted_files.append({'uri': uri})
                 return delete_folder(path).then(_continue)

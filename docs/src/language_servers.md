@@ -884,6 +884,52 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
     }
     ```
 
+## Slang
+
+1. Install the [Slang](https://packages.sublimetext.io/packages/Slang) package from Package Control for syntax highlighting.
+2. Download and unzip the Slang compiler from <https://github.com/shader-slang/slang/releases>. The `slangd` language server executable is inside the `bin` folder, so you can either add that to your PATH environment variable, or you need to specify the full path in the config below. Alternatively, the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home) also includes the Slang compiler and language server, so you can skip this step if you already have that installed.
+3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"slang-lsp"` configuration:
+
+    ```jsonc
+    {
+        "slang-lsp": {
+            "enabled": true,
+            "command": ["slangd"],
+            "selector": "source.slang",
+            "settings": {
+                // Predefined macros to use in the language server. Each item contains one macro definition. You can also use `macro_name=value` syntax to specify the value of the macro.
+                "slang.predefinedMacros": [],
+                // Controls whether or not the language server should look in all sub-directories in the current workspace for an include or imported file if it is not found in the explicitly specified search paths.
+                "slang.searchInAllWorkspaceDirectories": true,
+                // The language server will search for the included or imported file in these additional directories first. If not found, the server will look in all sub directories in the current workspace (if enabled by the setting).
+                "slang.additionalSearchPaths": [],
+                // Controls whether or not to enable commit characters for selecting an auto completion item in addition to pressing enter. Options: "off", "membersOnly", "on"
+                "slang.enableCommitCharactersInAutoCompletion": "off",  // This functionality is not supported by Sublime LSP.
+                // Controls whether or not to format code automatically while typing. Requires clang-format to be discoverable from PATH.
+                "slang.format.enableFormatOnType": true,
+                // The location of clang-format for auto formatting, including the executable name. If left unspecified, will attempt to find `clang-format` under `PATH`.
+                "slang.format.clangFormatLocation": "",
+                // The `-style` argument to pass to clang-format, without quotes. Examples: `Microsoft`, `LLVM`, `file:fileName`.
+                "slang.format.clangFormatStyle": "file",
+                // The `-fallback-style` argument to pass to clang-format, without quotes. Examples: `Microsoft`, `LLVM`, `file:fileName`.
+                "slang.format.clangFormatFallbackStyle": "{BasedOnStyle: Microsoft, BreakBeforeBraces: Allman, ColumnLimit: 0}",
+                // Controls whether the extension is allowed to make line-break changes when reformatting the code on typing.
+                "slang.format.allowLineBreakChangesInOnTypeFormatting": false,
+                // Controls whether the extension is allowed to make line-break changes when doing range formatting, such as formatting on paste or on command.
+                "slang.format.allowLineBreakChangesInRangeFormatting": false,
+                // Enable inlay hints for duduced decl types, e.g. the deduced type in `var i = 2`
+                "slang.inlayHints.deducedTypes": true,
+                // Enable inlay hints for parameter names at call sites.
+                "slang.inlayHints.parameterNames": true,
+                // Controls the workspace flavor of the language server. Options: "standard", "vfx"
+                "slang.workspaceFlavor": "standard",
+                // The assumed Slang language version for source files that do not contain a `#language` directive. The empty default follows the compiler's own default version. Set this to match the version you build with (for example a global `-std`/`-language-version` option) so the editor does not report false errors on directive-less files. A per-file `#language` directive always overrides this setting. Options: "" (use the compiler's default language version), "2018", "2025", "2026", "latest"
+                "slang.predefinedLanguageVersion": "",
+            }
+        }
+    }
+    ```
+
 ## Solidity
 
 1. Install the [Ethereum](https://packagecontrol.io/packages/Ethereum) package from Package Control for syntax highlighting.

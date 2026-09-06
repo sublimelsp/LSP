@@ -6,8 +6,8 @@ If you encounter problems, consult the [common issues](troubleshooting.md#common
 
 If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](./client_configuration.md). Pull requests for adding a new configuration are welcome.
 
-!!! tip "We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json)."
-    [LSP-json](https://packagecontrol.io/packages/LSP-json) provides completions and diagnostics when editing JSON files that adhere to a JSON schema.
+!!! tip "We recommend installing [LSP-json](https://packages.sublimetext.io/packages/LSP-json)."
+    [LSP-json](https://packages.sublimetext.io/packages/LSP-json) provides completions and diagnostics when editing JSON files that adhere to a JSON schema.
 
 !!! info "For legacy ST3 docs, see [lsp.readthedocs.io](https://lsp.readthedocs.io)."
 
@@ -24,7 +24,7 @@ Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/
     cargo install asm-lsp
     ```
 
-2. Install the [x86 and x86_64 Assembly](https://packagecontrol.io/packages/x86%20and%20x86_64%20Assembly) package from Package Control.
+2. Install the [x86 and x86_64 Assembly](https://packages.sublimetext.io/packages/x86%20and%20x86_64%20Assembly) package from Package Control.
 
 3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"asm-lsp"` configuration:
 
@@ -173,7 +173,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 
 ## F\#
 
-1. Install the [F#](https://packagecontrol.io/packages/F%23) package from Package Control for syntax highlighting.
+1. Install the [F#](https://packages.sublimetext.io/packages/F%23) package from Package Control for syntax highlighting.
 2. Make sure you have installed the latest [.NET SDK](https://dotnet.microsoft.com/download).
 3. Install the [FsAutoComplete](https://github.com/fsharp/FsAutoComplete) from command prompt using the following command:
 
@@ -201,7 +201,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 
 ## Fortran
 
-1. Install the [ModernFortran](https://packagecontrol.io/packages/ModernFortran) or the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
+1. Install the [ModernFortran](https://packages.sublimetext.io/packages/ModernFortran) or the [Fortran](https://packages.sublimetext.io/packages/Fortran) package from Package Control for syntax highlighting.
 2. Install the [fortls](https://fortls.fortran-lang.org/quickstart.html#download) language server.
 3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"fortls"` configuration:
 
@@ -226,7 +226,7 @@ Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LS
 
 ## GDScript (Godot Engine)
 
-1. Install the [GDScript (Godot Engine)](https://packagecontrol.io/packages/GDScript%20(Godot%20Engine)) package from Package Control for syntax highlighting.
+1. Install the [GDScript (Godot Engine)](https://packages.sublimetext.io/packages/GDScript%20(Godot%20Engine)) package from Package Control for syntax highlighting.
 2. Launch the Godot Editor on the project you are working on and leave it running.
 3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"godot-lsp"` configuration:
 
@@ -265,7 +265,7 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
 ## Helm
 
 1. Install [helm-ls](https://github.com/mrjosh/helm-ls).
-2. Install the [YamlPipelines](https://packagecontrol.io/packages/YamlPipelines) package from Package Control for syntax highlighting.
+2. Install the [YamlPipelines](https://packages.sublimetext.io/packages/YamlPipelines) package from Package Control for syntax highlighting.
 3. (Optional & recommended) Install [yaml-language-server](https://github.com/mrjosh/helm-ls?tab=readme-ov-file#integration-with-yaml-language-server).
 4. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"helm-ls"` configuration:
 
@@ -386,7 +386,7 @@ Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LS
 
 ## Kotlin
 
-1. Install the [Kotlin](https://packagecontrol.io/packages/Kotlin) package from Package Control for syntax highlighting.
+1. Install the [Kotlin](https://packages.sublimetext.io/packages/Kotlin) package from Package Control for syntax highlighting.
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
 3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"kotlinls"` configuration:
 
@@ -508,7 +508,7 @@ Follow installation instructions on [LSP-marksman](https://github.com/sublimelsp
 
 ## MediaWiki
 
-1. Install the [Mediawiker](https://packagecontrol.io/packages/Mediawiker) package from Package Control for syntax highlighting.
+1. Install the [Mediawiker](https://packages.sublimetext.io/packages/Mediawiker) package from Package Control for syntax highlighting.
 2. Install the `wikitext-lsp` package:
 
     ```sh
@@ -545,7 +545,7 @@ Follow [installation instructions on nixd](https://github.com/nix-community/nixd
 
 ## OCaml/Reason
 
-1. Install the [Reason](https://packagecontrol.io/packages/Reason) package from Package Control for syntax highlighting.
+1. Install the [Reason](https://packages.sublimetext.io/packages/Reason) package from Package Control for syntax highlighting.
 2. Install the [Reason Language Server](https://github.com/jaredly/reason-language-server#sublime-text).
 3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"reason"` configuration:
 
@@ -685,7 +685,7 @@ Follow installation instructions on [R-IDE](https://github.com/REditorSupport/su
 
 ## Racket
 
-1. Install the [Racket](https://packagecontrol.io/packages/Racket) package from Package Control for syntax highlighting.
+1. Install the [Racket](https://packages.sublimetext.io/packages/Racket) package from Package Control for syntax highlighting.
 2. Follow the instructions for installation at [racket-langserver](https://github.com/jeapostrophe/racket-langserver).
 3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"racket-langserver"` configuration:
 
@@ -932,7 +932,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
 
 ## Solidity
 
-1. Install the [Ethereum](https://packagecontrol.io/packages/Ethereum) package from Package Control for syntax highlighting.
+1. Install the [Ethereum](https://packages.sublimetext.io/packages/Ethereum) package from Package Control for syntax highlighting.
 2. Install the [github:NomicFoundation/hardhat-vscode](https://github.com/NomicFoundation/hardhat-vscode/tree/development/server) language server.
 3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"solidity"` configuration:
 
@@ -979,7 +979,7 @@ Follow installation instructions on [LSP-SourceKit](https://github.com/sublimels
 
 ## SystemVerilog
 
-1. Install the [SystemVerilog](https://packagecontrol.io/packages/SystemVerilog) package from Package Control for syntax highlighting.
+1. Install the [SystemVerilog](https://packages.sublimetext.io/packages/SystemVerilog) package from Package Control for syntax highlighting.
 2. Make sure you install the latest version of [Verible](https://github.com/chipsalliance/verible).
 3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"verible"` configuration:
 
@@ -1009,7 +1009,7 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
 
 ## Toit
 
-1. Install the [Toit](https://packagecontrol.io/packages/Toit) package from Package Control for syntax highlighting.
+1. Install the [Toit](https://packages.sublimetext.io/packages/Toit) package from Package Control for syntax highlighting.
 2. Install the [Jaguar Language Server](https://github.com/toitlang/jaguar).
 3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"jag"` configuration:
 
@@ -1080,7 +1080,7 @@ Follow installation instructions on [LSP-vetur](https://github.com/sublimelsp/LS
 
 ## Vala
 
-1. Install the [Vala-TMBundle](https://packagecontrol.io/packages/Vala-TMBundle) package from Package Control to add Vala syntax highlighting and for Vala files to be reconginsed.
+1. Install the [Vala-TMBundle](https://packages.sublimetext.io/packages/Vala-TMBundle) package from Package Control to add Vala syntax highlighting and for Vala files to be reconginsed.
 2. Install the [Vala Language Server](https://github.com/Prince781/vala-language-server)
 3. Add Vala Langauge Server to LSP settings:
 

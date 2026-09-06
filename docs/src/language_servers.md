@@ -265,7 +265,7 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
 ## Helm
 
 1. Install [helm-ls](https://github.com/mrjosh/helm-ls).
-2. Install the [Yaml​Pipelines](https://packagecontrol.io/packages/YamlPipelines) package from Package Control for syntax highlighting.
+2. Install the [YamlPipelines](https://packagecontrol.io/packages/YamlPipelines) package from Package Control for syntax highlighting.
 3. (Optional & recommended) Install [yaml-language-server](https://github.com/mrjosh/helm-ls?tab=readme-ov-file#integration-with-yaml-language-server).
 4. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"helm-ls"` configuration:
 

@@ -16,8 +16,8 @@ deps = [
     "orjson==3.11.4",
 ]
 commands = [
-    ["pyright", "plugin", "stubs"],
-    ["ruff", "check"],
+    ["python", "scripts/run_with_modified_python_path.py", "python314", "pyright", "plugin", "stubs"],
+    ["python", "scripts/run_with_modified_python_path.py", "python314", "ruff", "check"],
 ]
 
 [tool.ruff]
@@ -45,9 +45,10 @@ order-by-type = false
 required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
+"plugin/core/protocol.py" = ["UP006", "UP007"]
 "plugin/core/typing.py" = ["F401"]
 "protocol/__init__.py" = ["D400", "D415"]
-"plugin/core/protocol.py" = ["UP006", "UP007"]
+"scripts/*.py" = ["INP001"]
 
 [tool.ruff.lint]
 # Enable preview rules.

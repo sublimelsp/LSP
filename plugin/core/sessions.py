@@ -1975,7 +1975,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 deleted_files.append({'uri': uri})
                 return await _continue(await delete_file(path))
             if os.path.isdir(path):  # noqa: ASYNC240
-                if os.listdir() and not options.get('recursive'):
+                if os.listdir(path) and not options.get('recursive'):
                     return await _continue(f'DeleteFile failed because folder {uri} is not empty')
                 deleted_files.append({'uri': uri})
                 return await _continue(await delete_folder(path))

@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from .core.types import ClientConfig
     from .core.workspace import WorkspaceFolder
     from weakref import ref
+    import asyncio
 
 
 HANDLER_MARKER = '__HANDLER_MARKER'
@@ -501,6 +502,16 @@ class LspPlugin(APIHandler):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         cls.name = cls.__module__.split('.')[0]  # pyright: ignore[reportAttributeAccessIssue]
         cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.name)  # pyright: ignore[reportAttributeAccessIssue]
+
+    async def on_transport_ready(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        """
+        Called before any JSON-RPC communication starts.
+
+        Override to do custom communication with the language server. The communication is not logged.
+        Use the provided writer object to write bytes; use the reader object to read bytes.
+        When returning from this async method, the JSON-RPC communication starts.
+        """
+        pass
 
     @deprecated("override on_initialized instead")
     def on_initialized_async(self) -> None:

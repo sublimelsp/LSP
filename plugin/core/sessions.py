@@ -1411,6 +1411,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> InitializeResult | Error:
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
+            if (reader := transport.reader) and (writer := transport.writer):
+                await self._plugin.on_transport_ready(reader, writer)
+            else:
+                raise RuntimeError("transport has already stopped")
         self.transport = transport
         self.working_directory = working_directory
         self._variables = variables

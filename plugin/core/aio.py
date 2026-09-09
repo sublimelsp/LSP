@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from .logging import debug
 from .logging import exception_log
+from .promise import Promise
+from .protocol import Error
+from .protocol import ErrorCodes
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -15,11 +18,13 @@ import sublime_aio
 
 if TYPE_CHECKING:
     from contextvars import Context
+    from plugin.core.promise import ResolveFunc
     from sublime_aio import T
     from sublime_aio import Ts
     from typing_extensions import ParamSpec
     from typing_extensions import Unpack
     import concurrent.futures
+
     P = ParamSpec("P")
 
 
@@ -223,3 +228,31 @@ class TaskContainer:
         The parameters and behavior of this method are exactly the same as :py:meth`create_task`.
         """
         run_on_asyncio_thread(lambda: self.create_task(coro, name=name))
+
+    def create_task_and_wrap_in_promise(
+        self, coro: Coroutine[T, Any, Any], name: str | None = None
+    ) -> Promise[T | Error]:
+
+        def executor_func(resolve: ResolveFunc) -> None:
+
+            def on_asyncio_thread() -> None:
+                if task := self.create_task(coro, name=name):
+
+                    def handle_on_done(f: asyncio.Future[T]) -> None:
+                        if ex := f.exception():
+                            resolve(Error.from_exception(ex))
+                        else:
+                            resolve(f.result())
+
+                    task.add_done_callback(handle_on_done)
+                else:
+                    resolve(Error(ErrorCodes.UnknownErrorCode, "unable to create task"))
+
+            try:
+                asyncio.get_running_loop()
+                on_asyncio_thread()
+            except RuntimeError:
+                pass
+            run_on_asyncio_thread(on_asyncio_thread)
+
+        return Promise(executor_func)

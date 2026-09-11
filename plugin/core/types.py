@@ -218,6 +218,7 @@ class DebouncerNonThreadSafe:
         self._task_container = weakref.ref(task_container)
         self._current_id = -1
         self._next_id = 0
+        self._task: asyncio.Task | None = None
 
     def debounce(
         self, f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True
@@ -242,10 +243,13 @@ class DebouncerNonThreadSafe:
 
         current_id = self._current_id = self._next_id
         self._next_id += 1
-        task_container.create_task(run(current_id))
+        self._task = task_container.create_task(run(current_id))
 
     def cancel_pending(self) -> None:
         self._current_id = -1
+        if self._task:
+            self._task.cancel()
+            self._task = None
 
 
 def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:

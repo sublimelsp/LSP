@@ -155,7 +155,6 @@ class TcpClientTransportConfig(TransportConfig):
             process = None
             error_reader = None
         start_time = time.time()
-        current_time = start_time
         delta = 0
         while delta < TCP_CONNECT_TIMEOUT:
             time_left = TCP_CONNECT_TIMEOUT - delta
@@ -176,8 +175,7 @@ class TcpClientTransportConfig(TransportConfig):
             except TimeoutError:
                 # We passed the TCP_CONNECT_TIMEOUT and the process didn't respond.
                 break
-            current_time = time.time()
-            delta = current_time - start_time
+            delta = time.time() - start_time
         raise RuntimeError(f"Failed to connect to TCP port {port}")
 
 
@@ -218,7 +216,9 @@ class TcpServerTransportConfig(TransportConfig):
             async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
                 async with self.cv:
                     transport = StreamTransport(encode_json, decode_json, reader, writer)
-                    self.wrapper = TransportWrapper(callbacks, transport, self.process, command, self.error_reader)
+                    self.wrapper = TransportWrapper(
+                        callbacks, transport, self.process, launch.command, self.error_reader
+                    )
                     self.cv.notify()
 
         callback = ClientConnectedCallback()
@@ -237,7 +237,7 @@ class TcpServerTransportConfig(TransportConfig):
                 callback.error_reader = ErrorReader(callbacks, process.stdout)
                 try:
                     await asyncio.wait_for(callback.cv.wait(), timeout=TCP_CONNECT_TIMEOUT)
-                except Exception:
+                except BaseException:
                     process.kill()
                     await process.wait()
                     raise
@@ -340,7 +340,12 @@ class StreamTransport(Transport):
     @override
     async def write_bytes(self, payload: bytes) -> None:
         self._writer.write(payload)
-        await self._writer.drain()
+        try:
+            await self._writer.drain()
+        except ConnectionResetError:
+            # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
+            # there's other logic that will make the transport shut down.
+            pass
 
     @override
     async def close(self) -> None:
@@ -531,7 +536,7 @@ async def kill_all_subprocesses() -> None:
             p.kill()
         except Exception:
             pass
-    await asyncio.gather(*[p.wait() for p in subprocesses])
+    await asyncio.gather(*[p.wait() for p in subprocesses], return_exceptions=True)
 
 
 def _fixup_startup_args(args: list[str]) -> Any:

@@ -1042,8 +1042,6 @@ class RequestController:
 class CancellableRequest(RequestController, Generic[R]):
     """A request that is in flight. The result can be awaited."""
 
-    _future: asyncio.Future[R | Error]
-
     def __init__(self, future: asyncio.Future[R | Error], req_id: int, session: Session) -> None:
         """
         Create a new instance of this class.
@@ -1877,7 +1875,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             while os.path.exists(path) and attempts < self._FILE_DELETED_MAX_CHECK_ATTEMPTS:  # noqa: ASYNC240
                 await asyncio.sleep(0.1)
                 attempts += 1
-            if attempts >= self._FILE_DELETED_MAX_CHECK_ATTEMPTS and not os.path.exists(path):  # noqa: ASYNC240
+            if os.path.exists(path):  # noqa: ASYNC240
                 raise asyncio.TimeoutError(f"Timeout waiting for deletion of {path}")
 
         async def delete_file(path: str) -> None:

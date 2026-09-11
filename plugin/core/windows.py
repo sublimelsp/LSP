@@ -234,10 +234,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     # Do not let an exception in listener.on_session_initialized_async cause a failure in this method.
                     asyncio.get_running_loop().call_soon(listener.on_session_initialized_async, session)
                     return session
-
             config = ClientConfig.from_config(config, {})
             config.set_view_status_handler(self)
-
             try:
                 workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
                 plugin_class = get_plugin(config.name)
@@ -289,7 +287,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 config.erase_view_status(listener.view)
                 sublime.message_dialog(message)
                 return None
-
             try:
                 config.set_view_status(listener.view, "initializing...")
                 initialize_result = await session.initialize(

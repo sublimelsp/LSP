@@ -17,8 +17,8 @@ import sublime
 import sublime_aio
 
 if TYPE_CHECKING:
+    from .promise import ResolveFunc
     from contextvars import Context
-    from plugin.core.promise import ResolveFunc
     from sublime_aio import T
     from sublime_aio import Ts
     from typing_extensions import ParamSpec
@@ -53,8 +53,8 @@ def run_coroutine(coroutine: Coroutine[object, object, T]) -> concurrent.futures
       `asyncio.create_task`, keeps a (strong) reference to the Task object.
     """
     future = sublime_aio.run_coroutine(coroutine)
-    future.add_done_callback(_on_future_done)
     _futures.add(future)
+    future.add_done_callback(_on_future_done)
     return future
 
 
@@ -250,9 +250,9 @@ class TaskContainer:
 
             try:
                 asyncio.get_running_loop()
-                on_asyncio_thread()
             except RuntimeError:
-                pass
-            run_on_asyncio_thread(on_asyncio_thread)
+                run_on_asyncio_thread(on_asyncio_thread)
+            else:
+                on_asyncio_thread()
 
         return Promise(executor_func)

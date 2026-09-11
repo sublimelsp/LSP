@@ -36,12 +36,12 @@ from LSP.protocol import MarkupContent
 from LSP.protocol import MarkupKind
 from typing import Any
 from unittest.mock import MagicMock
-from unittesting import DeferrableTestCase
 import re
 import sublime
+import unittest
 
 
-class ViewsTest(DeferrableTestCase):
+class ViewsTest(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()

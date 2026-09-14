@@ -287,6 +287,8 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "source.cs": LanguageKind.CSharp,
     "source.dosbatch": LanguageKind.WindowsBat,
     "source.fixedform-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
+    "source.gjs": "glimmer-js",
+    "source.gts": "glimmer-ts",
     "source.js": LanguageKind.JavaScript,
     "source.js.react": LanguageKind.JavaScriptReact,  # https://github.com/Thom1729/Sublime-JS-Custom
     "source.json-tmlanguage": "jsonc",  # https://github.com/SublimeText/PackageDev

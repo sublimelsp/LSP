@@ -570,6 +570,8 @@ class LanguageKind(StrEnum):
     FSharp = 'fsharp'
     GitCommit = 'git-commit'
     GitRebase = 'rebase'
+    GlimmerJs = 'glimmer-js'
+    GlimmerTs = 'glimmer-ts'
     Go = 'go'
     Groovy = 'groovy'
     Handlebars = 'handlebars'

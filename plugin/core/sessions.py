@@ -898,11 +898,11 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def purge_changes(self) -> asyncio.Future[list[BaseException | None]]:
+    async def purge_changes(self) -> list[BaseException | None]:
         raise NotImplementedError
 
     @abstractmethod
-    def trigger_on_pre_save(self) -> asyncio.Future[list[BaseException | None]]:
+    async def trigger_on_pre_save(self) -> list[BaseException | None]:
         raise NotImplementedError
 
     @abstractmethod

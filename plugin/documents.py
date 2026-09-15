@@ -978,8 +978,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 return sv.has_capability_async(capability_path)
         return False
 
-    def purge_changes(self) -> asyncio.Future[list[BaseException | None]]:
-        return asyncio.gather(*(sv.purge_changes() for sv in self.session_views_async()), return_exceptions=True)
+    async def purge_changes(self) -> list[BaseException | None]:
+        return await asyncio.gather(*(sv.purge_changes() for sv in self.session_views_async()), return_exceptions=True)
 
     @deprecated("use DocumentSyncListener.purge_changes instead")
     def purge_changes_async(self) -> None:
@@ -989,8 +989,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
         self.create_task_threadsafe(run())
 
-    def trigger_on_pre_save(self) -> asyncio.Future[list[BaseException | None]]:
-        return asyncio.gather(*(sv.on_pre_save() for sv in self.session_views_async()), return_exceptions=True)
+    async def trigger_on_pre_save(self) -> list[BaseException | None]:
+        return await asyncio.gather(*(sv.on_pre_save() for sv in self.session_views_async()), return_exceptions=True)
 
     async def revert(self) -> list[BaseException | None]:
         exceptions = []

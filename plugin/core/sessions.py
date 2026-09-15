@@ -1573,7 +1573,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
-    ) -> sublime.View | None:
+    ) -> sublime.View | Literal[False] | None:
         """
         Try to open a URI.
 
@@ -1583,6 +1583,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         - Otherwise, if the URI has a scheme supported by the language server, then asks the language server for the
           content.
         - Otherwise, if there's a plugin attached, delegates to the plugin.
+        - If the plugin cannot handle the scheme, or an error occurred, returns the literal False.
         """
         scheme, _ = parse_uri(uri)
         if scheme == 'file':
@@ -1622,7 +1623,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             )
             if isinstance(response, Error):
                 # TODO: Handle error.
-                return None
+                return False
             content = response['text'].replace('\r', '')
             syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
             return self._on_view_for_uri_opened(
@@ -1636,7 +1637,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     return self._on_sheet_for_uri_opened(sheet, uri, r)
             else:
                 return await self._open_uri_with_plugin(self._plugin, uri, r, flags, group)
-        return None
+        return False
 
     async def _open_file_uri(
         self,
@@ -1673,7 +1674,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         r: Range | None,
         flags: sublime.NewFileFlags,
         group: int,
-    ) -> sublime.View | None:
+    ) -> sublime.View | Literal[False] | None:
         # I cannot type-hint an unpacked tuple
         pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         promise, resolve = pair
@@ -1685,7 +1686,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return self._on_view_for_uri_opened(view, uri, r)
         # resolve unused promise
         resolve(('', '', ''))
-        return None
+        return False
 
     async def open_scratch_buffer(
         self,
@@ -1727,7 +1728,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         location: Location | LocationLink,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
-    ) -> sublime.View | None:
+    ) -> sublime.View | Literal[False] | None:
         uri, r = get_uri_and_range_from_location(location)
         return await self.open_uri(uri, r, flags, group)
 
@@ -1805,7 +1806,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> ApplyWorkspaceEditResult:
 
         async def apply_text_document_edit(
-            view: sublime.View | None,
+            view: sublime.View | Literal[False] | None,
             uri: DocumentUri,
             edits: list[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
             version: int | None,
@@ -2473,7 +2474,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return {"success": open_externally(uri)}
         # TODO: ST API does not allow us to say "do not focus this new view"
         result = await self.open_uri(uri, params.get("selection"))
-        return {"success": result is not None}
+        return {"success": bool(result)}
 
     @request_handler('window/workDoneProgress/create')
     async def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> None:

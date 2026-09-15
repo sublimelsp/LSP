@@ -363,7 +363,7 @@ class LspHoverCommand(LspTextCommand):
         if r:
             uri = urlunsplit(uri_parts._replace(fragment=''))
         for session in self.sessions():
-            if isinstance(await session.open_uri(uri, r), sublime.View):
+            if not isinstance(await session.open_uri(uri, r), bool):
                 return
 
 

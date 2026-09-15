@@ -58,9 +58,9 @@ async def format_document(text_command: LspTextCommand, formatter: str | None = 
     return None
 
 
-async def format_selection(listener: AbstractViewListener | None) -> Error | None:
+async def format_selection(listener: AbstractViewListener | None) -> Error | bool:
     if not listener:
-        return None
+        return False
     await listener.purge_changes()
     session: Session | None = None
     text_edits: list[TextEdit] | Error | None = None
@@ -78,9 +78,9 @@ async def format_selection(listener: AbstractViewListener | None) -> Error | Non
             await apply_text_edits(listener.view, text_edits, label="Format Selection")
             if selection:
                 _maybe_reset_selection_start_async(listener.view, selection.begin())
-        else:
-            return text_edits
-    return None
+            return True
+        return text_edits
+    return False
 
 
 def _maybe_reset_selection_start_async(view: sublime.View, offset: int) -> None:
@@ -97,9 +97,6 @@ class WillSaveWaitTask(LspTask):
     @classmethod
     def is_applicable(cls, view: sublime.View) -> bool:
         return bool(view.file_name())
-
-    def __init__(self, text_command: LspTextCommand) -> None:
-        super().__init__(text_command)
 
     async def run(self) -> None:
         await super().run()
@@ -156,15 +153,15 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
         return super().is_enabled() or bool(self.best_session(LspFormatDocumentRangeCommand.capability))
 
     @override
-    async def on_tasks_completed(self, *, select: bool = False, **kwargs: dict[str, Any]) -> Error | None:
+    async def on_tasks_completed(self, *, select: bool = False, **kwargs: dict[str, Any]) -> None:
         session_names = [session.config.name for session in self.sessions(self.capability)]
         syntax = self.view.syntax()
         if not syntax:
-            return None
+            return
         base_scope = syntax.scope
         if select:
             self.select_formatter(base_scope, session_names)
-            return None
+            return
         if listener := self.get_listener():
             await listener.purge_changes()
         if len(session_names) > 1:
@@ -172,15 +169,17 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
                 if session := self.session_by_name(formatter, self.capability):
                     text_edits = await session.request(text_document_formatting(self.view))
                     if isinstance(text_edits, Error):
-                        return text_edits
-                    return await self._apply_text_edits(text_edits, label=self.label)
+                        sublime.status_message(f"Failed to load text edits: {text_edits}")
+                        return
+                    await self._apply_text_edits(text_edits, label=self.label)
+                    return
             self.select_formatter(base_scope, session_names)
         else:
             text_edits = await format_document(self)
             if isinstance(text_edits, Error):
-                return text_edits
-            return await self._apply_text_edits(text_edits, label=self.label)
-        return None
+                sublime.status_message(f"Failed to format document: {text_edits}")
+                return
+            await self._apply_text_edits(text_edits, label=self.label)
 
     async def _apply_text_edits(self, text_edits: list[TextEdit] | None, label: str) -> None:
         try:

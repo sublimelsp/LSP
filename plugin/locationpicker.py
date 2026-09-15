@@ -117,8 +117,8 @@ class LocationPicker:
             session, location, uri, position = self._unpack(index)
             if not session:
                 return
-            # Note: this has to run on the main thread (and not via open_location_async)
-            # otherwise the bevior feels weird. It's the only reason why open_basic_file exists.
+            # Note: this has to run on the main thread otherwise the bevior feels weird. It's the only reason why
+            # open_basic_file exists.
             if uri.startswith(("file:", "res:")):
                 flags = sublime.NewFileFlags.ENCODED_POSITION
                 if not self._side_by_side:

@@ -50,6 +50,8 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
         if not isinstance(enable, bool):
             enable = not bool(window_settings.get('lsp_show_inlay_hints'))
         window_settings.set('lsp_show_inlay_hints', enable)
+        status = 'on' if enable else 'off'
+        sublime.status_message(f'Inlay Hints are {status}')
         coros: list[Awaitable[None]] = []
         for session in self.sessions():
             for sv in session.session_views_async():
@@ -58,8 +60,6 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
                 elif sv.get_request_flags() & RequestFlags.INLAY_HINT:
                     coros.append(sv.session_buffer.do_inlay_hints(sv.view))
         await asyncio.gather(*coros)
-        status = 'on' if enable else 'off'
-        sublime.status_message(f'Inlay Hints are {status}')
 
     def is_checked(self) -> bool:
         return bool(self.window.settings().get('lsp_show_inlay_hints'))
@@ -82,12 +82,10 @@ class LspInlayHintClickCommand(LspTextCommand):
             result = await session.request(Request.resolveInlayHint(inlay_hint, self.view))
             if not isinstance(result, Error):
                 inlay_hint = result
-
         if session and (text_edits := inlay_hint.get('textEdits')):
             for sb in session.session_buffers_async():
                 sb.remove_inlay_hint_phantom(phantom_uuid)
             await apply_text_edits(self.view, text_edits, label="Insert Inlay Hint")
-
         if label_part and (command := label_part.get('command')):
             self.view.run_command("lsp_execute", {
                 "session_name": session_name,

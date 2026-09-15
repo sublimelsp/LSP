@@ -453,12 +453,6 @@ class SemanticToken:
     modifiers: list[str]
 
 
-class ClientStates:
-    STARTING = 0
-    READY = 1
-    STOPPING = 2
-
-
 def is_notebook_cell_text_document_filter(document_filter: DocumentFilter) -> TypeGuard[NotebookCellTextDocumentFilter]:
     return 'notebook' in document_filter
 

@@ -6,7 +6,7 @@ from .logging import debug
 from .logging import exception_log
 from .promise import Promise
 from .protocol import Error
-from .protocol import ErrorCodes
+from .protocol import LSPErrorCodes
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import asyncio
 import sublime
 import sublime_aio
+import sys
 
 if TYPE_CHECKING:
     from .promise import ResolveFunc
@@ -26,6 +27,14 @@ if TYPE_CHECKING:
     import concurrent.futures
 
     P = ParamSpec("P")
+
+
+if sys.version_info >= (3, 11, 0):
+    # On py3.11 and later, asyncio.TimeoutError == TimeoutError
+    PortableTimeoutError = TimeoutError
+else:
+    # On earlier versions, asyncio.TimeoutError != TimeoutError
+    PortableTimeoutError = asyncio.TimeoutError
 
 
 _futures: set[concurrent.futures.Future] = set()
@@ -190,7 +199,7 @@ class TaskContainer:
 
         return [x for x in await asyncio.gather(*self._tasks, return_exceptions=True) if isinstance(x, Exception)]
 
-    def create_task(self, coro: Coroutine[object, object, object], name: str | None = None) -> asyncio.Task | None:
+    def create_task(self, coro: Coroutine[object, object, object], name: str | None = None) -> asyncio.Task:
         """
         Spawn a new coroutine, to be run in the background. Not thread-safe. Must be invoked from the asyncio thread.
 
@@ -204,11 +213,7 @@ class TaskContainer:
 
         """
         task = asyncio.create_task(coro, name=name)
-        try:
-            tasks = self._tasks
-        except AttributeError:
-            # This object already died on *some* thread... Most likely DocumentSyncListener.
-            return None
+        tasks = self._tasks
         tasks.add(task)
 
         def on_done(t: asyncio.Task) -> None:
@@ -236,17 +241,17 @@ class TaskContainer:
         def executor_func(resolve: ResolveFunc) -> None:
 
             def on_asyncio_thread() -> None:
-                if task := self.create_task(coro, name=name):
+                task = self.create_task(coro, name=name)
 
-                    def handle_on_done(f: asyncio.Future[T]) -> None:
-                        if ex := f.exception():
-                            resolve(Error.from_exception(ex))
-                        else:
-                            resolve(f.result())
+                def handle_on_done(f: asyncio.Future[T]) -> None:
+                    if f.cancelled():
+                        resolve(Error(LSPErrorCodes.RequestCancelled, "cancelled"))
+                    elif ex := f.exception():
+                        resolve(Error.from_exception(ex))
+                    else:
+                        resolve(f.result())
 
-                    task.add_done_callback(handle_on_done)
-                else:
-                    resolve(Error(ErrorCodes.UnknownErrorCode, "unable to create task"))
+                task.add_done_callback(handle_on_done)
 
             try:
                 asyncio.get_running_loop()

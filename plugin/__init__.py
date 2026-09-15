@@ -11,6 +11,7 @@ from .api import register_plugin
 from .api import request_handler
 from .api import unregister_plugin
 from .api import uri_handler
+from .core.aio import PortableTimeoutError
 from .core.aio import run_coroutine
 from .core.aio import run_on_asyncio_thread
 from .core.aio import run_on_threadpool
@@ -76,6 +77,7 @@ __all__ = [
     'OnPreStartContext',
     'PackagedTask',
     'PluginStartError',
+    'PortableTimeoutError',
     'Promise',
     'Request',
     'Response',

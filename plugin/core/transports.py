@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .aio import PortableTimeoutError
 from .aio import TaskContainer
 from .constants import ST_PLATFORM
 from .logging import debug
@@ -160,7 +161,7 @@ class TcpClientTransportConfig(TransportConfig):
             time_left = TCP_CONNECT_TIMEOUT - delta
             try:
                 reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(host='127.0.0.1', port=port), timeout=time_left
+                    asyncio.open_connection(host='localhost', port=port), timeout=time_left
                 )
                 return TransportWrapper(
                     callback_object=callbacks,
@@ -169,12 +170,12 @@ class TcpClientTransportConfig(TransportConfig):
                     process_args=launch.command if launch else None,
                     error_reader=error_reader,
                 )
-            except ConnectionRefusedError:
-                # Can happen when the language server is still starting. Just wait a bit and retry.
-                await asyncio.sleep(TCP_CONNECT_TIMEOUT / 10)
-            except TimeoutError:
+            except PortableTimeoutError:
                 # We passed the TCP_CONNECT_TIMEOUT and the process didn't respond.
                 break
+            except (ConnectionRefusedError, OSError):
+                # Can happen when the language server is still starting. Just wait a bit and retry.
+                await asyncio.sleep(TCP_CONNECT_TIMEOUT / 10)
             delta = time.time() - start_time
         raise RuntimeError(f"Failed to connect to TCP port {port}")
 
@@ -223,7 +224,7 @@ class TcpServerTransportConfig(TransportConfig):
 
         callback = ClientConnectedCallback()
         async with callback.cv:
-            server = await asyncio.start_server(callback, host='127.0.0.1', port=port, family=socket.AF_INET)
+            server = await asyncio.start_server(callback, host='localhost', port=port, family=socket.AF_INET)
             try:
                 await server.start_serving()
                 process = await launch.start(
@@ -265,7 +266,7 @@ class Transport(ABC):
         self._decoder = decoder
 
     @abstractmethod
-    async def read(self) -> JSONRPCMessage | None:
+    async def read(self) -> JSONRPCMessage:
         raise NotImplementedError
 
     @abstractmethod
@@ -373,7 +374,7 @@ class TransportWrapper(TaskContainer):
         process_args: list[str] | None,
         error_reader: ErrorReader | None,
     ) -> None:
-        TaskContainer.__init__(self)
+        super().__init__()
         self._callback_object = weakref.ref(callback_object)
         self._transport: Transport | None = transport
         self._process = process
@@ -410,8 +411,7 @@ class TransportWrapper(TaskContainer):
         exception: Exception | None = None
         try:
             while self._transport:
-                if (payload := await self._transport.read()) is None:
-                    continue
+                payload = await self._transport.read()
                 if callback_object := self._callback_object():
                     # Don't block the read loop on handler execution. Otherwise, a request handler that sends its own
                     # request to the server and awaits the response would deadlock: the read loop is stuck waiting for

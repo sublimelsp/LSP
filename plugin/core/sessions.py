@@ -101,6 +101,7 @@ from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import gather_and_flatten_exceptions
+from .aio import PortableTimeoutError
 from .aio import run_on_asyncio_thread
 from .aio import run_on_main_thread
 from .aio import TaskContainer
@@ -154,7 +155,6 @@ from .transports import TransportCallbacks
 from .transports import TransportWrapper
 from .types import Capabilities
 from .types import ClientConfig
-from .types import ClientStates
 from .types import diff
 from .types import DocumentSelectorMatcher
 from .types import method2attr
@@ -1138,7 +1138,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
         self.window = manager.window
-        self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
@@ -1285,25 +1284,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     # --- capability observers -----------------------------------------------------------------------------------------
 
-    def can_handle(self, view: sublime.View, scheme: str, capability: str | None, inside_workspace: bool) -> bool:
-        if self.state != ClientStates.READY:
-            return False
-        if scheme == "file":
-            file_name = view.file_name()
-            if not file_name:
-                # We're closing down
-                return False
-            if not self.handles_path(file_name, inside_workspace):
-                return False
-        if self.config.match_view(view, scheme, self.window, self._workspace_folders):
-            # If there's no capability requirement then this session can handle the view
-            if capability is None:
-                return True
-            if sv := self.session_view_for_view_async(view):
-                return sv.has_capability_async(capability)
-            return self.has_capability(capability)
-        return False
-
     def has_capability(self, capability: str, *, check_views: bool = False) -> bool:
         """
         Check whether this `Session` has the given `capability`. If `check_views` is set to `True`, this includes
@@ -1423,7 +1403,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self._workspace_folders = self._workspace_folders[:1]
         if diagnostic_options := capabilities.get('diagnosticProvider'):
             self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
-        self.state = ClientStates.READY
         if self._plugin_class:
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
@@ -1876,7 +1855,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 await asyncio.sleep(0.1)
                 attempts += 1
             if os.path.exists(path):  # noqa: ASYNC240
-                raise asyncio.TimeoutError(f"Timeout waiting for deletion of {path}")
+                raise PortableTimeoutError(f"Timeout waiting for deletion of {path}")
 
         async def delete_file(path: str) -> None:
             # The delete_file command moves the given files into the recycle bin
@@ -2595,7 +2574,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         for watcher in itertools.chain.from_iterable(self._dynamic_file_watchers.values()):
             watcher.destroy()
         self._dynamic_file_watchers = {}
-        self.state = ClientStates.STOPPING
         exceptions.extend(await self.cancel_all_tasks())
         try:
             await self.request(Request.shutdown())
@@ -2612,7 +2590,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
         self.exiting = True
-        self.state = ClientStates.STOPPING
         self.transport = None
         for _request, _result_handler, error_handler in self._response_handlers.values():
             error_handler(Error(ErrorCodes.InternalError, "transport closed").to_lsp())

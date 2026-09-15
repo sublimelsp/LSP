@@ -223,6 +223,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        TaskContainer.__init__(self)  # https://github.com/sublimehq/sublime_text/issues/6979
         settings = view.settings()
         self._uri = ''  # assumed to never be falsey
         self._current_syntax = settings.get("syntax")
@@ -1131,8 +1132,11 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             sel.add_all(original_selection)
 
         try:
-            await format_selection(self)
-            sublime.status_message("Paste was formatted")
+            if result := await format_selection(self):
+                if isinstance(result, Error):
+                    sublime.status_message(f"Error: {result}")
+                elif result:
+                    sublime.status_message("Paste was formatted")
         finally:
             sublime.set_timeout(restore_selection)
 

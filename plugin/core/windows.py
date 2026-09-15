@@ -210,9 +210,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 return session
         return None
 
-    def _can_start_config(self, config_name: str, file_path: str) -> bool:
-        return not bool(self._find_session(config_name, file_path))
-
     def _find_session(self, config_name: str, file_path: str) -> Session | None:
         inside = self._workspace.contains(file_path)
         for session in self._sessions:
@@ -287,6 +284,9 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 config.erase_view_status(listener.view)
                 sublime.message_dialog(message)
                 return None
+            except asyncio.CancelledError:
+                config.erase_view_status(listener.view)
+                raise
             try:
                 config.set_view_status(listener.view, "initializing...")
                 initialize_result = await session.initialize(
@@ -295,9 +295,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if isinstance(initialize_result, Error):
                     raise initialize_result
                 self._sessions.add(session)
-                # Do not let an exception in listener.on_session_initialized_async cause a failure in this method.
-                asyncio.get_running_loop().call_soon(listener.on_session_initialized_async, session)
-                config.set_view_status(listener.view, "")
             except Exception as e:
                 message = (
                     f'Failed to initialize {config.name} - disabling for this window for the duration of the current '
@@ -310,7 +307,13 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 self._config_manager.disable_config(config.name, only_for_session=True)
                 sublime.message_dialog(message)
                 config.erase_view_status(listener.view)
+            except asyncio.CancelledError:
+                config.erase_view_status(listener.view)
+                raise
             else:
+                # Do not let an exception in listener.on_session_initialized_async cause a failure in this method.
+                asyncio.get_running_loop().call_soon(listener.on_session_initialized_async, session)
+                config.set_view_status(listener.view, "")
                 return session
             return None
 
@@ -351,13 +354,16 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         return exceptions
 
     async def _end_sessions(self, config_names: list[str] | None = None) -> list[Exception]:
-        coros = []
-        for session in list(self._sessions):
-            if config_names is None or session.config.name in config_names:
-                debug(f"stopping {session.config.name}")
-                coros.append(session.end())
-                self._sessions.discard(session)
-        return await gather_and_flatten_exceptions(*coros)
+        if not self._start_lock:
+            self._start_lock = asyncio.Lock()
+        async with self._start_lock:
+            coros = []
+            for session in list(self._sessions):
+                if config_names is None or session.config.name in config_names:
+                    debug(f"stopping {session.config.name}")
+                    coros.append(session.end())
+                    self._sessions.discard(session)
+            return await gather_and_flatten_exceptions(*coros)
 
     @override
     def get_project_path(self, file_path: str) -> str | None:

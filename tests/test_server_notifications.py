@@ -5,15 +5,15 @@ from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import DiagnosticSeverity
 from LSP.protocol import DiagnosticTag
 from LSP.protocol import PublishDiagnosticsParams
-from typing import Generator
+import asyncio
 import sublime
 
 
 class ServerNotifications(TextDocumentTestCase):
 
-    def test_publish_diagnostics(self) -> Generator:
+    async def test_publish_diagnostics(self) -> None:
         self.insert_characters("a b c\n")
-        yield from self.await_message('textDocument/didChange')
+        await self.await_message('textDocument/didChange')
         params: PublishDiagnosticsParams = {
             'uri': filename_to_uri(self.view.file_name() or ''),
             'diagnostics': [
@@ -38,17 +38,20 @@ class ServerNotifications(TextDocumentTestCase):
                 }
             ]
         }
-        yield from self.await_client_notification("textDocument/publishDiagnostics", params)
+        await self.mock_client_notification("textDocument/publishDiagnostics", params)
         errors_icon_regions = self.view.get_regions("lspTESTds1_icon")
         errors_underline_regions = self.view.get_regions("lspTESTds1_underline")
         warnings_icon_regions = self.view.get_regions("lspTESTds2_icon")
         warnings_underline_regions = self.view.get_regions("lspTESTds2_underline")
         info_icon_regions = self.view.get_regions("lspTESTds3_icon")
         info_underline_regions = self.view.get_regions("lspTESTds3_underline")
-        yield lambda: len(errors_icon_regions) == len(errors_underline_regions) == 1
-        yield lambda: len(warnings_icon_regions) == len(warnings_underline_regions) == 1
-        yield lambda: len(info_icon_regions) == len(info_underline_regions) == 1
-        yield lambda: len(self.view.get_regions("lspTESTds3_tags")) == 0
+        while not (  # noqa: ASYNC110
+            len(errors_icon_regions) == len(errors_underline_regions) == 1
+            and len(warnings_icon_regions) == len(warnings_underline_regions) == 1
+            and len(info_icon_regions) == len(info_underline_regions) == 1
+            and len(self.view.get_regions("lspTESTds3_tags")) == 0
+        ):
+            await asyncio.sleep(0.05)
         self.assertEqual(errors_underline_regions[0], sublime.Region(0, 1))
         self.assertEqual(warnings_underline_regions[0], sublime.Region(2, 3))
         self.assertEqual(info_underline_regions[0], sublime.Region(4, 5))

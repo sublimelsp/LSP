@@ -29,17 +29,17 @@ class LspSaveCommand(LspTextCommandWithTasks):
         ]
 
     @override
-    def on_before_tasks(self) -> None:
-        sublime.set_timeout_async(self._trigger_on_pre_save_async)
+    async def on_before_tasks(self) -> None:
+        await self._trigger_on_pre_save()
 
     @override
-    def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
+    async def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
         # Triggered from set_timeout to preserve original semantics of on_pre_save handling
         sublime.set_timeout(lambda: self.view.run_command('save', kwargs))
 
-    def _trigger_on_pre_save_async(self) -> None:
+    async def _trigger_on_pre_save(self) -> None:
         if listener := self.get_listener():
-            listener.trigger_on_pre_save_async()
+            await listener.trigger_on_pre_save()
 
 
 class LspSaveAllCommand(sublime_plugin.WindowCommand):

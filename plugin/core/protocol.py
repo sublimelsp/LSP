@@ -325,7 +325,7 @@ class Error(Exception):
         return f"{super().__str__()} ({self._code})"
 
     @classmethod
-    def from_exception(cls, ex: Exception) -> Error:
+    def from_exception(cls, ex: BaseException) -> Error:
         return Error(ErrorCodes.InternalError, str(ex))
 
 

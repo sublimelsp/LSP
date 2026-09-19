@@ -141,6 +141,8 @@ class LspSymbolRenameCommand(LspTextCommand):
         self.view.run_command("lsp_symbol_rename", args)
 
     async def _do_rename(self, position: int, old_name: str, new_name: str, preferred_session: Session | None) -> None:
+        if listener := self.get_listener():
+            await listener.purge_changes()
         session = preferred_session or self.best_session(self.capability, position)
         if not session:
             return

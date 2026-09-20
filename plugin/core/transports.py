@@ -243,8 +243,15 @@ class TcpServerTransportConfig(TransportConfig):
                     await process.wait()
                     raise
             finally:
+                # Note: deliberately not awaiting server.wait_closed() here. Since Python 3.12, wait_closed() also
+                # waits for all active connections to be dropped, not just the listening socket. But the connection
+                # accepted above (if any) is the one we just handed off to the caller as the long-lived transport for
+                # the language server session, so waiting for it to close here would deadlock forever.
+                #
+                # See: https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.Server.wait_closed
+                #
+                # More background information: https://github.com/python/cpython/issues/104344
                 server.close()
-                await server.wait_closed()
         assert callback.wrapper
         return callback.wrapper
 

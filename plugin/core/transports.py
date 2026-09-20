@@ -161,7 +161,7 @@ class TcpClientTransportConfig(TransportConfig):
             time_left = TCP_CONNECT_TIMEOUT - delta
             try:
                 reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(host='localhost', port=port), timeout=time_left
+                    asyncio.open_connection(host='localhost', port=port, family=socket.AF_INET), timeout=time_left
                 )
                 return TransportWrapper(
                     callback_object=callbacks,

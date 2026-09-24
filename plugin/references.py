@@ -7,10 +7,10 @@ from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import userprefs
+from .core.type_converters import position_to_offset
 from .core.views import get_line
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
-from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
 from typing import Literal
@@ -189,7 +189,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 if view_filename != session.config.map_server_uri_to_client_path(location['uri']):
                     continue
                 index = idx
-                if position_to_offset(location['range']['start'], self.view) > pt:
+                if position_to_offset(self.view, location['range']['start']) > pt:
                     break
         LocationPicker(self.view, session, locations, side_by_side, force_group, group, placeholder, kind, index)
 

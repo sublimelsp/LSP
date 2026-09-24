@@ -40,6 +40,8 @@ from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import SessionViewProtocol
 from .core.transports import TransportWrapper
+from .core.type_converters import point_to_offset
+from .core.type_converters import position_to_offset
 from .core.types import ClientConfig
 from .core.types import DebouncerNonThreadSafe
 from .core.types import matches_pattern
@@ -49,8 +51,6 @@ from .core.url import uri_to_filename  # deprecated
 from .core.version import __version__
 from .core.views import first_selection_region
 from .core.views import offset_to_position
-from .core.views import point_to_offset
-from .core.views import position_to_offset
 from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params

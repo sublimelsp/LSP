@@ -53,6 +53,8 @@ from .protocol import Notification
 from .protocol import Request
 from .protocol import TextPosition
 from .settings import userprefs
+from .type_converters import point_to_offset as _point_to_offset
+from .type_converters import position_to_offset as _position_to_offset
 from .url import encode_code_action_uri
 from .url import parse_uri
 from .workspace import is_subpath_of
@@ -183,10 +185,9 @@ def extract_variables(window: sublime.Window) -> dict[str, str]:
     return variables
 
 
+@deprecated('Use point_to_offset(view, point) from the LSP.plugin module instead')
 def point_to_offset(point: TextPosition, view: sublime.View) -> int:
-    # @see https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#position
-    # If the character value is greater than the line length it defaults back to the line length.
-    return view.text_point_utf16(point.row, point.col, clamp_column=True)
+    return _point_to_offset(view, point)
 
 
 def offset_to_point(view: sublime.View, offset: int) -> TextPosition:
@@ -202,8 +203,9 @@ def position(view: sublime.View, offset: int) -> Position:
     return offset_to_position(view, offset)
 
 
+@deprecated('Use position_to_offset(view, position) from the LSP.plugin module instead')
 def position_to_offset(position: Position, view: sublime.View) -> int:
-    return point_to_offset(TextPosition.from_lsp(position), view)
+    return _position_to_offset(view, position)
 
 
 def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
@@ -218,7 +220,7 @@ def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
 
 
 def range_to_region(lsp_range: Range, view: sublime.View) -> sublime.Region:
-    return sublime.Region(position_to_offset(lsp_range['start'], view), position_to_offset(lsp_range['end'], view))
+    return sublime.Region(_position_to_offset(view, lsp_range['start']), _position_to_offset(view, lsp_range['end']))
 
 
 def region_to_range(view: sublime.View, region: sublime.Region) -> Range:

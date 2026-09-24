@@ -132,7 +132,9 @@ from .protocol import ClientResponse
 from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
+from .protocol import P_contra
 from .protocol import Point
+from .protocol import R
 from .protocol import Request
 from .protocol import ResolvedCodeLens
 from .protocol import Response
@@ -182,7 +184,6 @@ from typing import Literal
 from typing import overload
 from typing import Protocol
 from typing import TYPE_CHECKING
-from typing import TypeVar
 from typing import Union
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
@@ -201,8 +202,6 @@ if TYPE_CHECKING:
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
-P = TypeVar('P', bound=LSPAny)
-R = TypeVar('R', bound=LSPAny)
 
 
 class ViewStateActions(IntFlag):
@@ -1876,7 +1875,7 @@ class Session(APIHandler, TransportCallbacks):
                 deleted_files.append({'uri': uri})
                 return delete_file(path).then(_continue)
             if os.path.isdir(path):
-                if os.listdir() and not options.get('recursive'):
+                if os.listdir(path) and not options.get('recursive'):
                     return _continue(f'DeleteFile failed because folder {uri} is not empty')
                 deleted_files.append({'uri': uri})
                 return delete_folder(path).then(_continue)
@@ -2060,16 +2059,16 @@ class Session(APIHandler, TransportCallbacks):
     ) -> None:
         if reset_pending_response:
             self.workspace_diagnostics_pending_responses[identifier] = None
-        for diagnostic_report in response['items']:
-            uri = normalize_uri(diagnostic_report['uri'])
-            version = diagnostic_report['version']
+        for report in response['items']:
+            uri = normalize_uri(report['uri'])
+            version = report['version']
             # Skip if outdated
             if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri_async(uri)) and \
                     version < session_buffer.last_synced_version:
                 continue
-            self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-            if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
+            self.diagnostics_result_ids[(uri, identifier)] = report.get('resultId')
+            diagnostics = report['items'] if is_workspace_full_document_diagnostic_report(report) else None
+            self.handle_diagnostics_async(uri, identifier, version, diagnostics)
 
     def _on_workspace_diagnostics_error_async(self, identifier: DiagnosticsIdentifier, error: ResponseError) -> None:
         if error['code'] == LSPErrorCodes.ServerCancelled:
@@ -2210,7 +2209,11 @@ class Session(APIHandler, TransportCallbacks):
         self.handle_diagnostics_async(params['uri'], None, None, params['diagnostics'])
 
     def handle_diagnostics_async(
-        self, uri: DocumentUri, identifier: DiagnosticsIdentifier, version: int | None, diagnostics: list[Diagnostic]
+        self,
+        uri: DocumentUri,
+        identifier: DiagnosticsIdentifier,
+        version: int | None,
+        diagnostics: list[Diagnostic] | None
     ) -> None:
         mgr = self.manager()
         if not mgr:
@@ -2219,8 +2222,12 @@ class Session(APIHandler, TransportCallbacks):
         if isinstance(reason, str):
             debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
             return
-        self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
-        mgr.on_diagnostics_updated()
+        if diagnostics is not None:
+            self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
+            mgr.on_diagnostics_updated()
+        # Even if we received an UnchangedDocumentDiagnosticReport (represented by the diagnostics argument being None)
+        # we still have to redraw the diagnostic regions in the view to ensure they keep their original positions after
+        # a buffer change.
         if session_buffer := self.get_session_buffer_for_uri_async(uri):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
@@ -2481,7 +2488,7 @@ class Session(APIHandler, TransportCallbacks):
 
     def send_request_async(
             self,
-            request: Request[P, R],
+            request: Request[P_contra, R],
             on_result: Callable[[R], None],
             on_error: Callable[[ResponseError], None] | None = None
     ) -> int:
@@ -2500,27 +2507,27 @@ class Session(APIHandler, TransportCallbacks):
         elif self._plugin:
             client_request = cast('ClientRequest', cast('object', {'method': request.method, 'params': request.params}))
             self._plugin.on_pre_send_request_async(client_request, request.view)
-            request.params = cast('P', client_request['params'])
+            request.params = cast('P_contra', client_request['params'])
         self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
         return request_id
 
     def send_request(
             self,
-            request: Request[P, R],
+            request: Request[P_contra, R],
             on_result: Callable[[R], None],
             on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
         sublime.set_timeout_async(partial(self.send_request_async, request, on_result, on_error))
 
-    def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:
+    def send_request_task(self, request: Request[P_contra, R]) -> Promise[R | Error]:
         task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 
-    def send_request_task_2(self, request: Request[P, R]) -> tuple[Promise[R | Error], int]:
+    def send_request_task_2(self, request: Request[P_contra, R]) -> tuple[Promise[R | Error], int]:
         task: PackagedTask[R | Error] = Promise.packaged_task()
         promise, resolver = task
         request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
@@ -2534,18 +2541,18 @@ class Session(APIHandler, TransportCallbacks):
             self._invoke_views(request, "on_request_canceled_async", request_id)
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
-    def send_notification(self, notification: Notification[P]) -> None:
+    def send_notification(self, notification: Notification[P_contra]) -> None:
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_notification_async(notification)
         elif self._plugin:
             client_notification = cast('ClientNotification',
                                        cast('object', {'method': notification.method, 'params': notification.params}))
             self._plugin.on_pre_send_notification_async(client_notification)
-            notification.params = cast('P', client_notification['params'])
+            notification.params = cast('P_contra', client_notification['params'])
         self._logger.outgoing_notification(notification.method, notification.params)
         self.send_payload(notification.to_payload())
 
-    def send_response(self, response: Response[P]) -> None:
+    def send_response(self, response: Response[R]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)
         self.send_payload(response.to_payload())
         if response.post_response_callback:

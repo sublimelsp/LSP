@@ -4,5 +4,5 @@ contact_links:
     url: https://discord.gg/TZ5WN8t
     about: 'Feel free to ask questions on the #lsp channel.'
   - name: Documentation
-    url: https://lsp.readthedocs.io/
+    url: https://lsp.sublimetext.io/
     about: Check our documentation before reporting issues.

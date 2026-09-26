@@ -2637,7 +2637,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         result = CancellableRequest(future, request_id, self)
-        if self.exiting:
+        if self.exiting and r.method != "shutdown":
             future.cancel()
             return result
         if r.progress and isinstance(r.params, dict):

@@ -4,6 +4,7 @@ from .setup import make_stdio_test_config
 from copy import deepcopy
 from LSP.plugin.core.constants import MARKO_MD_PARSER_VERSION
 from LSP.plugin.core.protocol import Point
+from LSP.plugin.core.type_converters import point_to_offset
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_open
@@ -17,7 +18,6 @@ from LSP.plugin.core.views import lsp_color_to_html
 from LSP.plugin.core.views import lsp_color_to_phantom
 from LSP.plugin.core.views import minihtml
 from LSP.plugin.core.views import MissingUriError
-from LSP.plugin.core.views import point_to_offset
 from LSP.plugin.core.views import range_to_region
 from LSP.plugin.core.views import selection_range_params
 from LSP.plugin.core.views import text2html
@@ -163,18 +163,18 @@ class ViewsTest(DeferrableTestCase):
 
     def test_point_to_offset(self) -> None:
         first_line_length = len(self.view.line(0))
-        self.assertEqual(point_to_offset(Point(1, 2), self.view), first_line_length + 3)
-        self.assertEqual(point_to_offset(Point(0, first_line_length + 9999), self.view), first_line_length)
+        self.assertEqual(point_to_offset(self.view, Point(1, 2)), first_line_length + 3)
+        self.assertEqual(point_to_offset(self.view, Point(0, first_line_length + 9999)), first_line_length)
 
     def test_point_to_offset_utf16(self) -> None:
         self.view.run_command("insert", {"characters": "🍺foo"})
         foobarbaz_length = len("foo bar baz")
-        offset = point_to_offset(Point(1, foobarbaz_length), self.view)
+        offset = point_to_offset(self.view, Point(1, foobarbaz_length))
         # Sanity check
         self.assertEqual(self.view.substr(offset), "🍺")
         # When we move two UTF-16 points further, we should encompass the beer emoji.
         # So that means that the code point offsets should have a difference of 1.
-        self.assertEqual(point_to_offset(Point(1, foobarbaz_length + 2), self.view) - offset, 1)
+        self.assertEqual(point_to_offset(self.view, Point(1, foobarbaz_length + 2)) - offset, 1)
 
     def test_selection_range_params(self) -> None:
         self.view.run_command("lsp_selection_set", {"regions": [(0, 5), (6, 11)]})

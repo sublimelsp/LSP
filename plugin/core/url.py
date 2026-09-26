@@ -42,6 +42,8 @@ def filename_to_uri(file_name: str) -> str:
     if file_name.startswith(prefix) and not os.path.exists(file_name):
         return _to_resource_uri(file_name, prefix)
     if sys.version_info >= (3, 14):
+        # Python 3.14+ `pathname2url` keeps the case of the drive letter. Earlier versions make it uppercase.
+        file_name = re.sub(r"^([a-z]):", _uppercase_driveletter, file_name)
         return pathname2url(file_name, add_scheme=True)
     return urljoin('file:', pathname2url(file_name))
 

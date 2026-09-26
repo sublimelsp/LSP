@@ -110,12 +110,12 @@ class SignatureHelpTest(unittest.TestCase):
                     <span style="color: #\w{6}; font-weight: bold">x</span>
                     <span style="color: #\w{6}">\)</span>
                 </div>
-                <p>must be in the <strong>frobnicate</strong> range</p>
+                <p>must be in the <strong>frobnicate</strong> range</p>\s*
                 <div class="wrapper--spacer"></div>
             </div>
             <hr[^>]*>
             <div class="[^"]+">
-                <p>f does <em>interesting</em> things</p>
+                <p>f does <em>interesting</em> things</p>\s*
                 <div class="wrapper--spacer"></div>
             </div>
             '''

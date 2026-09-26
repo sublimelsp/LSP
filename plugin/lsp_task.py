@@ -102,6 +102,6 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
             if task_type.is_applicable(self.view):
                 task = task_type(self)
                 try:
-                    await asyncio.wait_for(task_type(self).run(), timeout=userprefs().on_save_task_timeout_ms / 1000)
+                    await asyncio.wait_for(task.run(), timeout=userprefs().on_save_task_timeout_ms / 1000)
                 except PortableTimeoutError:
-                    self._set_view_status(task.status_key, f'Timeout processing {task.__name__}')
+                    self._set_view_status(task.status_key, f'Timeout processing {task_type.__name__}')

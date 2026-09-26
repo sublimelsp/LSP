@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .logging import debug
 from .logging import exception_log
+from .logging import exceptions_log
 from .promise import Promise
 from .protocol import Error
 from .protocol import LSPErrorCodes
@@ -172,6 +173,11 @@ async def gather_and_flatten_exceptions(*coros: Coroutine[Any, Any, list[Excepti
         elif isinstance(item, list):
             exceptions.extend(item)
     return exceptions
+
+
+async def maybe_log_exceptions(message: str, coro: Coroutine[Any, Any, list[Exception]]) -> None:
+    """Logs a list of exceptions."""
+    exceptions_log(message, await coro)
 
 
 class TaskContainer:

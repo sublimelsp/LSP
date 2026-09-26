@@ -101,6 +101,7 @@ from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import gather_and_flatten_exceptions
+from .aio import maybe_log_exceptions
 from .aio import PortableTimeoutError
 from .aio import run_on_asyncio_thread
 from .aio import run_on_main_thread
@@ -125,7 +126,6 @@ from .file_watcher import get_file_watcher_implementation
 from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
 from .logging import debug
 from .logging import exception_log
-from .logging import exceptions_log
 from .logging import printf
 from .open import center_selection
 from .open import open_externally
@@ -1190,7 +1190,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         async def maybe_end() -> None:
             await asyncio.sleep(3)
             if self._views_opened == current_count:
-                exceptions_log(f"Exception while stopping {self.config.name}", await self.end())
+                await maybe_log_exceptions(f"Exception while stopping {self.config.name}", self.end())
                 self._maybe_end_task = None
 
         if self.exiting:
@@ -1382,6 +1382,18 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self._workspace_folders = folders[:1]
 
     async def initialize(
+        self,
+        variables: dict[str, str],
+        working_directory: str | None,
+        transport: TransportWrapper
+    ) -> InitializeResult | Error:
+        try:
+            return await self._initialize_impl(variables, working_directory, transport)
+        except:
+            await transport.close()
+            raise
+
+    async def _initialize_impl(
         self,
         variables: dict[str, str],
         working_directory: str | None,
@@ -2578,8 +2590,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         exceptions.extend(await self.cancel_all_tasks())
         try:
             await self.request(Request.shutdown())
-        except Exception as shutdown_exception:
-            exceptions.append(shutdown_exception)
+        except Exception as ex:
+            exceptions.append(ex)
         finally:
             await self.exit()
         return exceptions
@@ -2625,6 +2637,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         result = CancellableRequest(future, request_id, self)
+        if self.exiting:
+            future.cancel()
+            return result
         if r.progress and isinstance(r.params, dict):
             r.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         if r.on_partial_result and isinstance(r.params, dict):

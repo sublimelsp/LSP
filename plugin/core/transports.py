@@ -292,23 +292,32 @@ class Transport(ABC):
 async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str]:
     headers: dict[str, str] = {}
     try:
-        headers_bytes = (await reader.readuntil(b'\r\n\r\n')).decode("ascii").rstrip()
-        for line in headers_bytes.split("\r\n"):
-            key, value = line.split(":", 1)
-            headers[key.lower()] = value
+        raw = await reader.readuntil(b'\r\n\r\n')
     except asyncio.IncompleteReadError as ex:
         # May happen when shutting down. parse_content_length will then return None,
         # which will cause the read loop to stop.
         if ex.partial:
             # Propagate server's output to the UI.
             raise
+        return headers
+    headers_bytes = raw.decode("ascii", "replace").rstrip()
+    for line in headers_bytes.split("\r\n"):
+        if ":" not in line:
+            raise RuntimeError(f"Malformed header line from language server: {line!r}")
+        key, value = line.split(":", 1)
+        headers[key.lower()] = value
     return headers
 
 
 async def parse_content_length(reader: asyncio.StreamReader) -> int | None:
     headers = await parse_headers(reader)
+    if not headers:
+        # clean EOF
+        return None
     content_length = headers.get("content-length")
-    return int(content_length) if content_length else None
+    if content_length is None:
+        raise RuntimeError(f"Missing Content-Length header in language server output: {headers}")
+    return int(content_length)
 
 
 class StreamTransport(Transport):
@@ -338,27 +347,22 @@ class StreamTransport(Transport):
     async def write(self, payload: JSONRPCMessage) -> None:
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
-        try:
+        # ConnectionError can happen when the lang server is shut down or the connection is severed in some way. Just
+        # ignore it, there's other logic that will make the transport shut down.
+        with contextlib.suppress(ConnectionError):
             await self._writer.drain()
-        except ConnectionResetError:
-            # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
-            # there's other logic that will make the transport shut down.
-            pass
 
     @override
     async def write_bytes(self, payload: bytes) -> None:
         self._writer.write(payload)
-        try:
+        with contextlib.suppress(ConnectionError):
             await self._writer.drain()
-        except ConnectionResetError:
-            # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
-            # there's other logic that will make the transport shut down.
-            pass
 
     @override
     async def close(self) -> None:
         self._writer.close()
-        await self._writer.wait_closed()
+        with contextlib.suppress(ConnectionError):
+            await self._writer.wait_closed()
 
 
 # --- TransportWrapper -------------------------------------------------------------------------------------------------

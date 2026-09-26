@@ -25,6 +25,7 @@ from typing import Any
 from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakValueDictionary
+import asyncio
 import html
 import itertools
 import sublime
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
     from .core.protocol import Request
     from .core.protocol import ResolvedCodeLens
     from .core.sessions import AbstractViewListener
+    from .core.sessions import RequestController
     from .core.sessions import Session
 
 
@@ -84,7 +86,7 @@ class SessionView:
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
 
-    def on_before_remove(self) -> None:
+    async def on_before_remove(self) -> list[Exception]:
         settings: sublime.Settings = self.view.settings()
         self._clear_auto_complete_triggers(settings)
         self.clear_code_lenses_async()
@@ -93,10 +95,8 @@ class SessionView:
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            for request_id, data in self._active_requests.items():
-                if data.request.view and not data.canceled:
-                    self.session.cancel_request_async(request_id)
-            self.session.unregister_session_view_async(self)
+            await asyncio.gather(*(data.cancel() for data in self._active_requests.values()))
+            await self.session.unregister_session_view(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(DIAGNOSTIC_STYLES.keys()):
             self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_icon")
@@ -104,9 +104,10 @@ class SessionView:
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_underline")
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
-        self.session_buffer.remove_session_view(self)
+        exceptions = await self.session_buffer.remove_session_view(self)
         if listener := self.listener():
             listener.on_diagnostics_updated_async(self.session_buffer, False)
+        return exceptions
 
     def on_initialized(self) -> None:
         self.session_buffer.on_session_view_initialized(self._view)
@@ -289,9 +290,10 @@ class SessionView:
     def has_capability_async(self, capability_path: str) -> bool:
         return self.session_buffer.has_capability(capability_path)
 
-    def shutdown_async(self) -> None:
+    async def shutdown(self) -> list[Exception]:
         if listener := self.listener():
-            listener.on_session_shutdown_async(self.session)
+            return await listener.on_session_shutdown(self.session)
+        return []
 
     def diagnostics_key(self, severity: DiagnosticSeverity, multiline: bool) -> str:
         return "lsp{}d{}{}".format(self.session.config.name, "m" if multiline else "s", severity)
@@ -348,8 +350,8 @@ class SessionView:
             else:
                 self.view.erase_regions(data.key)
 
-    def on_request_started_async(self, request_id: int, request: Request[Any, Any]) -> None:
-        self._active_requests[request_id] = ActiveRequest(self, request_id, request)
+    def on_request_started_async(self, controller: RequestController, request: Request[Any, Any]) -> None:
+        self._active_requests[controller.id] = ActiveRequest(self, controller, request)
 
     def on_request_finished_async(self, request_id: int) -> None:
         self._active_requests.pop(request_id, None)
@@ -362,25 +364,25 @@ class SessionView:
         if request := self._active_requests.get(request_id, None):
             request.update_progress_async(params)
 
-    def on_text_changed_async(
+    def on_text_changed(
         self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
     ) -> None:
-        self.session_buffer.on_text_changed_async(self.view, change_count, changes, action)
+        self.session_buffer.on_text_changed(self.view, change_count, changes, action)
 
-    def on_revert_async(self) -> None:
-        self.session_buffer.on_revert_async(self.view)
+    async def on_revert(self) -> None:
+        return await self.session_buffer.on_revert(self.view)
 
-    def on_reload_async(self) -> None:
-        self.session_buffer.on_reload_async(self.view)
+    async def on_reload(self) -> None:
+        return await self.session_buffer.on_reload(self.view)
 
-    def purge_changes_async(self) -> None:
-        self.session_buffer.purge_changes_async(self.view)
+    async def purge_changes(self) -> None:
+        return await self.session_buffer.purge_changes(self.view)
 
-    def on_pre_save_async(self) -> None:
-        self.session_buffer.on_pre_save_async(self.view)
+    async def on_pre_save(self) -> None:
+        return await self.session_buffer.on_pre_save(self.view)
 
-    def on_post_save_async(self, new_uri: DocumentUri) -> None:
-        self.session_buffer.on_post_save_async(self.view, new_uri)
+    async def on_post_save(self, new_uri: DocumentUri) -> None:
+        return await self.session_buffer.on_post_save(self.view, new_uri)
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_diagnostics_async()

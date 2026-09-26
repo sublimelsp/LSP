@@ -1,6 +1,6 @@
 # Stubs for sublime.py
 from enum import IntEnum, IntFlag
-from typing import Any, Callable, Iterable, Iterator, Literal, Optional, Reversible, Sequence
+from typing import Any, Callable, Generic, Iterable, Iterator, Literal, Mapping, Optional, Reversible, Sequence, TypeVar
 from typing_extensions import deprecated
 
 
@@ -3305,13 +3305,16 @@ class QuickPanelItem:
         ...
 
 
-class ListInputItem:
+_T_Value = TypeVar('_T_Value', bound=bool | str | int | float | Sequence[Any] | Mapping[str, Any] | None)
+
+
+class ListInputItem(Generic[_T_Value]):
     """
     Represents a row shown via `ListInputHandler`.
     """
     text: str
     """Text to match against the user's input."""
-    value: Any
+    value: _T_Value
     """A `Value` passed to the command if the row is selected."""
     details: str | list[str] | tuple[str]
     """A minihtml string or list of strings displayed below the trigger."""
@@ -3323,7 +3326,7 @@ class ListInputItem:
     def __init__(
         self,
         text: str,
-        value: bool | str | int | float | list[Any] | dict[str, Any] | None,
+        value: _T_Value,
         details: str | Sequence[str] = ...,
         annotation: str = ...,
         kind: tuple[int, str, str] = ...

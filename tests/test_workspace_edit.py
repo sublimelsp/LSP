@@ -8,12 +8,17 @@ from typing import Any
 from typing import Generator
 from typing import TYPE_CHECKING
 import os
+import sublime
 import tempfile
 
 if TYPE_CHECKING:
     from ..protocol import ApplyWorkspaceEditParams
     from ..protocol import ApplyWorkspaceEditResult
     from ..protocol import WorkspaceEdit
+
+# Use a folder on the same file system as the home directory, because Sublime Text can only move files from there
+# to the recycle bin. The system temporary folder can be on a different file system.
+TEMP_DIR_ROOT = sublime.cache_path()
 
 
 def verify(testcase: TextDocumentTestCase, method: str, input_params: Any, expected_result: Any) -> Generator:
@@ -70,7 +75,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
         self.assertEqual(entire_content(self.view), 'hello\nthere\n')
 
     def test_changes_for_unopened_files(self) -> Generator:
-        with tempfile.TemporaryDirectory() as dirpath:
+        with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             file1 = os.path.join(dirpath, 'file1.txt')
             file2 = os.path.join(dirpath, 'file2.txt')
             Path(file1).write_text('a b', encoding='utf-8')
@@ -162,7 +167,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
 
     def test_create_file(self) -> Generator:
         window = self.view.window()
-        with tempfile.TemporaryDirectory() as dirpath:
+        with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')
             uri = filename_to_uri(filepath)
             new_text = 'hello\nworld\n'
@@ -194,7 +199,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             self.assertEqual(content, new_text)
 
     def test_fails_create_file_exists(self) -> Generator:
-        with tempfile.TemporaryDirectory() as dirpath:
+        with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')
             old_text = 'hello\nthere\n'
             new_text = 'hello\nworld\n'
@@ -230,7 +235,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
 
     def test_create_file_exists_ignore(self) -> Generator:
         window = self.view.window()
-        with tempfile.TemporaryDirectory() as dirpath:
+        with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')
             old_text = 'hello\nthere\n'
             new_text = 'hello\nworld\n'
@@ -265,7 +270,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
 
     def test_create_file_exists_overwrite(self) -> Generator:
         window = self.view.window()
-        with tempfile.TemporaryDirectory() as dirpath:
+        with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')
             old_text = 'hello\nthere\n'
             new_text = 'hello\nworld\n'
@@ -301,7 +306,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
 
     def test_rename_file(self) -> Generator:
         window = self.view.window()
-        with tempfile.TemporaryDirectory() as dirpath:
+        with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             old_path = os.path.join(dirpath, 'old_file.txt')
             new_path = os.path.join(dirpath, 'new_file.txt')
             old_uri = filename_to_uri(old_path)
@@ -338,7 +343,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             self.assertEqual(content, new_text + old_text)
 
     def test_rename_file_exists(self) -> Generator:
-        with tempfile.TemporaryDirectory() as dirpath:
+        with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             old_path = os.path.join(dirpath, 'old_file.txt')
             new_path = os.path.join(dirpath, 'new_file.txt')
             old_uri = filename_to_uri(old_path)
@@ -381,7 +386,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
 
     def test_rename_file_exists_ignore(self) -> Generator:
         window = self.view.window()
-        with tempfile.TemporaryDirectory() as dirpath:
+        with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             old_path = os.path.join(dirpath, 'old_file.txt')
             new_path = os.path.join(dirpath, 'new_file.txt')
             old_uri = filename_to_uri(old_path)
@@ -423,7 +428,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
 
     def test_rename_file_exists_overwrite(self) -> Generator:
         window = self.view.window()
-        with tempfile.TemporaryDirectory() as dirpath:
+        with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             old_path = os.path.join(dirpath, 'old_file.txt')
             new_path = os.path.join(dirpath, 'new_file.txt')
             old_uri = filename_to_uri(old_path)
@@ -465,7 +470,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             self.assertEqual(content, new_text + old_text1)
 
     def test_delete_file(self) -> Generator:
-        with tempfile.TemporaryDirectory() as dirpath:
+        with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')
             Path(filepath).write_text('hello\nworld\n', encoding='utf-8')
             uri = filename_to_uri(filepath)

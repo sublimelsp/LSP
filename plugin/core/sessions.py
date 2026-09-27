@@ -1030,6 +1030,10 @@ class _RegistrationData:
 _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
+# How long to wait for the delete_file and delete_folder commands to remove a path.
+_DELETE_TIMEOUT_MS = 1000
+_DELETE_POLL_INTERVAL_MS = 10
+
 
 class Session(APIHandler, TransportCallbacks):
 
@@ -1785,15 +1789,36 @@ class Session(APIHandler, TransportCallbacks):
             renamed_files.append({'oldUri': old_uri, 'newUri': new_uri})
             return Promise.resolve(None)
 
-        def delete_file(path: str) -> Promise[None]:
+        def delete_file(path: str) -> Promise[str | None]:
             # The delete_file command moves the given files into the recycle bin
             self.window.run_command('delete_file', {'files': [path], 'prompt': False})
-            return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None), 1))
+            return await_path_removed(path)
 
-        def delete_folder(path: str) -> Promise[None]:
+        def delete_folder(path: str) -> Promise[str | None]:
             # The delete_folder command moves the given folders into the recycle bin
             self.window.run_command('delete_folder', {'dirs': [path], 'prompt': False})
-            return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None), 1))
+            return await_path_removed(path)
+
+        def await_path_removed(path: str) -> Promise[str | None]:
+            # The delete commands run asynchronously and do not report an error. For example, ST 4215+ does not move
+            # a path to the recycle bin if the path is on a different file system than the home directory.
+            def executor(resolve: Callable[[str | None], None]) -> None:
+                def check(attempts_left: int) -> None:
+                    if not os.path.exists(path):
+                        resolve(None)
+                    elif attempts_left > 0:
+                        sublime.set_timeout_async(lambda: check(attempts_left - 1), _DELETE_POLL_INTERVAL_MS)
+                    else:
+                        resolve(f'Failed to move {path} to the recycle bin')
+
+                sublime.set_timeout_async(lambda: check(_DELETE_TIMEOUT_MS // _DELETE_POLL_INTERVAL_MS), 1)
+
+            return Promise(executor)
+
+        def on_deleted(uri: DocumentUri, failure_reason: str | None) -> Promise[ApplyWorkspaceEditResult]:
+            if not failure_reason:
+                deleted_files.append({'uri': uri})
+            return _continue(failure_reason)
 
         def _continue(failure_reason: str | None) -> Promise[ApplyWorkspaceEditResult]:
             if failure_reason:
@@ -1835,7 +1860,9 @@ class Session(APIHandler, TransportCallbacks):
                 return _continue(f'CreateFile not supported for URI {uri}')
             if os.path.isfile(path):
                 if options.get('overwrite'):
-                    return delete_file(path).then(lambda _: create_file(path)).then(_continue)
+                    return delete_file(path).then(
+                        lambda failure_reason: Promise.resolve(failure_reason) if failure_reason else create_file(path)
+                    ).then(_continue)
                 if options.get('ignoreIfExists'):
                     return _continue(None)
                 return _continue(f'CreateFile failed because a file already exists at target {uri}')
@@ -1857,7 +1884,10 @@ class Session(APIHandler, TransportCallbacks):
                 return _continue(f'RenameFile not supported for URI {new_uri}')
             if os.path.isfile(new_path):
                 if options.get('overwrite') and os.path.isfile(old_path):
-                    return delete_file(new_path).then(lambda _: rename_file(old_path, new_path)).then(_continue)
+                    return delete_file(new_path).then(
+                        lambda failure_reason:
+                            Promise.resolve(failure_reason) if failure_reason else rename_file(old_path, new_path)
+                    ).then(_continue)
                 if options.get('ignoreIfExists'):
                     return _continue(None)
                 return _continue(f'RenameFile failed because target {new_uri} already exists')
@@ -1872,13 +1902,11 @@ class Session(APIHandler, TransportCallbacks):
             if scheme != 'file':
                 return _continue(f'DeleteFile not supported for URI {uri}')
             if os.path.isfile(path):
-                deleted_files.append({'uri': uri})
-                return delete_file(path).then(_continue)
+                return delete_file(path).then(lambda failure_reason: on_deleted(uri, failure_reason))
             if os.path.isdir(path):
                 if os.listdir(path) and not options.get('recursive'):
                     return _continue(f'DeleteFile failed because folder {uri} is not empty')
-                deleted_files.append({'uri': uri})
-                return delete_folder(path).then(_continue)
+                return delete_folder(path).then(lambda failure_reason: on_deleted(uri, failure_reason))
             if options.get('ignoreIfNotExists'):
                 return _continue(None)
             return _continue(f'DeleteFile failed because {uri} does not exist')

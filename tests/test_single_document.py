@@ -11,9 +11,14 @@ from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from typing import Generator
 from typing import Iterable
+from typing import TYPE_CHECKING
 from unittest import skip
 import os
 import sublime
+
+if TYPE_CHECKING:
+    from LSP.protocol import Position
+    from LSP.protocol import TextDocumentContentChangeEvent
 
 SELFDIR = os.path.dirname(__file__)
 TEST_FILE_PATH = os.path.join(SELFDIR, 'testfile.txt')
@@ -48,6 +53,30 @@ GOTO_CONTENT = r'''abcdefghijklmnopqrstuvwxyz
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
 0123456789
 '''
+
+
+def apply_content_changes(text: str, changes: list[TextDocumentContentChangeEvent]) -> str:
+    """Apply incremental `contentChanges` of a `textDocument/didChange` notification to `text`."""
+
+    def offset(position: Position) -> int:
+        lines = text.split('\n')
+        line_start = sum(len(line) + 1 for line in lines[:position['line']])
+        # Convert the UTF-16 code unit offset to a code point offset.
+        utf16_units = 0
+        column = 0
+        for char in lines[position['line']]:
+            if utf16_units >= position['character']:
+                break
+            utf16_units += 2 if ord(char) > 0xFFFF else 1
+            column += 1
+        return line_start + column
+
+    for change in changes:
+        assert 'range' in change
+        start = offset(change['range']['start'])
+        end = offset(change['range']['end'])
+        text = text[:start] + change['text'] + text[end:]
+    return text
 
 
 class SingleDocumentTestCase(TextDocumentTestCase):
@@ -316,8 +345,8 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.view.run_command("lsp_selection_set", {"regions": [(0, 0)]})
         self.view.run_command("lsp_symbol_rename", {"new_name": "bar"})
         yield from self.await_message("textDocument/rename")
-        yield from self.await_view_change(9)
-        self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "bar\nbar\nbar\n")
+        yield {"condition": lambda: entire_content(self.view) == "bar\nbar\nbar\n", "timeout": TIMEOUT_TIME}
+        self.assertEqual(entire_content(self.view), "bar\nbar\nbar\n")
 
     def test_run_command(self) -> Generator:
         self.set_response("workspace/executeCommand", {"canReturnAnythingHere": "asdf"})
@@ -349,25 +378,23 @@ class SingleDocumentTestCase2(TextDocumentTestCase):
         self.maxDiff = None
         self.insert_characters("A")
         yield from self.await_message("textDocument/didChange")
+        text_before = entire_content(self.view)
         # multiple changes are batched into one didChange notification
         self.insert_characters("B\n")
         self.insert_characters("🙂\n")
         self.insert_characters("D")
         promise = YieldPromise()
         yield from self.await_message("textDocument/didChange", promise)
-        self.assertEqual(promise.result(), {
-            'contentChanges': [
-                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 1}, 'end': {'line': 0, 'character': 1}}, 'text': 'B'},   # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 2}, 'end': {'line': 0, 'character': 2}}, 'text': '\n'},  # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 0}}, 'text': '🙂'},  # noqa
-                # Note that this is character offset (2) is correct (UTF-16).
-                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 2}, 'end': {'line': 1, 'character': 2}}, 'text': '\n'},  # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 2, 'character': 0}, 'end': {'line': 2, 'character': 0}}, 'text': 'D'}],  # noqa
-            'textDocument': {
-                'version': self.view.change_count(),
-                'uri': filename_to_uri(TEST_FILE_PATH)
-            }
+        params = promise.result()
+        self.assertEqual(params['textDocument'], {
+            'version': self.view.change_count(),
+            'uri': filename_to_uri(TEST_FILE_PATH)
         })
+        # Different ST builds can split the inserted text into different numbers of changes,
+        # so compare the result of the changes.
+        # The emoji makes the result wrong if an offset after it is not in UTF-16 code units.
+        self.assertEqual(apply_content_changes(text_before, params['contentChanges']), "AB\n🙂\nD")
+        self.assertEqual(entire_content(self.view), "AB\n🙂\nD")
 
 
 class SingleDocumentTestCase3(TextDocumentTestCase):

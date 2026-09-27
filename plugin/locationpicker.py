@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from .core.constants import ST_PACKAGES_PATH
-from .core.constants import SublimeKind
 from .core.logging import debug
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
@@ -18,6 +17,7 @@ if TYPE_CHECKING:
     from ..protocol import LocationLink
     from ..protocol import Position
     from .core.sessions import Session
+    from sublime_types import Kind
 
 
 def open_location_async(
@@ -75,7 +75,7 @@ class LocationPicker:
         force_group: bool = True,
         group: int = -1,
         placeholder: str = "",
-        kind: SublimeKind = sublime.KIND_AMBIGUOUS,
+        kind: Kind = sublime.KIND_AMBIGUOUS,
         selected_index: int = -1
     ) -> None:
         self._view = view

@@ -102,7 +102,6 @@ from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import gather_and_flatten_exceptions
 from .aio import maybe_log_exceptions
-from .aio import PortableTimeoutError
 from .aio import run_on_asyncio_thread
 from .aio import run_on_main_thread
 from .aio import TaskContainer
@@ -1117,14 +1116,12 @@ class _RegistrationData:
 _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
+# How long to wait for the delete_file and delete_folder commands to remove a path.
+_DELETE_TIMEOUT_MS = 1000
+_DELETE_POLL_INTERVAL_MS = 10
+
 
 class Session(APIHandler, TransportCallbacks, TaskContainer):
-
-    _FILE_DELETED_MAX_CHECK_ATTEMPTS = 40
-    """
-    Number of times to sleep for 100ms and wait for a file/folder to be actually deleted during a CreateFile, DeleteFile
-    or RenameFile document change.
-    """
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
@@ -1862,25 +1859,33 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             renamed_files.append({'oldUri': old_uri, 'newUri': new_uri})
             return None
 
-        async def wait_for_path_deletion(path: str) -> None:
+        async def wait_for_path_deletion(path: str) -> str | None:
+            # The delete commands run asynchronously and do not report an error. For example, ST 4215+ does not move
+            # a path to the recycle bin if the path is on a different file system than the home directory.
             attempts = 0
-            while os.path.exists(path) and attempts < self._FILE_DELETED_MAX_CHECK_ATTEMPTS:  # noqa: ASYNC240
-                await asyncio.sleep(0.1)
+            while os.path.exists(path) and attempts < _DELETE_TIMEOUT_MS // _DELETE_POLL_INTERVAL_MS:  # noqa: ASYNC240
+                await asyncio.sleep(_DELETE_POLL_INTERVAL_MS / 1000)
                 attempts += 1
             if os.path.exists(path):  # noqa: ASYNC240
-                raise PortableTimeoutError(f"Timeout waiting for deletion of {path}")
+                return f'Failed to move {path} to the recycle bin'
+            return None
 
-        async def delete_file(path: str) -> None:
+        async def delete_file(path: str) -> str | None:
             # The delete_file command moves the given files into the recycle bin
             self.window.run_command('delete_file', {'files': [path], 'prompt': False})
             # TODO: ideally we'd have a callback for 'delete_file'
-            await wait_for_path_deletion(path)
+            return await wait_for_path_deletion(path)
 
-        async def delete_folder(path: str) -> None:
+        async def delete_folder(path: str) -> str | None:
             # The delete_folder command moves the given folders into the recycle bin
             self.window.run_command('delete_folder', {'dirs': [path], 'prompt': False})
             # TODO: ideally we'd have a callback for 'delete_folder'
-            await wait_for_path_deletion(path)
+            return await wait_for_path_deletion(path)
+
+        async def on_deleted(uri: DocumentUri, failure_reason: str | None) -> ApplyWorkspaceEditResult:
+            if not failure_reason:
+                deleted_files.append({'uri': uri})
+            return await _continue(failure_reason)
 
         async def _continue(failure_reason: str | None) -> ApplyWorkspaceEditResult:
             if failure_reason:
@@ -1923,8 +1928,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return await _continue(f'CreateFile not supported for URI {uri}')
             if os.path.isfile(path):  # noqa: ASYNC240
                 if options.get('overwrite'):
-                    await delete_file(path)
-                    return await _continue(create_file(path))
+                    failure_reason = await delete_file(path)
+                    return await _continue(failure_reason or create_file(path))
                 if options.get('ignoreIfExists'):
                     return await _continue(None)
                 return await _continue(f'CreateFile failed because a file already exists at target {uri}')
@@ -1946,8 +1951,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return await _continue(f'RenameFile not supported for URI {new_uri}')
             if os.path.isfile(new_path):  # noqa: ASYNC240
                 if options.get('overwrite') and os.path.isfile(old_path):  # noqa: ASYNC240
-                    await delete_file(new_path)
-                    return await _continue(rename_file(old_path, new_path))
+                    failure_reason = await delete_file(new_path)
+                    return await _continue(failure_reason or rename_file(old_path, new_path))
                 if options.get('ignoreIfExists'):
                     return await _continue(None)
                 return await _continue(f'RenameFile failed because target {new_uri} already exists')
@@ -1962,13 +1967,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if scheme != 'file':
                 return await _continue(f'DeleteFile not supported for URI {uri}')
             if os.path.isfile(path):  # noqa: ASYNC240
-                deleted_files.append({'uri': uri})
-                return await _continue(await delete_file(path))
+                return await on_deleted(uri, await delete_file(path))
             if os.path.isdir(path):  # noqa: ASYNC240
                 if os.listdir(path) and not options.get('recursive'):
                     return await _continue(f'DeleteFile failed because folder {uri} is not empty')
-                deleted_files.append({'uri': uri})
-                return await _continue(await delete_folder(path))
+                return await on_deleted(uri, await delete_folder(path))
             if options.get('ignoreIfNotExists'):
                 return await _continue(None)
             return await _continue(f'DeleteFile failed because {uri} does not exist')

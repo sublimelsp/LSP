@@ -619,6 +619,30 @@ There are multiple options:
 
 Follow installation instructions on [LSP-intelephense](https://github.com/sublimelsp/LSP-intelephense).
 
+### PHP Tools
+
+1. Install [devsense-php-ls globally](https://docs.devsense.com/other/sublime/#installation).
+2. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"phptools"` configuration:
+
+    ```jsonc
+    {
+        "phptools": {
+            "enabled": true,
+            "command": ["devsense-php-ls"],
+            "selector": "embedding.php",
+            "priority_selector": "source.php",
+            "initialization_options": {
+              "0": "<YOUR_LICENSE_KEY>",
+              "php.stubs": "*",
+              "php.version": "8.5",
+              "phpTools.language": "en",
+              "php.completion.parameters": "parameters",
+              "php.format.codeStyle": "psr-12"
+            }
+        }
+    }
+    ```
+
 ### Phpactor
 
 1. Install [Phpactor globally](https://phpactor.readthedocs.io/en/master/usage/standalone.html#installation-global).

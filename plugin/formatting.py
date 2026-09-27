@@ -40,8 +40,11 @@ def get_formatter(window: sublime.Window | None, base_scope: str) -> str | None:
     if not window_manager:
         return None
     project_data = window_manager.window.project_data()
-    return DottedDict(project_data).get(f'settings.LSP.formatters.{base_scope}') if \
-        isinstance(project_data, dict) else window_manager.formatters.get(base_scope)
+    if not isinstance(project_data, dict):
+        return window_manager.formatters.get(base_scope)
+    # The base scope contains dots, so it must not be part of the DottedDict path.
+    formatters = DottedDict(project_data).get('settings.LSP.formatters')
+    return formatters.get(base_scope) if isinstance(formatters, dict) else None
 
 
 def format_document(text_command: LspTextCommand, formatter: str | None = None) -> Promise[FormatResponse]:

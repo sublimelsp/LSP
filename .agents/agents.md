@@ -12,7 +12,7 @@ This repository is a universal Language Server Protocol client for Sublime Text.
 - `plugin/api.py`: public extension API used by language-server packages. Treat changes to its contracts as compatibility-sensitive.
 - `protocol/__init__.py`: generated LSP types. It is marked `DO NOT EDIT`; locate the generation workflow before changing generated definitions.
 - `stubs/`: type stubs used by static analysis.
-- `tests/`: Sublime Text UnitTesting suite, shared fixtures in `tests/setup.py`, and a fake language server in `tests/server.py`.
+- `tests/`: Sublime Text UnitTesting suite, shared fixtures in `tests/setup.py`, and a test language server in `tests/server.py`.
 - `LSP.sublime-settings` and `LanguageServers.sublime-settings`: package and server settings. Commands, key bindings, menus, syntaxes, and CSS live in the corresponding Sublime resource files.
 - `docs/src/`: documentation sources; `docs/mkdocs.yml`: site configuration.
 - `third_party/`: vendored code. Keep unrelated cleanup out of this directory.

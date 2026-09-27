@@ -2,7 +2,6 @@
 from enum import IntEnum, IntFlag
 from typing import Any, Callable, Generic, Iterable, Iterator, Literal, Mapping, Optional, Reversible, Sequence, TypeVar
 from typing_extensions import deprecated
-from sublime_types import Kind
 
 
 class HoverZone(IntEnum):
@@ -423,15 +422,15 @@ KIND_ID_COLOR_PINKISH = KindId.COLOR_PINKISH
 KIND_ID_COLOR_DARK = KindId.COLOR_DARK
 KIND_ID_COLOR_LIGHT = KindId.COLOR_LIGHT
 
-KIND_AMBIGUOUS: Kind
-KIND_KEYWORD: Kind
-KIND_TYPE: Kind
-KIND_FUNCTION: Kind
-KIND_NAMESPACE: Kind
-KIND_NAVIGATION: Kind
-KIND_MARKUP: Kind
-KIND_VARIABLE: Kind
-KIND_SNIPPET: Kind
+KIND_AMBIGUOUS: tuple[int, str, str]
+KIND_KEYWORD: tuple[int, str, str]
+KIND_TYPE: tuple[int, str, str]
+KIND_FUNCTION: tuple[int, str, str]
+KIND_NAMESPACE: tuple[int, str, str]
+KIND_NAVIGATION: tuple[int, str, str]
+KIND_MARKUP: tuple[int, str, str]
+KIND_VARIABLE: tuple[int, str, str]
+KIND_SNIPPET: tuple[int, str, str]
 
 
 class SymbolSource(IntEnum):
@@ -3154,7 +3153,7 @@ class CompletionItem:
     """Text to insert if the completion is specified. If empty the `trigger` will be inserted instead."""
     completion_format: int
     """The format of the completion."""
-    kind: Kind
+    kind: tuple[int, str, str]
     """The kind of the completion."""
     details: str
     """
@@ -3169,7 +3168,7 @@ class CompletionItem:
             annotation: str = ...,
             completion: str = ...,
             completion_format: CompletionFormat = ...,
-            kind: Kind = ...,
+            kind: tuple[int, str, str] = ...,
             details: str = ...,
             flags: CompletionItemFlags = ...
         ) -> None:
@@ -3187,7 +3186,7 @@ class CompletionItem:
         trigger: str,
         snippet: str,
         annotation: str = ...,
-        kind: Kind = ...,
+        kind: tuple[int, str, str] = ...,
         details: str = ...
     ) -> 'CompletionItem':
         """
@@ -3202,7 +3201,7 @@ class CompletionItem:
         command: str,
         args: dict[str, Any] = ...,
         annotation: str = ...,
-        kind: Kind = ...,
+        kind: tuple[int, str, str] = ...,
         details: str = ...
     ) -> 'CompletionItem':
         """
@@ -3290,7 +3289,7 @@ class QuickPanelItem:
     """A minihtml string or list of strings displayed below the trigger."""
     annotation: str
     """Hint to draw to the right-hand side of the row."""
-    kind: Kind
+    kind: tuple[int, str, str]
     """The kind of the item."""
 
     def __init__(
@@ -3298,7 +3297,7 @@ class QuickPanelItem:
         trigger: str,
         details: str | Sequence[str] = ...,
         annotation: str = ...,
-        kind: Kind = ...
+        kind: tuple[int, str, str] = ...
     ) -> None:
         ...
 
@@ -3321,7 +3320,7 @@ class ListInputItem(Generic[_T_Value]):
     """A minihtml string or list of strings displayed below the trigger."""
     annotation: str
     """Hint to draw to the right-hand side of the row."""
-    kind: Kind
+    kind: tuple[int, str, str]
     """The kind of the item."""
 
     def __init__(
@@ -3330,7 +3329,7 @@ class ListInputItem(Generic[_T_Value]):
         value: _T_Value,
         details: str | Sequence[str] = ...,
         annotation: str = ...,
-        kind: Kind = ...
+        kind: tuple[int, str, str] = ...
     ) -> None:
         ...
 
@@ -3350,10 +3349,10 @@ class SymbolRegion:
     """The name of the syntax for the symbol."""
     type: int
     """The type of the symbol"""
-    kind: Kind
+    kind: tuple[int, str, str]
     """The kind of the symbol."""
 
-    def __init__(self, name: str, region: Region, syntax: str, type: int, kind: Kind) -> None:
+    def __init__(self, name: str, region: Region, syntax: str, type: int, kind: tuple[int, str, str]) -> None:
         ...
 
     def __repr__(self) -> str:
@@ -3376,7 +3375,7 @@ class SymbolLocation:
     """The name of the syntax for the symbol."""
     type: int
     """The type of the symbol."""
-    kind: Kind
+    kind: tuple[int, str, str]
     """The kind of the symbol."""
 
     def __init__(
@@ -3387,7 +3386,7 @@ class SymbolLocation:
         col: int,
         syntax: str,
         type: int,
-        kind: Kind
+        kind: tuple[int, str, str]
     ) -> None:
         ...
 

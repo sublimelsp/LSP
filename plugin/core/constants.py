@@ -16,11 +16,7 @@ from os.path import dirname
 from os.path import join
 from typing import Dict
 from typing import Tuple
-from typing import TYPE_CHECKING
 import sublime
-
-if TYPE_CHECKING:
-    from sublime_types import Kind
 
 try:
     from mdpopups.marko import __version__ as marko_version  # pyright: ignore[reportMissingImports]
@@ -29,6 +25,7 @@ except ImportError:
 
 
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
+SublimeKind = Tuple[int, str, str]
 
 
 ST_CACHE_PATH = sublime.cache_path()
@@ -151,7 +148,7 @@ KIND_QUICKFIX = (sublime.KindId.COLOR_YELLOWISH, "f", "QuickFix")
 KIND_REFACTOR = (sublime.KindId.COLOR_CYANISH, "r", "Refactor")
 KIND_SOURCE = (sublime.KindId.COLOR_PURPLISH, "s", "Source")
 
-COMPLETION_KINDS: dict[CompletionItemKind, Kind] = {
+COMPLETION_KINDS: dict[CompletionItemKind, SublimeKind] = {
     CompletionItemKind.Text: KIND_TEXT,
     CompletionItemKind.Method: KIND_METHOD,
     CompletionItemKind.Function: KIND_FUNCTION,
@@ -179,7 +176,7 @@ COMPLETION_KINDS: dict[CompletionItemKind, Kind] = {
     CompletionItemKind.TypeParameter: KIND_TYPEPARAMETER
 }
 
-SYMBOL_KINDS: dict[SymbolKind, Kind] = {
+SYMBOL_KINDS: dict[SymbolKind, SublimeKind] = {
     SymbolKind.File: KIND_FILE,
     SymbolKind.Module: KIND_MODULE,
     SymbolKind.Namespace: KIND_NAMESPACE,
@@ -208,14 +205,14 @@ SYMBOL_KINDS: dict[SymbolKind, Kind] = {
     SymbolKind.TypeParameter: KIND_TYPEPARAMETER
 }
 
-DIAGNOSTIC_KINDS: dict[DiagnosticSeverity, Kind] = {
+DIAGNOSTIC_KINDS: dict[DiagnosticSeverity, SublimeKind] = {
     DiagnosticSeverity.Error: KIND_ERROR,
     DiagnosticSeverity.Warning: KIND_WARNING,
     DiagnosticSeverity.Information: KIND_INFORMATION,
     DiagnosticSeverity.Hint: KIND_HINT
 }
 
-CODE_ACTION_KINDS: dict[CodeActionKind, Kind] = {
+CODE_ACTION_KINDS: dict[CodeActionKind, SublimeKind] = {
     CodeActionKind.QuickFix: KIND_QUICKFIX,
     CodeActionKind.Refactor: KIND_REFACTOR,
     CodeActionKind.Source: KIND_SOURCE
@@ -231,7 +228,7 @@ MESSAGE_TYPE_LEVELS: dict[MessageType, str] = {
 
 
 # Symbol scope to kind mapping, based on https://github.com/sublimetext-io/docs.sublimetext.io/issues/30
-SUBLIME_KIND_SCOPES: dict[Kind, str] = {
+SUBLIME_KIND_SCOPES: dict[SublimeKind, str] = {
     sublime.KIND_KEYWORD: "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language",  # noqa: E501
     sublime.KIND_TYPE: "entity.name.type | entity.name.class | entity.name.enum | entity.name.trait | entity.name.struct | entity.name.impl | entity.name.interface | entity.name.union | support.type | support.class",  # noqa: E501
     sublime.KIND_FUNCTION: "entity.name.function | entity.name.method | entity.name.macro | meta.method entity.name.function | support.function | meta.function-call variable.function | meta.function-call support.function | support.method | meta.method-call variable.function",  # noqa: E501

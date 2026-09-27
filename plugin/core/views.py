@@ -47,6 +47,7 @@ from .constants import ST_CACHE_PATH
 from .constants import ST_PLATFORM
 from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES
+from .constants import SublimeKind
 from .css import css as lsp_css
 from .protocol import Notification
 from .protocol import Point
@@ -80,7 +81,6 @@ import tempfile
 if TYPE_CHECKING:
     from .sessions import SessionBufferProtocol
     from .types import ClientConfig
-    from sublime_types import Kind
 
 
 _baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501
@@ -200,7 +200,7 @@ def position_to_offset(position: Position, view: sublime.View) -> int:
     return point_to_offset(Point.from_lsp(position), view)
 
 
-def get_symbol_kind_from_scope(scope_name: str) -> Kind:
+def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
     best_kind = sublime.KIND_AMBIGUOUS
     best_kind_score = 0
     for kind, selector in SUBLIME_KIND_SCOPES.items():

@@ -18,14 +18,14 @@ import sublime_plugin
 import uuid
 
 if TYPE_CHECKING:
-    from sublime_types import Kind
+    from .constants import SublimeKind
 
 # pyright: reportInvalidTypeVarUse=false
 T = TypeVar('T')
 
 TreeViewAction = Literal['move_up', 'move_right', 'move_down', 'move_left', 'close', 'activate']
 
-KIND_CLASS_NAMES: dict[sublime.KindId, str] = {
+KIND_CLASS_NAMES: dict[int, str] = {
     sublime.KindId.KEYWORD: 'kind kind_keyword',
     sublime.KindId.TYPE: 'kind kind_type',
     sublime.KindId.FUNCTION: 'kind kind_function',
@@ -48,7 +48,7 @@ class TreeItem:
     def __init__(
         self,
         label: str,
-        kind: Kind = sublime.KIND_AMBIGUOUS,
+        kind: SublimeKind = sublime.KIND_AMBIGUOUS,
         description: str = "",
         tooltip: str = "",
         action_command: tuple[str, dict[str, Any]] | None = None,

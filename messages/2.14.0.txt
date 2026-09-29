@@ -1,0 +1,33 @@
+=> 2.14.0
+
+# Features
+
+- Add additional exports to public API (#2910) (Rafał Chłodnicki)
+- Show progress when requesting code actions manually (#2987) (Raoul Wols)
+- Add optional argument severity_level for diagnostics navigation (#2984) (jwortmann)
+- Add language IDs for glimmer-js and glimmer-ts (#3028) (Isaac Lee)
+- Add Svelte language identifier (#3000) (dontwanttothink)
+
+# Fixes
+
+- Pick saved formatter on "format-on-save" or "format file" (#3034) (Rafał Chłodnicki)
+- Fix rename file handler not passing path to listdir (#3024) (Rafał Chłodnicki)
+- Fix Git base scopes in language ID mapping (#3020) (jwortmann)
+- Fix handling of unchanged diagnostics report (#3012) (jwortmann)
+- Ensure selection start is retained when range formatting (#2993) (jwortmann)
+- Properly fix wrong capability name for textDocumentContent provider (#2980) (jwortmann)
+- Fix tree item text indent when no kind (#2974) (Rafał Chłodnicki)
+
+# Refactors
+
+- Replace SublimeKind with Kind (#3039) (Rafał Chłodnicki)
+- Narrow HtmlSheet return type in type stubs (#3010) (jwortmann)
+- Enhance logging functions (#2991) (Raoul Wols)
+
+# Documentation
+
+- Add Devsense PHP Tools installation and configuration instructions (#3030) (Jakub Míšek)
+- Add instructions for Slang language server (Janos Wortmann)
+- Add roslyn-language-server to language server docs (#2978) (Raoul Wols)
+- Add syntax_map to roslyn-language-server configuration (#2988) (Raoul Wols)
+- Replace <path-to-your-home-folder> by ${home} in docs (#2979) (Raoul Wols)

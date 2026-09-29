@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .setup import CI
 from .setup import TextDocumentTestCase
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
@@ -9,7 +10,9 @@ from typing import Generator
 from typing import TYPE_CHECKING
 import os
 import sublime
+import sys
 import tempfile
+import unittest
 
 if TYPE_CHECKING:
     from ..protocol import ApplyWorkspaceEditParams
@@ -268,6 +271,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             content = entire_content(window.open_file(filepath))
             self.assertEqual(content, new_text + old_text)
 
+    @unittest.skipIf(sys.platform == 'darwin' and CI, 'Moving files to the Recycle Bin times out on macOS CI')
     def test_create_file_exists_overwrite(self) -> Generator:
         window = self.view.window()
         with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
@@ -426,6 +430,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             content = entire_content(window.open_file(new_path))
             self.assertEqual(content, new_text + old_text2)
 
+    @unittest.skipIf(sys.platform == 'darwin' and CI, 'Moving files to the Recycle Bin times out on macOS CI')
     def test_rename_file_exists_overwrite(self) -> Generator:
         window = self.view.window()
         with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
@@ -469,6 +474,7 @@ class ApplyWorkspaceEditTests(TextDocumentTestCase):
             content = entire_content(window.open_file(new_path))
             self.assertEqual(content, new_text + old_text1)
 
+    @unittest.skipIf(sys.platform == 'darwin' and CI, 'Moving files to the Recycle Bin times out on macOS CI')
     def test_delete_file(self) -> Generator:
         with tempfile.TemporaryDirectory(dir=TEMP_DIR_ROOT) as dirpath:
             filepath = os.path.join(dirpath, 'newfile.txt')

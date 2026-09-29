@@ -31,6 +31,7 @@ jobs:
             --exclude LSP-aurelia \
             --exclude LSP-gnols \
             --exclude LSP-MaaFramework \
+            --exclude LSP-pawnforge \
             --exclude LSP-pyvoice \
             --exclude LSP-vale-ls \
             --exclude WolframLanguage

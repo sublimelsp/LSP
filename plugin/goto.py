@@ -14,12 +14,12 @@ from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.settings import userprefs
+from .core.type_converters import position_to_offset
 from .core.types import method_to_capability
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import get_symbol_kind_from_scope
-from .core.views import position_to_offset
 from .core.views import range_to_region
 from .core.views import text_document_position_params
 from .core.views import to_encoded_filename
@@ -320,7 +320,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             code = str(diagnostic.get('code', ''))
             kind = DIAGNOSTIC_KINDS[severity]
             items.append(sublime.ListInputItem(text, value, annotation=code, kind=kind))
-            if self._preview and position_to_offset(diagnostic['range']['start'], self._preview) <= caret_pos:
+            if self._preview and position_to_offset(self._preview, diagnostic['range']['start']) <= caret_pos:
                 selected_index = index
         return items, selected_index
 

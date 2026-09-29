@@ -8,7 +8,7 @@ from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.settings import userprefs
-from .core.views import position_to_offset
+from .core.type_converters import position_to_offset
 from typing import cast
 from typing import TYPE_CHECKING
 import html
@@ -105,7 +105,7 @@ class LspInlayHintClickCommand(LspTextCommand):
 
 def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Session) -> sublime.Phantom:
     position = inlay_hint["position"]
-    region = sublime.Region(position_to_offset(position, view))
+    region = sublime.Region(position_to_offset(view, position))
     phantom_uuid = str(uuid.uuid4())
     content = get_inlay_hint_html(view, inlay_hint, session, phantom_uuid)
     p = sublime.Phantom(region, content, sublime.PhantomLayout.INLINE)

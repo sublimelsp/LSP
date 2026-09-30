@@ -17,7 +17,6 @@ from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
-from .plugin.core.aio import maybe_log_exceptions
 from .plugin.core.aio import run_coroutine
 from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
@@ -232,7 +231,7 @@ def plugin_loaded() -> None:
 
 def plugin_unloaded() -> None:
     _unregister_all_plugins()
-    run_coroutine(maybe_log_exceptions("Error disabling windows", windows.disable()))
+    run_coroutine(windows.disable())
     for listeners in sublime_plugin.view_event_listeners.values():
         for listener in listeners:
             if isinstance(listener, DocumentSyncListener):

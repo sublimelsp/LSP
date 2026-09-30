@@ -65,6 +65,7 @@ from .core.views import document_highlight_key
 from .core.views import first_selection_region
 from .core.views import format_diagnostics_for_html
 from .core.views import make_link
+from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_identifier
@@ -442,7 +443,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     async def _on_load_impl(self) -> None:
         if not self._registered and is_regular_view(self.view):
-            self._register()
+            try:
+                self._register()
+            except MissingUriError:
+                pass  # view already closed; don't care
             return
         if initially_folded_kinds := userprefs().initially_folded:
             if session := self.session_async('foldingRangeProvider'):

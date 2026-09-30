@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .aio import maybe_log_exceptions
 from .aio import run_coroutine
 from .settings import userprefs
 from .type_converters import position_to_offset
@@ -238,7 +237,7 @@ class LspRestartServerCommand(LspTextCommand):
     def restart_server(self, wm: WindowManager, index: int) -> None:
         if index == -1:
             return
-        run_coroutine(maybe_log_exceptions("Error restarting server", wm.restart_sessions([self._config_names[index]])))
+        run_coroutine(wm.restart_sessions([self._config_names[index]]))
 
 
 class LspCheckApplicableCommand(sublime_plugin.TextCommand):

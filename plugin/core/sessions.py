@@ -101,7 +101,6 @@ from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .aio import gather_and_flatten_exceptions
-from .aio import maybe_log_exceptions
 from .aio import run_on_asyncio_thread
 from .aio import run_on_main_thread
 from .aio import TaskContainer
@@ -125,6 +124,7 @@ from .file_watcher import get_file_watcher_implementation
 from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
 from .logging import debug
 from .logging import exception_log
+from .logging import exceptions_log
 from .logging import printf
 from .open import center_selection
 from .open import open_externally
@@ -1187,7 +1187,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         async def maybe_end() -> None:
             await asyncio.sleep(3)
             if self._views_opened == current_count:
-                await maybe_log_exceptions(f"Exception while stopping {self.config.name}", self.end())
+                await self.end()
                 self._maybe_end_task = None
 
         if self.exiting:
@@ -1404,7 +1404,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         result = await self.request(Request.initialize(params))
         if isinstance(result, Error):
-            await self.end()  # ignore exceptions
+            await self.end()
             return result
         capabilities = result['capabilities']
         self.capabilities.assign(capabilities)
@@ -2572,9 +2572,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
-    async def end(self) -> list[Exception]:
+    async def end(self) -> None:
         if self.exiting:
-            return []
+            return
         self.exiting = True
         if self._plugin:
             self._plugin.on_session_end_async(None, None)
@@ -2592,12 +2592,14 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._dynamic_file_watchers = {}
         exceptions.extend(await self.cancel_all_tasks())
         try:
-            await self.request(Request.shutdown())
+            result = await self.request(Request.shutdown())
+            if isinstance(result, Error):
+                exceptions.append(result)
         except Exception as ex:
             exceptions.append(ex)
         finally:
             await self.exit()
-        return exceptions
+        exceptions_log(f"Errors occurred during shutdown of {self.config.name}", exceptions)
 
     async def shutdown_session_view(self, session_view: SessionViewProtocol) -> list[Exception]:
         for status_key in self._status_messages:

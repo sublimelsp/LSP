@@ -18,7 +18,6 @@ from ..api import LspPlugin
 from ..api import OnPreStartContext
 from ..api import PluginStartError
 from .aio import gather_and_flatten_exceptions
-from .aio import maybe_log_exceptions
 from .aio import run_coroutine
 from .aio import run_on_asyncio_thread
 from .aio import run_on_threadpool
@@ -225,7 +224,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             exception_log(f"failed to attach {session.config.name} to view", ex)
         if not any(session.session_views_async()):
             self._sessions.discard(session)
-            await maybe_log_exceptions(f"Error stopping {session.config.name}", session.end())
+            await session.end()
             return None
         return session
 
@@ -361,15 +360,14 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return await MessageRequestHandler(view, params, config_name).show()
         return None
 
-    async def restart_sessions(self, config_names: list[str]) -> list[Exception]:
-        exceptions = await self._end_sessions(config_names)
+    async def restart_sessions(self, config_names: list[str]) -> None:
+        await self._end_sessions(config_names)
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
             self.register_listener_async(listener)
-        return exceptions
 
-    async def _end_sessions(self, config_names: list[str] | None = None) -> list[Exception]:
+    async def _end_sessions(self, config_names: list[str] | None = None) -> None:
         if not self._start_lock:
             self._start_lock = asyncio.Lock()
         async with self._start_lock:
@@ -379,7 +377,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     debug(f"stopping {session.config.name}")
                     coros.append(session.end())
                     self._sessions.discard(session)
-            return await gather_and_flatten_exceptions(*coros)
 
     @override
     def get_project_path(self, file_path: str) -> str | None:
@@ -444,13 +441,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             else:
                 self._config_manager.disable_config(config.name, only_for_session=True)
 
-    async def destroy(self) -> list[Exception]:
+    async def destroy(self) -> None:
         """Destroy everything related to this instance."""
-        result = await self._end_sessions()
+        await self._end_sessions()
         if self.panel_manager:
             self.panel_manager.destroy_output_panels()
             self.panel_manager = None
-        return result
 
     @override
     def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
@@ -581,11 +577,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     # --- Implements WindowConfigChangeListener ------------------------------------------------------------------------
 
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:
-        run_coroutine(
-            maybe_log_exceptions(
-                "Error restarting sessions", self.restart_sessions([config.name for config in configs])
-            )
-        )
+        run_coroutine(self.restart_sessions([config.name for config in configs]))
 
     def on_server_settings_changed(self, configs: list[ClientConfig]) -> None:
         for config in configs:
@@ -625,11 +617,10 @@ class WindowRegistry(LspSettingsChangeListener):
         for window in sublime.windows():
             self.lookup(window)
 
-    async def disable(self) -> list[Exception]:
+    async def disable(self) -> None:
         self._enabled = False
-        exceptions = await gather_and_flatten_exceptions(*(wm.destroy() for wm in self._windows.values()))
+        asyncio.gather(*(wm.destroy() for wm in self._windows.values()), return_exceptions=True)
         self._windows = {}
-        return exceptions
 
     def lookup(self, window: sublime.Window | None) -> WindowManager | None:
         if not self._enabled or not window or not window.is_valid():
@@ -649,7 +640,7 @@ class WindowRegistry(LspSettingsChangeListener):
 
     def discard(self, window: sublime.Window) -> None:
         if wm := self._windows.pop(window.id(), None):
-            run_coroutine(maybe_log_exceptions("Error discarding window", wm.destroy()))
+            run_coroutine(wm.destroy())
 
     # --- Implements LspSettingsChangeListener -------------------------------------------------------------------------
 

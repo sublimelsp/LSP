@@ -22,7 +22,6 @@ from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any
-from typing import Coroutine
 from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakValueDictionary
@@ -96,7 +95,10 @@ class SessionView:
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            await asyncio.gather(*(data.cancel() for data in self._active_requests.values()))
+            await asyncio.gather(
+                *(data.cancel() for data in self._active_requests.values() if data.request.view),
+                return_exceptions=True
+            )
             await self.session.unregister_session_view(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(DIAGNOSTIC_STYLES.keys()):
@@ -370,20 +372,20 @@ class SessionView:
     ) -> None:
         self.session_buffer.on_text_changed(self.view, change_count, changes, action)
 
-    def on_revert(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_revert(self.view)
+    async def on_revert(self) -> None:
+        await self.session_buffer.on_revert(self.view)
 
-    def on_reload(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_reload(self.view)
+    async def on_reload(self) -> None:
+        await self.session_buffer.on_reload(self.view)
 
-    def purge_changes(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.purge_changes(self.view)
+    async def purge_changes(self) -> None:
+        await self.session_buffer.purge_changes(self.view)
 
-    def on_pre_save(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_pre_save(self.view)
+    async def on_pre_save(self) -> None:
+        await self.session_buffer.on_pre_save(self.view)
 
-    def on_post_save(self, new_uri: DocumentUri) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_post_save(self.view, new_uri)
+    async def on_post_save(self, new_uri: DocumentUri) -> None:
+        await self.session_buffer.on_post_save(self.view, new_uri)
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_diagnostics_async()

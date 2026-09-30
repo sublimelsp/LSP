@@ -46,7 +46,6 @@ from .core.constants import SEMANTIC_TOKENS_MAP
 from .core.constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .core.edit import apply_text_edits
 from .core.logging import debug
-from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
@@ -85,6 +84,7 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Coroutine
+from typing import TYPE_CHECKING
 from typing_extensions import Concatenate
 from typing_extensions import deprecated
 from typing_extensions import ParamSpec
@@ -94,6 +94,9 @@ import asyncio
 import itertools
 import sublime
 import time
+
+if TYPE_CHECKING:
+    from .core.promise import Promise
 
 P = ParamSpec('P')
 
@@ -1036,11 +1039,9 @@ class SessionBuffer(TaskContainer):
         *,
         progress: bool = False,
     ) -> Promise[list[Command | CodeAction] | Error | None]:
-        if task := self.create_task(
+        return self.create_task_and_wrap_in_promise(
             self.request_code_actions(view, region, diagnostics, kinds, trigger_kind, progress=progress)
-        ):
-            return Promise.wrap_task(task)
-        raise RuntimeError("unable to schedule task")
+        )
 
     async def request_code_actions(
         self,
@@ -1092,7 +1093,7 @@ class SessionBuffer(TaskContainer):
 
     async def resolve_visible_code_lenses(self, view: sublime.View) -> None:
         if self.has_capability('codeLensProvider.resolveProvider'):
-            _ = await asyncio.gather(
+            await asyncio.gather(
                 *(
                     code_lens.resolve(self.session, view)
                     for code_lens in self._code_lenses.unresolved_visible_code_lenses(view)

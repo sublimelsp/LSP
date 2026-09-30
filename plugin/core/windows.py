@@ -206,19 +206,27 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         if file_path:
             return self._find_session(config_name, file_path)
         for session in self._sessions:
-            if session.config.name == config_name:
+            if session.config.name == config_name and not session.exiting:
                 return session
         return None
-
-    def _can_start_config(self, config_name: str, file_path: str) -> bool:
-        return not bool(self._find_session(config_name, file_path))
 
     def _find_session(self, config_name: str, file_path: str) -> Session | None:
         inside = self._workspace.contains(file_path)
         for session in self._sessions:
-            if session.config.name == config_name and session.handles_path(file_path, inside):
+            if session.config.name == config_name and not session.exiting and session.handles_path(file_path, inside):
                 return session
         return None
+
+    async def _attach_session(self, listener: AbstractViewListener, session: Session) -> Session | None:
+        try:
+            listener.on_session_initialized_async(session)
+        except Exception as ex:
+            exception_log(f"failed to attach {session.config.name} to view", ex)
+        if not any(session.session_views_async()):
+            self._sessions.discard(session)
+            await session.end()
+            return None
+        return session
 
     @override
     async def start(self, config: ClientConfig, listener: AbstractViewListener) -> Session | None:
@@ -228,16 +236,16 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             file_path = listener.view.file_name() or ''
             inside = self._workspace.contains(file_path)
             for session in list(self._sessions):
-                if session.config.name == config.name and session.handles_path(file_path, inside):
+                if (
+                    session.config.name == config.name
+                    and not session.exiting
+                    and session.handles_path(file_path, inside)
+                ):
                     # OK, this session is already initialized for this view.
                     session.config.set_view_status(listener.view, "")
-                    # Do not let an exception in listener.on_session_initialized_async cause a failure in this method.
-                    asyncio.get_running_loop().call_soon(listener.on_session_initialized_async, session)
-                    return session
-
+                    return await self._attach_session(listener, session)
             config = ClientConfig.from_config(config, {})
             config.set_view_status_handler(self)
-
             try:
                 workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
                 plugin_class = get_plugin(config.name)
@@ -270,8 +278,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
                 transport = await config.create_transport_config().start(
                     config.command, config.env, cwd, variables, session)
-                if plugin_class and issubclass(plugin_class, AbstractPlugin):
-                    plugin_class.on_post_start(self._window, listener.view, workspace_folders, config)
+                try:
+                    if plugin_class and issubclass(plugin_class, AbstractPlugin):
+                        plugin_class.on_post_start(self._window, listener.view, workspace_folders, config)
+                except:
+                    await transport.close()
+                    raise
             except PluginStartError as ex:
                 config.erase_view_status(listener.view)
                 message = f"cannot start {config.name}: {ex!s}"
@@ -289,7 +301,9 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 config.erase_view_status(listener.view)
                 sublime.message_dialog(message)
                 return None
-
+            except asyncio.CancelledError:
+                config.erase_view_status(listener.view)
+                raise
             try:
                 config.set_view_status(listener.view, "initializing...")
                 initialize_result = await session.initialize(
@@ -298,9 +312,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if isinstance(initialize_result, Error):
                     raise initialize_result
                 self._sessions.add(session)
-                # Do not let an exception in listener.on_session_initialized_async cause a failure in this method.
-                asyncio.get_running_loop().call_soon(listener.on_session_initialized_async, session)
-                config.set_view_status(listener.view, "")
             except Exception as e:
                 message = (
                     f'Failed to initialize {config.name} - disabling for this window for the duration of the current '
@@ -313,8 +324,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 self._config_manager.disable_config(config.name, only_for_session=True)
                 sublime.message_dialog(message)
                 config.erase_view_status(listener.view)
+            except asyncio.CancelledError:
+                config.erase_view_status(listener.view)
+                raise
             else:
-                return session
+                config.set_view_status(listener.view, "")
+                return await self._attach_session(listener, session)
             return None
 
     def _create_logger(self, config_name: str) -> Logger:
@@ -345,22 +360,24 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return await MessageRequestHandler(view, params, config_name).show()
         return None
 
-    async def restart_sessions(self, config_names: list[str]) -> list[Exception]:
-        exceptions = await self._end_sessions(config_names)
+    async def restart_sessions(self, config_names: list[str]) -> None:
+        await self._end_sessions(config_names)
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
             self.register_listener_async(listener)
-        return exceptions
 
-    async def _end_sessions(self, config_names: list[str] | None = None) -> list[Exception]:
-        coros = []
-        for session in list(self._sessions):
-            if config_names is None or session.config.name in config_names:
-                debug(f"stopping {session.config.name}")
-                coros.append(session.end())
-                self._sessions.discard(session)
-        return await gather_and_flatten_exceptions(*coros)
+    async def _end_sessions(self, config_names: list[str] | None = None) -> None:
+        if not self._start_lock:
+            self._start_lock = asyncio.Lock()
+        async with self._start_lock:
+            coros = []
+            for session in list(self._sessions):
+                if config_names is None or session.config.name in config_names:
+                    debug(f"stopping {session.config.name}")
+                    coros.append(session.end())
+                    self._sessions.discard(session)
+            await asyncio.gather(*coros, return_exceptions=True)
 
     @override
     def get_project_path(self, file_path: str) -> str | None:
@@ -425,13 +442,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             else:
                 self._config_manager.disable_config(config.name, only_for_session=True)
 
-    async def destroy(self) -> list[Exception]:
+    async def destroy(self) -> None:
         """Destroy everything related to this instance."""
-        result = await self._end_sessions()
+        await self._end_sessions()
         if self.panel_manager:
             self.panel_manager.destroy_output_panels()
             self.panel_manager = None
-        return result
 
     @override
     def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
@@ -562,9 +578,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     # --- Implements WindowConfigChangeListener ------------------------------------------------------------------------
 
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:
-        config_names = [config.name for config in configs]
-        # TODO: handle exception list?
-        run_coroutine(self.restart_sessions(config_names))
+        run_coroutine(self.restart_sessions([config.name for config in configs]))
 
     def on_server_settings_changed(self, configs: list[ClientConfig]) -> None:
         for config in configs:
@@ -604,11 +618,10 @@ class WindowRegistry(LspSettingsChangeListener):
         for window in sublime.windows():
             self.lookup(window)
 
-    async def disable(self) -> list[Exception]:
+    async def disable(self) -> None:
         self._enabled = False
-        exceptions = await gather_and_flatten_exceptions(*(wm.destroy() for wm in self._windows.values()))
+        await asyncio.gather(*(wm.destroy() for wm in self._windows.values()), return_exceptions=True)
         self._windows = {}
-        return exceptions
 
     def lookup(self, window: sublime.Window | None) -> WindowManager | None:
         if not self._enabled or not window or not window.is_valid():

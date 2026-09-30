@@ -65,6 +65,7 @@ from .core.views import document_highlight_key
 from .core.views import first_selection_region
 from .core.views import format_diagnostics_for_html
 from .core.views import make_link
+from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_identifier
@@ -223,6 +224,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        TaskContainer.__init__(self)  # https://github.com/sublimehq/sublime_text/issues/6979
         settings = view.settings()
         self._uri = ''  # assumed to never be falsey
         self._current_syntax = settings.get("syntax")
@@ -441,7 +443,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     async def _on_load_impl(self) -> None:
         if not self._registered and is_regular_view(self.view):
-            self._register()
+            try:
+                self._register()
+            except MissingUriError:
+                pass  # view already closed; don't care
             return
         if initially_folded_kinds := userprefs().initially_folded:
             if session := self.session_async('foldingRangeProvider'):
@@ -457,7 +462,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self.on_post_move_window_async()
 
     async def on_activated(self) -> None:
-        await self._activated_impl()
+        try:
+            await self._activated_impl()
+        except MissingUriError:
+            pass  # view already closed; don't care
 
     async def _activated_impl(self) -> None:
         if self.view.is_loading() or not is_regular_view(self.view):
@@ -977,8 +985,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 return sv.has_capability_async(capability_path)
         return False
 
-    def purge_changes(self) -> asyncio.Future[list[BaseException | None]]:
-        return asyncio.gather(*(sv.purge_changes() for sv in self.session_views_async()), return_exceptions=True)
+    async def purge_changes(self) -> list[BaseException | None]:
+        return await asyncio.gather(*(sv.purge_changes() for sv in self.session_views_async()), return_exceptions=True)
 
     @deprecated("use DocumentSyncListener.purge_changes instead")
     def purge_changes_async(self) -> None:
@@ -988,8 +996,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
         self.create_task_threadsafe(run())
 
-    def trigger_on_pre_save(self) -> asyncio.Future[list[BaseException | None]]:
-        return asyncio.gather(*(sv.on_pre_save() for sv in self.session_views_async()), return_exceptions=True)
+    async def trigger_on_pre_save(self) -> list[BaseException | None]:
+        return await asyncio.gather(*(sv.on_pre_save() for sv in self.session_views_async()), return_exceptions=True)
 
     async def revert(self) -> list[BaseException | None]:
         exceptions = []
@@ -1131,8 +1139,11 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             sel.add_all(original_selection)
 
         try:
-            await format_selection(self)
-            sublime.status_message("Paste was formatted")
+            if result := await format_selection(self):
+                if isinstance(result, Error):
+                    sublime.status_message(f"Error: {result}")
+                elif result:
+                    sublime.status_message("Paste was formatted")
         finally:
             sublime.set_timeout(restore_selection)
 

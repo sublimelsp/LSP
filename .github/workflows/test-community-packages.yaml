@@ -31,6 +31,7 @@ jobs:
             --exclude LSP-aurelia \
             --exclude LSP-gnols \
             --exclude LSP-MaaFramework \
+            --exclude LSP-pawnforge \
             --exclude LSP-pyvoice \
             --exclude LSP-vale-ls \
             --exclude WolframLanguage
@@ -47,7 +48,7 @@ jobs:
         working-directory: lsp_maintainers
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v10.1.0
+        uses: astral-sh/setup-uv@v10.2.0
 
       - name: Sync venv and type check
         run: |

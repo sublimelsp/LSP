@@ -1093,7 +1093,7 @@ class SessionBuffer(TaskContainer):
 
     async def resolve_visible_code_lenses(self, view: sublime.View) -> None:
         if self.has_capability('codeLensProvider.resolveProvider'):
-            _ = await asyncio.gather(
+            await asyncio.gather(
                 *(
                     code_lens.resolve(self.session, view)
                     for code_lens in self._code_lenses.unresolved_visible_code_lenses(view)

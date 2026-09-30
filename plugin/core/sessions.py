@@ -2595,10 +2595,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             result = await self.request(Request.shutdown())
             if isinstance(result, Error):
                 exceptions.append(result)
+            await self.exit()
         except Exception as ex:
             exceptions.append(ex)
-        finally:
-            await self.exit()
         exceptions_log(f"Errors occurred during shutdown of {self.config.name}", exceptions)
 
     async def shutdown_session_view(self, session_view: SessionViewProtocol) -> list[Exception]:

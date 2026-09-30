@@ -377,6 +377,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     debug(f"stopping {session.config.name}")
                     coros.append(session.end())
                     self._sessions.discard(session)
+            await asyncio.gather(*coros, return_exceptions=True)
 
     @override
     def get_project_path(self, file_path: str) -> str | None:
@@ -619,7 +620,7 @@ class WindowRegistry(LspSettingsChangeListener):
 
     async def disable(self) -> None:
         self._enabled = False
-        asyncio.gather(*(wm.destroy() for wm in self._windows.values()), return_exceptions=True)
+        await asyncio.gather(*(wm.destroy() for wm in self._windows.values()), return_exceptions=True)
         self._windows = {}
 
     def lookup(self, window: sublime.Window | None) -> WindowManager | None:

@@ -95,7 +95,10 @@ class SessionView:
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            await asyncio.gather(*(data.cancel() for data in self._active_requests.values()))
+            await asyncio.gather(
+                *(data.cancel() for data in self._active_requests.values() if data.request.view),
+                return_exceptions=True
+            )
             await self.session.unregister_session_view(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(DIAGNOSTIC_STYLES.keys()):
@@ -370,19 +373,19 @@ class SessionView:
         self.session_buffer.on_text_changed(self.view, change_count, changes, action)
 
     async def on_revert(self) -> None:
-        return await self.session_buffer.on_revert(self.view)
+        await self.session_buffer.on_revert(self.view)
 
     async def on_reload(self) -> None:
-        return await self.session_buffer.on_reload(self.view)
+        await self.session_buffer.on_reload(self.view)
 
     async def purge_changes(self) -> None:
-        return await self.session_buffer.purge_changes(self.view)
+        await self.session_buffer.purge_changes(self.view)
 
     async def on_pre_save(self) -> None:
-        return await self.session_buffer.on_pre_save(self.view)
+        await self.session_buffer.on_pre_save(self.view)
 
     async def on_post_save(self, new_uri: DocumentUri) -> None:
-        return await self.session_buffer.on_post_save(self.view, new_uri)
+        await self.session_buffer.on_post_save(self.view, new_uri)
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_diagnostics_async()

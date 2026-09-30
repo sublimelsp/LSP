@@ -462,7 +462,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self.on_post_move_window_async()
 
     async def on_activated(self) -> None:
-        await self._activated_impl()
+        try:
+            await self._activated_impl()
+        except MissingUriError:
+            pass  # view already closed; don't care
 
     async def _activated_impl(self) -> None:
         if self.view.is_loading() or not is_regular_view(self.view):

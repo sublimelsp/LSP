@@ -66,7 +66,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, ABC):
     """
 
     def __init__(
-        self, window: sublime.Window, initial_value: str | sublime.ListInputItem | None = None
+        self, window: sublime.Window, initial_value: str | sublime.ListInputItem[Any] | None = None
     ) -> None:
         super().__init__()
         self._window = window
@@ -140,7 +140,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):
             self.listener.detach()
 
     @final
-    def list_items(self) -> list[sublime.ListInputItem]:
+    def list_items(self) -> list[sublime.ListInputItem[Any]]:
         if not self.text:  # Show initial items when the command was just invoked
             return self.get_list_items() or [sublime.ListInputItem("No Results", "")]
         if items := getattr(self.command, '_items', None):  # Items were updated after typing
@@ -176,11 +176,11 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):
         """Called after changes have been made to the input, with the text of the input field passed as argument."""
         pass
 
-    def get_list_items(self) -> list[sublime.ListInputItem]:
+    def get_list_items(self) -> list[sublime.ListInputItem[Any]]:
         """The list items which are initially shown."""
         return []
 
-    def update(self, items: list[sublime.ListInputItem]) -> None:
+    def update(self, items: list[sublime.ListInputItem[Any]]) -> None:
         """Call this method to update the list items."""
         if not self.input_view:
             return

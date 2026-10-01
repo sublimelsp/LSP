@@ -116,7 +116,6 @@ from .file_watcher import FileWatcher
 from .file_watcher import FileWatcherEvent
 from .file_watcher import get_file_watcher_implementation
 from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
-from .logging import dbg  # TEMP
 from .logging import debug
 from .logging import exception_log
 from .logging import printf
@@ -1318,7 +1317,6 @@ class Session(APIHandler, TransportCallbacks):
         if diagnostic_options := capabilities.get('diagnosticProvider'):
             self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
         self.state = ClientStates.READY
-        dbg('READY', id(self))
         if self._plugin_class:
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
@@ -2473,7 +2471,6 @@ class Session(APIHandler, TransportCallbacks):
 
     def end_async(self) -> None:
         # TODO: Ensure this function is called only from the async thread
-        dbg('end_async', id(self), self.state, self.exiting, stack=True)
         if self.exiting:
             return
         self.exiting = True
@@ -2503,7 +2500,6 @@ class Session(APIHandler, TransportCallbacks):
         self.exit()
 
     def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
-        dbg('on_transport_close', id(self), self.state, exit_code, exception)
         self.exiting = True
         self.state = ClientStates.STOPPING
         self.transport = None

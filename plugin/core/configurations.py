@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .logging import dbg  # TEMP
 from .logging import exception_log
 from .logging import printf
 from .types import ClientConfig
@@ -150,7 +149,6 @@ class WindowConfigManager:
                 **{c.name: c for c in changes['unchanged']},
                 **{c.name: c for c in changes['added']},
             }
-        dbg('reload_configs', updated_config_name, {k: [c.name for c in v] for k, v in changes.items() if k != 'unchanged' and v})  # noqa: E501
         if notify_listeners:
             if changed := changes['settings_changed']:
                 for listener in self._change_listeners:

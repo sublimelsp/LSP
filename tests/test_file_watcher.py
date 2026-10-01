@@ -10,7 +10,6 @@ from LSP.plugin import FileWatcherProtocol
 from LSP.plugin import parse_uri
 from LSP.plugin.core.file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from LSP.plugin.core.file_watcher import register_file_watcher_implementation
-from LSP.plugin.core.logging import dbg  # TEMP
 from LSP.plugin.core.types import ClientConfig
 from LSP.protocol import WatchKind
 from os.path import join
@@ -27,7 +26,6 @@ if TYPE_CHECKING:
 def setup_workspace_folder() -> str:
     window = sublime.active_window()
     folder_path = expand(join('$packages', 'LSP', 'tests'), window)
-    dbg('setup_workspace_folder')
     window.set_project_data({
         'folders': [
             {
@@ -113,7 +111,6 @@ class FileWatcherDocumentTestCase(TextDocumentTestCase):
         # Restore original project data.
         window = sublime.active_window()
         window.set_project_data({})
-        dbg('tearDown: project data cleared')
 
 
 class FileWatcherStaticTests(FileWatcherDocumentTestCase):

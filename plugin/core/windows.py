@@ -22,7 +22,6 @@ from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
 from .configurations import WindowConfigManager
 from .constants import MESSAGE_TYPE_LEVELS
-from .logging import dbg  # TEMP
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
@@ -132,12 +131,10 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         yield from self._sessions
 
     def on_load_project_async(self) -> None:
-        dbg('on_load_project_async', self._window.folders())
         self.update_workspace_folders_async()
         self._config_manager.update()
 
     def on_post_save_project_async(self) -> None:
-        dbg('on_post_save_project_async', self._window.folders())
         if self.suppress_sessions_restart_on_project_update:
             self.suppress_sessions_restart_on_project_update = False
             return
@@ -146,7 +143,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     def update_workspace_folders_async(self) -> None:
         if self._workspace.update():
             workspace_folders = self._workspace.get_workspace_folders()
-            dbg('workspace folders changed', [f.path for f in workspace_folders])
             for session in self._sessions:
                 session.update_folders(workspace_folders)
 
@@ -220,12 +216,10 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 self._new_session = None
                 return
         if self._new_session:
-            dbg('dequeue add', id(self._new_session), self._new_session.state, 'listener view', listener.view.id(), listener.view.is_valid())  # noqa: E501
             self._sessions.add(self._new_session)
         self._publish_sessions_to_listener_async(listener)
         if self._new_session:
             if not any(self._new_session.session_views_async()):
-                dbg('dequeue no views, end if unused', id(self._new_session), listener.view.id(), listener.view.is_valid())  # noqa: E501
                 # The view that started the session can close while the server initializes. Do not end the session
                 # now, because a pending listener (for example a view that was opened in the meantime) can use it.
                 self._new_session.end_async_if_unused()
@@ -335,7 +329,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 init_callback=functools.partial(self._on_post_session_initialize, initiating_view)
             )
             self._new_session = session
-            dbg('start_async', id(session), initiating_view.id(), initiating_view.file_name(), [f.path for f in workspace_folders], stack=True)  # noqa: E501
         except PluginStartError as ex:
             config.erase_view_status(initiating_view)
             message = f"cannot start {config.name}: {ex!s}"
@@ -396,7 +389,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         return Promise.resolve(None)
 
     def restart_sessions_async(self, config_names: list[str]) -> None:
-        dbg('restart_sessions_async', config_names, [id(s) for s in self._sessions], 'new', id(self._new_session) if self._new_session else None, stack=True)  # noqa: E501
         self._end_sessions_async(config_names)
         listeners = list(self._listeners)
         self._listeners.clear()
@@ -442,7 +434,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         return None
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Exception | None) -> None:
-        dbg('on_post_exit_async', id(session), exit_code, exception)
         self._sessions.discard(session)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)

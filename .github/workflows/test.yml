@@ -16,17 +16,14 @@ on:
 
 jobs:
   Unittesting:
-    name: Unittesting (${{ matrix.os }}, ${{ matrix.attempt }})
+    name: Unittesting (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
         os:
-          # TEMP: only macOS while testing the flaky setUpClass timeout. Revert before merge.
-          # - ubuntu-latest
+          - ubuntu-latest
           - macOS-latest
-          # - windows-latest
-        # TEMP: run the macOS tests a number of times in parallel. Revert before merge.
-        attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+          - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -36,8 +33,6 @@ jobs:
           coverage: true
 
   Lint:
-    # TEMP: disabled while testing the flaky setUpClass timeout. Revert before merge.
-    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -8,6 +8,8 @@ on:
 jobs:
   type-check:
     name: Type-check community packages
+    # TEMP: disabled while testing the flaky setUpClass timeout. Revert before merge.
+    if: false
     runs-on: macOS-latest
     steps:
       - name: Check out PR branch

@@ -21,9 +21,10 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
+          # TEMP: only macOS while testing the flaky setUpClass timeout. Revert before merge.
+          # - ubuntu-latest
           - macOS-latest
-          - windows-latest
+          # - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -33,6 +34,8 @@ jobs:
           coverage: true
 
   Lint:
+    # TEMP: disabled while testing the flaky setUpClass timeout. Revert before merge.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

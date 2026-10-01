@@ -54,3 +54,13 @@ def exceptions_log(message: str, exs: list[Exception]) -> None:
 def printf(*args: Any, prefix: str = 'LSP') -> None:
     """Print args to the console, prefixed by the plugin name."""
     print(prefix + ":", *args)
+
+
+def dbg(*args: object, stack: bool = False) -> None:  # TEMP: CI trace, revert before merge
+    import threading
+    import time
+    import traceback
+    extra = ""
+    if stack:
+        extra = " <- " + " <- ".join(f"{f.name}:{f.lineno}" for f in reversed(traceback.extract_stack()[-9:-2]))
+    print(f"DBG {time.monotonic():.3f} [{threading.current_thread().name}:{threading.get_native_id()}]", *args, extra)

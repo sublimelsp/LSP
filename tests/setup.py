@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .test_mocks import basic_responses
 from LSP.plugin.core.collections import DottedDict
+from LSP.plugin.core.logging import dbg  # TEMP
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
@@ -133,6 +134,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             session = cls.wm.get_session(cls.config.name, filename)
             if session and session.state == ClientStates.READY:
                 cls.session = session
+                dbg('setUpClass got session', cls.__name__, id(session), cls.view.id())
                 return True
             return False
 
@@ -211,6 +213,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         def error_handler(params: Any) -> None:
             print("Got error:", params, "awaiting timeout :(")
 
+        dbg('await_message', method, id(cls.session), cls.session.state)
         cls.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
         yield from cls.await_promise(promise)
         return promise.result()  # noqa: B901
@@ -308,6 +311,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     @classmethod
     def tearDownClass(cls) -> Generator:
+        dbg('tearDownClass', cls.__name__, id(cls.session) if cls.session else None)
         if cls.session and cls.wm:
             sublime.set_timeout_async(cls.session.end_async)
             yield lambda: cls.session.state == ClientStates.STOPPING

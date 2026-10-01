@@ -225,9 +225,10 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         self._publish_sessions_to_listener_async(listener)
         if self._new_session:
             if not any(self._new_session.session_views_async()):
-                dbg('dequeue END no views', id(self._new_session), listener.view.id(), listener.view.is_valid(), listener.view.file_name())  # noqa: E501
-                self._sessions.discard(self._new_session)
-                self._new_session.end_async()
+                dbg('dequeue no views, end if unused', id(self._new_session), listener.view.id(), listener.view.is_valid())  # noqa: E501
+                # The view that started the session can close while the server initializes. Do not end the session
+                # now, because a pending listener (for example a view that was opened in the meantime) can use it.
+                self._new_session.end_async_if_unused()
             self._new_session = None
         if config := self._needed_config(listener.view):
             # debug("found new config for listener", listener)

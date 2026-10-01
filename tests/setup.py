@@ -126,9 +126,17 @@ class TextDocumentTestCase(DeferrableTestCase):
         cls.view = window.open_file(filename)
         yield {"condition": lambda: not cls.view.is_loading(), "timeout": TIMEOUT_TIME}
         yield cls.ensure_document_listener_created
-        yield {"condition": lambda: cls.wm.get_session(cls.config.name, filename) is not None, "timeout": TIMEOUT_TIME}
-        cls.session = cls.wm.get_session(cls.config.name, filename)
-        yield {"condition": lambda: cls.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
+
+        def ready_session() -> bool:
+            # The first session can stop before the test sees it as ready, and then LSP starts a new session.
+            # So capture the session only when it is ready.
+            session = cls.wm.get_session(cls.config.name, filename)
+            if session and session.state == ClientStates.READY:
+                cls.session = session
+                return True
+            return False
+
+        yield {"condition": ready_session, "timeout": TIMEOUT_TIME}
         cls.initialize_params = yield from cls.await_message("initialize")
         yield from cls.await_message("initialized")
         yield from close_test_view(cls.view)

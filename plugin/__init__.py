@@ -11,6 +11,10 @@ from .api import register_plugin
 from .api import request_handler
 from .api import unregister_plugin
 from .api import uri_handler
+from .core.aio import PortableTimeoutError
+from .core.aio import run_coroutine
+from .core.aio import run_on_asyncio_thread
+from .core.aio import run_on_threadpool
 from .core.collections import DottedDict
 from .core.constants import MarkdownLangMap
 from .core.constants import ST_STORAGE_PATH
@@ -85,6 +89,7 @@ __all__ = [
     'OnPreStartContext',
     'PackagedTask',
     'PluginStartError',
+    'PortableTimeoutError',
     'Promise',
     'Request',
     'Response',
@@ -113,6 +118,9 @@ __all__ = [
     'register_file_watcher_implementation',
     'register_plugin',
     'request_handler',
+    'run_coroutine',
+    'run_on_asyncio_thread',
+    'run_on_threadpool',
     'text_document_identifier',
     'text_document_position_params',
     'unregister_plugin',

@@ -119,6 +119,7 @@ def apply_text_edits(
             }
         )
     elif required_view_version is None or required_view_version == view.change_count():
+        # TODO: Communicate results back.
         view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': label})
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
     # thread, and that we've received view changes in the asynchronous thread.

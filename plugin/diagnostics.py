@@ -160,7 +160,11 @@ class DiagnosticsAnnotationsView:
         self._severity_colors = self._get_severity_colors()
 
     def _get_severity_colors(self) -> dict[DiagnosticSeverity, str]:
-        return {
-            severity: self._view.style_for_scope(scope)['foreground']
-            for severity, scope in DIAGNOSTIC_SEVERITY_SCOPES.items()
-        }
+        try:
+            return {
+                severity: self._view.style_for_scope(scope)['foreground']
+                for severity, scope in DIAGNOSTIC_SEVERITY_SCOPES.items()
+            }
+        except KeyError:
+            # Happens when the view is already closed.
+            return {}

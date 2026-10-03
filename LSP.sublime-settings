@@ -252,8 +252,9 @@
   // Log communication from and to language servers.
   // Set to an array of values:
   // - "panel" - log to the LSP Log Panel
-  // - "remote" - start a local websocket server on port 9981. Can be connected to with
+  // - "remote" - start a websocket server on localhost:9981. Can be connected to with
   //              a websocket client to receive the log messages in real time.
+  //              A free browser-based viewer can be used here: https://lsp-log-parser.netlify.app
   // For backward-compatibility, when set to "true", enables the "panel" logger and when
   // set to "false" disables logging.
   // This output panel can be toggled from the command palette with the

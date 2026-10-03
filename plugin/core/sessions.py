@@ -140,6 +140,7 @@ from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
 from .protocol import ServerNotification
+from .protocol import ServerRequest
 from .protocol import ServerResponse
 from .settings import globalprefs
 from .settings import userprefs
@@ -2617,6 +2618,10 @@ class Session(APIHandler, TransportCallbacks):
             if "id" in payload:
                 req_id = payload["id"]
                 self._logger.incoming_request(req_id, method, result)
+                if isinstance(self._plugin, LspPlugin):
+                    server_request = cast('ServerRequest', cast('object', {'method': method, 'params': result}))
+                    self._plugin.on_server_request_async(server_request)
+                    result = server_request['params']
                 if handler is None:
                     self.send_error_response(req_id, Error(ErrorCodes.MethodNotFound, method))
                 else:

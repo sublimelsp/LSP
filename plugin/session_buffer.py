@@ -46,6 +46,7 @@ from .core.constants import SEMANTIC_TOKENS_MAP
 from .core.constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .core.edit import apply_text_edits
 from .core.logging import debug
+from .core.logging import exceptions_log
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
@@ -236,24 +237,30 @@ class SessionBuffer(TaskContainer):
                 # we're closing
                 return
             try:
-                await self.session.notify(did_open(view, language_id))
+                notification = did_open(view, language_id)
             except MissingUriError:
                 # Closed tab. Just forget about it.
                 return
+            # Note: set these *before* the await point. Otherwise concurrent tasks may send textDocument/didOpen twice,
+            # or text changes made while awaiting may be discarded.
             self.opened = True
             version = view.change_count()
             self._last_synced_version = version
-            request_flags = self._get_request_flags(view)
-            if request_flags & RequestFlags.DOCUMENT_COLOR:
-                self._do_color_boxes_async(view, version)
-            self.create_task(self.do_document_diagnostic(view, version))
-            if request_flags & RequestFlags.SEMANTIC_TOKENS:
-                self.create_task(self.do_semantic_tokens(view, view.size() > HUGE_FILE_SIZE))
-            if request_flags & RequestFlags.INLAY_HINT:
-                self.create_task(self.do_inlay_hints(view))
-            self.create_task(self.do_code_lenses(view))
-            if userprefs().link_highlight_style == 'underline':
-                self._do_document_link_async(view, version)
+            await self.session.notify(notification)
+            try:
+                request_flags = self._get_request_flags(view)
+                if request_flags & RequestFlags.DOCUMENT_COLOR:
+                    self._do_color_boxes_async(view, version)
+                self.create_task(self.do_document_diagnostic(view, version))
+                if request_flags & RequestFlags.SEMANTIC_TOKENS:
+                    self.create_task(self.do_semantic_tokens(view, view.size() > HUGE_FILE_SIZE))
+                if request_flags & RequestFlags.INLAY_HINT:
+                    self.create_task(self.do_inlay_hints(view))
+                self.create_task(self.do_code_lenses(view))
+                if userprefs().link_highlight_style == 'underline':
+                    self._do_document_link_async(view, version)
+            except MissingUriError:
+                return
             await self.session.notify_plugin_on_session_buffer_change(self)
 
     async def _check_did_close(self, view: sublime.View) -> None:
@@ -438,10 +445,11 @@ class SessionBuffer(TaskContainer):
             self.create_task(maybe_purge_later())
 
     async def _cancel_pending_requests(self) -> None:
-        for identifier, pending in self._document_diagnostic_pending_requests.items():
-            if pending:
+        for identifier in list(self._document_diagnostic_pending_requests):
+            if pending := self._document_diagnostic_pending_requests[identifier]:
                 await pending.request.cancel()
-                self._document_diagnostic_pending_requests[identifier] = None
+                if self._document_diagnostic_pending_requests.get(identifier) is pending:
+                    self._document_diagnostic_pending_requests[identifier] = None
         if self.semantic_tokens.pending_response:
             await self.semantic_tokens.cancel()
 
@@ -674,14 +682,14 @@ class SessionBuffer(TaskContainer):
 
     async def do_document_diagnostic(
         self, view: sublime.View, version: int, *, forced_update: bool = False
-    ) -> list[BaseException | None]:
+    ) -> None:
         mgr = self.session.manager()
         if not mgr or mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
-            return []
+            return
         if version < view.change_count():
             # If the document content changed in the meanwhile, new diagnostic requests will automatically be triggered
             # from _on_after_change_async after the didChange notification.
-            return []
+            return
 
         task = asyncio.gather(
             *(
@@ -691,7 +699,10 @@ class SessionBuffer(TaskContainer):
             return_exceptions=True,
         )
         self._reset_pending_refresh(RequestFlags.DIAGNOSTIC)
-        return await task
+        exceptions_log(
+            f"Error while pulling diagnostics from {self.session.config.name}",
+            [result for result in await task if isinstance(result, Exception)]
+        )
 
     async def _do_document_diagnostic(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, *, forced_update: bool = False
@@ -709,7 +720,8 @@ class SessionBuffer(TaskContainer):
         if (result_id := self.session.diagnostics_result_ids.get((self._last_known_uri, identifier))) is not None:
             params['previousResultId'] = result_id
         req = self.session.request(Request.documentDiagnostic(params, view))
-        self._document_diagnostic_pending_requests[identifier] = PendingDocumentDiagnosticRequest(version, req)
+        pending = PendingDocumentDiagnosticRequest(version, req)
+        self._document_diagnostic_pending_requests[identifier] = pending
         error: Error | None = None
         response = await req
         if isinstance(response, Error):
@@ -728,7 +740,8 @@ class SessionBuffer(TaskContainer):
                     self.session.diagnostics_result_ids[(uri, identifier)] = report.get('resultId')
                     diagnostics = report['items'] if is_full_document_diagnostic_report(report) else None
                     self.session.handle_diagnostics_async(uri, identifier, None, diagnostics)
-        self._document_diagnostic_pending_requests[identifier] = None
+        if self._document_diagnostic_pending_requests.get(identifier) is pending:
+            self._document_diagnostic_pending_requests[identifier] = None
         if error and is_diagnostic_server_cancellation_data(error.data) and error.data['retriggerRequest']:
             # Retrigger the request after a short delay, but only if there are no additional changes to the
             # buffer in the meanwhile, because in that case a new request will be sent automatically after the
@@ -892,23 +905,39 @@ class SessionBuffer(TaskContainer):
         | Request[SemanticTokensRangeParams, SemanticTokens | None],
         only_viewport: bool = False,
     ) -> None:
-        self.semantic_tokens.pending_response = self.session.request(request)
-        if (response := await self.semantic_tokens.pending_response) and not isinstance(response, Error):
-            self.semantic_tokens.pending_response = None
+        pending_response = self.session.request(request)
+        self.semantic_tokens.pending_response = pending_response
+        try:
+            response = await pending_response
+        finally:
+            if self.semantic_tokens.pending_response is pending_response:
+                self.semantic_tokens.pending_response = None
+        if isinstance(response, Error):
+            self.semantic_tokens.result_id = None
+            return
+        if response:
             self.semantic_tokens.result_id = response.get("resultId")
             self.semantic_tokens.data = response["data"]
             self._draw_semantic_tokens_async()
-            if only_viewport:
-                # now request semantic tokens for the full file
-                self.create_task(self.do_semantic_tokens(view))
+        if only_viewport:
+            # now request semantic tokens for the full file
+            self.create_task(self.do_semantic_tokens(view))
 
     async def _do_semantic_tokens_delta(
         self,
         request: Request[SemanticTokensDeltaParams, SemanticTokens | SemanticTokensDelta | None]
     ) -> None:
-        self.semantic_tokens.pending_response = self.session.request(request)
-        if (response := await self.semantic_tokens.pending_response) and not isinstance(response, Error):
-            self.semantic_tokens.pending_response = None
+        pending_response = self.session.request(request)
+        self.semantic_tokens.pending_response = pending_response
+        try:
+            response = await pending_response
+        finally:
+            if self.semantic_tokens.pending_response is pending_response:
+                self.semantic_tokens.pending_response = None
+        if isinstance(response, Error):
+            self.semantic_tokens.result_id = None
+            return
+        if response:
             self.semantic_tokens.result_id = response.get("resultId")
             if "edits" in response:  # response is of type SemanticTokensDelta
                 for semantic_tokens_edit in response["edits"]:
@@ -1005,10 +1034,13 @@ class SessionBuffer(TaskContainer):
             "range": entire_content_range(view)
         }
         self._reset_pending_refresh(RequestFlags.INLAY_HINT)
-        if (response := await self.session.request(Request.inlayHint(params, view))) and not isinstance(
-            response, Error
-        ):
-            phantoms = [inlay_hint_to_phantom(view, inlay_hint, self.session) for inlay_hint in response]
+        response = await self.session.request(Request.inlayHint(params, view))
+        if isinstance(response, Error):
+            return
+        if response:
+            if not (current_view := self.some_view()):
+                return
+            phantoms = [inlay_hint_to_phantom(current_view, inlay_hint, self.session) for inlay_hint in response]
             sublime.set_timeout(lambda: self.present_inlay_hints(phantoms))
         else:
             sublime.set_timeout(self.remove_all_inlay_hints)

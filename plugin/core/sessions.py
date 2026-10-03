@@ -725,6 +725,9 @@ class SessionViewProtocol(Protocol):
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
         ...
 
+    def on_request_started_async(self, controller: RequestController, request: Request[Any, Any]) -> None:
+        ...
+
     def on_request_finished_async(self, request_id: int) -> None:
         ...
 

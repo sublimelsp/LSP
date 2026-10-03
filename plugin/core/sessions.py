@@ -844,7 +844,7 @@ class SessionBufferProtocol(Protocol):
 
     async def do_document_diagnostic(
         self, view: sublime.View, version: int, *, forced_update: bool = ...
-    ) -> list[BaseException | None]: ...
+    ) -> None: ...
 
     def request_code_actions_async(
         self,
@@ -2600,11 +2600,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 exceptions.append(result)
         except Exception as ex:
             exceptions.append(ex)
-        try:
-            await self.exit()
-        except Exception as ex:
-            exceptions.append(ex)
-        exceptions_log(f"Errors occurred during shutdown of {self.config.name}", exceptions)
+        finally:
+            try:
+                await self.exit()
+            except Exception as ex:
+                exceptions.append(ex)
+            exceptions_log(f"Errors occurred during shutdown of {self.config.name}", exceptions)
 
     async def shutdown_session_view(self, session_view: SessionViewProtocol) -> list[Exception]:
         for status_key in self._status_messages:

@@ -92,13 +92,15 @@ class SessionView:
         self.clear_code_lenses_async()
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
             self._decrement_hover_count()
+        exceptions: list[Exception] = []
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            await asyncio.gather(
+            results = await asyncio.gather(
                 *(data.cancel() for data in self._active_requests.values() if data.request.view),
                 return_exceptions=True
             )
+            exceptions.extend(result for result in results if isinstance(result, Exception))
             await self.session.unregister_session_view(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(DIAGNOSTIC_STYLES.keys()):
@@ -107,7 +109,7 @@ class SessionView:
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_underline")
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
-        exceptions = await self.session_buffer.remove_session_view(self)
+        exceptions.extend(await self.session_buffer.remove_session_view(self))
         if listener := self.listener():
             listener.on_diagnostics_updated_async(self.session_buffer, False)
         return exceptions

@@ -443,10 +443,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     async def _on_load_impl(self) -> None:
         if not self._registered and is_regular_view(self.view):
-            try:
-                self._register()
-            except MissingUriError:
-                pass  # view already closed; don't care
+            self._register()
             return
         if initially_folded_kinds := userprefs().initially_folded:
             if session := self.session_async('foldingRangeProvider'):
@@ -462,10 +459,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self.on_post_move_window_async()
 
     async def on_activated(self) -> None:
-        try:
-            await self._activated_impl()
-        except MissingUriError:
-            pass  # view already closed; don't care
+        await self._activated_impl()
 
     async def _activated_impl(self) -> None:
         if self.view.is_loading() or not is_regular_view(self.view):
@@ -1039,7 +1033,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             self._manager = windows.lookup(self.view.window())
         if not self._manager:
             return
-        self._manager.register_listener_async(self)
+        try:
+            self._manager.register_listener_async(self)
+        except MissingUriError:
+            return  # view already closed; don't care
         views = buf.views()
         if not isinstance(views, list):
             debug("skipping clone checks for", self)

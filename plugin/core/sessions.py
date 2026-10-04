@@ -140,6 +140,7 @@ from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
 from .protocol import ServerNotification
+from .protocol import ServerRequest
 from .protocol import ServerResponse
 from .settings import globalprefs
 from .settings import userprefs
@@ -1030,6 +1031,10 @@ class _RegistrationData:
 _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
+# How long to wait for the delete_file and delete_folder commands to remove a path.
+_DELETE_TIMEOUT_MS = 1000
+_DELETE_POLL_INTERVAL_MS = 10
+
 
 class Session(APIHandler, TransportCallbacks):
 
@@ -1090,8 +1095,12 @@ class Session(APIHandler, TransportCallbacks):
     def unregister_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.discard(sv)
         if not self._session_views:
-            current_count = self._views_opened
-            debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
+            self.end_async_if_unused()
+
+    def end_async_if_unused(self) -> None:
+        """End the session after a short delay, unless a view is registered with the session before then."""
+        current_count = self._views_opened
+        debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
 
     def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
         """It is only safe to iterate over this in the async thread."""
@@ -1785,15 +1794,36 @@ class Session(APIHandler, TransportCallbacks):
             renamed_files.append({'oldUri': old_uri, 'newUri': new_uri})
             return Promise.resolve(None)
 
-        def delete_file(path: str) -> Promise[None]:
+        def delete_file(path: str) -> Promise[str | None]:
             # The delete_file command moves the given files into the recycle bin
             self.window.run_command('delete_file', {'files': [path], 'prompt': False})
-            return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None), 1))
+            return await_path_removed(path)
 
-        def delete_folder(path: str) -> Promise[None]:
+        def delete_folder(path: str) -> Promise[str | None]:
             # The delete_folder command moves the given folders into the recycle bin
             self.window.run_command('delete_folder', {'dirs': [path], 'prompt': False})
-            return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None), 1))
+            return await_path_removed(path)
+
+        def await_path_removed(path: str) -> Promise[str | None]:
+            # The delete commands run asynchronously and do not report an error. For example, ST 4215+ does not move
+            # a path to the recycle bin if the path is on a different file system than the home directory.
+            def executor(resolve: Callable[[str | None], None]) -> None:
+                def check(attempts_left: int) -> None:
+                    if not os.path.exists(path):
+                        resolve(None)
+                    elif attempts_left > 0:
+                        sublime.set_timeout_async(lambda: check(attempts_left - 1), _DELETE_POLL_INTERVAL_MS)
+                    else:
+                        resolve(f'Failed to move {path} to the recycle bin')
+
+                sublime.set_timeout_async(lambda: check(_DELETE_TIMEOUT_MS // _DELETE_POLL_INTERVAL_MS), 1)
+
+            return Promise(executor)
+
+        def on_deleted(uri: DocumentUri, failure_reason: str | None) -> Promise[ApplyWorkspaceEditResult]:
+            if not failure_reason:
+                deleted_files.append({'uri': uri})
+            return _continue(failure_reason)
 
         def _continue(failure_reason: str | None) -> Promise[ApplyWorkspaceEditResult]:
             if failure_reason:
@@ -1835,7 +1865,9 @@ class Session(APIHandler, TransportCallbacks):
                 return _continue(f'CreateFile not supported for URI {uri}')
             if os.path.isfile(path):
                 if options.get('overwrite'):
-                    return delete_file(path).then(lambda _: create_file(path)).then(_continue)
+                    return delete_file(path).then(
+                        lambda failure_reason: Promise.resolve(failure_reason) if failure_reason else create_file(path)
+                    ).then(_continue)
                 if options.get('ignoreIfExists'):
                     return _continue(None)
                 return _continue(f'CreateFile failed because a file already exists at target {uri}')
@@ -1857,7 +1889,10 @@ class Session(APIHandler, TransportCallbacks):
                 return _continue(f'RenameFile not supported for URI {new_uri}')
             if os.path.isfile(new_path):
                 if options.get('overwrite') and os.path.isfile(old_path):
-                    return delete_file(new_path).then(lambda _: rename_file(old_path, new_path)).then(_continue)
+                    return delete_file(new_path).then(
+                        lambda failure_reason:
+                            Promise.resolve(failure_reason) if failure_reason else rename_file(old_path, new_path)
+                    ).then(_continue)
                 if options.get('ignoreIfExists'):
                     return _continue(None)
                 return _continue(f'RenameFile failed because target {new_uri} already exists')
@@ -1872,13 +1907,11 @@ class Session(APIHandler, TransportCallbacks):
             if scheme != 'file':
                 return _continue(f'DeleteFile not supported for URI {uri}')
             if os.path.isfile(path):
-                deleted_files.append({'uri': uri})
-                return delete_file(path).then(_continue)
+                return delete_file(path).then(lambda failure_reason: on_deleted(uri, failure_reason))
             if os.path.isdir(path):
-                if os.listdir() and not options.get('recursive'):
+                if os.listdir(path) and not options.get('recursive'):
                     return _continue(f'DeleteFile failed because folder {uri} is not empty')
-                deleted_files.append({'uri': uri})
-                return delete_folder(path).then(_continue)
+                return delete_folder(path).then(lambda failure_reason: on_deleted(uri, failure_reason))
             if options.get('ignoreIfNotExists'):
                 return _continue(None)
             return _continue(f'DeleteFile failed because {uri} does not exist')
@@ -2059,16 +2092,16 @@ class Session(APIHandler, TransportCallbacks):
     ) -> None:
         if reset_pending_response:
             self.workspace_diagnostics_pending_responses[identifier] = None
-        for diagnostic_report in response['items']:
-            uri = normalize_uri(diagnostic_report['uri'])
-            version = diagnostic_report['version']
+        for report in response['items']:
+            uri = normalize_uri(report['uri'])
+            version = report['version']
             # Skip if outdated
             if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri_async(uri)) and \
                     version < session_buffer.last_synced_version:
                 continue
-            self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-            if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
+            self.diagnostics_result_ids[(uri, identifier)] = report.get('resultId')
+            diagnostics = report['items'] if is_workspace_full_document_diagnostic_report(report) else None
+            self.handle_diagnostics_async(uri, identifier, version, diagnostics)
 
     def _on_workspace_diagnostics_error_async(self, identifier: DiagnosticsIdentifier, error: ResponseError) -> None:
         if error['code'] == LSPErrorCodes.ServerCancelled:
@@ -2209,7 +2242,11 @@ class Session(APIHandler, TransportCallbacks):
         self.handle_diagnostics_async(params['uri'], None, None, params['diagnostics'])
 
     def handle_diagnostics_async(
-        self, uri: DocumentUri, identifier: DiagnosticsIdentifier, version: int | None, diagnostics: list[Diagnostic]
+        self,
+        uri: DocumentUri,
+        identifier: DiagnosticsIdentifier,
+        version: int | None,
+        diagnostics: list[Diagnostic] | None
     ) -> None:
         mgr = self.manager()
         if not mgr:
@@ -2218,8 +2255,12 @@ class Session(APIHandler, TransportCallbacks):
         if isinstance(reason, str):
             debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
             return
-        self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
-        mgr.on_diagnostics_updated()
+        if diagnostics is not None:
+            self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
+            mgr.on_diagnostics_updated()
+        # Even if we received an UnchangedDocumentDiagnosticReport (represented by the diagnostics argument being None)
+        # we still have to redraw the diagnostic regions in the view to ensure they keep their original positions after
+        # a buffer change.
         if session_buffer := self.get_session_buffer_for_uri_async(uri):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
@@ -2577,6 +2618,10 @@ class Session(APIHandler, TransportCallbacks):
             if "id" in payload:
                 req_id = payload["id"]
                 self._logger.incoming_request(req_id, method, result)
+                if isinstance(self._plugin, LspPlugin):
+                    server_request = cast('ServerRequest', cast('object', {'method': method, 'params': result}))
+                    self._plugin.on_server_request_async(server_request)
+                    result = server_request['params']
                 if handler is None:
                     self.send_error_response(req_id, Error(ErrorCodes.MethodNotFound, method))
                 else:

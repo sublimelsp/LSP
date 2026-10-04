@@ -14,12 +14,12 @@ from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.settings import userprefs
+from .core.type_converters import position_to_offset
 from .core.types import method_to_capability
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import get_symbol_kind_from_scope
-from .core.views import position_to_offset
 from .core.views import range_to_region
 from .core.views import text_document_position_params
 from .core.views import to_encoded_filename
@@ -31,7 +31,6 @@ from functools import partial
 from os.path import basename
 from pathlib import Path
 from typing import Any
-from typing import cast
 from typing import TYPE_CHECKING
 from typing import TypedDict
 import sublime
@@ -219,14 +218,14 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
     def placeholder(self) -> str:
         return 'Select file'
 
-    def get_list_items(self) -> tuple[list[sublime.ListInputItem], int]:
+    def get_list_items(self) -> tuple[list[sublime.ListInputItem[DocumentUri]], int]:
         severity_counts_per_uri: dict[DocumentUri, Counter[DiagnosticSeverity]] = {}
         for session in self.sessions:
             for uri, diagnostics in session.diagnostics.get_diagnostics(self._max_severity).items():
                 if diagnostics:
                     severity_counts_per_uri.setdefault(uri, Counter()).update(map(diagnostic_severity, diagnostics))
         window_folders = [Path(folder) for folder in self.window.folders()]
-        items: list[sublime.ListInputItem] = []
+        items: list[sublime.ListInputItem[DocumentUri]] = []
         selected_index = 0
         for index, (uri, counts) in enumerate(sorted(severity_counts_per_uri.items())):
             if uri == self.uri:
@@ -306,8 +305,8 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
     def name(self) -> str:
         return 'diagnostic'
 
-    def list_items(self) -> tuple[list[sublime.ListInputItem], int]:
-        items: list[sublime.ListInputItem] = []
+    def list_items(self) -> tuple[list[sublime.ListInputItem[DiagnosticData]], int]:
+        items: list[sublime.ListInputItem[DiagnosticData]] = []
         selected_index = 0
         caret_pos = region.b if self._preview and (region := first_selection_region(self._preview)) is not None else 0
         for index, diagnostic_data in enumerate(self.diagnostics):
@@ -316,11 +315,10 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             raw_message = (message['value'] if isinstance(message, dict) else message) or '…'
             severity = diagnostic_severity(diagnostic)
             text = f"{'_EWIH'[severity]}: {raw_message.splitlines()[0]}"
-            value = cast('dict', diagnostic_data)
             code = str(diagnostic.get('code', ''))
             kind = DIAGNOSTIC_KINDS[severity]
-            items.append(sublime.ListInputItem(text, value, annotation=code, kind=kind))
-            if self._preview and position_to_offset(diagnostic['range']['start'], self._preview) <= caret_pos:
+            items.append(sublime.ListInputItem(text, diagnostic_data, annotation=code, kind=kind))
+            if self._preview and position_to_offset(self._preview, diagnostic['range']['start']) <= caret_pos:
                 selected_index = index
         return items, selected_index
 

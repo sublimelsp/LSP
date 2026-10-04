@@ -20,7 +20,6 @@ Various methods of LspPlugin now have `async` counterparts. Each `async` counter
 | `on_server_notification_async(notification)` | `async on_server_notification(notification)` |
 | `on_text_changed_async(session_buffer)` | `async on_text_changed(session_buffer)` |
 | `on_session_end_async(exit_code, exception)` | `async on_session_end(exit_code, exception)` |
----
 
 Not only do most methods have `async` counterparts; existing `@command_handler` and `@request_handler` methods have migration paths as well, explained below.
 

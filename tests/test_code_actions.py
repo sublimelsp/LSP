@@ -286,7 +286,8 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
         self.assertEqual(entire_content(self.view), 'const x = 1;')
 
         # Check that the last mock response was NOT requested.
-        unused_mock_responses = await self.get_and_clear_unused_mock_responses()
+        unused_mocks = await self.get_and_clear_unused_mock_responses()
+        unused_mock_responses = unused_mocks["responses"]
         self.assertEqual(len(unused_mock_responses), 1)
         self.assertEqual(unused_mock_responses[0][0], 'textDocument/codeAction')
         self.assertEqual(unused_mock_responses[0][1], should_be_unused_code_actions)

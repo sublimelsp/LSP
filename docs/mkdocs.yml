@@ -64,7 +64,6 @@ nav:
   - Migration to LspPlugin: migrating_to_lsp_plugin.md
   - Migration to async LspPlugin: migrating_to_async_lsp_plugin.md
 
-
 extra:
   social:
     - icon: fontawesome/brands/discord

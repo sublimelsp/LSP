@@ -47,8 +47,8 @@ import sublime
 import webbrowser
 
 if TYPE_CHECKING:
-    from .core.sessions import CancellableInflightRequest
     from .core.sessions import CancellableRequest
+    from .core.sessions import RequestController
 
 SessionName: TypeAlias = str
 CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, None]
@@ -192,7 +192,7 @@ class QueryCompletionsTask:
         self._view = view
         self._location = location
         self._triggered_manually = triggered_manually
-        self._pending_completion_requests: dict[int, CancellableRequest] = {}
+        self._pending_completion_requests: dict[int, RequestController] = {}
 
     async def query_completions(
         self, sessions: list[Session]
@@ -207,7 +207,7 @@ class QueryCompletionsTask:
             )
         )
 
-    def _create_completion_request_async(self, session: Session) -> CancellableInflightRequest[CompletionResponse]:
+    def _create_completion_request_async(self, session: Session) -> CancellableRequest[CompletionResponse]:
         params = cast('CompletionParams', text_document_position_params(self._view, self._location))
         request = Request.complete(params, self._view)
         future = session.request(request)

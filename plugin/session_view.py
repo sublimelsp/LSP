@@ -22,7 +22,6 @@ from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any
-from typing import Coroutine
 from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakValueDictionary
@@ -35,7 +34,7 @@ if TYPE_CHECKING:
     from .core.protocol import Request
     from .core.protocol import ResolvedCodeLens
     from .core.sessions import AbstractViewListener
-    from .core.sessions import CancellableRequest
+    from .core.sessions import RequestController
     from .core.sessions import Session
 
 
@@ -93,19 +92,27 @@ class SessionView:
         self.clear_code_lenses_async()
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
             self._decrement_hover_count()
+        exceptions: list[Exception] = []
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            await asyncio.gather(*(data.cancel() for data in self._active_requests.values()))
+            results = await asyncio.gather(
+                *(data.cancel() for data in self._active_requests.values() if data.request.view),
+                return_exceptions=True
+            )
+            exceptions.extend(result for result in results if isinstance(result, Exception))
             await self.session.unregister_session_view(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(DIAGNOSTIC_STYLES.keys()):
-            self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_icon")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_underline")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_underline")
+            for multiline in (False, True):
+                key = self.diagnostics_key(severity, multiline)
+                self.view.erase_regions(f"{key}_icon")
+                self.view.erase_regions(f"{key}_underline")
+                for tag in DIAGNOSTIC_TAG_SCOPES:
+                    self.view.erase_regions(f"{key}_tags_{tag}")
+        self._diagnostic_annotations.clear()
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
-        exceptions = await self.session_buffer.remove_session_view(self)
+        exceptions.extend(await self.session_buffer.remove_session_view(self))
         if listener := self.listener():
             listener.on_diagnostics_updated_async(self.session_buffer, False)
         return exceptions
@@ -351,8 +358,8 @@ class SessionView:
             else:
                 self.view.erase_regions(data.key)
 
-    def on_request_started_async(self, cancellable: CancellableRequest, request: Request[Any, Any]) -> None:
-        self._active_requests[cancellable.id] = ActiveRequest(self, cancellable, request)
+    def on_request_started_async(self, controller: RequestController, request: Request[Any, Any]) -> None:
+        self._active_requests[controller.id] = ActiveRequest(self, controller, request)
 
     def on_request_finished_async(self, request_id: int) -> None:
         self._active_requests.pop(request_id, None)
@@ -370,20 +377,20 @@ class SessionView:
     ) -> None:
         self.session_buffer.on_text_changed(self.view, change_count, changes, action)
 
-    def on_revert(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_revert(self.view)
+    async def on_revert(self) -> None:
+        await self.session_buffer.on_revert(self.view)
 
-    def on_reload(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_reload(self.view)
+    async def on_reload(self) -> None:
+        await self.session_buffer.on_reload(self.view)
 
-    def purge_changes(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.purge_changes(self.view)
+    async def purge_changes(self) -> None:
+        await self.session_buffer.purge_changes(self.view)
 
-    def on_pre_save(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_pre_save(self.view)
+    async def on_pre_save(self) -> None:
+        await self.session_buffer.on_pre_save(self.view)
 
-    def on_post_save(self, new_uri: DocumentUri) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_post_save(self.view, new_uri)
+    async def on_post_save(self, new_uri: DocumentUri) -> None:
+        await self.session_buffer.on_post_save(self.view, new_uri)
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_diagnostics_async()

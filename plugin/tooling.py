@@ -548,7 +548,7 @@ class ServerTestRunner(TransportCallbacks):
         except Exception as ex:
             await self.on_transport_close(-1, ex)
 
-    def on_payload(self, payload: dict[str, Any]) -> None:
+    async def on_payload(self, payload: dict[str, Any]) -> None:
         pass
 
     def on_stderr_message(self, message: str) -> None:

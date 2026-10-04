@@ -36,6 +36,7 @@ from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
 from .core.logging import exception_log
+from .core.logging import exceptions_log
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.panels import PanelName
@@ -65,6 +66,7 @@ from .core.views import document_highlight_key
 from .core.views import first_selection_region
 from .core.views import format_diagnostics_for_html
 from .core.views import make_link
+from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_identifier
@@ -223,6 +225,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        TaskContainer.__init__(self)  # https://github.com/sublimehq/sublime_text/issues/6979
         settings = view.settings()
         self._uri = ''  # assumed to never be falsey
         self._current_syntax = settings.get("syntax")
@@ -977,8 +980,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 return sv.has_capability_async(capability_path)
         return False
 
-    def purge_changes(self) -> asyncio.Future[list[BaseException | None]]:
-        return asyncio.gather(*(sv.purge_changes() for sv in self.session_views_async()), return_exceptions=True)
+    async def purge_changes(self) -> list[BaseException | None]:
+        return await asyncio.gather(*(sv.purge_changes() for sv in self.session_views_async()), return_exceptions=True)
 
     @deprecated("use DocumentSyncListener.purge_changes instead")
     def purge_changes_async(self) -> None:
@@ -988,8 +991,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
         self.create_task_threadsafe(run())
 
-    def trigger_on_pre_save(self) -> asyncio.Future[list[BaseException | None]]:
-        return asyncio.gather(*(sv.on_pre_save() for sv in self.session_views_async()), return_exceptions=True)
+    async def trigger_on_pre_save(self) -> list[BaseException | None]:
+        return await asyncio.gather(*(sv.on_pre_save() for sv in self.session_views_async()), return_exceptions=True)
 
     async def revert(self) -> list[BaseException | None]:
         exceptions = []
@@ -1026,12 +1029,15 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if not text_change_listener:
             debug("couldn't find a text change listener for", self)
             return
-        self._registered = True
         if not self._manager:
             self._manager = windows.lookup(self.view.window())
         if not self._manager:
             return
-        self._manager.register_listener_async(self)
+        try:
+            self._manager.register_listener_async(self)
+        except MissingUriError:
+            return  # view already closed; don't care
+        self._registered = True
         views = buf.views()
         if not isinstance(views, list):
             debug("skipping clone checks for", self)
@@ -1131,16 +1137,21 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             sel.add_all(original_selection)
 
         try:
-            await format_selection(self)
-            sublime.status_message("Paste was formatted")
+            if result := await format_selection(self):
+                if isinstance(result, Error):
+                    sublime.status_message(f"Error: {result}")
+                elif result:
+                    sublime.status_message("Paste was formatted")
         finally:
             sublime.set_timeout(restore_selection)
 
-    async def _clear_session_views(self) -> list[Exception]:
+    async def _clear_session_views(self) -> None:
         session_views = self._session_views
-        exceptions = await gather_and_flatten_exceptions(*(s.on_before_remove() for s in session_views.values()))
+        exceptions_log(
+            "Error clearing session views",
+            await gather_and_flatten_exceptions(*(s.on_before_remove() for s in session_views.values())),
+        )
         session_views.clear()
-        return exceptions
 
     def on_userprefs_changed_async(self) -> None:
         if userprefs().document_highlight_style:

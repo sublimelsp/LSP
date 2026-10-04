@@ -6,7 +6,7 @@ from .core.protocol import ResolvedCodeLens
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
-from .core.views import range_to_region
+from .core.type_converters import range_to_region
 from functools import partial
 from typing import cast
 from typing import TYPE_CHECKING
@@ -95,7 +95,7 @@ class CodeLensCache:
         visible_region = view.visible_region()
         return [
             cl for cl in itertools.chain.from_iterable(self.code_lenses.values())
-            if not is_resolved(cl.data) and range_to_region(cl.data['range'], view).intersects(visible_region)
+            if not is_resolved(cl.data) and range_to_region(view, cl.data['range']).intersects(visible_region)
         ]
 
     def code_lenses_with_command(self) -> list[ResolvedCodeLens]:

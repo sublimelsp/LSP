@@ -5,6 +5,7 @@ from copy import deepcopy
 from LSP.plugin.core.constants import MARKO_MD_PARSER_VERSION
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.type_converters import point_to_offset
+from LSP.plugin.core.type_converters import range_to_region
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_open
@@ -18,7 +19,6 @@ from LSP.plugin.core.views import lsp_color_to_html
 from LSP.plugin.core.views import lsp_color_to_phantom
 from LSP.plugin.core.views import minihtml
 from LSP.plugin.core.views import MissingUriError
-from LSP.plugin.core.views import range_to_region
 from LSP.plugin.core.views import selection_range_params
 from LSP.plugin.core.views import text2html
 from LSP.plugin.core.views import text_document_code_action_params
@@ -353,7 +353,7 @@ class ViewsTest(DeferrableTestCase):
         ]
         phantom = lsp_color_to_phantom(self.view, response[0])
         self.assertEqual(phantom.content, lsp_color_to_html(response[0]))
-        self.assertEqual(phantom.region, range_to_region(response[0]["range"], self.view))
+        self.assertEqual(phantom.region, range_to_region(self.view, response[0]["range"]))
 
     def test_document_color_params(self) -> None:
         self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))

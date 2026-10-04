@@ -7,8 +7,8 @@ from .logging import exception_log
 from .promise import Promise
 from .promise import ResolveFunc
 from .protocol import UINT_MAX
+from .type_converters import range_to_region
 from .url import parse_uri
-from .views import range_to_region
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
 from urllib.parse import urlparse
@@ -150,7 +150,7 @@ def open_resource(window: sublime.Window, uri: DocumentUri, group: int = -1) -> 
 
 
 def center_selection(view: sublime.View, r: Range) -> sublime.View:
-    selection = range_to_region(r, view)
+    selection = range_to_region(view, r)
     view.run_command("lsp_selection_set", {"regions": [(selection.a, selection.a)]})
     if window := view.window():
         window.focus_view(view)

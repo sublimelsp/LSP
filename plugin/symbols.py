@@ -19,8 +19,8 @@ from .core.protocol import ResponseError
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
+from .core.type_converters import range_to_region
 from .core.views import offset_to_point
-from .core.views import range_to_region
 from .core.views import text_document_identifier
 from functools import partial
 from typing import Any
@@ -336,7 +336,7 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
 
     def preview(self, text: DocumentSymbolValue | None) -> str | sublime.Html | None:
         if is_document_symbol_value(text):
-            region = range_to_region(text['range'], self.view)
+            region = range_to_region(self.view, text['range'])
             self.view.run_command('lsp_selection_set', {'regions': [(region.a, region.b)]})
             self.view.show_at_center(region.a)
             if text['deprecated']:

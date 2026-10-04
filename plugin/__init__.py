@@ -42,6 +42,7 @@ from .core.sessions import SessionViewProtocol
 from .core.transports import TransportWrapper
 from .core.type_converters import point_to_offset
 from .core.type_converters import position_to_offset
+from .core.type_converters import range_to_region
 from .core.types import ClientConfig
 from .core.types import DebouncerNonThreadSafe
 from .core.types import matches_pattern
@@ -109,6 +110,7 @@ __all__ = [
     'parse_uri',
     'point_to_offset',
     'position_to_offset',
+    'range_to_region',
     'region_to_range',
     'register_file_watcher_implementation',
     'register_plugin',

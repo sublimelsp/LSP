@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from .core.protocol import Notification
     from .core.protocol import Request
     from .core.protocol import ServerNotification
+    from .core.protocol import ServerRequest
     from .core.protocol import ServerResponse
     from .core.sessions import Session
     from .core.sessions import SessionBufferProtocol
@@ -550,6 +551,21 @@ class LspPlugin(APIHandler):
         :param    notification:  The notification object. The notification['params'] can be modified by the plugin.
         """
         self.on_pre_send_notification_async(notification)
+
+    @deprecated("override on_server_request instead")
+    def on_server_request_async(self, request: ServerRequest) -> None:
+        pass
+
+    async def on_server_request(self, request: ServerRequest) -> None:
+        """
+        Notifies about a request message that has been received from the language server.
+
+        Called before the request is handled by the LSP package or by a `@request_handler`.
+
+        :param    request:  The request object. The request['params'] field can be modified by the plugin, before it
+                            gets further handled by the LSP package.
+        """
+        self.on_server_request_async(request)
 
     @deprecated("override on_server_response instead")
     def on_server_response_async(self, response: ServerResponse) -> None:

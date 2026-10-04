@@ -147,6 +147,7 @@ from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
 from .protocol import ServerNotification
+from .protocol import ServerRequest
 from .protocol import ServerResponse
 from .settings import globalprefs
 from .settings import userprefs
@@ -154,7 +155,6 @@ from .transports import TransportCallbacks
 from .transports import TransportWrapper
 from .types import Capabilities
 from .types import ClientConfig
-from .types import ClientStates
 from .types import diff
 from .types import DocumentSelectorMatcher
 from .types import method2attr
@@ -726,6 +726,9 @@ class SessionViewProtocol(Protocol):
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
         ...
 
+    def on_request_started_async(self, controller: RequestController, request: Request[Any, Any]) -> None:
+        ...
+
     def on_request_finished_async(self, request_id: int) -> None:
         ...
 
@@ -842,7 +845,7 @@ class SessionBufferProtocol(Protocol):
 
     async def do_document_diagnostic(
         self, view: sublime.View, version: int, *, forced_update: bool = ...
-    ) -> list[BaseException | None]: ...
+    ) -> None: ...
 
     def request_code_actions_async(
         self,
@@ -898,11 +901,11 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def purge_changes(self) -> asyncio.Future[list[BaseException | None]]:
+    async def purge_changes(self) -> list[BaseException | None]:
         raise NotImplementedError
 
     @abstractmethod
-    def trigger_on_pre_save(self) -> asyncio.Future[list[BaseException | None]]:
+    async def trigger_on_pre_save(self) -> list[BaseException | None]:
         raise NotImplementedError
 
     @abstractmethod
@@ -1012,9 +1015,6 @@ class Logger(ABC):
 class RequestController:
     """Controller for a pending request."""
 
-    _id: int | None
-    _weaksession: weakref.ref[Session]
-
     def __init__(self, req_id: int, session: Session) -> None:
         self._id = req_id
         self._weaksession = weakref.ref(session)
@@ -1044,8 +1044,6 @@ class RequestController:
 
 class CancellableRequest(RequestController, Generic[R]):
     """A request that is in flight. The result can be awaited."""
-
-    _future: asyncio.Future[R | Error]
 
     def __init__(self, future: asyncio.Future[R | Error], req_id: int, session: Session) -> None:
         """
@@ -1122,14 +1120,12 @@ class _RegistrationData:
 _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
+# How long to wait for the delete_file and delete_folder commands to remove a path.
+_DELETE_TIMEOUT_MS = 1000
+_DELETE_POLL_INTERVAL_MS = 10
+
 
 class Session(APIHandler, TransportCallbacks, TaskContainer):
-
-    _FILE_DELETED_MAX_CHECK_ATTEMPTS = 40
-    """
-    Number of times to sleep for 100ms and wait for a file/folder to be actually deleted during a CreateFile, DeleteFile
-    or RenameFile document change.
-    """
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
@@ -1143,7 +1139,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
         self.window = manager.window
-        self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
@@ -1196,7 +1191,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         async def maybe_end() -> None:
             await asyncio.sleep(3)
             if self._views_opened == current_count:
-                exceptions_log(f"Exception while stopping {self.config.name}", await self.end())
+                await self.end()
                 self._maybe_end_task = None
 
         if self.exiting:
@@ -1289,25 +1284,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         return next(filter(predicate, self.session_buffers_async()), None)
 
     # --- capability observers -----------------------------------------------------------------------------------------
-
-    def can_handle(self, view: sublime.View, scheme: str, capability: str | None, inside_workspace: bool) -> bool:
-        if self.state != ClientStates.READY:
-            return False
-        if scheme == "file":
-            file_name = view.file_name()
-            if not file_name:
-                # We're closing down
-                return False
-            if not self.handles_path(file_name, inside_workspace):
-                return False
-        if self.config.match_view(view, scheme, self.window, self._workspace_folders):
-            # If there's no capability requirement then this session can handle the view
-            if capability is None:
-                return True
-            if sv := self.session_view_for_view_async(view):
-                return sv.has_capability_async(capability)
-            return self.has_capability(capability)
-        return False
 
     def has_capability(self, capability: str, *, check_views: bool = False) -> bool:
         """
@@ -1412,15 +1388,27 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         working_directory: str | None,
         transport: TransportWrapper
     ) -> InitializeResult | Error:
-        loop = asyncio.get_running_loop()
+        try:
+            return await self._initialize_impl(variables, working_directory, transport)
+        except:
+            await transport.close()
+            raise
+
+    async def _initialize_impl(
+        self,
+        variables: dict[str, str],
+        working_directory: str | None,
+        transport: TransportWrapper
+    ) -> InitializeResult | Error:
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
         self.transport = transport
         self.working_directory = working_directory
+        self._variables = variables
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         result = await self.request(Request.initialize(params))
         if isinstance(result, Error):
-            await self.end()  # ignore exceptions
+            await self.end()
             return result
         capabilities = result['capabilities']
         self.capabilities.assign(capabilities)
@@ -1428,7 +1416,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self._workspace_folders = self._workspace_folders[:1]
         if diagnostic_options := capabilities.get('diagnosticProvider'):
             self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
-        self.state = ClientStates.READY
         if self._plugin_class:
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
@@ -1455,7 +1442,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     ignores = config.get('ignores') or self._get_global_ignore_globs(folder.path)
                     watcher = self._watcher_impl.create(folder.path, patterns, events, ignores, self)
                     self._static_file_watchers.append(watcher)
-        loop.call_soon(self.do_workspace_diagnostics_async)
+        asyncio.get_running_loop().call_soon(self.do_workspace_diagnostics_async)
         return result
 
     def _get_global_ignore_globs(self, root_path: str) -> list[str]:
@@ -1509,6 +1496,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 promise, resolve = task
                 if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                     return cast("LSPAny", await promise)
+                promise.resolve(None)
         # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and view:
             # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
@@ -1559,11 +1547,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         view: sublime.View | None = None,
         is_refactoring: bool = False,
     ) -> Promise[LSPAny | Error]:
-        if task := self.create_task_threadsafe(
+        return self.create_task_and_wrap_in_promise(
             self.run_command(command, progress=progress, view=view, is_refactoring=is_refactoring)
-        ):
-            return Promise.wrap_task(task)
-        raise RuntimeError("unable to schedule task")
+        )
 
     def check_log_unsupported_command(self, command: str) -> None:
         if userprefs().log_debug and command not in self._logged_unsupported_commands:
@@ -1600,7 +1586,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
-    ) -> sublime.View | None:
+    ) -> sublime.View | Literal[False] | None:
         """
         Try to open a URI.
 
@@ -1610,11 +1596,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         - Otherwise, if the URI has a scheme supported by the language server, then asks the language server for the
           content.
         - Otherwise, if there's a plugin attached, delegates to the plugin.
+        - If the plugin cannot handle the scheme, or an error occurred, returns the literal False.
         """
         scheme, _ = parse_uri(uri)
         if scheme == 'file':
             return await self._open_file_uri(uri, r, flags, group)
-
         # Try to find a pre-existing session-buffer
         if sb := self.get_session_buffer_for_uri_async(uri):
             view = sb.get_view_in_group(group)
@@ -1624,7 +1610,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return view
         if scheme == 'res':
             return await self._open_res_uri(uri, r, group)
-
         if scheme == 'untitled':  # VSCode specific URI scheme for unsaved buffers
 
             def open_untitled_buffer(flags: sublime.NewFileFlags) -> sublime.View:
@@ -1644,7 +1629,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return view
 
             return await run_on_main_thread(open_untitled_buffer, flags)
-
         if scheme in self.get_capability('workspace.textDocumentContent.schemes', []):
             title = urlparse(uri).path.split('/')[-1]
             response: TextDocumentContentResult | Error = await self.request(
@@ -1652,13 +1636,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             )
             if isinstance(response, Error):
                 # TODO: Handle error.
-                return None
+                return False
             content = response['text'].replace('\r', '')
             syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
             return self._on_view_for_uri_opened(
                 await self.open_scratch_buffer(title, content, syntax, flags, group), uri, r
             )
-
         # There is no pre-existing session-buffer, so we have to go through the plugin's URI handler.
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
@@ -1667,8 +1650,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     return self._on_sheet_for_uri_opened(sheet, uri, r)
             else:
                 return await self._open_uri_with_plugin(self._plugin, uri, r, flags, group)
-
-        return None
+        return False
 
     async def _open_file_uri(
         self,
@@ -1705,7 +1687,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         r: Range | None,
         flags: sublime.NewFileFlags,
         group: int,
-    ) -> sublime.View | None:
+    ) -> sublime.View | Literal[False] | None:
         # I cannot type-hint an unpacked tuple
         pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         promise, resolve = pair
@@ -1717,7 +1699,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return self._on_view_for_uri_opened(view, uri, r)
         # resolve unused promise
         resolve(('', '', ''))
-        return None
+        return False
 
     async def open_scratch_buffer(
         self,
@@ -1759,7 +1741,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         location: Location | LocationLink,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
-    ) -> sublime.View | None:
+    ) -> sublime.View | Literal[False] | None:
         uri, r = get_uri_and_range_from_location(location)
         return await self.open_uri(uri, r, flags, group)
 
@@ -1784,12 +1766,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return await self.request(Request("codeAction/resolve", code_action))
         return code_action
 
-    async def _apply_code_action(self, code_action: CodeAction | Error | None, view: sublime.View | None) -> None:
+    async def _apply_code_action(self, code_action: CodeAction | None, view: sublime.View | None) -> None:
         if not code_action:
-            return
-        if isinstance(code_action, Error):
-            # TODO: do something with the error?
-            self.window.status_message(f"Failed to apply code action: {code_action}")
             return
         title = code_action['title']
         edit = code_action.get("edit")
@@ -1841,7 +1819,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> ApplyWorkspaceEditResult:
 
         async def apply_text_document_edit(
-            view: sublime.View | None,
+            view: sublime.View | Literal[False] | None,
             uri: DocumentUri,
             edits: list[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
             version: int | None,
@@ -1885,25 +1863,33 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             renamed_files.append({'oldUri': old_uri, 'newUri': new_uri})
             return None
 
-        async def wait_for_path_deletion(path: str) -> None:
+        async def wait_for_path_deletion(path: str) -> str | None:
+            # The delete commands run asynchronously and do not report an error. For example, ST 4215+ does not move
+            # a path to the recycle bin if the path is on a different file system than the home directory.
             attempts = 0
-            while os.path.exists(path) and attempts < self._FILE_DELETED_MAX_CHECK_ATTEMPTS:  # noqa: ASYNC240
-                await asyncio.sleep(0.1)
+            while os.path.exists(path) and attempts < _DELETE_TIMEOUT_MS // _DELETE_POLL_INTERVAL_MS:  # noqa: ASYNC240
+                await asyncio.sleep(_DELETE_POLL_INTERVAL_MS / 1000)
                 attempts += 1
-            if attempts >= self._FILE_DELETED_MAX_CHECK_ATTEMPTS:
-                raise asyncio.TimeoutError(f"Timeout waiting for deletion of {path}")
+            if os.path.exists(path):  # noqa: ASYNC240
+                return f'Failed to move {path} to the recycle bin'
+            return None
 
-        async def delete_file(path: str) -> None:
+        async def delete_file(path: str) -> str | None:
             # The delete_file command moves the given files into the recycle bin
             self.window.run_command('delete_file', {'files': [path], 'prompt': False})
             # TODO: ideally we'd have a callback for 'delete_file'
-            await wait_for_path_deletion(path)
+            return await wait_for_path_deletion(path)
 
-        async def delete_folder(path: str) -> None:
+        async def delete_folder(path: str) -> str | None:
             # The delete_folder command moves the given folders into the recycle bin
             self.window.run_command('delete_folder', {'dirs': [path], 'prompt': False})
             # TODO: ideally we'd have a callback for 'delete_folder'
-            await wait_for_path_deletion(path)
+            return await wait_for_path_deletion(path)
+
+        async def on_deleted(uri: DocumentUri, failure_reason: str | None) -> ApplyWorkspaceEditResult:
+            if not failure_reason:
+                deleted_files.append({'uri': uri})
+            return await _continue(failure_reason)
 
         async def _continue(failure_reason: str | None) -> ApplyWorkspaceEditResult:
             if failure_reason:
@@ -1946,8 +1932,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return await _continue(f'CreateFile not supported for URI {uri}')
             if os.path.isfile(path):  # noqa: ASYNC240
                 if options.get('overwrite'):
-                    await delete_file(path)
-                    return await _continue(create_file(path))
+                    failure_reason = await delete_file(path)
+                    return await _continue(failure_reason or create_file(path))
                 if options.get('ignoreIfExists'):
                     return await _continue(None)
                 return await _continue(f'CreateFile failed because a file already exists at target {uri}')
@@ -1969,8 +1955,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return await _continue(f'RenameFile not supported for URI {new_uri}')
             if os.path.isfile(new_path):  # noqa: ASYNC240
                 if options.get('overwrite') and os.path.isfile(old_path):  # noqa: ASYNC240
-                    await delete_file(new_path)
-                    await _continue(rename_file(old_path, new_path))
+                    failure_reason = await delete_file(new_path)
+                    return await _continue(failure_reason or rename_file(old_path, new_path))
                 if options.get('ignoreIfExists'):
                     return await _continue(None)
                 return await _continue(f'RenameFile failed because target {new_uri} already exists')
@@ -1985,13 +1971,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if scheme != 'file':
                 return await _continue(f'DeleteFile not supported for URI {uri}')
             if os.path.isfile(path):  # noqa: ASYNC240
-                deleted_files.append({'uri': uri})
-                return await _continue(await delete_file(path))
+                return await on_deleted(uri, await delete_file(path))
             if os.path.isdir(path):  # noqa: ASYNC240
-                if os.listdir() and not options.get('recursive'):
+                if os.listdir(path) and not options.get('recursive'):
                     return await _continue(f'DeleteFile failed because folder {uri} is not empty')
-                deleted_files.append({'uri': uri})
-                return await _continue(await delete_folder(path))
+                return await on_deleted(uri, await delete_folder(path))
             if options.get('ignoreIfNotExists'):
                 return await _continue(None)
             return await _continue(f'DeleteFile failed because {uri} does not exist')
@@ -2049,12 +2033,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             x: tuple[ApplyWorkspaceEditResult, WorkspaceEditSummary] | BaseException,
         ) -> tuple[ApplyWorkspaceEditResult, WorkspaceEditSummary]:
             if isinstance(x, BaseException):
-                return cast('ApplyWorkspaceEditResult', {}), cast('WorkspaceEditSummary', {})
+                return {"applied": False}, {"created_files": 0, "edited_files": 0, "total_changes": 0}
             return x
 
-        if task := self.create_task(self.apply_workspace_edit(edit, label=label, is_refactoring=is_refactoring)):
-            return Promise.wrap_task(task).then(ignore_exception)
-        raise RuntimeError("unable to schedule task")
+        return self.create_task_and_wrap_in_promise(
+            self.apply_workspace_edit(edit, label=label, is_refactoring=is_refactoring)
+        ).then(ignore_exception)
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
@@ -2194,7 +2178,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 return
             self.workspace_diagnostics_pending_responses[identifier] = None
             return
-        self._on_workspace_diagnostics_async(identifier, response, reset_pending_response=False)
+        self._on_workspace_diagnostics_async(identifier, response)
 
     def _on_workspace_diagnostics_async(
         self,
@@ -2509,7 +2493,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             return {"success": open_externally(uri)}
         # TODO: ST API does not allow us to say "do not focus this new view"
         result = await self.open_uri(uri, params.get("selection"))
-        return {"success": result is not None}
+        return {"success": bool(result)}
 
     @request_handler('window/workDoneProgress/create')
     async def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> None:
@@ -2561,7 +2545,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     token = str(token)
                     request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                     request = self._response_handlers[request_id][0]
-                    lambda: self._invoke_views(request, "on_request_progress", request_id, params)
+                    self._invoke_views(request, "on_request_progress", request_id, params)
                 except (TypeError, IndexError, ValueError, KeyError):
                     # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
                     # dealing with possibility (2).
@@ -2592,9 +2576,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
-    async def end(self) -> list[Exception]:
+    async def end(self) -> None:
         if self.exiting:
-            return []
+            return
         self.exiting = True
         if self._plugin:
             self._plugin.on_session_end_async(None, None)
@@ -2610,15 +2594,19 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         for watcher in itertools.chain.from_iterable(self._dynamic_file_watchers.values()):
             watcher.destroy()
         self._dynamic_file_watchers = {}
-        self.state = ClientStates.STOPPING
         exceptions.extend(await self.cancel_all_tasks())
         try:
-            await self.request(Request.shutdown())
-        except Exception as shutdown_exception:
-            exceptions.append(shutdown_exception)
+            result = await self.request(Request.shutdown())
+            if isinstance(result, Error):
+                exceptions.append(result)
+        except Exception as ex:
+            exceptions.append(ex)
         finally:
-            await self.exit()
-        return exceptions
+            try:
+                await self.exit()
+            except Exception as ex:
+                exceptions.append(ex)
+            exceptions_log(f"Errors occurred during shutdown of {self.config.name}", exceptions)
 
     async def shutdown_session_view(self, session_view: SessionViewProtocol) -> list[Exception]:
         for status_key in self._status_messages:
@@ -2627,7 +2615,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
         self.exiting = True
-        self.state = ClientStates.STOPPING
         self.transport = None
         for _request, _result_handler, error_handler in self._response_handlers.values():
             error_handler(Error(ErrorCodes.InternalError, "transport closed").to_lsp())
@@ -2662,6 +2649,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         result = CancellableRequest(future, request_id, self)
+        if self.exiting and r.method != "shutdown":
+            future.cancel()
+            return result
         if r.progress and isinstance(r.params, dict):
             r.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         if r.on_partial_result and isinstance(r.params, dict):
@@ -2735,8 +2725,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         def set_request_id() -> None:
             nonlocal request_id
             with self._threading_condition:
-                request_id = do_request()
-                self._threading_condition.notify()
+                try:
+                    request_id = do_request()
+                except:  # ruff: ignore[bare-except]
+                    request_id = -1
+                finally:
+                    self._threading_condition.notify()
 
         with self._threading_condition:
             run_on_asyncio_thread(set_request_id)
@@ -2755,10 +2749,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     @deprecated("use Session.request instead")
     def send_request_task(self, request: Request[P_contra, R]) -> Promise[R | Error]:
-        task: PackagedTask[Any] = Promise.packaged_task()
-        promise, resolver = task
-        self.send_request(request, resolver, lambda x: resolver(Error.from_lsp(x)))
-        return promise
+
+        async def do() -> R | Error:
+            return await self.request(request)
+
+        return self.create_task_and_wrap_in_promise(do())
 
     @deprecated("use Session.request instead")
     def send_request_task_2(self, request: Request[P_contra, R]) -> tuple[Promise[R | Error], int]:
@@ -2826,6 +2821,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             if "id" in payload:
                 req_id = payload["id"]
                 self._logger.incoming_request(req_id, method, result)
+                if isinstance(self._plugin, LspPlugin):
+                    server_request = cast('ServerRequest', cast('object', {'method': method, 'params': result}))
+                    await self._plugin.on_server_request(server_request)
+                    result = server_request['params']
                 if handler is None:
                     await self.send_error_response(req_id, Error(ErrorCodes.MethodNotFound, method))
                 else:

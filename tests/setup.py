@@ -9,6 +9,7 @@ from LSP.plugin.core.aio import run_on_asyncio_thread
 from LSP.plugin.core.aio import tick
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.open import open_file
+from LSP.plugin.core.protocol import Error
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
@@ -247,7 +248,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
         return cls.session.request(Request("$test/fakeRequest", {"method": method, "params": params}))
 
     @classmethod
-    async def await_run_code_action(cls, code_action: CodeAction) -> LSPAny:
+    async def await_run_code_action(cls, code_action: CodeAction) -> LSPAny | Error:
         assert cls.session
         return await cls.session.run_code_action(code_action, progress=False, view=cls.view)
 

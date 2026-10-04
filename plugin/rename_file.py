@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .core.aio import run_coroutine
 from .core.aio import run_on_asyncio_thread
+from .core.aio import run_on_main_thread
 from .core.edit import show_summary_message
 from .core.logging import debug
 from .core.open import open_file_uri
@@ -174,7 +175,7 @@ class LspRenamePathCommand(LspWindowCommand):
                     last_active_view = new_file_name
                 restore_files.append((new_file_name, self.window.get_view_index(view), list(view.sel())))
                 if view.is_dirty():
-                    view.run_command('save', {'async': False})
+                    await run_on_main_thread(partial(view.run_command, 'save', {'async': False}))
                 view.close()  # LSP spec - send didClose for the old file
         if (new_dir := new_path.parent) and not new_dir.exists():
             new_dir.mkdir(parents=True)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .aio import PortableTimeoutError
 from .aio import TaskContainer
 from .constants import ST_PLATFORM
 from .logging import debug
@@ -155,13 +156,12 @@ class TcpClientTransportConfig(TransportConfig):
             process = None
             error_reader = None
         start_time = time.time()
-        current_time = start_time
         delta = 0
         while delta < TCP_CONNECT_TIMEOUT:
             time_left = TCP_CONNECT_TIMEOUT - delta
             try:
                 reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(host='127.0.0.1', port=port), timeout=time_left
+                    asyncio.open_connection(host='localhost', port=port, family=socket.AF_INET), timeout=time_left
                 )
                 return TransportWrapper(
                     callback_object=callbacks,
@@ -170,14 +170,13 @@ class TcpClientTransportConfig(TransportConfig):
                     process_args=launch.command if launch else None,
                     error_reader=error_reader,
                 )
-            except ConnectionRefusedError:
-                # Can happen when the language server is still starting. Just wait a bit and retry.
-                await asyncio.sleep(TCP_CONNECT_TIMEOUT / 10)
-            except TimeoutError:
+            except PortableTimeoutError:
                 # We passed the TCP_CONNECT_TIMEOUT and the process didn't respond.
                 break
-            current_time = time.time()
-            delta = current_time - start_time
+            except (ConnectionRefusedError, OSError):
+                # Can happen when the language server is still starting. Just wait a bit and retry.
+                await asyncio.sleep(TCP_CONNECT_TIMEOUT / 10)
+            delta = time.time() - start_time
         raise RuntimeError(f"Failed to connect to TCP port {port}")
 
 
@@ -218,12 +217,14 @@ class TcpServerTransportConfig(TransportConfig):
             async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
                 async with self.cv:
                     transport = StreamTransport(encode_json, decode_json, reader, writer)
-                    self.wrapper = TransportWrapper(callbacks, transport, self.process, command, self.error_reader)
+                    self.wrapper = TransportWrapper(
+                        callbacks, transport, self.process, launch.command, self.error_reader
+                    )
                     self.cv.notify()
 
         callback = ClientConnectedCallback()
         async with callback.cv:
-            server = await asyncio.start_server(callback, host='127.0.0.1', port=port, family=socket.AF_INET)
+            server = await asyncio.start_server(callback, host='localhost', port=port, family=socket.AF_INET)
             try:
                 await server.start_serving()
                 process = await launch.start(
@@ -237,13 +238,20 @@ class TcpServerTransportConfig(TransportConfig):
                 callback.error_reader = ErrorReader(callbacks, process.stdout)
                 try:
                     await asyncio.wait_for(callback.cv.wait(), timeout=TCP_CONNECT_TIMEOUT)
-                except Exception:
+                except BaseException:
                     process.kill()
                     await process.wait()
                     raise
             finally:
+                # Note: deliberately not awaiting server.wait_closed() here. Since Python 3.12, wait_closed() also
+                # waits for all active connections to be dropped, not just the listening socket. But the connection
+                # accepted above (if any) is the one we just handed off to the caller as the long-lived transport for
+                # the language server session, so waiting for it to close here would deadlock forever.
+                #
+                # See: https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.Server.wait_closed
+                #
+                # More background information: https://github.com/python/cpython/issues/104344
                 server.close()
-                await server.wait_closed()
         assert callback.wrapper
         return callback.wrapper
 
@@ -265,7 +273,7 @@ class Transport(ABC):
         self._decoder = decoder
 
     @abstractmethod
-    async def read(self) -> JSONRPCMessage | None:
+    async def read(self) -> JSONRPCMessage:
         raise NotImplementedError
 
     @abstractmethod
@@ -284,23 +292,32 @@ class Transport(ABC):
 async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str]:
     headers: dict[str, str] = {}
     try:
-        headers_bytes = (await reader.readuntil(b'\r\n\r\n')).decode("ascii").rstrip()
-        for line in headers_bytes.split("\r\n"):
-            key, value = line.split(":", 1)
-            headers[key.lower()] = value
+        raw = await reader.readuntil(b'\r\n\r\n')
     except asyncio.IncompleteReadError as ex:
         # May happen when shutting down. parse_content_length will then return None,
         # which will cause the read loop to stop.
         if ex.partial:
             # Propagate server's output to the UI.
             raise
+        return headers
+    headers_bytes = raw.decode("ascii", "replace").rstrip()
+    for line in headers_bytes.split("\r\n"):
+        if ":" not in line:
+            raise RuntimeError(f"Malformed header line from language server: {line!r}")
+        key, value = line.split(":", 1)
+        headers[key.lower()] = value
     return headers
 
 
 async def parse_content_length(reader: asyncio.StreamReader) -> int | None:
     headers = await parse_headers(reader)
+    if not headers:
+        # clean EOF
+        return None
     content_length = headers.get("content-length")
-    return int(content_length) if content_length else None
+    if content_length is None:
+        raise RuntimeError(f"Missing Content-Length header in language server output: {headers}")
+    return int(content_length)
 
 
 class StreamTransport(Transport):
@@ -330,22 +347,22 @@ class StreamTransport(Transport):
     async def write(self, payload: JSONRPCMessage) -> None:
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
-        try:
+        # ConnectionError can happen when the lang server is shut down or the connection is severed in some way. Just
+        # ignore it, there's other logic that will make the transport shut down.
+        with contextlib.suppress(ConnectionError):
             await self._writer.drain()
-        except ConnectionResetError:
-            # Can happen when the lang server is shut down or the connection is severed in some way. Just return,
-            # there's other logic that will make the transport shut down.
-            pass
 
     @override
     async def write_bytes(self, payload: bytes) -> None:
         self._writer.write(payload)
-        await self._writer.drain()
+        with contextlib.suppress(ConnectionError):
+            await self._writer.drain()
 
     @override
     async def close(self) -> None:
         self._writer.close()
-        await self._writer.wait_closed()
+        with contextlib.suppress(ConnectionError):
+            await self._writer.wait_closed()
 
 
 # --- TransportWrapper -------------------------------------------------------------------------------------------------
@@ -368,7 +385,7 @@ class TransportWrapper(TaskContainer):
         process_args: list[str] | None,
         error_reader: ErrorReader | None,
     ) -> None:
-        TaskContainer.__init__(self)
+        super().__init__()
         self._callback_object = weakref.ref(callback_object)
         self._transport: Transport | None = transport
         self._process = process
@@ -405,8 +422,7 @@ class TransportWrapper(TaskContainer):
         exception: Exception | None = None
         try:
             while self._transport:
-                if (payload := await self._transport.read()) is None:
-                    continue
+                payload = await self._transport.read()
                 if callback_object := self._callback_object():
                     # Don't block the read loop on handler execution. Otherwise, a request handler that sends its own
                     # request to the server and awaits the response would deadlock: the read loop is stuck waiting for
@@ -531,7 +547,7 @@ async def kill_all_subprocesses() -> None:
             p.kill()
         except Exception:
             pass
-    await asyncio.gather(*[p.wait() for p in subprocesses])
+    await asyncio.gather(*[p.wait() for p in subprocesses], return_exceptions=True)
 
 
 def _fixup_startup_args(args: list[str]) -> Any:

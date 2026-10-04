@@ -185,7 +185,7 @@ class WindowConfigManager:
         printf(f"{config_name} crashed ({crash_count} / {RETRY_MAX_COUNT} times in the last "
                f"{RETRY_COUNT_TIMEDELTA.total_seconds()} seconds), exit code {exit_code}, exception: {exception}")
         if isinstance(exception, asyncio.IncompleteReadError):
-            printf(f"server's output:\n{exception.partial.decode()}")
+            printf(f"server's output:\n{exception.partial.decode('utf-8', 'replace')}")
         return crash_count < RETRY_MAX_COUNT
 
     def _reenable_disabled_for_session(self, config_name: str) -> bool:

@@ -69,7 +69,6 @@ class LspFoldCommand(LspTextCommand):
         point: int | None = None
     ) -> bool:
         if not prefetch:
-
             return True
         # There should be a single empty selection in the view, otherwise this functionality would be misleading
         selection = self.view.sel()

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.views import range_to_region
 from .core.views import selection_range_params
-from typing import Any
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,11 +17,6 @@ class LspExpandSelectionCommand(LspTextCommand):
 
     capability = 'selectionRangeProvider'
 
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-        self._regions: list[sublime.Region] = []
-        self._change_count = 0
-
     def is_enabled(self, event: dict | None = None, point: int | None = None, fallback: bool = False) -> bool:
         return fallback or super().is_enabled(event, point)
 
@@ -30,31 +25,29 @@ class LspExpandSelectionCommand(LspTextCommand):
             return self.is_enabled(event, point, fallback)
         return True
 
-    def run(self, edit: sublime.Edit, event: dict | None = None, fallback: bool = False) -> None:
+    async def run(self, event: dict | None = None, fallback: bool = False) -> None:
         position = get_position(self.view, event)
         if position is None:
             return
-        if session := self.best_session(self.capability, position):
-            self._regions.extend(self.view.sel())
-            self._change_count = self.view.change_count()
-            params = selection_range_params(self.view)
-            session.send_request(Request.selectionRange(params), self.on_result, self.on_error)
-        elif fallback:
-            self._run_builtin_expand_selection(f"No {self.capability} found")
-
-    def on_result(self, params: list[SelectionRange] | None) -> None:
-        if self._change_count != self.view.change_count():
+        session = self.best_session(self.capability, position)
+        if not session:
+            if fallback:
+                self._run_builtin_expand_selection(f"No {self.capability} found")
             return
-        if params:
+        regions = list(self.view.sel())
+        change_count = self.view.change_count()
+        params = selection_range_params(self.view)
+        response = await session.request(Request.selectionRange(params))
+        if isinstance(response, Error):
+            self._run_builtin_expand_selection(f"Error: {response}")
+            return
+        if change_count != self.view.change_count():
+            return
+        if response:
             self.view.run_command("lsp_selection_set",
-                                  {"regions": list(map(self._smallest_containing, self._regions, params))})
+                                  {"regions": list(map(self._smallest_containing, regions, response))})
         else:
             self._status_message("Nothing to expand")
-        self._regions.clear()
-
-    def on_error(self, params: Any) -> None:
-        self._regions.clear()
-        self._run_builtin_expand_selection("Error: {}".format(params["message"]))
 
     def _status_message(self, msg: str) -> None:
         if window := self.view.window():

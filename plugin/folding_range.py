@@ -4,13 +4,18 @@ from ..protocol import FoldingRange
 from ..protocol import FoldingRangeKind
 from ..protocol import FoldingRangeParams
 from ..protocol import Range
+from .core.aio import run_coroutine
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import UINT_MAX
 from .core.registry import LspTextCommand
 from .core.views import range_to_region
 from .core.views import text_document_identifier
-from functools import partial
+from typing import TYPE_CHECKING
 import sublime
+
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 
 def folding_range_to_range(folding_range: FoldingRange) -> Range:
@@ -84,17 +89,15 @@ class LspFoldCommand(LspTextCommand):
             self.change_count = -1
             session = self.best_session(self.capability)
             if session:
-                params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
-                session.send_request(
-                    Request.foldingRange(params, self.view),
-                    partial(self._handle_response_async, view_change_count)
-                )
+                run_coroutine(self._prefetch(session, view_change_count))
             return False
         return self.folding_region is not None  # Already set or unset by self.description
 
-    def _handle_response_async(self, change_count: int, response: list[FoldingRange] | None) -> None:
+    async def _prefetch(self, session: Session, change_count: int) -> None:
+        params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
+        response = await session.request(Request.foldingRange(params, self.view))
         self.change_count = change_count
-        self.folding_ranges = response or []
+        self.folding_ranges = response if response and not isinstance(response, Error) else []
 
     def description(
         self,
@@ -133,9 +136,8 @@ class LspFoldCommand(LspTextCommand):
                 return "LSP: Fold"
         return "LSP <debug>"  # is_visible will return False
 
-    def run(
+    async def run(
         self,
-        edit: sublime.Edit,
         prefetch: bool = False,
         hidden: bool = False,
         strict: bool = True,
@@ -145,28 +147,25 @@ class LspFoldCommand(LspTextCommand):
         if prefetch:
             if self.folding_region is not None:
                 self.view.fold(self.folding_region)
+            return
+        if point is not None:
+            pt = point
         else:
-            if point is not None:
-                pt = point
-            else:
-                selection = self.view.sel()
-                if len(selection) != 1 or not selection[0].empty():
-                    self.view.run_command('fold')
-                    return
-                pt = selection[0].b
-            if session := self.best_session(self.capability):
-                params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
-                session.send_request(
-                    Request.foldingRange(params, self.view),
-                    partial(self._handle_response_manual_async, pt, strict)
-                )
-
-    def _handle_response_manual_async(self, point: int, strict: bool, response: list[FoldingRange] | None) -> None:
-        if response:
+            selection = self.view.sel()
+            if len(selection) != 1 or not selection[0].empty():
+                self.view.run_command('fold')
+                return
+            pt = selection[0].b
+        session = self.best_session(self.capability)
+        if not session:
+            return
+        params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
+        response = await session.request(Request.foldingRange(params, self.view))
+        if response and not isinstance(response, Error):
             for folding_range in sorted_folding_ranges(response):
                 region = range_to_region(folding_range_to_range(folding_range), self.view)
-                if ((strict and region.contains(point)) or
-                        (not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(point))) and \
+                if ((strict and region.contains(pt)) or
+                        (not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(pt))) and \
                         not self.view.is_folded(region):
                     self.view.fold(region)
                     return
@@ -178,14 +177,13 @@ class LspFoldAllCommand(LspTextCommand):
 
     capability = 'foldingRangeProvider'
 
-    def run(self, edit: sublime.Edit, kind: str | None = None, event: dict | None = None) -> None:
-        if session := self.best_session(self.capability):
-            params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
-            session.send_request(
-                Request.foldingRange(params, self.view), partial(self._handle_response_async, kind))
-
-    def _handle_response_async(self, kind: str | None, response: list[FoldingRange] | None) -> None:
-        if not response:
+    async def run(self, kind: str | None = None, event: dict | None = None) -> None:
+        session = self.best_session(self.capability)
+        if not session:
+            return
+        params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
+        response = await session.request(Request.foldingRange(params, self.view))
+        if not response or isinstance(response, Error):
             return
         regions = [
             range_to_region(folding_range_to_range(folding_range), self.view)

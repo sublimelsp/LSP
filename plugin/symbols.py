@@ -15,7 +15,6 @@ from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Point
 from .core.protocol import Request
-from .core.protocol import ResponseError
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
@@ -188,26 +187,45 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.cached = False
         self.has_matching_symbols = True
 
-    def run(
+    async def run(
         self,
-        edit: sublime.Edit,
         event: dict[str, Any] | None = None,
         kind: int = 0,
         index: int | None = None
     ) -> None:
-        if index is None:
-            if not self.has_matching_symbols:
-                self.has_matching_symbols = True
-                if window := self.view.window():
-                    kind_name = SYMBOL_KIND_NAMES.get(cast('SymbolKind', self.kind))
-                    window.status_message(f'No symbols of kind "{kind_name}" in this file')
-                return
-            self.kind = kind
-            if session := self.best_session(self.capability):
-                self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
-                params: DocumentSymbolParams = {"textDocument": text_document_identifier(self.view)}
-                session.send_request(
-                    Request.documentSymbols(params, self.view), self.handle_response_async, self.handle_response_error)
+        if index is not None:
+            return
+        if not self.has_matching_symbols:
+            self.has_matching_symbols = True
+            if window := self.view.window():
+                kind_name = SYMBOL_KIND_NAMES.get(cast('SymbolKind', self.kind))
+                window.status_message(f'No symbols of kind "{kind_name}" in this file')
+            return
+        self.kind = kind
+        session = self.best_session(self.capability)
+        if not session:
+            return
+        self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
+        params: DocumentSymbolParams = {"textDocument": text_document_identifier(self.view)}
+        response = await session.request(Request.documentSymbols(params, self.view))
+        if isinstance(response, Error):
+            self._reset_suppress_input()
+            print_to_status_bar(response.to_lsp())
+            return
+        self.items.clear()
+        if response and self.view.is_valid():
+            if 'selectionRange' in response[0]:
+                items = cast('list[DocumentSymbol]', response)
+                for item in items:
+                    self.items.extend(self.process_document_symbol_recursive(item))
+            else:
+                items = cast('list[SymbolInformation]', response)
+                for item in items:
+                    self.items.append(symbol_to_list_input_item(item))
+            self.items.sort(key=lambda item: Point.from_lsp(item.value['range']['start']))
+            if window := self.view.window():
+                self.cached = True
+                window.run_command('show_overlay', {'overlay': 'command_palette', 'command': self.name()})
 
     def input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
         if self.cached:
@@ -227,26 +245,6 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             sublime.set_timeout(self._reset_suppress_input)
             return DocumentSymbolsKindInputHandler(window, initial_value, self.view, self.items)
         return None
-
-    def handle_response_async(self, response: list[DocumentSymbol] | list[SymbolInformation] | None) -> None:
-        self.items.clear()
-        if response and self.view.is_valid():
-            if 'selectionRange' in response[0]:
-                items = cast('list[DocumentSymbol]', response)
-                for item in items:
-                    self.items.extend(self.process_document_symbol_recursive(item))
-            else:
-                items = cast('list[SymbolInformation]', response)
-                for item in items:
-                    self.items.append(symbol_to_list_input_item(item))
-            self.items.sort(key=lambda item: Point.from_lsp(item.value['range']['start']))
-            if window := self.view.window():
-                self.cached = True
-                window.run_command('show_overlay', {'overlay': 'command_palette', 'command': self.name()})
-
-    def handle_response_error(self, error: ResponseError) -> None:
-        self._reset_suppress_input()
-        print_to_status_bar(error)
 
     def _reset_suppress_input(self) -> None:
         self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)

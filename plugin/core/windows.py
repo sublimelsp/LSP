@@ -628,6 +628,8 @@ class WindowRegistry(LspSettingsChangeListener):
             return None
         if wm := self._windows.get(window.id()):
             return wm
+        # Don't store a sublime_aio.Window, because it overrides some methods with coroutines.
+        window = sublime.Window(window.id())
         workspace = ProjectFolders(window)
         window_config_manager = WindowConfigManager(window, client_configs.all)
         manager = WindowManager(window, workspace, window_config_manager)

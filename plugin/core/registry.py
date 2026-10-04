@@ -9,7 +9,6 @@ from .views import MissingUriError
 from .views import uri_from_view
 from .windows import WindowManager
 from .windows import WindowRegistry
-from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -310,25 +309,22 @@ class LspOpenLocationCommand(LspWindowCommand):
 
 class LspRestartServerCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, config_name: str | None = None) -> None:
+    async def run(self, config_name: str | None = None) -> None:
         wm = windows.lookup(self.view.window())
         if not wm:
             return
-        self._config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
-        if not self._config_names:
+        config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
+        if not config_names:
             return
-        if len(self._config_names) == 1:
-            self.restart_server(wm, 0)
+        if len(config_names) == 1:
+            index = 0
         else:
-            wm.window.show_quick_panel(self._config_names, partial(self.restart_server, wm))
+            index = await sublime_aio.Window(wm.window.id()).show_quick_panel(config_names)
+        if index != -1:
+            await wm.restart_sessions([config_names[index]])
 
     def want_event(self) -> bool:
         return False
-
-    def restart_server(self, wm: WindowManager, index: int) -> None:
-        if index == -1:
-            return
-        run_coroutine(wm.restart_sessions([self._config_names[index]]))
 
 
 class LspCheckApplicableCommand(sublime_aio.ViewCommand):

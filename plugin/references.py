@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .core.constants import RegionKey
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import TextPosition
 from .core.registry import get_position
@@ -15,13 +16,13 @@ from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
 from typing import Literal
 from typing import TYPE_CHECKING
-import functools
 import linecache
 import os
 import sublime
 
 if TYPE_CHECKING:
     from ..protocol import Location
+    from ..protocol import ReferenceParams
     from .core.sessions import Session
     from .core.types import ClientConfig
 
@@ -67,9 +68,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 event, point, side_by_side, force_group, fallback, group, include_declaration, output_mode)
         return True
 
-    def run(
+    async def run(
         self,
-        _: sublime.Edit,
         event: dict | None = None,
         point: int | None = None,
         side_by_side: bool = False,
@@ -82,50 +82,27 @@ class LspSymbolReferencesCommand(LspTextCommand):
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
         pos = get_position(self.view, event, point)
-        if session and file_path and pos is not None:
-            position_params = text_document_position_params(self.view, pos)
-            params = {
-                'textDocument': position_params['textDocument'],
-                'position': position_params['position'],
-                'context': {
-                    "includeDeclaration": include_declaration,
-                },
-            }
-            request = Request("textDocument/references", params, self.view, progress=True)
-            word_range = self.view.word(pos)
-            session.send_request(
-                request,
-                functools.partial(
-                    self._handle_response_async,
-                    self.view.substr(word_range),
-                    session,
-                    side_by_side,
-                    force_group,
-                    fallback,
-                    group,
-                    output_mode,
-                    event,
-                    word_range.begin()
-                )
-            )
-        else:
+        if not session or not file_path or pos is None:
             self._handle_no_results(fallback, side_by_side)
-
-    def _handle_response_async(
-        self,
-        word: str,
-        session: Session,
-        side_by_side: bool,
-        force_group: bool,
-        fallback: bool,
-        group: int,
-        output_mode: OutputMode | None,
-        event: dict | None,
-        position: int,
-        response: list[Location] | None
-    ) -> None:
+            return
+        position_params = text_document_position_params(self.view, pos)
+        params: ReferenceParams = {
+            'textDocument': position_params['textDocument'],
+            'position': position_params['position'],
+            'context': {
+                "includeDeclaration": include_declaration,
+            },
+        }
+        request: Request[ReferenceParams, list[Location] | None]
+        request = Request("textDocument/references", params, self.view, progress=True)
+        word_range = self.view.word(pos)
+        word = self.view.substr(word_range)
+        word_begin = word_range.begin()
+        response = await session.request(request)
+        if isinstance(response, Error):
+            response = None
         sublime.set_timeout(lambda: self._handle_response(
-            word, session, side_by_side, force_group, fallback, group, output_mode, event, position, response))
+            word, session, side_by_side, force_group, fallback, group, output_mode, event, word_begin, response))
 
     def _handle_response(
         self,

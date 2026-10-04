@@ -31,6 +31,7 @@ from typing import Union
 from typing_extensions import override
 import asyncio
 import sublime
+import sublime_aio
 
 if TYPE_CHECKING:
     from .core.sessions import AbstractViewListener
@@ -360,7 +361,7 @@ class LspCodeActionsCommand(LspTextCommand):
         code_actions_by_config: list[CodeActionsByConfigName] | None = None
     ) -> None:
         if code_actions_by_config:
-            self._handle_code_actions(code_actions_by_config, run_first=True)
+            await self._handle_code_actions(code_actions_by_config, run_first=True)
             return
         view = self.view
         region = first_selection_region(view)
@@ -373,41 +374,30 @@ class LspCodeActionsCommand(LspTextCommand):
         actions = await actions_manager.request_for_region(
             view, region, session_buffer_diagnostics, only_kinds, manual=True, progress=True
         )
-        sublime.set_timeout(lambda: self._handle_code_actions(actions))
+        await self._handle_code_actions(actions)
 
-    def _handle_code_actions(self, response: list[CodeActionsByConfigName], run_first: bool = False) -> None:
+    async def _handle_code_actions(self, response: list[CodeActionsByConfigName], run_first: bool = False) -> None:
         # Flatten response to a list of (config_name, code_action) tuples.
         actions: list[tuple[ConfigName, CodeActionOrCommand]] = []
         for config_name, session_actions in response:
             actions.extend([(config_name, action) for action in session_actions])
-        if actions:
-            if len(actions) == 1 and run_first:
-                self._handle_select(0, actions)
-            else:
-                self._show_code_actions(actions)
-        elif window := self.view.window():
-            window.status_message("No code actions available")
-
-    def _show_code_actions(self, actions: list[tuple[ConfigName, CodeActionOrCommand]]) -> None:
-        if window := self.view.window():
-            items, selected_index = format_code_actions_for_quick_panel(actions)
-            window.show_quick_panel(
-                items,
-                lambda i: self._handle_select(i, actions),
-                selected_index=selected_index,
-                placeholder="Code action")
-
-    def _handle_select(self, index: int, actions: list[tuple[ConfigName, CodeActionOrCommand]]) -> None:
-        if index == -1:
+        if not actions:
+            if window := self.view.window():
+                window.status_message("No code actions available")
             return
-
-        async def run() -> None:
-            config_name, action = actions[index]
-            if session := self.session_by_name(config_name):
-                response = await session.run_code_action(action, progress=True, view=self.view)
-                self._handle_response_async(config_name, response)
-
-        run_coroutine(run())
+        index = 0
+        if len(actions) > 1 or not run_first:
+            if not (window := self.view.window()):
+                return
+            items, selected_index = format_code_actions_for_quick_panel(actions)
+            index = await sublime_aio.Window(window.id()).show_quick_panel(
+                items, selected_index=selected_index, placeholder="Code action")
+            if index == -1:
+                return
+        config_name, action = actions[index]
+        if session := self.session_by_name(config_name):
+            result = await session.run_code_action(action, progress=True, view=self.view)
+            self._handle_response_async(config_name, result)
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
@@ -466,11 +456,8 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
             config_name, action = self.actions_cache[index]
             if session := self.session_by_name(config_name):
                 response = await session.run_code_action(action, progress=True, view=self.view)
-                self._handle_response_async(config_name, response)
-
-    def _handle_response_async(self, session_name: str, response: Any) -> None:
-        if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {response}")
+                if isinstance(response, Error):
+                    sublime.error_message(f"{config_name}: {response}")
 
     def _is_cache_valid(self, event: dict | None) -> bool:
         view = self.view

@@ -4,7 +4,6 @@ from .api import get_plugin
 from .api import LspPlugin
 from .api import OnPreStartContext
 from .api import PluginStartError
-from .core.aio import run_coroutine
 from .core.aio import run_on_threadpool
 from .core.css import css
 from .core.logging import debug
@@ -29,6 +28,7 @@ import json
 import mdpopups
 import os
 import sublime
+import sublime_aio
 import sublime_plugin
 import textwrap
 import traceback
@@ -306,40 +306,34 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         view.set_read_only(True)
 
 
-class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
+class LspTroubleshootServerCommand(sublime_aio.WindowCommand):
 
-    def run(self) -> None:
+    async def run(self) -> None:
         wm = windows.lookup(self.window)
         if not wm:
             return
-        view = wm.window.active_view()
-        if not view:
-            sublime.message_dialog('Troubleshooting must be run with a file opened')
+        active_view = wm.window.active_view()
+        if not active_view:
+            await sublime_aio.message_dialog('Troubleshooting must be run with a file opened')
             return
-        active_view = view
         configs = wm.get_config_manager().get_configs()
         config_names = [config.name for config in configs]
-        if config_names:
-            wm.window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),
-                                       placeholder='Select server to troubleshoot')
-
-    def on_selected(self, selected_index: int, configs: list[ClientConfig], active_view: sublime.View) -> None:
+        if not config_names:
+            return
+        selected_index = await self.window.show_quick_panel(config_names, placeholder='Select server to troubleshoot')
         if selected_index == -1:
             return
         config = configs[selected_index]
         output_sheet = mdpopups.new_html_sheet(
-            self.window, f'Server: {config.name}', '# Running server test...',
+            wm.window, f'Server: {config.name}', '# Running server test...',
             css=css().sheets, wrapper_class=css().sheets_classname)
-        # Store the instance so that it's not GC'ed before it's finished.
-        self.test_runner: ServerTestRunner | None = ServerTestRunner(
-            config, self.window, active_view,
+        await ServerTestRunner(
+            config, wm.window, active_view,
             lambda resolved_command, output, exit_code: self.update_sheet(
-                config, active_view, output_sheet, resolved_command, output, exit_code))
-        run_coroutine(self.test_runner.run())
+                config, active_view, output_sheet, resolved_command, output, exit_code)).run()
 
     def update_sheet(self, config: ClientConfig, active_view: sublime.View | None, output_sheet: sublime.HtmlSheet,
                      resolved_command: list[str] | None, server_output: str, exit_code: int) -> None:
-        self.test_runner = None
         frontmatter = mdpopups.format_frontmatter({'allow_code_wrap': True})
         contents = self.get_contents(config, active_view, resolved_command, server_output, exit_code)
         # The href needs to be encoded to avoid having markdown parser ruin it.

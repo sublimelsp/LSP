@@ -8,7 +8,6 @@ from .core.views import range_to_region
 from .core.views import text_document_identifier
 from typing import TYPE_CHECKING
 import sublime
-import sublime_aio
 
 if TYPE_CHECKING:
     from ..protocol import ColorInformation
@@ -51,7 +50,7 @@ class LspColorPresentationCommand(LspTextCommand):
             filtered_response.append(item)
         if not filtered_response:
             return
-        index = await sublime_aio.Window(window.id()).show_quick_panel(
+        index = await window.show_quick_panel_async(
             [sublime.QuickPanelItem(item['label']) for item in filtered_response],
             placeholder="Change color format")
         if index > -1:

@@ -20,7 +20,6 @@ from .core.views import text_document_code_action_params
 from .lsp_task import LspTask
 from abc import ABC
 from abc import abstractmethod
-from typing import Any
 from typing import AsyncGenerator
 from typing import cast
 from typing import final
@@ -390,18 +389,15 @@ class LspCodeActionsCommand(LspTextCommand):
             if not (window := self.view.window()):
                 return
             items, selected_index = format_code_actions_for_quick_panel(actions)
-            index = await sublime_aio.Window(window.id()).show_quick_panel(
+            index = await window.show_quick_panel_async(
                 items, selected_index=selected_index, placeholder="Code action")
             if index == -1:
                 return
         config_name, action = actions[index]
         if session := self.session_by_name(config_name):
             result = await session.run_code_action(action, progress=True, view=self.view)
-            self._handle_response_async(config_name, result)
-
-    def _handle_response_async(self, session_name: str, response: Any) -> None:
-        if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {response}")
+            if isinstance(result, Error):
+                await sublime_aio.error_message(f"{config_name}: {result}")
 
 
 # This command must be a WindowCommand in order to reliably hide corresponding menu entries when no view has focus.

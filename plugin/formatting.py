@@ -25,7 +25,6 @@ from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import override
 import sublime
-import sublime_aio
 
 if TYPE_CHECKING:
     from .core.sessions import AbstractViewListener
@@ -191,11 +190,13 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
             sublime.status_message(f"Failed to {label}: {ex}")
 
     async def select_formatter(self, base_scope: str, session_names: list[str]) -> None:
-        window_manager = windows.lookup(self.view.window())
+        window = self.view.window()
+        if not window:
+            return
+        window_manager = windows.lookup(window)
         if not window_manager:
             return
-        window = window_manager.window
-        index = await sublime_aio.Window(window.id()).show_quick_panel(session_names, placeholder="Select Formatter")
+        index = await window.show_quick_panel_async(session_names, placeholder="Select Formatter")
         if index == -1:
             return
         session_name = session_names[index]

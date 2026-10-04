@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 from typing_extensions import TypeGuard
 import itertools
 import sublime
-import sublime_aio
 
 if TYPE_CHECKING:
     from ..protocol import CodeLens
@@ -161,7 +160,7 @@ class LspCodeLensCommand(LspTextCommand):
         if len(commands) > 1:
             if not (window := self.view.window()):
                 return
-            index = await sublime_aio.Window(window.id()).show_quick_panel(
+            index = await window.show_quick_panel_async(
                 [sublime.QuickPanelItem(cmd["title"], annotation=session_name) for session_name, cmd in commands])
             if index == -1:
                 return

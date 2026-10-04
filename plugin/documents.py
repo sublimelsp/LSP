@@ -36,6 +36,7 @@ from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
 from .core.logging import exception_log
+from .core.logging import exceptions_log
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.panels import PanelName
@@ -1028,7 +1029,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if not text_change_listener:
             debug("couldn't find a text change listener for", self)
             return
-        self._registered = True
         if not self._manager:
             self._manager = windows.lookup(self.view.window())
         if not self._manager:
@@ -1037,6 +1037,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             self._manager.register_listener_async(self)
         except MissingUriError:
             return  # view already closed; don't care
+        self._registered = True
         views = buf.views()
         if not isinstance(views, list):
             debug("skipping clone checks for", self)
@@ -1144,11 +1145,13 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         finally:
             sublime.set_timeout(restore_selection)
 
-    async def _clear_session_views(self) -> list[Exception]:
+    async def _clear_session_views(self) -> None:
         session_views = self._session_views
-        exceptions = await gather_and_flatten_exceptions(*(s.on_before_remove() for s in session_views.values()))
+        exceptions_log(
+            "Error clearing session views",
+            await gather_and_flatten_exceptions(*(s.on_before_remove() for s in session_views.values())),
+        )
         session_views.clear()
-        return exceptions
 
     def on_userprefs_changed_async(self) -> None:
         if userprefs().document_highlight_style:

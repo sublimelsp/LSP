@@ -29,6 +29,7 @@ import asyncio
 import sublime
 
 if TYPE_CHECKING:
+    from LSP.plugin.core.protocol import ServerRequest
     from LSP.plugin.core.sessions import CancellableRequest
     from LSP.plugin.core.sessions import Session
     from LSP.plugin.core.windows import WindowManager
@@ -184,8 +185,11 @@ class TextDocumentTestCase(SublimeAioTestCase):
     async def tearDown(self) -> None:
         self.assertIsNotNone(self.session)
         assert self.session
-        for response in await self.get_and_clear_unused_mock_responses():
+        unused_mocks = await self.get_and_clear_unused_mock_responses()
+        for response in unused_mocks["responses"]:
             print(f"WARNING: unused mock response: {response}")
+        for command_name, action in unused_mocks["commandActions"].items():
+            print(f"WARNING: unused command action for {command_name}: {action}")
 
     @classmethod
     def get_test_name(cls) -> str:
@@ -265,6 +269,26 @@ class TextDocumentTestCase(SublimeAioTestCase):
         payload = [{"method": method, "response": responses} for method, responses in responses]
         await self.session.request(Request("$test/setResponses", payload))
 
+    async def set_command_response_action(self, command_name: str, action: ServerRequest) -> None:
+        """
+        Make the fake server send a request when workspace/executeCommand is received.
+
+        Examples:
+            await self.set_command_response_action("myCommand", {
+                "method": "window/showDocument",
+                "params": {"uri": "file:///test.txt", "takeFocus": True}
+            })
+            await self.set_command_response_action("rename", {
+                "method": "workspace/applyEdit",
+                "params": {"edit": {"changes": {...}}}
+            })
+        """
+        assert self.session
+        await self.session.request(Request("$test/setupCommandAction", {
+            "commandName": command_name,
+            **action
+        }))
+
     async def mock_client_notification(self, method: str, params: LSPAny = None) -> LSPAny:
         """Emit an arbitrary notification from the fake server."""
         self.assertIsNotNone(self.session)
@@ -272,7 +296,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
         await self.session.request(Request("$test/sendNotification", {"method": method, "params": params}))
         return params
 
-    async def get_and_clear_unused_mock_responses(self) -> list[tuple[str, LSPAny]]:
+    async def get_and_clear_unused_mock_responses(self) -> dict[str, LSPAny]:
         return await self.session.request(Request("$test/getAndClearUnusedMockResponses"))
 
     async def await_clear_view_and_save(self) -> None:

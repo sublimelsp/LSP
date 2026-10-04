@@ -354,6 +354,23 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         await self.await_message("workspace/executeCommand")
         self.assertEqual(result, {"canReturnAnythingHere": "asdf"})
 
+    async def test_complex_request_chain_with_command(self) -> None:
+        # Setup mocks.
+        await self.set_command_response_action(
+            "fooooobar",
+            {"method": "window/showDocument", "params": {"uri": "r2d2:some-decompiled-file-from-a-jar-or-dll"}},
+        )
+        await self.mock_response("workspace/textDocumentContent", {"text": "hello world"})
+        result = await self.session.run_command(
+            {"command": "fooooobar", "arguments": ["doesnt", "matter"]},
+            progress=False,
+            view=self.view,
+        )
+        # Assert that some methods have been called.
+        params = await self.await_message("workspace/textDocumentContent")
+        self.assertEqual(params, {"uri": "r2d2:some-decompiled-file-from-a-jar-or-dll"})
+        self.assertEqual(result, {"success": True})
+
     async def test_progress(self) -> None:
         # not sure how this tests $/progress ?
         await self.mock_response("foobar", {"general": "kenobi"})

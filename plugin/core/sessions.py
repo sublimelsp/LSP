@@ -1094,8 +1094,12 @@ class Session(APIHandler, TransportCallbacks):
     def unregister_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.discard(sv)
         if not self._session_views:
-            current_count = self._views_opened
-            debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
+            self.end_async_if_unused()
+
+    def end_async_if_unused(self) -> None:
+        """End the session after a short delay, unless a view is registered with the session before then."""
+        current_count = self._views_opened
+        debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
 
     def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
         """It is only safe to iterate over this in the async thread."""

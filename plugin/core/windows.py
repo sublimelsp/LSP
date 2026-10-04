@@ -20,7 +20,6 @@ from .aio import gather_and_flatten_exceptions
 from .aio import run_coroutine
 from .aio import run_on_asyncio_thread
 from .aio import run_on_threadpool
-from .aio import TaskContainer
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -763,11 +762,11 @@ class PanelLogger(Logger):
         return f"[{RequestTimeTracker.formatted_now()}] {direction} {self._server_name} {method}"
 
 
-class RemoteLogger(Logger, TaskContainer):
+class RemoteLogger(Logger):
     PORT = 9981
     DIRECTION_OUTGOING = 1
     DIRECTION_INCOMING = 2
-    _ws_server: websockets.Server | None = None
+    _ws_server: websockets.asyncio.server.Server | None = None
     _ws_server_task: asyncio.Task[None] | None = None
     _last_id = 0
 
@@ -775,29 +774,28 @@ class RemoteLogger(Logger, TaskContainer):
         RemoteLogger._last_id += 1
         self._server_name = f'{server_name} ({RemoteLogger._last_id})'
         if not RemoteLogger._ws_server_task:
-            try:
+            RemoteLogger._ws_server_task = asyncio.create_task(RemoteLogger._serve_forever())
 
-                async def serve_forever() -> None:
-                    async with websockets.asyncio.server.serve(self._on_new_client, "localhost", self.PORT) as server:
-                        RemoteLogger._ws_server = server
-                        await server.serve_forever()
-
-                RemoteLogger._ws_server_task = asyncio.create_task(serve_forever())
-            except OSError as ex:
-                if ex.errno == 48:  # Address already in use
-                    debug('WebsocketServer not started - address already in use')
-                    RemoteLogger._ws_server = None
-                else:
-                    raise
+    @staticmethod
+    async def _serve_forever() -> None:
+        try:
+            async with websockets.asyncio.server.serve(
+                RemoteLogger._on_new_client, "127.0.0.1", RemoteLogger.PORT
+            ) as server:
+                RemoteLogger._ws_server = server
+                await server.serve_forever()
+        except OSError as ex:
+            debug(f'WebsocketServer not started: {ex}')
+        finally:
+            RemoteLogger._ws_server = None
+            RemoteLogger._ws_server_task = None
 
     def _stop_server(self) -> None:
-        if RemoteLogger._ws_server:
-            RemoteLogger._ws_server.close()
-            RemoteLogger._ws_server = None
-            if RemoteLogger._ws_server_task:
-                RemoteLogger._ws_server_task = None
+        if RemoteLogger._ws_server_task:
+            RemoteLogger._ws_server_task.cancel()
 
-    async def _on_new_client(self, websocket: websockets.asyncio.server.ServerConnection) -> None:
+    @staticmethod
+    async def _on_new_client(websocket: websockets.asyncio.server.ServerConnection) -> None:
         """Called for every client connecting (after handshake)."""
         try:
             debug(f"New client connected and was given id {websocket.id}")
@@ -885,15 +883,9 @@ class RemoteLogger(Logger, TaskContainer):
         })
 
     def _broadcast_json(self, data: dict[str, Any]) -> None:
-
-        async def broadcast() -> None:
+        if RemoteLogger._ws_server and (connections := RemoteLogger._ws_server.connections):
             json_data = json.dumps(data, sort_keys=True, check_circular=False, separators=(',', ':'))
-            if RemoteLogger._ws_server:
-                await asyncio.gather(
-                    *(connection.send(json_data, text=True) for connection in RemoteLogger._ws_server.connections)
-                )
-
-        self.create_task(broadcast())
+            websockets.asyncio.server.broadcast(connections, json_data)
 
 
 class RouterLogger(Logger):

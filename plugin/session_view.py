@@ -104,10 +104,13 @@ class SessionView:
             await self.session.unregister_session_view(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(DIAGNOSTIC_STYLES.keys()):
-            self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_icon")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_underline")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_underline")
+            for multiline in (False, True):
+                key = self.diagnostics_key(severity, multiline)
+                self.view.erase_regions(f"{key}_icon")
+                self.view.erase_regions(f"{key}_underline")
+                for tag in DIAGNOSTIC_TAG_SCOPES:
+                    self.view.erase_regions(f"{key}_tags_{tag}")
+        self._diagnostic_annotations.clear()
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
         exceptions.extend(await self.session_buffer.remove_session_view(self))
         if listener := self.listener():

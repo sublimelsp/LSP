@@ -714,7 +714,10 @@ class SessionBuffer(TaskContainer):
                 return
             if not pending.request.cancelled:
                 await pending.request.cancel()
-        params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
+        try:
+            params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
+        except MissingUriError:
+            return
         if identifier:
             params['identifier'] = identifier
         if (result_id := self.session.diagnostics_result_ids.get((self._last_known_uri, identifier))) is not None:

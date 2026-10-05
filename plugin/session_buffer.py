@@ -299,7 +299,7 @@ class SessionBuffer(TaskContainer):
 
     async def remove_session_view(self, sv: SessionViewProtocol) -> list[Exception]:
         self._clear_semantic_token_regions(sv.view)
-        self.session_views.remove(sv)
+        self.session_views.discard(sv)
         if len(self.session_views) == 0:
             return await self._on_before_destroy(sv.view)
         return []

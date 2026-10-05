@@ -10,7 +10,6 @@ from ...protocol import MessageActionItem
 from ...protocol import MessageType
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
-from ...third_party import WebsocketServer  # type: ignore
 from ..api import AbstractPlugin
 from ..api import get_plugin
 from ..api import IsApplicableContext
@@ -71,7 +70,7 @@ import asyncio
 import functools
 import json
 import sublime
-import threading
+import websockets.asyncio.server  # pyright: ignore[reportMissingImports]
 
 if TYPE_CHECKING:
     from .tree_view import TreeViewSheet
@@ -767,54 +766,43 @@ class RemoteLogger(Logger):
     PORT = 9981
     DIRECTION_OUTGOING = 1
     DIRECTION_INCOMING = 2
-    _ws_server: WebsocketServer | None = None
-    _ws_server_thread: threading.Thread | None = None
+    _ws_server: websockets.asyncio.server.Server | None = None
+    _ws_server_task: asyncio.Task[None] | None = None
     _last_id = 0
 
     def __init__(self, manager: WindowManager, server_name: str) -> None:
         RemoteLogger._last_id += 1
         self._server_name = f'{server_name} ({RemoteLogger._last_id})'
-        if not RemoteLogger._ws_server:
-            try:
-                RemoteLogger._ws_server = WebsocketServer(self.PORT)
-                RemoteLogger._ws_server.set_fn_new_client(self._on_new_client)
-                RemoteLogger._ws_server.set_fn_client_left(self._on_client_left)
-                RemoteLogger._ws_server.set_fn_message_received(self._on_message_received)
-                self._start_server()
-            except OSError as ex:
-                if ex.errno == 48:  # Address already in use
-                    debug('WebsocketServer not started - address already in use')
-                    RemoteLogger._ws_server = None
-                else:
-                    raise
+        if not RemoteLogger._ws_server_task:
+            RemoteLogger._ws_server_task = asyncio.create_task(RemoteLogger._serve_forever())
 
-    def _start_server(self) -> None:
-        def start_async() -> None:
-            if RemoteLogger._ws_server:
-                RemoteLogger._ws_server.run_forever()
-        RemoteLogger._ws_server_thread = threading.Thread(target=start_async)
-        RemoteLogger._ws_server_thread.start()
+    @staticmethod
+    async def _serve_forever() -> None:
+        try:
+            async with websockets.asyncio.server.serve(
+                RemoteLogger._on_new_client, "127.0.0.1", RemoteLogger.PORT
+            ) as server:
+                RemoteLogger._ws_server = server
+                await server.serve_forever()
+        except OSError as ex:
+            debug(f'WebsocketServer not started: {ex}')
+        finally:
+            RemoteLogger._ws_server = None
+            RemoteLogger._ws_server_task = None
 
     def _stop_server(self) -> None:
-        if RemoteLogger._ws_server:
-            RemoteLogger._ws_server.shutdown()
-            RemoteLogger._ws_server = None
-            if RemoteLogger._ws_server_thread:
-                RemoteLogger._ws_server_thread.join()
-                RemoteLogger._ws_server_thread = None
+        if RemoteLogger._ws_server_task:
+            RemoteLogger._ws_server_task.cancel()
 
-    def _on_new_client(self, client: dict, server: WebsocketServer) -> None:
+    @staticmethod
+    async def _on_new_client(websocket: websockets.asyncio.server.ServerConnection) -> None:
         """Called for every client connecting (after handshake)."""
-        debug(f"New client connected and was given id {client['id']}")
-        # server.send_message_to_all("Hey all, a new client has joined us")
-
-    def _on_client_left(self, client: dict, server: WebsocketServer) -> None:
-        """Called for every client disconnecting."""
-        debug(f"Client({client['id']}) disconnected")
-
-    def _on_message_received(self, client: dict, server: WebsocketServer, message: str) -> None:
-        """Called when a client sends a message."""
-        debug(f"Client({client['id']}) said: {message}")
+        try:
+            debug(f"New client connected and was given id {websocket.id}")
+            async for message in websocket:
+                debug(f"Client({websocket.id}) said: {message}")
+        finally:
+            debug(f"Client({websocket.id}) disconnected")
 
     def stderr_message(self, message: str) -> None:
         self._broadcast_json({
@@ -895,9 +883,9 @@ class RemoteLogger(Logger):
         })
 
     def _broadcast_json(self, data: dict[str, Any]) -> None:
-        if RemoteLogger._ws_server:
+        if RemoteLogger._ws_server and (connections := RemoteLogger._ws_server.connections):
             json_data = json.dumps(data, sort_keys=True, check_circular=False, separators=(',', ':'))
-            RemoteLogger._ws_server.send_message_to_all(json_data)
+            websockets.asyncio.server.broadcast(connections, json_data)
 
 
 class RouterLogger(Logger):

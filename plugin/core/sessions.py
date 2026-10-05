@@ -317,9 +317,7 @@ class Manager(ABC):
         ...
 
     @abstractmethod
-    def handle_show_message(
-        self, config_name: str, params: ShowMessageParams
-    ) -> Promise[MessageActionItem | None]:
+    def handle_show_message(self, config_name: str, params: ShowMessageParams) -> None:
         ...
 
     @abstractmethod

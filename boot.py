@@ -65,9 +65,11 @@ from .plugin.hover import LspToggleHoverPopupsCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
 from .plugin.inlay_hint import LspToggleInlayHintsCommand
 from .plugin.panels import LspClearLogPanelCommand
+from .plugin.panels import LspClearMessagesPanelCommand
 from .plugin.panels import LspClearPanelCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleLogPanelLinesLimitCommand
+from .plugin.panels import LspToggleMessagesPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.panels import LspUpdateLogPanelCommand
 from .plugin.panels import LspUpdatePanelCommand
@@ -104,6 +106,7 @@ __all__ = (
     "LspCallHierarchyCommand",
     "LspCheckApplicableCommand",
     "LspClearLogPanelCommand",
+    "LspClearMessagesPanelCommand",
     "LspClearPanelCommand",
     "LspCodeActionsCommand",
     "LspCodeLensCommand",
@@ -165,6 +168,7 @@ __all__ = (
     "LspToggleHoverPopupsCommand",
     "LspToggleInlayHintsCommand",
     "LspToggleLogPanelLinesLimitCommand",
+    "LspToggleMessagesPanelCommand",
     "LspToggleServerPanelCommand",
     "LspTroubleshootServerCommand",
     "LspTypeHierarchyCommand",

@@ -34,6 +34,7 @@ class PanelName:
     References = "references"
     WorkspaceEdit = "Workspace Edit"
     Log = "LSP Log Panel"
+    Messages = "LSP Messages"
 
 
 class PanelManager:
@@ -77,6 +78,10 @@ class PanelManager:
     def ensure_log_panel(self) -> sublime.View | None:
         return self.ensure_panel(PanelName.Log, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax",
                                  "Context LSP Log Panel.sublime-menu")
+
+    def ensure_messages_panel(self) -> sublime.View | None:
+        return self.ensure_panel(PanelName.Messages, "", "", "Packages/LSP/Syntaxes/Messages.sublime-syntax",
+                                 "Context LSP Messages Panel.sublime-menu")
 
     def ensure_references_panel(self) -> sublime.View | None:
         return self.ensure_panel("references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,

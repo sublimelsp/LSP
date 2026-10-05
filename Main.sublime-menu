@@ -246,6 +246,10 @@
             "command": "lsp_show_diagnostics_panel"
           },
           {
+            "caption": "Toggle Messages Panel",
+            "command": "lsp_toggle_messages_panel"
+          },
+          {
             "id": "lsp-server-configurations",
             "caption": "-"
           },

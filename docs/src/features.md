@@ -373,3 +373,13 @@ A language server may also have this capability and is in a better position to d
 Language servers can have custom commands to provide additional functionalities.
 Such server commands can be executed manually via the `lsp_execute` command from LSP, that you can bind to a key.
 See [Execute server commands](commands.md#execute-server-commands) for details.
+
+
+## Server Messages
+
+Language servers can send messages that are meant to be shown to the user, for example to notify about a problem with the project setup.
+These messages are collected in the "LSP Messages" panel, which can be toggled with the `LSP: Toggle Messages Panel` command from the Command Palette.
+The panel opens automatically when a new message arrives, depending on the `show_messages_panel_level` setting.
+
+Some messages ask for a response and offer a choice of actions, which are rendered as buttons below the message.
+Such a message stays pending until one of the actions is chosen or the message is dismissed, so it is not lost when the panel gets closed.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .aio import run_coroutine
+from .aio import show_quick_panel
 from .settings import userprefs
 from .type_converters import position_to_offset
 from .views import first_selection_region
@@ -60,97 +61,6 @@ def get_position(view: sublime.View, event: dict | None = None, point: int | Non
         return None
 
 
-class Window(sublime.Window):
-    """
-    A `sublime.Window` which can await the quick panel and the input panel.
-
-    In contrast to `sublime_aio.Window`, this class does not turn `show_quick_panel` and `show_input_panel` into
-    coroutines. Those methods keep the callback-based behavior of `sublime.Window`, and the awaitable variants are
-    offered under the separate names `show_quick_panel_async` and `show_input_panel_async`. The remaining overrides
-    only narrow the return type. Instances therefore remain substitutable for a plain `sublime.Window`.
-    """
-
-    def active_view(self) -> View | None:
-        view = super().active_view()
-        return View(view.id()) if view is not None else None
-
-    def new_file(self, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, syntax: str = '') -> View:
-        return View(super().new_file(flags, syntax).id())
-
-    def open_file(self, fname: str, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1) -> View:
-        return View(super().open_file(fname, flags, group).id())
-
-    def find_open_file(self, fname: str, group: int = -1) -> View | None:
-        view = super().find_open_file(fname, group)
-        return View(view.id()) if view is not None else None
-
-    def views(self, *, include_transient: bool = False) -> list[View]:
-        return [View(view.id()) for view in super().views(include_transient=include_transient)]
-
-    def active_view_in_group(self, group: int) -> View | None:
-        view = super().active_view_in_group(group)
-        return View(view.id()) if view is not None else None
-
-    def views_in_group(self, group: int) -> list[View]:
-        return [View(view.id()) for view in super().views_in_group(group)]
-
-    def transient_view_in_group(self, group: int) -> View | None:
-        view = super().transient_view_in_group(group)
-        return View(view.id()) if view is not None else None
-
-    def create_output_panel(self, name: str, unlisted: bool = False) -> View:
-        return View(super().create_output_panel(name, unlisted).id())
-
-    def find_output_panel(self, name: str) -> View | None:
-        view = super().find_output_panel(name)
-        return View(view.id()) if view is not None else None
-
-    async def show_quick_panel_async(
-        self,
-        items: list[str] | list[list[str]] | list[sublime.QuickPanelItem],
-        flags: sublime.QuickPanelFlags = sublime.QuickPanelFlags.NONE,
-        selected_index: int = -1,
-        on_highlight: Callable[[int], Coroutine[Any, Any, Any]] | None = None,
-        placeholder: str | None = None
-    ) -> int:
-        """
-        Show the quick panel and wait until the user has made a choice.
-
-        Returns the index of the selected item, or -1 if the quick panel was cancelled.
-        """
-        return await sublime_aio.Window(self.id()).show_quick_panel(
-            items, flags, selected_index, on_highlight, placeholder)
-
-    async def show_input_panel_async(
-        self,
-        caption: str,
-        initial_text: str = '',
-        on_change: Callable[[sublime.View, str], Coroutine[Any, Any, Any]] | None = None
-    ) -> str | None:
-        """
-        Show the input panel and wait until the user has confirmed or cancelled it.
-
-        Returns the entered text, or None if the input panel was cancelled.
-        """
-        return await sublime_aio.Window(self.id()).show_input_panel(caption, initial_text, on_change)
-
-
-class View(sublime.View):
-    """
-    A `sublime.View` whose window is a `Window`.
-
-    In contrast to `sublime_aio.View`, the overrides only narrow the return type. Instances therefore remain
-    substitutable for a plain `sublime.View`.
-    """
-
-    def window(self) -> Window | None:
-        window = super().window()
-        return Window(window.id()) if window is not None else None
-
-    def clones(self) -> list[View]:
-        return [View(view.id()) for view in super().clones()]
-
-
 def _bind_coroutine_command(
     command: sublime_plugin.Command,
     args: dict[str, Any] | None,
@@ -188,9 +98,6 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
       await requests to a language server.
     """
 
-    # The window this command is attached to. This is a plain sublime.Window with additional awaitable methods.
-    window: Window  # pyright: ignore[reportIncompatibleVariableOverride]
-
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
     # capability attached to a view in the window.
     capability: str = ''
@@ -204,7 +111,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
     cancel_previous_run: ClassVar[bool] = False
 
     def __init__(self, window: sublime.Window) -> None:
-        super().__init__(Window(window.id()))
+        super().__init__(window)
         self._run_future: concurrent.futures.Future[None] | None = None
         if not self.session_name:
             # Auto-detect session_name based on package name. In case of the LSP package use empty string.
@@ -282,9 +189,6 @@ class LspTextCommand(sublime_plugin.TextCommand):
       needs to await requests to a language server.
     """
 
-    # The view this command is attached to. This is a plain sublime.View whose window() returns a Window.
-    view: View  # pyright: ignore[reportIncompatibleVariableOverride]
-
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
     # capability attached to the active view.
     capability: str = ''
@@ -306,7 +210,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
                 raise TypeError(f"{cls.__name__}.run is a coroutine function and must not take an edit token")
 
     def __init__(self, view: sublime.View) -> None:
-        super().__init__(View(view.id()))
+        super().__init__(view)
         self._run_future: concurrent.futures.Future[None] | None = None
         if not self.session_name:
             # Auto-detect session_name based on package name. In case of the LSP package use empty string.
@@ -416,7 +320,7 @@ class LspRestartServerCommand(LspTextCommand):
         if len(config_names) == 1:
             index = 0
         elif window := self.view.window():
-            index = await window.show_quick_panel_async(config_names)
+            index = await show_quick_panel(window, config_names)
         else:
             index = -1
         if index != -1:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextEdit
 from .code_actions import CodeActionsOnFormatTask
+from .core.aio import show_quick_panel
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
 from .core.logging import exception_log
@@ -196,7 +197,7 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
         window_manager = windows.lookup(window)
         if not window_manager:
             return
-        index = await window.show_quick_panel_async(session_names, placeholder="Select Formatter")
+        index = await show_quick_panel(window, session_names, placeholder="Select Formatter")
         if index == -1:
             return
         session_name = session_names[index]

@@ -158,6 +158,45 @@ def get_clipboard() -> asyncio.Future[str]:
     return future
 
 
+def show_quick_panel(
+    window: sublime.Window,
+    items: list[str] | list[list[str]] | list[sublime.QuickPanelItem],
+    flags: sublime.QuickPanelFlags = sublime.QuickPanelFlags.NONE,
+    selected_index: int = -1,
+    on_highlight: Callable[[int], None] | None = None,
+    placeholder: str | None = None,
+) -> asyncio.Future[int]:
+    """
+    Show a quick panel to select an item in a list.
+
+    :param items: May be either a list of strings, or a list of lists of strings where the first item is the trigger and
+    all subsequent strings are details shown below.
+    :param flags: `QuickPanelFlags` controlling behavior. The ``WANT_EVENT`` bit is set to 0.
+    :param selected_index: The initially selected item. ``-1`` for no selection.
+    :param on_highlight: Called every time the highlighted item in the quick panel is changed.
+    :param placeholder: Text displayed in the filter input field before any query is typed.
+    """
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
+    # Clear the WANT_EVENT bit.
+    flags &= ~sublime.QuickPanelFlags.WANT_EVENT
+
+    def on_select(index: int) -> None:
+        if not future.cancelled():
+            future.set_result(index)
+
+    window.show_quick_panel(
+        items=items,
+        # See: https://github.com/sublimehq/sublime_text/issues/6920
+        on_select=partial(loop.call_soon_threadsafe, on_select),  # type: ignore
+        flags=flags,
+        selected_index=selected_index,
+        on_highlight=on_highlight,
+        placeholder=placeholder,
+    )
+    return future
+
+
 async def gather_and_flatten_exceptions(*coros: Coroutine[Any, Any, list[Exception]]) -> list[Exception]:
     """
     Takes a list of coroutines, runs them concurrently using asyncio.gather, collects all exceptions, and returns a

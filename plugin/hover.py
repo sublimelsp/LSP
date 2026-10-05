@@ -54,7 +54,6 @@ import asyncio
 import html
 import mdpopups
 import sublime
-import sublime_aio
 import sublime_plugin
 
 if TYPE_CHECKING:
@@ -350,7 +349,7 @@ class LspHoverCommand(LspTextCommand):
                 return
 
 
-class LspToggleHoverPopupsCommand(sublime_aio.WindowCommand):
+class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
 
     def is_enabled(self) -> bool:
         if view := self.window.active_view():
@@ -360,7 +359,7 @@ class LspToggleHoverPopupsCommand(sublime_aio.WindowCommand):
     def is_checked(self) -> bool:
         return bool(self.window.settings().get(HOVER_ENABLED_KEY, True))
 
-    async def run(self) -> None:
+    def run(self) -> None:
         enable = not self.is_checked()
         self.window.settings().set(HOVER_ENABLED_KEY, enable)
         if window_manager := windows.lookup(self.window):

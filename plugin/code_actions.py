@@ -6,6 +6,7 @@ from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
 from .core.aio import run_coroutine
+from .core.aio import show_quick_panel
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
@@ -389,8 +390,7 @@ class LspCodeActionsCommand(LspTextCommand):
             if not (window := self.view.window()):
                 return
             items, selected_index = format_code_actions_for_quick_panel(actions)
-            index = await window.show_quick_panel_async(
-                items, selected_index=selected_index, placeholder="Code action")
+            index = await show_quick_panel(window, items, selected_index=selected_index, placeholder="Code action")
             if index == -1:
                 return
         config_name, action = actions[index]

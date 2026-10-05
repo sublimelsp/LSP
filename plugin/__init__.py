@@ -40,8 +40,6 @@ from .core.protocol import ServerResponse
 from .core.protocol import TextPosition
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.registry import View
-from .core.registry import Window
 from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import SessionViewProtocol
@@ -103,8 +101,6 @@ __all__ = [
     'SessionViewProtocol',
     'TextPosition',
     'TransportWrapper',
-    'View',
-    'Window',
     'WorkspaceFolder',
     '__version__',
     'apply_text_edits',

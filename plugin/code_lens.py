@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .core.aio import show_quick_panel
 from .core.constants import CODE_LENS_ENABLED_KEY
 from .core.protocol import Error
 from .core.protocol import Request
@@ -160,8 +161,10 @@ class LspCodeLensCommand(LspTextCommand):
         if len(commands) > 1:
             if not (window := self.view.window()):
                 return
-            index = await window.show_quick_panel_async(
-                [sublime.QuickPanelItem(cmd["title"], annotation=session_name) for session_name, cmd in commands])
+            index = await show_quick_panel(
+                window,
+                [sublime.QuickPanelItem(cmd["title"], annotation=session_name) for session_name, cmd in commands]
+            )
             if index == -1:
                 return
         session_name, command = commands[index]

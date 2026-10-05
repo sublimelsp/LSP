@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .core.aio import show_quick_panel
 from .core.edit import apply_text_edits
 from .core.protocol import Error
 from .core.protocol import Request
@@ -50,9 +51,11 @@ class LspColorPresentationCommand(LspTextCommand):
             filtered_response.append(item)
         if not filtered_response:
             return
-        index = await window.show_quick_panel_async(
+        index = await show_quick_panel(
+            window,
             [sublime.QuickPanelItem(item['label']) for item in filtered_response],
-            placeholder="Change color format")
+            placeholder="Change color format"
+        )
         if index > -1:
             color_pres = filtered_response[index]
             text_edit = color_pres.get('textEdit') or {'range': lsp_range, 'newText': color_pres['label']}

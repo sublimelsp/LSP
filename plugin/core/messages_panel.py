@@ -164,7 +164,8 @@ class MessagesPanel:
         chunks: list[str] = []
         pending: list[tuple[int, MessageEntry]] = []
         offset = 0
-        for entry in self._entries:
+        # Show the newest entries at the top.
+        for entry in reversed(self._entries):
             text = entry.render()
             if entry.is_pending:
                 pending.append((offset + len(text), entry))
@@ -179,4 +180,4 @@ class MessagesPanel:
                 on_navigate=lambda href, entry=entry: self._on_navigate(entry, href)
             ) for point, entry in pending
         ])
-        panel.show(panel.size(), animate=False)
+        panel.show(0, animate=False)

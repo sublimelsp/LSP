@@ -56,7 +56,10 @@ class MessagesPanelTests(DeferrableTestCase):
         self.assertEqual(self.window_stub.shown_panels, [])
         self.messages.add_message("server", {"type": MessageType.Info, "message": "third"}, show_panel=True)
         yield lambda: self.window_stub.shown_panels == [f"output.{PanelName.Messages}"]
-        self.assertTrue(self.panel_text().endswith(" server INFO\n    third"))
+        # The newest message is shown at the top.
+        self.assertRegex(
+            self.panel_text(),
+            r"^\d{2}:\d{2}:\d{2} server INFO\n    third\n\n\d{2}:\d{2}:\d{2} server ERROR\n    first\n    second$")
 
     def test_show_message_request_action(self) -> Generator:
         actions = [{"title": "Yes"}, {"title": "No", "extra": 1}]

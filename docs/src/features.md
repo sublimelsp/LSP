@@ -378,7 +378,7 @@ See [Execute server commands](commands.md#execute-server-commands) for details.
 ## Server Messages
 
 Language servers can send messages that are meant to be shown to the user, for example to notify about a problem with the project setup.
-These messages are collected in the "LSP Messages" panel, which can be toggled with the `LSP: Toggle Messages Panel` command from the Command Palette.
+These messages are collected in the "LSP Messages" panel, with the newest message at the top. The panel can be toggled with the `LSP: Toggle Messages Panel` command from the Command Palette.
 The panel opens automatically when a new message arrives, depending on the `show_messages_panel_level` setting.
 
 Some messages ask for a response and offer a choice of actions, which are rendered as buttons below the message.

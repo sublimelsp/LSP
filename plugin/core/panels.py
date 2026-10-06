@@ -3,6 +3,7 @@ from __future__ import annotations
 from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
 from typing import Iterable
+import html
 import sublime
 
 LOG_LINES_LIMIT_SETTING_NAME = 'lsp_limit_lines'
@@ -27,6 +28,48 @@ OUTPUT_PANEL_SETTINGS = {
     "translate_tabs_to_spaces": False,
     "word_wrap": False
 }
+
+BUTTONS_TEMPLATE = """
+<style>
+    html {{
+        background-color: transparent;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }}
+    a {{
+        line-height: 1.6rem;
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+        border-width: 1px;
+        border-style: solid;
+        border-color: #fff4;
+        border-radius: 4px;
+        color: #cccccc;
+        background-color: #3f3f3f;
+        text-decoration: none;
+    }}
+    html.light a {{
+        border-color: #000a;
+        color: white;
+        background-color: #636363;
+    }}
+    a.primary, html.light a.primary {{
+        background-color: color(var(--accent) min-contrast(white 6.0));
+    }}
+</style>
+<body id='lsp-buttons'>{buttons}</body>"""
+
+
+def buttons_html(buttons: Iterable[tuple[str, str, bool]]) -> str:
+    """
+    Render a row of buttons for a phantom in an output panel.
+
+    Each button is given as a tuple of the link target, the label and whether it is the primary button.
+    """
+    return BUTTONS_TEMPLATE.format(buttons="&nbsp;".join(
+        "<a href='{}'{}>{}</a>".format(href, " class='primary'" if primary else "", html.escape(label))
+        for href, label, primary in buttons
+    ))
 
 
 class PanelName:

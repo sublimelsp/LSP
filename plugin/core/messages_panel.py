@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .constants import MESSAGE_TYPE_LEVELS
+from .panels import buttons_html
 from .panels import PanelManager
 from .panels import PanelName
 from .promise import Promise
@@ -8,7 +9,6 @@ from .promise import ResolveFunc
 from datetime import datetime
 from itertools import count
 from typing import TYPE_CHECKING
-import html
 import sublime
 
 if TYPE_CHECKING:
@@ -19,36 +19,6 @@ if TYPE_CHECKING:
 
 MAX_MESSAGES = 100
 INDENT = "    "
-
-BUTTONS_TEMPLATE = """
-<style>
-    html {{
-        background-color: transparent;
-        margin-top: 0.5rem;
-        margin-bottom: 0.5rem;
-    }}
-    a {{
-        line-height: 1.6rem;
-        padding-left: 0.6rem;
-        padding-right: 0.6rem;
-        border-width: 1px;
-        border-style: solid;
-        border-color: #fff4;
-        border-radius: 4px;
-        color: #cccccc;
-        background-color: #3f3f3f;
-        text-decoration: none;
-    }}
-    html.light a {{
-        border-color: #000a;
-        color: white;
-        background-color: #636363;
-    }}
-    a.primary, html.light a.primary {{
-        background-color: color(var(--accent) min-contrast(white 6.0));
-    }}
-</style>
-<body id='lsp-message-actions'>{buttons}</body>"""
 
 DISMISS_HREF = "dismiss"
 
@@ -98,12 +68,9 @@ class MessageEntry:
         return "\n".join(lines)
 
     def render_buttons(self) -> str:
-        buttons = [
-            "<a href='{}'{}>{}</a>".format(idx, " class='primary'" if idx == 0 else "", html.escape(action['title']))
-            for idx, action in enumerate(self.actions)
-        ]
-        buttons.append(f"<a href='{DISMISS_HREF}'>Dismiss</a>")
-        return BUTTONS_TEMPLATE.format(buttons="&nbsp;".join(buttons))
+        buttons = [(str(idx), action['title'], idx == 0) for idx, action in enumerate(self.actions)]
+        buttons.append((DISMISS_HREF, "Dismiss", False))
+        return buttons_html(buttons)
 
 
 class MessagesPanel:

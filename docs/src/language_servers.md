@@ -1072,18 +1072,7 @@ Follow installation instructions on [LSP-taplo](https://github.com/sublimelsp/LS
 
 ### Tombi
 
-1. Install [tombi](https://tombi-toml.github.io/tombi/docs/installation).
-2. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"tombi"` configuration:
-
-    ```jsonc
-    {
-        "tombi": {
-            "enabled": true,
-            "command": ["tombi", "lsp"],
-            "selector": "source.toml"
-        }
-    }
-    ```
+Follow installation instructions on [LSP-tombi](https://github.com/sublimelsp/LSP-tombi).
 
 ## Twig
 

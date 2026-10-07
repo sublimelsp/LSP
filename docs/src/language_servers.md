@@ -857,6 +857,8 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
 
 ## Shell
 
+### Shellcheck
+
 1. Install [shellcheck](https://github.com/koalaman/shellcheck) (follow instructions in the repo).
 2. Install the [diagnostic-languageserver](https://github.com/iamcco/diagnostic-languageserver) server.
 
@@ -905,6 +907,21 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
                 }
             }
         }
+    }
+    ```
+
+### Shuck
+
+[Shuck](https://ewhauser.github.io/shuck/) provides an LSP server for shell scripts.
+
+1. Install [Shuck](https://ewhauser.github.io/shuck/docs/getting-started/).
+2. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"shuck"` configuration:
+
+    ```jsonc
+    "shuck": {
+      "enabled": true,
+      "command": ["shuck", "server"],
+      "selector": "source.shell"
     }
     ```
 

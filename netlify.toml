@@ -4,4 +4,4 @@
   environment = { PYTHON_VERSION = "3.13", MISE_IDIOMATIC_VERSION_FILE_ENABLE_TOOLS = "[]" }
   base    = "docs/"
   publish = "site/"
-  command = "make build"
+  command = "zensical build --clean"

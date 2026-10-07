@@ -1045,7 +1045,7 @@ class Session(APIHandler, TransportCallbacks):
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: dict[str | int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # ruff: ignore[line-too-long]
+        self._response_handlers: dict[str | int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # noqa: E501
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -1595,7 +1595,7 @@ class Session(APIHandler, TransportCallbacks):
         pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         promise, resolve = pair
         # It'd be nice to have automatic tuple unpacking continuations
-        callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # ruff: ignore[lambda-assignment]
+        callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             return promise.then(lambda tup: self.open_scratch_buffer(*tup, flags, group)) \
                 .then(lambda view: self._on_view_for_uri_opened(view, uri, r))
@@ -2096,7 +2096,7 @@ class Session(APIHandler, TransportCallbacks):
         self.workspace_diagnostics_pending_responses[identifier] = self.send_request_async(
             Request.workspaceDiagnostic(
                 params,
-                on_partial_result=partial(self._on_workspace_diagnostics_async, identifier, reset_pending_response=False)),  # ruff: ignore[line-too-long]
+                on_partial_result=partial(self._on_workspace_diagnostics_async, identifier, reset_pending_response=False)),  # noqa: E501
             partial(self._on_workspace_diagnostics_async, identifier),
             partial(self._on_workspace_diagnostics_error_async, identifier)
         )

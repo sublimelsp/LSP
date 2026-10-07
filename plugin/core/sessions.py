@@ -1045,7 +1045,7 @@ class Session(APIHandler, TransportCallbacks):
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: dict[str | int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # noqa: E501
+        self._response_handlers: dict[str | int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # ruff: ignore[line-too-long]
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -1395,7 +1395,7 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
                 if command_handler := self._plugin.get_command_handler(command_name):
-                    return command_handler(command.get('arguments'))
+                    return self._run_command_handler(command_handler, command)
             else:
                 task: PackagedTask[R | Error | None] = Promise.packaged_task()
                 promise, resolve = task
@@ -1444,6 +1444,24 @@ class Session(APIHandler, TransportCallbacks):
             self._is_executing_refactoring_command = True
             execute_command_promise.then(lambda _: self._reset_is_executing_refactoring_command())
         return execute_command_promise
+
+    def _run_command_handler(
+        self, command_handler: Callable[[Any], Promise[Any]], command: ExecuteCommandParams
+    ) -> Promise[Any]:
+        """Runs a plugin command handler on the async thread, whichever thread the command was executed from."""
+        task: PackagedTask[Any] = Promise.packaged_task()
+        promise, resolve = task
+        arguments = command.get('arguments')
+
+        def run_async() -> None:
+            try:
+                command_handler(arguments).then(resolve)
+            except Exception as ex:
+                exception_log(f"Error running command handler for {command['command']}", ex)
+                resolve(Error.from_exception(ex))
+
+        sublime.set_timeout_async(run_async)
+        return promise
 
     def _reset_is_executing_refactoring_command(self) -> None:
         self._is_executing_refactoring_command = False
@@ -1577,7 +1595,7 @@ class Session(APIHandler, TransportCallbacks):
         pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         promise, resolve = pair
         # It'd be nice to have automatic tuple unpacking continuations
-        callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
+        callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # ruff: ignore[lambda-assignment]
         if plugin.on_open_uri_async(uri, callback):
             return promise.then(lambda tup: self.open_scratch_buffer(*tup, flags, group)) \
                 .then(lambda view: self._on_view_for_uri_opened(view, uri, r))
@@ -2078,7 +2096,7 @@ class Session(APIHandler, TransportCallbacks):
         self.workspace_diagnostics_pending_responses[identifier] = self.send_request_async(
             Request.workspaceDiagnostic(
                 params,
-                on_partial_result=partial(self._on_workspace_diagnostics_async, identifier, reset_pending_response=False)),  # noqa: E501
+                on_partial_result=partial(self._on_workspace_diagnostics_async, identifier, reset_pending_response=False)),  # ruff: ignore[line-too-long]
             partial(self._on_workspace_diagnostics_async, identifier),
             partial(self._on_workspace_diagnostics_error_async, identifier)
         )

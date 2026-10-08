@@ -4,7 +4,7 @@ from .core.edit import show_summary_message
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.views import range_to_region
+from .core.type_converters import range_to_region
 from .core.views import text_document_position_params
 from .edit import prompt_for_workspace_edits
 from functools import partial
@@ -156,12 +156,12 @@ class LspSymbolRenameCommand(LspTextCommand):
             sublime.error_message("The current selection cannot be renamed")
             return
         if is_range_response(response):
-            r = range_to_region(response, self.view)
+            r = range_to_region(self.view, response)
             placeholder = self.view.substr(r)
             pos = r.a
         elif "placeholder" in response:
             placeholder = response["placeholder"]  # type: ignore
-            pos = range_to_region(response["range"], self.view).a  # type: ignore
+            pos = range_to_region(self.view, response["range"]).a  # type: ignore
         else:
             placeholder = self.view.substr(self.view.word(pos))
         args = {"placeholder": placeholder, "point": pos, "session_name": session_name}

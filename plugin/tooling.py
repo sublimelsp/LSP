@@ -506,13 +506,13 @@ class ServerTestRunner(TransportCallbacks):
             plugin_class = get_plugin(config.name)
             workspace = ProjectFolders(window)
             workspace_folders = sorted_workspace_folders(workspace.folders, initiating_view.file_name() or '')
-            cwd = None
+            cwd = workspace_folders[0].path if workspace_folders else None
             if plugin_class:
                 # TODO: We should share this common code with WindowManager.start_async
-                cwd = workspace_folders[0].path if workspace_folders else None
                 plugin_context = OnPreStartContext(config, variables, initiating_view, cwd, workspace_folders)
                 if issubclass(plugin_class, LspPlugin):
                     plugin_class.on_pre_start_async(plugin_context)
+                    cwd = plugin_context.working_directory
                 else:
                     if plugin_class.needs_update_or_installation():
                         plugin_class.install_or_update()

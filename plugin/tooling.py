@@ -343,8 +343,9 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
         frontmatter = mdpopups.format_frontmatter({'allow_code_wrap': True})
         contents = self.get_contents(config, active_view, resolved_command, cwd, server_output, exit_code)
         # The href needs to be encoded to avoid having markdown parser ruin it.
-        copy_link = make_command_link('lsp_copy_to_clipboard_from_base64', '<kbd>Copy to clipboard</kbd>',
+        copy_link = make_command_link('lsp_copy_to_clipboard_from_base64', 'Copy to clipboard',
                                       {'contents': b64encode(contents.encode()).decode()})
+        copy_link = f'<kbd>{copy_link}</kbd>'
         formatted = f'{frontmatter}{copy_link}\n{contents}'
         mdpopups.update_html_sheet(output_sheet, formatted, css=css().sheets, wrapper_class=css().sheets_classname)
 

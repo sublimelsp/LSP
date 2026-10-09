@@ -14,11 +14,11 @@ from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import RequestFlags
 from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.settings import userprefs
+from .core.type_converters import range_to_region
 from .core.views import diagnostic_icon
 from .core.views import DIAGNOSTIC_STYLES
 from .core.views import document_highlight_key
 from .core.views import make_command_link
-from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any
@@ -442,7 +442,7 @@ class SessionView:
         return f'lsp_code_lens.{self.session.config.name}'
 
     def _code_lens_region(self, code_lens: ResolvedCodeLens) -> sublime.Region:
-        return range_to_region(code_lens['range'], self.view)
+        return range_to_region(self.view, code_lens['range'])
 
     def _code_lens_html(self, code_lens: ResolvedCodeLens) -> str:
         command = code_lens['command']

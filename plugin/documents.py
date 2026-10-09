@@ -52,6 +52,7 @@ from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.signature_help import SignatureHelpStyle
+from .core.type_converters import range_to_region
 from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
@@ -67,7 +68,6 @@ from .core.views import first_selection_region
 from .core.views import format_diagnostics_for_html
 from .core.views import make_link
 from .core.views import MissingUriError
-from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
@@ -917,7 +917,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             response = []
         kind2regions: dict[tuple[DocumentHighlightKind, bool], list[sublime.Region]] = {}
         for highlight in response:
-            r = range_to_region(highlight["range"], self.view)
+            r = range_to_region(self.view, highlight["range"])
             multiline = len(self.view.split_by_newlines(r)) > 1
             if multiline and not userprefs().show_multiline_document_highlights:
                 continue
@@ -944,7 +944,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if not response:
             return
         regions = [
-            range_to_region(folding_range_to_range(folding_range), self.view)
+            range_to_region(self.view, folding_range_to_range(folding_range))
             for kind in kinds
             for folding_range in response if kind == folding_range.get('kind')
         ]

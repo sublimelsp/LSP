@@ -54,6 +54,7 @@ from .protocol import TextPosition
 from .settings import userprefs
 from .type_converters import point_to_offset as _point_to_offset
 from .type_converters import position_to_offset as _position_to_offset
+from .type_converters import range_to_region as _range_to_region
 from .url import encode_code_action_uri
 from .url import parse_uri
 from .workspace import is_subpath_of
@@ -219,8 +220,9 @@ def get_symbol_kind_from_scope(scope_name: str) -> Kind:
     return best_kind
 
 
+@deprecated('Use range_to_region(view, lsp_range) from the LSP.plugin module instead')
 def range_to_region(lsp_range: Range, view: sublime.View) -> sublime.Region:
-    return sublime.Region(_position_to_offset(view, lsp_range['start']), _position_to_offset(view, lsp_range['end']))
+    return _range_to_region(view, lsp_range)
 
 
 def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
@@ -735,7 +737,7 @@ def lsp_color_to_html(color_info: ColorInformation) -> str:
 
 
 def lsp_color_to_phantom(view: sublime.View, color_info: ColorInformation) -> sublime.Phantom:
-    region = range_to_region(color_info['range'], view)
+    region = _range_to_region(view, color_info['range'])
     return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.PhantomLayout.INLINE)
 
 

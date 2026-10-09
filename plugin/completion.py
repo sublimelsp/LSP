@@ -24,11 +24,11 @@ from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.sessions import Session
 from .core.settings import userprefs
+from .core.type_converters import range_to_region
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import FORMAT_STRING
 from .core.views import html_wrapper
 from .core.views import minihtml
-from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from typing import Any
@@ -347,7 +347,7 @@ class LspSelectCompletionCommand(LspTextCommand):
         item = completion_with_defaults(items[index], item_defaults)
         if text_edit := item.get("textEdit"):
             new_text = text_edit["newText"].replace("\r", "")
-            edit_region = range_to_region(get_text_edit_range(text_edit), self.view)
+            edit_region = range_to_region(self.view, get_text_edit_range(text_edit))
             for region in self._translated_regions(edit_region):
                 self.view.erase(edit, region)
         else:

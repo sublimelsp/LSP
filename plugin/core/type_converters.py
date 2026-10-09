@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from .protocol import TextPosition
 from typing import TYPE_CHECKING
+import sublime
 
 if TYPE_CHECKING:
     from ...protocol import Position
-    import sublime
+    from ...protocol import Range
 
 # TODO: Move these functions back into views.py once the deprecated variants with the old argument order are removed.
 
@@ -18,3 +19,7 @@ def point_to_offset(view: sublime.View, point: TextPosition) -> int:
 
 def position_to_offset(view: sublime.View, position: Position) -> int:
     return point_to_offset(view, TextPosition.from_lsp(position))
+
+
+def range_to_region(view: sublime.View, lsp_range: Range) -> sublime.Region:
+    return sublime.Region(position_to_offset(view, lsp_range['start']), position_to_offset(view, lsp_range['end']))

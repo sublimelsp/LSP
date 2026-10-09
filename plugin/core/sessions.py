@@ -904,6 +904,11 @@ class AbstractViewListener(ABC):
     async def purge_changes(self) -> list[BaseException | None]:
         raise NotImplementedError
 
+    @deprecated("use AbstractViewListener.purge_changes instead")
+    @abstractmethod
+    def purge_changes_async(self) -> None:
+        raise NotImplementedError
+
     @abstractmethod
     async def trigger_on_pre_save(self) -> list[BaseException | None]:
         raise NotImplementedError

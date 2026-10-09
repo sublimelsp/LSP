@@ -261,3 +261,33 @@ class TaskContainer:
                 on_asyncio_thread()
 
         return Promise(executor_func)
+
+    def create_task_and_wrap_in_compat_promise(
+        self, coro: Coroutine[Any, Any, T], name: str | None = None
+    ) -> Promise[T]:
+        """
+        Like :py:meth:`create_task_and_wrap_in_promise` but the Promise resolves with the result of the coroutine only.
+
+        Used for keeping backwards-compatibility of Promise-based APIs that have been replaced by coroutines. If the
+        coroutine raises (the exception is logged) or is cancelled, the returned Promise never resolves.
+        """
+
+        def executor_func(resolve: ResolveFunc[T]) -> None:
+
+            def on_asyncio_thread() -> None:
+                task = self.create_task(coro, name=name)
+
+                def handle_on_done(f: asyncio.Future[T]) -> None:
+                    if not f.cancelled() and not f.exception():
+                        resolve(f.result())
+
+                task.add_done_callback(handle_on_done)
+
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                run_on_asyncio_thread(on_asyncio_thread)
+            else:
+                on_asyncio_thread()
+
+        return Promise(executor_func)

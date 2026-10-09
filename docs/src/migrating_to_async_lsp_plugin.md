@@ -56,6 +56,24 @@ on_opened(await session.open_location(location) or None)
 
 `Session.open_scratch_buffer` still returns a `Promise`, which can be both chained with `.then()` and awaited.
 
+### Replace `purge_changes_async` with `purge_changes`
+
+The view listener's `purge_changes_async` method, used to send pending document changes to the server before making a request, is deprecated in favor of the `async` method `purge_changes`. The deprecated method only schedules the changes to be sent and returns before they are, while awaiting `purge_changes` guarantees that they have been sent.
+
+```python
+# Before
+view_listener.purge_changes_async()
+session.send_request_task(request).then(on_result)
+```
+
+```python
+# After
+await view_listener.purge_changes()
+on_result(await session.request(request))
+```
+
+`SessionBuffer.purge_changes_async` was removed. Use the view listener's `purge_changes` instead.
+
 ### Replace `sublime.set_timeout_async` with `run_coroutine` or `run_on_asyncio_thread`.
 
 Before the LSP package used `asyncio` and `async` functions, the common pattern to use a `Session` object and its methods was to run code on Sublime's "async", or "worker" thread.

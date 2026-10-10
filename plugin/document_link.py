@@ -6,8 +6,8 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
+from .core.type_converters import range_to_region
 from .core.url import parse_uri
-from .core.views import range_to_region
 from .core.views import text_document_identifier
 from functools import partial
 from typing import TYPE_CHECKING
@@ -47,7 +47,7 @@ class LspOpenLinkCommand(LspTextCommand):
 
     def _on_response_async(self, session: Session, point: int, response: list[DocumentLink] | None) -> None:
         for link in response or []:
-            if range_to_region(link['range'], self.view).contains(point):
+            if range_to_region(self.view, link['range']).contains(point):
                 if (uri := link.get('target')) is not None:
                     self._open_uri_async(session, uri)
                 elif session.has_capability('documentLinkProvider.resolveProvider'):

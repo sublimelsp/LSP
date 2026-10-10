@@ -23,6 +23,7 @@ from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import userprefs
+from .core.type_converters import range_to_region
 from .core.url import CODE_ACTION_SCHEME
 from .core.url import decode_code_action_uri
 from .core.url import decode_document_link_uri
@@ -36,7 +37,6 @@ from .core.views import html_wrapper
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import minihtml
-from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
@@ -206,7 +206,7 @@ class LspHoverCommand(LspTextCommand):
 
     def _process_cached_document_links_async(self, point: int) -> None:
         for link in self._document_link_cache[2]:
-            if range_to_region(link['range'], self.view).contains(point):
+            if range_to_region(self.view, link['range']).contains(point):
                 session_name = self._document_link_cache[0]
                 version = self._document_link_cache[1]
                 self._document_link = (session_name, version, link)
@@ -237,7 +237,7 @@ class LspHoverCommand(LspTextCommand):
         if self._document_link is None:
             return "", None
         session_name, version, link = self._document_link
-        region = range_to_region(link['range'], self.view)
+        region = range_to_region(self.view, link['range'])
         title = link.get('tooltip')
         tooltip = f' title="{html.escape(title)}"' if title else ""
         if (uri := link.get('target')) is not None:
@@ -260,7 +260,7 @@ class LspHoverCommand(LspTextCommand):
     def hover_range(self) -> sublime.Region | None:
         for hover, _ in self._hover_responses:
             if hover_range := hover.get('range'):
-                return range_to_region(hover_range, self.view)
+                return range_to_region(self.view, hover_range)
         return None
 
     def show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:

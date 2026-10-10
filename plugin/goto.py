@@ -15,12 +15,12 @@ from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.settings import userprefs
 from .core.type_converters import position_to_offset
+from .core.type_converters import range_to_region
 from .core.types import method_to_capability
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import get_symbol_kind_from_scope
-from .core.views import range_to_region
 from .core.views import text_document_position_params
 from .core.views import to_encoded_filename
 from .core.views import uri_from_view
@@ -328,7 +328,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             if self.uri.startswith('file:'):
                 self._open_file(value, transient=True)
             elif self._preview:
-                self._preview.show_at_center(range_to_region(diagnostic['range'], self._preview))
+                self._preview.show_at_center(range_to_region(self._preview, diagnostic['range']))
             source = diagnostic.get('source', '')
             if code := str(diagnostic.get('code', '')):
                 if code_description := diagnostic.get('codeDescription'):

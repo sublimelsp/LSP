@@ -53,6 +53,7 @@ from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
+from .core.type_converters import range_to_region
 from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
@@ -71,7 +72,6 @@ from .core.views import first_selection_region
 from .core.views import formatting_options
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
-from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
@@ -607,7 +607,7 @@ class SessionBuffer:
             view = self.some_view()
             if not view:
                 return
-            regions = [range_to_region(link["range"], view) for link in self._document_links]
+            regions = [range_to_region(view, link["range"]) for link in self._document_links]
             for sv in self.session_views:
                 sv.view.add_regions(
                     RegionKey.DOCUMENT_LINK, regions, scope="markup.underline.link.lsp", flags=DOCUMENT_LINK_FLAGS)
@@ -617,7 +617,7 @@ class SessionBuffer:
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> DocumentLink | None:
         for link in self._document_links:
-            if range_to_region(link["range"], view).contains(point):
+            if range_to_region(view, link["range"]).contains(point):
                 return link
         return None
 
@@ -714,7 +714,7 @@ class SessionBuffer:
         diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
         data_per_severity: dict[tuple[DiagnosticSeverity, bool], DiagnosticSeverityData] = {}
         for diagnostic in raw_diagnostics:
-            region = range_to_region(diagnostic["range"], view)
+            region = range_to_region(view, diagnostic["range"])
             severity = diagnostic_severity(diagnostic)
             key = (severity, len(view.split_by_newlines(region)) > 1)
             data = data_per_severity.get(key)

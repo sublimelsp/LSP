@@ -4,6 +4,8 @@ from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
 from typing import Iterable
 from typing import Literal
+from typing import Optional
+from typing import Tuple
 import html
 import sublime
 
@@ -30,7 +32,8 @@ OUTPUT_PANEL_SETTINGS = {
     "word_wrap": False
 }
 
-ButtonStyle = Literal['primary', 'secondary']
+# The link target, the label and the optional style of a button.
+PanelButton = Tuple[str, str, Optional[Literal['primary', 'secondary']]]
 
 BUTTONS_TEMPLATE = """
 <style>
@@ -67,7 +70,7 @@ BUTTONS_TEMPLATE = """
 <body id='lsp-buttons'>{buttons}</body>"""
 
 
-def buttons_html(buttons: Iterable[tuple[str, str, ButtonStyle | None]]) -> str:
+def buttons_html(buttons: Iterable[PanelButton]) -> str:
     """
     Render a row of buttons for a phantom in an output panel.
 

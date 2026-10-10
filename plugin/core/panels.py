@@ -3,6 +3,7 @@ from __future__ import annotations
 from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
 from typing import Iterable
+from typing import Literal
 import html
 import sublime
 
@@ -28,6 +29,8 @@ OUTPUT_PANEL_SETTINGS = {
     "translate_tabs_to_spaces": False,
     "word_wrap": False
 }
+
+ButtonStyle = Literal['primary', 'secondary']
 
 BUTTONS_TEMPLATE = """
 <style>
@@ -56,19 +59,24 @@ BUTTONS_TEMPLATE = """
     a.primary, html.light a.primary {{
         background-color: color(var(--accent) min-contrast(white 6.0));
     }}
+    a.secondary, html.light a.secondary {{
+        color: color(var(--foreground) alpha(0.7));
+        background-color: transparent;
+    }}
 </style>
 <body id='lsp-buttons'>{buttons}</body>"""
 
 
-def buttons_html(buttons: Iterable[tuple[str, str, bool]]) -> str:
+def buttons_html(buttons: Iterable[tuple[str, str, ButtonStyle | None]]) -> str:
     """
     Render a row of buttons for a phantom in an output panel.
 
-    Each button is given as a tuple of the link target, the label and whether it is the primary button.
+    Each button is given as a tuple of the link target, the label and an optional style, which is either `primary` for
+    a highlighted button or `secondary` for a less prominent one.
     """
     return BUTTONS_TEMPLATE.format(buttons="&nbsp;".join(
-        "<a href='{}'{}>{}</a>".format(href, " class='primary'" if primary else "", html.escape(label))
-        for href, label, primary in buttons
+        "<a href='{}'{}>{}</a>".format(href, f" class='{style}'" if style else "", html.escape(label))
+        for href, label, style in buttons
     ))
 
 

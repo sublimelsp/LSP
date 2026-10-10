@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from ...protocol import MessageType
     from ...protocol import ShowMessageParams
     from ...protocol import ShowMessageRequestParams
+    from .panels import ButtonStyle
 
 MAX_MESSAGES = 100
 INDENT = "    "
@@ -68,8 +69,10 @@ class MessageEntry:
         return "\n".join(lines)
 
     def render_buttons(self) -> str:
-        buttons = [(str(idx), action['title'], idx == 0) for idx, action in enumerate(self.actions)]
-        buttons.append((DISMISS_HREF, "Dismiss", False))
+        buttons: list[tuple[str, str, ButtonStyle | None]] = [
+            (str(idx), action['title'], None) for idx, action in enumerate(self.actions)
+        ]
+        buttons.append((DISMISS_HREF, "Dismiss", 'secondary'))
         return buttons_html(buttons)
 
 

@@ -357,7 +357,7 @@ def _render_workspace_edit_panel(
             ]
         })
 
-    content = buttons_html([(command_url(True), 'Apply', True), (command_url(False), 'Discard', False)])
+    content = buttons_html([(command_url(True), 'Apply', 'primary'), (command_url(False), 'Discard', None)])
     pm.update_workspace_edit_panel_buttons([
         sublime.Phantom(sublime.Region(len(to_render[0]) - 1), content, sublime.PhantomLayout.BLOCK)
     ])

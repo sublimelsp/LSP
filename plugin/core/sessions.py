@@ -1395,7 +1395,7 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
                 if command_handler := self._plugin.get_command_handler(command_name):
-                    return command_handler(command.get('arguments'))
+                    return self._run_command_handler(command_handler, command)
             else:
                 task: PackagedTask[R | Error | None] = Promise.packaged_task()
                 promise, resolve = task
@@ -1444,6 +1444,24 @@ class Session(APIHandler, TransportCallbacks):
             self._is_executing_refactoring_command = True
             execute_command_promise.then(lambda _: self._reset_is_executing_refactoring_command())
         return execute_command_promise
+
+    def _run_command_handler(
+        self, command_handler: Callable[[Any], Promise[Any]], command: ExecuteCommandParams
+    ) -> Promise[Any]:
+        """Runs a plugin command handler on the async thread, whichever thread the command was executed from."""
+        task: PackagedTask[Any] = Promise.packaged_task()
+        promise, resolve = task
+        arguments = command.get('arguments')
+
+        def run_async() -> None:
+            try:
+                command_handler(arguments).then(resolve)
+            except Exception as ex:
+                exception_log(f"Error running command handler for {command['command']}", ex)
+                resolve(Error.from_exception(ex))
+
+        sublime.set_timeout_async(run_async)
+        return promise
 
     def _reset_is_executing_refactoring_command(self) -> None:
         self._is_executing_refactoring_command = False

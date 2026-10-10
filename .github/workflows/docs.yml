@@ -19,13 +19,8 @@ jobs:
     steps:
       - uses: actions/configure-pages@v6
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: 3.x
-      - run: |
-          cd docs
-          pip install zensical
-          zensical build --clean
+      - uses: astral-sh/setup-uv@v10.2.0
+      - run: make -C docs build
       - uses: actions/upload-pages-artifact@v5
         with:
           path: docs/site

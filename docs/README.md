@@ -1,17 +1,15 @@
 # Welcome to Zensical
 
 Install:
- - Zensical - https://zensical.org/docs/get-started/
+ - uv - https://docs.astral.sh/uv/getting-started/installation/
 
-```sh
-pip install zensical
-```
+Zensical is installed automatically by uv, using the version pinned in `requirements.txt`.
 
 ## Commands
 
-* `zensical serve` - Start the live-reloading docs server.
-* `zensical build` - Build the documentation site.
-* `zensical --help` - Print help message and exit.
+* `make serve` - Start the live-reloading docs server.
+* `make build` - Build the documentation site.
+* `make clean` - Remove the built site.
 
 ## Project layout
 

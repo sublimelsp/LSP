@@ -167,7 +167,7 @@ class CodeActionsManager:
     def _collect_code_actions_async(
         self,
         listener: AbstractViewListener,
-        request_factory: Callable[[SessionBufferProtocol], Request[CodeActionParams, list[CodeActionOrCommand] | None] | None],  # noqa: E501
+        request_factory: Callable[[SessionBufferProtocol], Request[CodeActionParams, list[CodeActionOrCommand] | None] | None],  # ruff: ignore[line-too-long]
         response_filter: Callable[[SessionBufferProtocol, list[CodeActionOrCommand]], list[CodeActionOrCommand]],
     ) -> Promise[list[CodeActionsByConfigName]]:
 

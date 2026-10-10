@@ -44,7 +44,6 @@ class LspSaveCommand(LspTextCommandWithTasks):
 
 class LspSaveAllCommand(sublime_plugin.WindowCommand):
 
-    @override
     def run(self, only_files: bool = False) -> None:
         done: set[int] = set()
         for view in self.window.views():

@@ -13,10 +13,10 @@ from typing import List
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
-from typing import TypedDict
 from typing import Union
 from typing_extensions import NotRequired
 from typing_extensions import TypeAlias
+from typing_extensions import TypedDict
 
 URI = str
 DocumentUri = str
@@ -1052,7 +1052,7 @@ class ImplementationParams(TypedDict):
     """
 
 
-class Location(TypedDict):
+class Location(TypedDict, closed=True):
     """
     Represents a location inside a resource, such as a line
     inside a text file.
@@ -1141,7 +1141,7 @@ class DocumentColorParams(TypedDict):
     """
 
 
-class ColorInformation(TypedDict):
+class ColorInformation(TypedDict, closed=True):
     """Represents a color range from a document."""
 
     range: 'Range'
@@ -2619,7 +2619,7 @@ class WillSaveTextDocumentParams(TypedDict):
     """The 'TextDocumentSaveReason'."""
 
 
-class TextEdit(TypedDict):
+class TextEdit(TypedDict, closed=True):
     """A text edit applicable to a text document."""
 
     range: 'Range'
@@ -3446,7 +3446,7 @@ class WorkspaceSymbolParams(TypedDict):
     """
 
 
-class WorkspaceSymbol(TypedDict):
+class WorkspaceSymbol(TypedDict, closed=True):
     """
     A special workspace symbol that supports locations without a range.
 
@@ -3951,7 +3951,7 @@ class LocationLink(TypedDict):
     """
 
 
-class Range(TypedDict):
+class Range(TypedDict, closed=True):
     """
     A range in a text document expressed as (zero-based) start and end positions.
 
@@ -4016,7 +4016,7 @@ class TextDocumentIdentifier(TypedDict):
     """The text document's uri."""
 
 
-class Color(TypedDict):
+class Color(TypedDict, closed=True):
     """Represents a color in RGBA space."""
 
     red: float
@@ -4041,7 +4041,7 @@ class DeclarationOptions(TypedDict):
     workDoneProgress: NotRequired[bool]
 
 
-class Position(TypedDict):
+class Position(TypedDict, closed=True):
     r"""
     Position in a text document expressed as zero-based line and character
     offset. Prior to 3.17 the offsets were always based on a UTF-16 string
@@ -4401,7 +4401,7 @@ class InlayHintLabelPart(TypedDict):
     """
 
 
-class MarkupContent(TypedDict):
+class MarkupContent(TypedDict, closed=True):
     r"""
     A `MarkupContent` literal represents a string value which content is interpreted base on its
     kind flag. Currently the protocol supports `plaintext` and `markdown` as markup kinds.
@@ -4995,7 +4995,7 @@ class FileSystemWatcher(TypedDict):
     """
 
 
-class Diagnostic(TypedDict):
+class Diagnostic(TypedDict, closed=True):
     """
     Represents a diagnostic, such as a compiler error or warning. Diagnostic objects
     are only valid in the scope of a resource.
@@ -5487,7 +5487,7 @@ class CodeActionOptions(TypedDict):
     workDoneProgress: NotRequired[bool]
 
 
-class LocationUriOnly(TypedDict):
+class LocationUriOnly(TypedDict, closed=True):
     """
     Location with only uri and does not include range.
 
@@ -5661,7 +5661,7 @@ class OptionalVersionedTextDocumentIdentifier(TypedDict):
     """The text document's uri."""
 
 
-class AnnotatedTextEdit(TypedDict):
+class AnnotatedTextEdit(TypedDict, closed=True):
     """
     A special text edit with an additional change annotation.
 
@@ -5682,7 +5682,7 @@ class AnnotatedTextEdit(TypedDict):
     """
 
 
-class SnippetTextEdit(TypedDict):
+class SnippetTextEdit(TypedDict, closed=True):
     """
     An interactive text edit.
 
@@ -6029,7 +6029,7 @@ class TextDocumentContentChangeWholeDocument(TypedDict):
     """The new text of the whole document."""
 
 
-class CodeDescription(TypedDict):
+class CodeDescription(TypedDict, closed=True):
     """
     Structure to capture a description for an error code.
 
@@ -6040,7 +6040,7 @@ class CodeDescription(TypedDict):
     """An URI to open with more information about the diagnostic error."""
 
 
-class DiagnosticRelatedInformation(TypedDict):
+class DiagnosticRelatedInformation(TypedDict, closed=True):
     """
     Represents a related message and source code location for a diagnostic. This should be
     used to point to code locations that cause or related to a diagnostics, e.g when duplicating

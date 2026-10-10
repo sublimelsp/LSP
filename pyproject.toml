@@ -1,9 +1,27 @@
+[project]
+name = "LSP"
+version = "1.0.0"
+requires-python = ">=3.8"
+
 [dependency-groups]
-lint = [
-    "pyright==1.1.414",
-    "ruff==0.17.0",
-    "orjson==3.13.0",
+dev = [
+  "pyrefly>=1.3.2",
 ]
+lint = [
+  "orjson==3.13.0",
+  "pyright==1.1.414",
+  "ruff==0.17.0",
+  "sublime-text-stubs>=1.4200.0b2",
+]
+
+[tool.pyrefly]
+python-version = "3.8.0"
+site-package-path = ["./stubs"]
+infer-with-first-use = false
+
+[tool.pyrefly.errors]
+bad-override = "ignore"
+missing-source = "ignore"
 
 [tool.pyright]
 pythonVersion = "3.8"
@@ -12,22 +30,10 @@ reportMissingModuleSource = "none"
 stubPath = "./stubs"
 typeCheckingMode = "standard"
 
-[tool.tox]
-requires = ["tox>=4.22"]
-env_list = ["py3"]
-skipsdist = true
-
-[tool.tox.env_run_base]
-dependency_groups = ["lint"]
-commands = [
-    ["pyright", "plugin", "stubs"],
-    ["ruff", "check"],
-]
-
 [tool.ruff]
 exclude = [
-    "third_party",
-    "stubs"
+  "third_party",
+  "stubs",
 ]
 line-length = 120
 target-version = "py38"
@@ -39,6 +45,108 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 # Automatically detect the appropriate line ending.
 line-ending = "auto"
+
+[tool.ruff.lint]
+# Enable preview rules.
+preview = true
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+select = ["ALL"]
+# Refer to https://docs.astral.sh/ruff/rules/
+ignore = [
+  "any-type",
+  "unused-method-argument",
+  "unused-class-method-argument",
+  "unused-lambda-argument",
+  "set-attr-with-constant",
+  "BLE",  # blind-except
+  "unnecessary-generator-set",
+  "complex-structure",
+  "missing-trailing-comma",
+  "missing-copyright-notice",
+  "undocumented-public-module",
+  "undocumented-public-class",
+  "undocumented-public-method",
+  "undocumented-public-function",
+  "undocumented-public-package",
+  "undocumented-magic-method",
+  "undocumented-public-init",
+  "incorrect-blank-line-before-class",
+  "missing-blank-line-after-summary",
+  "multi-line-summary-first-line",
+  "non-imperative-mood",
+  "missing-blank-line-after-last-section",
+  "docstring-missing-returns",
+  "docstring-missing-yields",
+  "docstring-missing-exception",
+  "call-datetime-now-without-tzinfo",
+  "EM",  # flake8-errmsg-em
+  "commented-out-code",
+  "boolean-type-hint-positional-argument",
+  "boolean-default-value-positional-argument",
+  "boolean-positional-value-in-call",
+  "FIX",  # flake8-fixme-fix
+  "invalid-function-name",
+  "try-except-in-loop",
+  "blanket-type-ignore",
+  "blanket-noqa",
+  "unnecessary-placeholder",
+  "import-outside-top-level",
+  "import-private-name",
+  "too-many-public-methods",
+  "too-many-return-statements",
+  "too-many-branches",
+  "too-many-arguments",
+  "too-many-locals",
+  "too-many-statements",
+  "too-many-positional-arguments",
+  "too-many-nested-blocks",
+  "magic-value-comparison",
+  "no-self-use",
+  "global-statement",
+  "too-many-statements-in-try-clause",
+  "redefined-loop-name",
+  "pytest-unittest-assertion",
+  "pytest-unittest-raises-assertion",
+  "os-path-abspath",
+  "os-getcwd",
+  "os-path-exists",
+  "os-path-expanduser",
+  "os-path-isdir",
+  "os-path-isfile",
+  "os-path-join",
+  "os-path-basename",
+  "os-path-dirname",
+  "os-path-samefile",
+  "os-path-splitext",
+  "os-listdir",
+  "Q",  # flake8-quotes
+  "ambiguous-unicode-character-string",
+  "mutable-class-default",
+  "unsorted-dunder-slots",
+  "incorrectly-parenthesized-tuple-in-subscript",
+  "non-empty-init-module",
+  "assert",
+  "try-except-pass",
+  "suspicious-eval-usage",
+  "suspicious-url-open-usage",
+  "suspicious-subprocess-import",
+  "subprocess-without-shell-equals-true",
+  "start-process-with-no-shell",
+  "collapsible-if",
+  "needless-bool",
+  "suppressible-exception",
+  "reimplemented-builtin",
+  "private-member-access",
+  "T20",  # flake8-print-t20
+  "invalid-todo-tag",
+  "missing-todo-author",
+  "missing-todo-link",
+  "relative-imports",
+  "raise-vanilla-class",
+  "raise-vanilla-args",
+  "raise-within-try",
+]
 
 [tool.ruff.lint.isort]
 case-sensitive = false
@@ -53,113 +161,14 @@ required-imports = ["from __future__ import annotations"]
 "protocol/__init__.py" = ["missing-trailing-period", "missing-terminal-punctuation", "noqa-comments"]
 "plugin/core/protocol.py" = ["non-pep585-annotation", "non-pep604-annotation-union"]
 
-[tool.ruff.lint]
-# Enable preview rules.
-preview = true
-# Allow fix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
-select = ["ALL"]
-# Refer to https://docs.astral.sh/ruff/rules/
-ignore = [
-    "any-type",
-    "unused-method-argument",
-    "unused-class-method-argument",
-    "unused-lambda-argument",
-    "set-attr-with-constant",
-    "BLE",  # blind-except
-    "unnecessary-generator-set",
-    "complex-structure",
-    "missing-trailing-comma",
-    "missing-copyright-notice",
-    "undocumented-public-module",
-    "undocumented-public-class",
-    "undocumented-public-method",
-    "undocumented-public-function",
-    "undocumented-public-package",
-    "undocumented-magic-method",
-    "undocumented-public-init",
-    "incorrect-blank-line-before-class",
-    "missing-blank-line-after-summary",
-    "multi-line-summary-first-line",
-    "non-imperative-mood",
-    "missing-blank-line-after-last-section",
-    "docstring-missing-returns",
-    "docstring-missing-yields",
-    "docstring-missing-exception",
-    "call-datetime-now-without-tzinfo",
-    "EM",  # flake8-errmsg-em
-    "commented-out-code",
-    "boolean-type-hint-positional-argument",
-    "boolean-default-value-positional-argument",
-    "boolean-positional-value-in-call",
-    "FIX",  # flake8-fixme-fix
-    "invalid-function-name",
-    "try-except-in-loop",
-    "blanket-type-ignore",
-    "blanket-noqa",
-    "unnecessary-placeholder",
-    "import-outside-top-level",
-    "import-private-name",
-    "too-many-public-methods",
-    "too-many-return-statements",
-    "too-many-branches",
-    "too-many-arguments",
-    "too-many-locals",
-    "too-many-statements",
-    "too-many-positional-arguments",
-    "too-many-nested-blocks",
-    "magic-value-comparison",
-    "no-self-use",
-    "global-statement",
-    "too-many-statements-in-try-clause",
-    "redefined-loop-name",
-    "pytest-unittest-assertion",
-    "pytest-unittest-raises-assertion",
-    "os-path-abspath",
-    "os-getcwd",
-    "os-path-exists",
-    "os-path-expanduser",
-    "os-path-isdir",
-    "os-path-isfile",
-    "os-path-join",
-    "os-path-basename",
-    "os-path-dirname",
-    "os-path-samefile",
-    "os-path-splitext",
-    "os-listdir",
-    "Q",  # flake8-quotes
-    "ambiguous-unicode-character-string",
-    "mutable-class-default",
-    "unsorted-dunder-slots",
-    "incorrectly-parenthesized-tuple-in-subscript",
-    "non-empty-init-module",
-    "assert",
-    "try-except-pass",
-    "suspicious-eval-usage",
-    "suspicious-url-open-usage",
-    "suspicious-subprocess-import",
-    "subprocess-without-shell-equals-true",
-    "start-process-with-no-shell",
-    "collapsible-if",
-    "needless-bool",
-    "suppressible-exception",
-    "reimplemented-builtin",
-    "private-member-access",
-    "T20",  # flake8-print-t20
-    "invalid-todo-tag",
-    "missing-todo-author",
-    "missing-todo-link",
-    "relative-imports",
-    "raise-vanilla-class",
-    "raise-vanilla-args",
-    "raise-within-try",
+[tool.tox]
+requires = ["tox>=4.22"]
+env_list = ["py3"]
+skipsdist = true
+
+[tool.tox.env_run_base]
+dependency_groups = ["lint"]
+commands = [
+  ["pyright", "plugin", "stubs"],
+  ["ruff", "check"],
 ]
-
-[tool.pyrefly]
-python-version = "3.8.0"
-site-package-path = ["./stubs"]
-infer-with-first-use = false
-
-[tool.pyrefly.errors]
-bad-override = "ignore"
-missing-source = "ignore"

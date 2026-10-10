@@ -8,7 +8,6 @@ from functools import partial
 from typing import Any
 from typing import Callable
 from typing import final
-from typing_extensions import override
 import sublime
 
 
@@ -125,7 +124,6 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
         self._tasks_runner = None
         self.on_tasks_completed(**kwargs)
 
-    @override
     def run(self, edit: sublime.Edit, **kwargs: dict[str, Any]) -> None:
         if self._tasks_runner:
             self._tasks_runner.cancel()

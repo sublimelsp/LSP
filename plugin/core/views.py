@@ -178,12 +178,14 @@ def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = Tru
 
 
 def extract_variables(window: sublime.Window) -> dict[str, str]:
-    variables = window.extract_variables()
-    variables["storage_path"] = ST_STORAGE_PATH
-    variables["cache_path"] = ST_CACHE_PATH
-    variables["temp_dir"] = tempfile.gettempdir()
-    variables["home"] = expanduser('~')
-    return variables
+    return {
+        # `WindowVariables` type should use `extra_types=dict[str, str]` when on py-3.15.
+        **cast('dict[str, str]', window.extract_variables()),
+        "storage_path": ST_STORAGE_PATH,
+        "cache_path": ST_CACHE_PATH,
+        "temp_dir": tempfile.gettempdir(),
+        "home": expanduser('~'),
+    }
 
 
 @deprecated('Use point_to_offset(view, point) from the LSP.plugin module instead')

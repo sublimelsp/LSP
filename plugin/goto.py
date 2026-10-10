@@ -32,7 +32,7 @@ from os.path import basename
 from pathlib import Path
 from typing import Any
 from typing import TYPE_CHECKING
-from typing import TypedDict
+from typing_extensions import TypedDict
 import sublime
 import sublime_plugin
 
@@ -155,7 +155,7 @@ class LspSymbolImplementationCommand(LspGotoCommand):
     placeholder_text = "Implementations of"
 
 
-class DiagnosticData(TypedDict):
+class DiagnosticData(TypedDict, closed=True):
     session_name: str
     diagnostic: Diagnostic
 

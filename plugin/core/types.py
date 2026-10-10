@@ -343,7 +343,7 @@ class Settings:
         r("show_diagnostics_panel_on_save", 0)
         r("show_diagnostics_severity_level", 2)
         r("show_inlay_hints", False)
-        r("show_messages_panel_level", 3)
+        r("show_messages_panel_level", 1)
         r("show_multiline_diagnostics_highlights", True)
         r("show_multiline_document_highlights", True)
         r("show_references_in_quick_panel", True)

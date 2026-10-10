@@ -40,6 +40,40 @@ All of these methods are superseded by the `request` method. You can read the do
 
 Because `Session.request` is an `async` method, it is _required_ to be invoked from another `async` function/method. One way to accomplish this is to replace various methods of LspPlugin with their async counterparts, or use one of the two utility functions described in the next section.
 
+### Replace `Session.open_uri_async` and `Session.open_location_async`
+
+The Promise-based `Session.open_uri_async` and `Session.open_location_async` methods are deprecated in favor of the `async` methods `Session.open_uri` and `Session.open_location`. Note that the new methods return `False` instead of `None` when the URI can't be handled.
+
+```python
+# Before
+session.open_location_async(location).then(on_opened)
+```
+
+```python
+# After
+on_opened(await session.open_location(location) or None)
+```
+
+`Session.open_scratch_buffer` still returns a `Promise`, which can be both chained with `.then()` and awaited.
+
+### Replace `purge_changes_async` with `purge_changes`
+
+The view listener's `purge_changes_async` method, used to send pending document changes to the server before making a request, is deprecated in favor of the `async` method `purge_changes`. The deprecated method only schedules the changes to be sent and returns before they are, while awaiting `purge_changes` guarantees that they have been sent.
+
+```python
+# Before
+view_listener.purge_changes_async()
+session.send_request_task(request).then(on_result)
+```
+
+```python
+# After
+await view_listener.purge_changes()
+on_result(await session.request(request))
+```
+
+`SessionBuffer.purge_changes_async` was removed. Use the view listener's `purge_changes` instead.
+
 ### Replace `sublime.set_timeout_async` with `run_coroutine` or `run_on_asyncio_thread`.
 
 Before the LSP package used `asyncio` and `async` functions, the common pattern to use a `Session` object and its methods was to run code on Sublime's "async", or "worker" thread.

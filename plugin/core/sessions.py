@@ -904,6 +904,11 @@ class AbstractViewListener(ABC):
     async def purge_changes(self) -> list[BaseException | None]:
         raise NotImplementedError
 
+    @deprecated("use AbstractViewListener.purge_changes instead")
+    @abstractmethod
+    def purge_changes_async(self) -> None:
+        raise NotImplementedError
+
     @abstractmethod
     async def trigger_on_pre_save(self) -> list[BaseException | None]:
         raise NotImplementedError
@@ -1640,7 +1645,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             content = response['text'].replace('\r', '')
             syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
             return self._on_view_for_uri_opened(
-                await self.open_scratch_buffer(title, content, syntax, flags, group), uri, r
+                await self._open_scratch_buffer(title, content, syntax, flags, group), uri, r
             )
         # There is no pre-existing session-buffer, so we have to go through the plugin's URI handler.
         if self._plugin:
@@ -1695,13 +1700,29 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             title, content, syntax = await promise
-            view = await self.open_scratch_buffer(title, content, syntax, flags, group)
+            view = await self._open_scratch_buffer(title, content, syntax, flags, group)
             return self._on_view_for_uri_opened(view, uri, r)
         # resolve unused promise
         resolve(('', '', ''))
         return False
 
-    async def open_scratch_buffer(
+    def open_scratch_buffer(
+        self,
+        title: str,
+        content: str,
+        syntax: str,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1,
+    ) -> Promise[sublime.View]:
+        """
+        Open a read-only scratch buffer with the given content.
+
+        The returned Promise can be awaited or chained with `.then()` (for backwards-compatibility).
+        """
+        return self.create_task_and_wrap_in_compat_promise(
+            self._open_scratch_buffer(title, content, syntax, flags, group))
+
+    async def _open_scratch_buffer(
         self,
         title: str,
         content: str,
@@ -1744,6 +1765,33 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> sublime.View | Literal[False] | None:
         uri, r = get_uri_and_range_from_location(location)
         return await self.open_uri(uri, r, flags, group)
+
+    @deprecated("use Session.open_uri instead")
+    def open_uri_async(
+        self,
+        uri: DocumentUri,
+        r: Range | None = None,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1
+    ) -> Promise[sublime.View | None]:
+
+        async def do() -> sublime.View | None:
+            return await self.open_uri(uri, r, flags, group) or None
+
+        return self.create_task_and_wrap_in_compat_promise(do())
+
+    @deprecated("use Session.open_location instead")
+    def open_location_async(
+        self,
+        location: Location | LocationLink,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1
+    ) -> Promise[sublime.View | None]:
+
+        async def do() -> sublime.View | None:
+            return await self.open_location(location, flags, group) or None
+
+        return self.create_task_and_wrap_in_compat_promise(do())
 
     async def notify_plugin_on_session_buffer_change(self, session_buffer: SessionBufferProtocol) -> None:
         if not self._plugin:

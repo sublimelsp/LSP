@@ -1,12 +1,17 @@
-# Minimal makefile for Sphinx documentation
+# Minimal makefile for Zensical documentation
 
-.PHONY: clean
+ZENSICAL = uv run --no-project --python ">=3.10" --with-requirements requirements.txt zensical
+
+.PHONY: install build serve clean
 
 install:
-	pip install zensical
+	$(ZENSICAL) --version
 
 build:
-	zensical build --clean
+	$(ZENSICAL) build --clean
+
+serve:
+	$(ZENSICAL) serve
 
 clean:
 	rm -rf site

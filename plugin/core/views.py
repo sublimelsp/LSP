@@ -87,7 +87,7 @@ if TYPE_CHECKING:
     from sublime_types import Kind
 
 
-_baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+_baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
 _multilineflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO
 
 

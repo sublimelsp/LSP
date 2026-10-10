@@ -218,8 +218,8 @@ def plugin_loaded() -> None:
     base_scope_map = sublime.load_settings("language-ids.sublime-settings")
     if base_scope_map.to_dict():
         def show_warning() -> None:
-            print("LSP - The language-ids.sublime-settings file is deprecated, but it looks like you have it.\nSee the migration guide -> https://github.com/sublimelsp/LSP/issues/2592")  # noqa: E501
-            sublime.status_message("LSP - The language-ids.sublime-settings file is deprecated. Open the Console for details.")  # noqa: E501
+            print("LSP - The language-ids.sublime-settings file is deprecated, but it looks like you have it.\nSee the migration guide -> https://github.com/sublimelsp/LSP/issues/2592")  # ruff: ignore[line-too-long]
+            sublime.status_message("LSP - The language-ids.sublime-settings file is deprecated. Open the Console for details.")  # ruff: ignore[line-too-long]
 
         sublime.set_timeout(show_warning, 5_000)
 
@@ -282,7 +282,7 @@ class Listener(sublime_plugin.EventListener):
             return
         for fn in g_opening_files:
             if fn == file_name or os.path.samefile(fn, file_name):
-                tup = g_opening_files.pop(fn, None)  # noqa: B909
+                tup = g_opening_files.pop(fn, None)  # ruff: ignore[loop-iterator-mutation]
                 if tup:
                     # The view got closed before it finished loading. This can happen.
                     tup[1](None)

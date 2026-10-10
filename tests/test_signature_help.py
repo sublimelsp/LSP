@@ -248,7 +248,7 @@ class SignatureHelpTest(unittest.TestCase):
                 </div>
                 <div class="wrapper--spacer">
             </div>
-            '''  # noqa: E501
+            '''  # ruff: ignore[line-too-long]
         )
 
     def test_dockerfile_signature(self) -> None:

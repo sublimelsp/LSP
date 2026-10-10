@@ -100,8 +100,8 @@ HOVER_ENABLED_KEY = 'lsp_show_hover_popups'
 SHOW_DEFINITIONS_KEY = 'show_definitions'
 
 # Region flags
-DIAGNOSTIC_ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
-DOCUMENT_LINK_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+DIAGNOSTIC_ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
+DOCUMENT_LINK_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
 REGIONS_INITIALIZE_FLAGS = sublime.RegionFlags.HIDDEN | sublime.RegionFlags.NO_UNDO
 SEMANTIC_TOKEN_FLAGS = sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO
 
@@ -232,13 +232,13 @@ MESSAGE_TYPE_LEVELS: dict[MessageType, str] = {
 
 # Symbol scope to kind mapping, based on https://github.com/sublimetext-io/docs.sublimetext.io/issues/30
 SUBLIME_KIND_SCOPES: dict[Kind, str] = {
-    sublime.KIND_KEYWORD: "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language",  # noqa: E501
-    sublime.KIND_TYPE: "entity.name.type | entity.name.class | entity.name.enum | entity.name.trait | entity.name.struct | entity.name.impl | entity.name.interface | entity.name.union | support.type | support.class",  # noqa: E501
-    sublime.KIND_FUNCTION: "entity.name.function | entity.name.method | entity.name.macro | meta.method entity.name.function | support.function | meta.function-call variable.function | meta.function-call support.function | support.method | meta.method-call variable.function",  # noqa: E501
+    sublime.KIND_KEYWORD: "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language",  # ruff: ignore[line-too-long]
+    sublime.KIND_TYPE: "entity.name.type | entity.name.class | entity.name.enum | entity.name.trait | entity.name.struct | entity.name.impl | entity.name.interface | entity.name.union | support.type | support.class",  # ruff: ignore[line-too-long]
+    sublime.KIND_FUNCTION: "entity.name.function | entity.name.method | entity.name.macro | meta.method entity.name.function | support.function | meta.function-call variable.function | meta.function-call support.function | support.method | meta.method-call variable.function",  # ruff: ignore[line-too-long]
     sublime.KIND_NAMESPACE: "entity.name.module | entity.name.namespace | support.module | support.namespace",
     sublime.KIND_NAVIGATION: "entity.name.definition | entity.name.label | entity.name.section",
     sublime.KIND_MARKUP: "entity.other.attribute-name | entity.name.tag | meta.toc-list.id.html",
-    sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
+    sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # ruff: ignore[line-too-long]
 }
 
 DIAGNOSTIC_SEVERITY_SCOPES: dict[DiagnosticSeverity, str] = {

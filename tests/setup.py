@@ -207,7 +207,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
         cls.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
         yield from cls.await_promise(promise)
-        return promise.result()  # noqa: B901
+        return promise.result()  # ruff: ignore[return-in-generator]
 
     def make_server_do_fake_request(self, method: str, params: Any) -> YieldPromise:
         promise = YieldPromise()
@@ -230,7 +230,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             yielder = YieldPromise()
             promise.then(yielder.fulfill)
         yield {"condition": yielder, "timeout": TIMEOUT_TIME}
-        return yielder.result()  # noqa: B901
+        return yielder.result()  # ruff: ignore[return-in-generator]
 
     def await_run_code_action(self, code_action: dict[str, Any]) -> Generator:
         promise = YieldPromise()

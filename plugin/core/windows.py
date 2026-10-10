@@ -28,7 +28,7 @@ from .constants import MESSAGE_TYPE_LEVELS
 from .logging import debug
 from .logging import exception_log
 from .logging import exceptions_log
-from .message_request_handler import MessageRequestHandler
+from .messages_panel import MessagesPanel
 from .panels import LOG_LINES_LIMIT_SETTING_NAME
 from .panels import MAX_LOG_LINES_LIMIT_OFF
 from .panels import MAX_LOG_LINES_LIMIT_ON
@@ -102,6 +102,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         self._panel_code_phantoms: sublime.PhantomSet | None = None
         self._server_log: list[tuple[str, str]] = []
         self.panel_manager: PanelManager | None = PanelManager(self._window)
+        self.messages_panel: MessagesPanel | None = MessagesPanel(self._window, self.panel_manager)
         self.tree_view_sheets: dict[str, TreeViewSheet] = {}
         self.formatters: dict[str, str] = {}
         self.suppress_sessions_restart_on_project_update = False
@@ -355,8 +356,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     async def handle_message_request(
         self, config_name: str, params: ShowMessageRequestParams
     ) -> MessageActionItem | None:
-        if view := self._window.active_view():
-            return await MessageRequestHandler(view, params, config_name).show()
+        if self.messages_panel:
+            return await self.messages_panel.add_request(config_name, params)
         return None
 
     async def restart_sessions(self, config_names: list[str]) -> None:
@@ -444,6 +445,9 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     async def destroy(self) -> None:
         """Destroy everything related to this instance."""
         await self._end_sessions()
+        if self.messages_panel:
+            self.messages_panel.destroy()
+            self.messages_panel = None
         if self.panel_manager:
             self.panel_manager.destroy_output_panels()
             self.panel_manager = None
@@ -485,11 +489,15 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
     @override
     def handle_show_message(self, config_name: str, params: ShowMessageParams) -> None:
-        level = MESSAGE_TYPE_LEVELS[params['type']]
+        level = MESSAGE_TYPE_LEVELS.get(params['type'], "INFO")
         message = params['message']
         msg = f"{config_name}: {level}: {message}"
         debug(msg)
-        self.window.status_message(msg)
+        show_panel = params['type'] <= userprefs().show_messages_panel_level
+        if self.messages_panel:
+            self.messages_panel.add_message(config_name, params, show_panel)
+        if not show_panel:
+            self.window.status_message(msg)
 
     @override
     def on_diagnostics_updated(self) -> None:

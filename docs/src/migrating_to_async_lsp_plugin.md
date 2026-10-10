@@ -13,6 +13,7 @@ Various methods of LspPlugin now have `async` counterparts. Each `async` counter
 |---|---|
 | `on_pre_start_async(context)` | `async on_pre_start(context)` |
 | `on_initialized_async()` | `async on_initialized()` |
+| `on_pre_send_request_async(request, view)` | `async on_pre_send_request(request, view)` |
 | `on_pre_send_response_async(response)` | `async on_pre_send_response(response)` |
 | `on_pre_send_notification_async(notification)` | `async on_pre_send_notification(notification)` |
 | `on_server_request_async(request)` | `async on_server_request(request)` |

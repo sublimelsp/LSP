@@ -2717,15 +2717,26 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
         self._response_handlers[request_id] = (r, on_result, on_error)
         self._invoke_views(r, "on_request_started_async", result, r)
-        if self._plugin and isinstance(self._plugin, AbstractPlugin):
-            self._plugin.on_pre_send_request_async(request_id, r)
-        elif self._plugin:
-            client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
-            self._plugin.on_pre_send_request_async(client_request, r.view)
-            r.params = cast('P_contra', client_request['params'])
-        self._logger.outgoing_request(request_id, r.method, r.params)
-        self.create_task(self.send_payload(r.to_payload(request_id)))
+        self.create_task(self._send_request_payload(request_id, r))
         return result
+
+    async def _send_request_payload(self, request_id: int, r: Request[P_contra, R]) -> None:
+        try:
+            if self._plugin and isinstance(self._plugin, AbstractPlugin):
+                self._plugin.on_pre_send_request_async(request_id, r)
+            elif self._plugin:
+                client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
+                await self._plugin.on_pre_send_request(client_request, r.view)
+                r.params = cast('P_contra', client_request['params'])
+        except Exception as ex:
+            # Don't leave the caller waiting for a response to a request that is never sent.
+            exception_log(f"Error in plugin hook before sending request {r.method}", ex)
+            if handlers := self._response_handlers.pop(request_id, None):
+                self._invoke_views(r, "on_request_finished_async", request_id)
+                handlers[2](Error.from_exception(ex).to_lsp())
+            return
+        self._logger.outgoing_request(request_id, r.method, r.params)
+        await self.send_payload(r.to_payload(request_id))
 
     @deprecated("use Session.request instead")
     def send_request_async(

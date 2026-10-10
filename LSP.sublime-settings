@@ -90,6 +90,19 @@
   // hint: 4
   "show_diagnostics_panel_on_save": 0,
 
+  // Messages that servers want to show to the user (`window/showMessage`) are collected in
+  // the "LSP Messages" panel. Open that panel automatically when a message with a level equal
+  // to or less than the following is received:
+  // none: 0 (never open the panel automatically)
+  // error: 1
+  // warning: 2
+  // info: 3
+  // log: 4
+  // debug: 5
+  // Messages that don't open the panel are additionally shown in the status bar.
+  // Requests that need a response from the user (`window/showMessageRequest`) always open the panel.
+  "show_messages_panel_level": 1,
+
   // Only show diagnostics in the panel with level equal to or less than:
   // error: 1
   // warning: 2

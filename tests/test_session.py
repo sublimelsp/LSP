@@ -64,10 +64,8 @@ class MockManager(Manager):
     ) -> Promise[MessageActionItem | None]:
         return Promise.resolve(None)
 
-    def handle_show_message(
-        self, config_name: str, params: ShowMessageParams
-    ) -> Promise[MessageActionItem | None]:
-        return Promise.resolve(None)
+    def handle_show_message(self, config_name: str, params: ShowMessageParams) -> None:
+        pass
 
     def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
         ...

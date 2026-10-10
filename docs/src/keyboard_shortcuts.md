@@ -88,3 +88,4 @@ Below is a list of supported commands and the corresponding keyboard shortcut (i
 | Toggle Diagnostics Panel | <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>M</kbd> | `lsp_show_diagnostics_panel`
 | Toggle Inlay Hints | unbound | `lsp_toggle_inlay_hints`<br>Supports optional args: `{"enable": true/false}`.
 | Toggle Log Panel | unbound | `lsp_toggle_server_panel`
+| Toggle Messages Panel | unbound | `lsp_toggle_messages_panel`

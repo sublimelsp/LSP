@@ -9,6 +9,7 @@ from .core.logging import debug
 from .core.registry import windows
 from .core.transports import TransportCallbacks
 from .core.transports import TransportWrapper
+from .core.types import ClientConfig
 from .core.version import __version__
 from .core.views import extract_variables
 from .core.views import make_command_link
@@ -32,7 +33,6 @@ import urllib.request
 
 if TYPE_CHECKING:
     from .core.types import Capabilities
-    from .core.types import ClientConfig
     from .session_buffer import SessionBuffer
 
 
@@ -332,24 +332,25 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
                               active_view: sublime.View, output_sheet: sublime.HtmlSheet) -> None:
         server = ServerTestRunner(
             config, window, active_view,
-            lambda resolved_command, output, exit_code: self.update_sheet(
-                config, active_view, output_sheet, resolved_command, output, exit_code))
+            lambda resolved_command, cwd, output, exit_code: self.update_sheet(
+                config, active_view, output_sheet, resolved_command, cwd, output, exit_code))
         # Store the instance so that it's not GC'ed before it's finished.
         self.test_runner: ServerTestRunner | None = server
 
     def update_sheet(self, config: ClientConfig, active_view: sublime.View | None, output_sheet: sublime.HtmlSheet,
-                     resolved_command: list[str], server_output: str, exit_code: int) -> None:
+                     resolved_command: list[str], cwd: str | None, server_output: str, exit_code: int) -> None:
         self.test_runner = None
         frontmatter = mdpopups.format_frontmatter({'allow_code_wrap': True})
-        contents = self.get_contents(config, active_view, resolved_command, server_output, exit_code)
+        contents = self.get_contents(config, active_view, resolved_command, cwd, server_output, exit_code)
         # The href needs to be encoded to avoid having markdown parser ruin it.
-        copy_link = make_command_link('lsp_copy_to_clipboard_from_base64', '<kbd>Copy to clipboard</kbd>',
+        copy_link = make_command_link('lsp_copy_to_clipboard_from_base64', 'Copy to clipboard',
                                       {'contents': b64encode(contents.encode()).decode()})
+        copy_link = f'<kbd>{copy_link}</kbd>'
         formatted = f'{frontmatter}{copy_link}\n{contents}'
         mdpopups.update_html_sheet(output_sheet, formatted, css=css().sheets, wrapper_class=css().sheets_classname)
 
     def get_contents(self, config: ClientConfig, active_view: sublime.View | None, resolved_command: list[str],
-                     server_output: str, exit_code: int) -> str:
+                     cwd: str | None, server_output: str, exit_code: int) -> str:
         lines = []
 
         def line(s: str) -> None:
@@ -363,13 +364,15 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
 
         line('## Server Test Run')
         line(f' - exit code: {exit_code}\n - output\n{self.code_block(server_output)}')
+        line(' - working directory\n{}'.format(
+            self.code_block(cwd if cwd is not None else f'{os.getcwd()} (inherited from Sublime Text)')))
 
         line('## Server Configuration')
         line(f' - command\n{self.json_dump(config.command)}')
         line(' - shell command\n{}'.format(self.code_block(list2cmdline(resolved_command), 'sh')))
         line(f' - selector\n{self.code_block(config.selector)}')
         line(f' - priority_selector\n{self.code_block(config.priority_selector)}')
-        line(' - init_options')
+        line(' - initialization_options')
         line(self.json_dump(config.initialization_options.get()))
         line(' - settings')
         line(self.json_dump(config.settings.get()))
@@ -495,13 +498,15 @@ class ServerTestRunner(TransportCallbacks):
         config: ClientConfig,
         window: sublime.Window,
         initiating_view: sublime.View,
-        on_close: Callable[[list[str], str, int], None]
+        on_close: Callable[[list[str], str | None, str, int], None]
     ) -> None:
         self._on_close = on_close
         self._transport: TransportWrapper | None = None
         self._resolved_command: list[str] = []
+        self._cwd: str | None = None
         self._stderr_lines: list[str] = []
         try:
+            config = ClientConfig.from_config(config, {})
             variables = extract_variables(window)
             plugin_class = get_plugin(config.name)
             workspace = ProjectFolders(window)
@@ -524,6 +529,7 @@ class ServerTestRunner(TransportCallbacks):
                         raise PluginStartError(f'Plugin.can_start() prevented the start due to: {reason}')
                     if new_cwd := plugin_class.on_pre_start(window, initiating_view, workspace_folders, config):
                         cwd = new_cwd
+            self._cwd = cwd
             transport_config = config.create_transport_config()
             self._transport = transport_config.start(config.command, config.env, cwd, variables, self)
             self._resolved_command = self._transport.process_args
@@ -544,7 +550,7 @@ class ServerTestRunner(TransportCallbacks):
     def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
         self._transport = None
         output = str(exception) if exception else '\n'.join(self._stderr_lines).rstrip()
-        sublime.set_timeout(lambda: self._on_close(self._resolved_command, output, exit_code))
+        sublime.set_timeout(lambda: self._on_close(self._resolved_command, self._cwd, output, exit_code))
 
 
 class LspOnDoubleClickCommand(sublime_plugin.TextCommand):

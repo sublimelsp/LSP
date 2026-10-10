@@ -101,7 +101,7 @@
   // debug: 5
   // Messages that don't open the panel are additionally shown in the status bar.
   // Requests that need a response from the user (`window/showMessageRequest`) always open the panel.
-  "show_messages_panel_level": 3,
+  "show_messages_panel_level": 1,
 
   // Only show diagnostics in the panel with level equal to or less than:
   // error: 1

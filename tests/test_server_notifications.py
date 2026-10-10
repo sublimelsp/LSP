@@ -45,7 +45,7 @@ class ServerNotifications(TextDocumentTestCase):
         warnings_underline_regions = self.view.get_regions("lspTESTds2_underline")
         info_icon_regions = self.view.get_regions("lspTESTds3_icon")
         info_underline_regions = self.view.get_regions("lspTESTds3_underline")
-        while not (  # noqa: ASYNC110
+        while not (  # ruff: ignore[async-busy-wait]
             len(errors_icon_regions) == len(errors_underline_regions) == 1
             and len(warnings_icon_regions) == len(warnings_underline_regions) == 1
             and len(info_icon_regions) == len(info_underline_regions) == 1

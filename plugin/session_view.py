@@ -313,7 +313,7 @@ class SessionView:
 
     def _redraw_diagnostics_async(self) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
-        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
         level = userprefs().show_diagnostics_severity_level
         for sev, style in reversed(DIAGNOSTIC_STYLES.items()):
             self._draw_diagnostics(sev, level, flags[sev - 1] or style.single_line_region_flags, multiline=False)

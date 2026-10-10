@@ -180,7 +180,7 @@ class LspRenamePathCommand(LspWindowCommand):
         if (new_dir := new_path.parent) and not new_dir.exists():
             new_dir.mkdir(parents=True)
         try:
-            old_path.rename(new_path)  # noqa: ASYNC240
+            old_path.rename(new_path)  # ruff: ignore[blocking-path-method-in-async-function]
         except Exception as error:
             sublime.status_message(f"Rename error: {error}")
             return False

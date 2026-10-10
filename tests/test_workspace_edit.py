@@ -1,4 +1,4 @@
-# ruff: noqa: ASYNC240
+# ruff: file-ignore[blocking-path-method-in-async-function]
 
 from __future__ import annotations
 

@@ -410,12 +410,12 @@ class Settings:
             style = default | sublime.RegionFlags.DRAW_NO_FILL
             return style, style
         if style_str == "stippled":
-            return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE  # noqa: E501
-        return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE  # noqa: E501
+            return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE  # ruff: ignore[line-too-long]
+        return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE  # ruff: ignore[line-too-long]
 
     @staticmethod
     def _style_str_to_flag(style_str: str) -> sublime.RegionFlags | None:
-        default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # noqa: E501
+        default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
         # This method could be a dict or lru_cache
         if not style_str:
             return default | sublime.RegionFlags.DRAW_NO_OUTLINE

@@ -184,7 +184,7 @@ class SessionBuffer(TaskContainer):
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
         self.supported_diagnostic_tags: set[DiagnosticTag] = set()
-        self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # noqa: E501
+        self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # ruff: ignore[line-too-long]
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(self)

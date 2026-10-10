@@ -199,7 +199,7 @@ class LspOpenLocationCommand(LspWindowCommand):
         if event:
             if modifier_keys := event.get('modifier_keys'):
                 if 'primary' in modifier_keys:
-                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
+                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # ruff: ignore[line-too-long]
                 elif 'shift' in modifier_keys:
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
         run_coroutine(self._run(location, session_name, flags, group))

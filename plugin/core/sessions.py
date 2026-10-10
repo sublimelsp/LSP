@@ -281,7 +281,7 @@ class Manager(ABC):
     @property
     @abstractmethod
     def window(self) -> sublime.Window:
-        """Get the window associated with this manager."""
+        """The window associated with this manager."""
         raise NotImplementedError
 
     @abstractmethod
@@ -1139,7 +1139,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: dict[str | int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # noqa: E501
+        self._response_handlers: dict[str | int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # ruff: ignore[line-too-long]
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -1697,7 +1697,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         promise, resolve = pair
         # It'd be nice to have automatic tuple unpacking continuations
-        callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
+        callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # ruff: ignore[lambda-assignment]
         if plugin.on_open_uri_async(uri, callback):
             title, content, syntax = await promise
             view = await self._open_scratch_buffer(title, content, syntax, flags, group)
@@ -1915,10 +1915,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             # The delete commands run asynchronously and do not report an error. For example, ST 4215+ does not move
             # a path to the recycle bin if the path is on a different file system than the home directory.
             attempts = 0
-            while os.path.exists(path) and attempts < _DELETE_TIMEOUT_MS // _DELETE_POLL_INTERVAL_MS:  # noqa: ASYNC240
+            while os.path.exists(path) and attempts < _DELETE_TIMEOUT_MS // _DELETE_POLL_INTERVAL_MS:  # ruff: ignore[blocking-path-method-in-async-function]
                 await asyncio.sleep(_DELETE_POLL_INTERVAL_MS / 1000)
                 attempts += 1
-            if os.path.exists(path):  # noqa: ASYNC240
+            if os.path.exists(path):  # ruff: ignore[blocking-path-method-in-async-function]
                 return f'Failed to move {path} to the recycle bin'
             return None
 
@@ -1978,14 +1978,14 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             scheme, path = parse_uri(uri)
             if scheme != 'file':
                 return await _continue(f'CreateFile not supported for URI {uri}')
-            if os.path.isfile(path):  # noqa: ASYNC240
+            if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
                 if options.get('overwrite'):
                     failure_reason = await delete_file(path)
                     return await _continue(failure_reason or create_file(path))
                 if options.get('ignoreIfExists'):
                     return await _continue(None)
                 return await _continue(f'CreateFile failed because a file already exists at target {uri}')
-            if os.path.isdir(path):  # noqa: ASYNC240
+            if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
                 # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
                 return await _continue(f'CreateFile failed because a folder already exists at target {uri}')
             return await _continue(create_file(path))
@@ -1996,19 +1996,19 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             old_scheme, old_path = parse_uri(old_uri)
             if old_scheme != 'file':
                 return await _continue(f'RenameFile not supported for URI {old_uri}')
-            if not os.path.exists(old_path):  # noqa: ASYNC240
+            if not os.path.exists(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
                 return await _continue(f'RenameFile failed because {old_uri} does not exist')
             new_scheme, new_path = parse_uri(new_uri)
             if new_scheme != 'file':
                 return await _continue(f'RenameFile not supported for URI {new_uri}')
-            if os.path.isfile(new_path):  # noqa: ASYNC240
-                if options.get('overwrite') and os.path.isfile(old_path):  # noqa: ASYNC240
+            if os.path.isfile(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
+                if options.get('overwrite') and os.path.isfile(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
                     failure_reason = await delete_file(new_path)
                     return await _continue(failure_reason or rename_file(old_path, new_path))
                 if options.get('ignoreIfExists'):
                     return await _continue(None)
                 return await _continue(f'RenameFile failed because target {new_uri} already exists')
-            if os.path.isdir(new_path):  # noqa: ASYNC240
+            if os.path.isdir(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
                 # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
                 return await _continue(f'RenameFile failed because target {new_uri} already exists')
             return await _continue(rename_file(old_path, new_path))
@@ -2018,9 +2018,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             scheme, path = parse_uri(uri)
             if scheme != 'file':
                 return await _continue(f'DeleteFile not supported for URI {uri}')
-            if os.path.isfile(path):  # noqa: ASYNC240
+            if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
                 return await on_deleted(uri, await delete_file(path))
-            if os.path.isdir(path):  # noqa: ASYNC240
+            if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
                 if os.listdir(path) and not options.get('recursive'):
                     return await _continue(f'DeleteFile failed because folder {uri} is not empty')
                 return await on_deleted(uri, await delete_folder(path))

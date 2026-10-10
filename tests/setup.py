@@ -93,7 +93,7 @@ def remove_config(config: ClientConfig) -> None:
 
 async def close_test_view(view: sublime.View | None) -> None:
     if view:
-        while view.is_loading():  # noqa: ASYNC110
+        while view.is_loading():  # ruff: ignore[async-busy-wait]
             await asyncio.sleep(0.05)
         view.set_scratch(True)
         future = asyncio.get_running_loop().create_future()
@@ -172,7 +172,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
         version: int = params["textDocument"]["version"]
         if version != 0:
             print(
-                f"WARNING: for some reason, the document version of {filename} is {version}. Attempting to close and then re-open it..."  # noqa: E501
+                f"WARNING: for some reason, the document version of {filename} is {version}. Attempting to close and then re-open it..."  # ruff: ignore[line-too-long]
             )
             await asyncio.sleep(0.2)
             await close_test_view(self.__class__.view)

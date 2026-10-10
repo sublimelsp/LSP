@@ -48,7 +48,7 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
     @property
     @abstractmethod
     def tasks(self) -> list[type[LspTask]]:
-        """Returns tasks to run when command is run."""
+        """Tasks to run when the command is run."""
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)

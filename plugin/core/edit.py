@@ -25,7 +25,7 @@ from typing_extensions import NotRequired
 from typing_extensions import TypeGuard
 import sublime
 
-WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit, SnippetTextEdit]], Optional[str], Optional[int]]]  # noqa: E501
+WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit, SnippetTextEdit]], Optional[str], Optional[int]]]  # ruff: ignore[line-too-long]
 
 
 class WorkspaceEditSummary(TypedDict):

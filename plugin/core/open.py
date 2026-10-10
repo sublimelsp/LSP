@@ -100,7 +100,7 @@ async def open_file(
     async with _get_opening_files_lock():
         # Is the view opening right now? Then return the associated unresolved future
         for fn, fut in g_opening_files.items():
-            if fn == file or os.path.samefile(fn, file):  # noqa ASYNC240
+            if fn == file or os.path.samefile(fn, file):  # ruff: ignore[blocking-path-method-in-async-function] ASYNC240
                 # Return the unresolved future. A future on_load event will resolve the future.
                 future = fut
                 break
@@ -184,7 +184,7 @@ def open_externally(uri: str) -> bool:
         elif ST_PLATFORM == "osx":
             subprocess.check_call(("/usr/bin/open", uri))
         else:  # linux
-            subprocess.check_call(("xdg-open", uri))  # noqa: S607
+            subprocess.check_call(("xdg-open", uri))  # ruff: ignore[start-process-with-partial-path]
     except Exception as ex:
         exception_log(f"Failed to open {uri}", ex)
         return False

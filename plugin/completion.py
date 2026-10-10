@@ -80,7 +80,7 @@ def format_completion(
     details: list[str] = []
     if can_resolve_completion_items or item.get('documentation'):
         # Not using "make_command_link" in a hot path to avoid slow json.dumps.
-        args = f'{{"view_id":{view_id},"command":"lsp_resolve_docs","args":{{"index":{index},"session_name":"{session_name}"}}}}'  # noqa: E501
+        args = f'{{"view_id":{view_id},"command":"lsp_resolve_docs","args":{{"index":{index},"session_name":"{session_name}"}}}}'  # ruff: ignore[line-too-long]
         href = f'subl:lsp_run_text_command_helper {args}'
         details.append(f"<a href='{href}'>More</a>")
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):

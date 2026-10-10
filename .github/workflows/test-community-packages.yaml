@@ -2,8 +2,6 @@ name: Test Community Packages
 
 on:
   pull_request:
-    branches:
-      - main
 
 jobs:
   type-check:

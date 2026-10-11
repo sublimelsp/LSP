@@ -164,22 +164,22 @@ def mutable(view: sublime.View) -> Generator:
 _file_lines_cache: dict[str, list[str]] = {}
 
 
-def _get_file_lines(file_name: str) -> list[str]:
+def _get_file_line(file_name: str, row: int) -> str:
     """
-    Return the lines of a file on disk, keeping line endings. Lines are cached until `clear_line_cache` is called.
+    Return a line of a file on disk, keeping the line ending, or an empty string if it can't be read.
 
-    Bytes that are not valid UTF-8 are replaced instead of failing, so that files in other encodings still produce a
-    usable preview.
+    The lines of the file are cached until `clear_line_cache` is called. Bytes that are not valid UTF-8 are replaced
+    instead of failing, so that files in other encodings still produce a usable preview.
     """
-    if (lines := _file_lines_cache.get(file_name)) is not None:
-        return lines
-    try:
-        with pathlib.Path(file_name).open(encoding='utf-8-sig', errors='replace') as f:
-            lines = f.readlines()
-    except OSError:
-        return []
-    _file_lines_cache[file_name] = lines
-    return lines
+    lines = _file_lines_cache.get(file_name)
+    if lines is None:
+        try:
+            with pathlib.Path(file_name).open(encoding='utf-8-sig', errors='replace') as f:
+                lines = f.readlines()
+        except OSError:
+            return ''
+        _file_lines_cache[file_name] = lines
+    return lines[row] if 0 <= row < len(lines) else ''
 
 
 def clear_line_cache() -> None:
@@ -197,8 +197,7 @@ def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = Tru
         point = view.text_point(row, 0)
         line = view.substr(view.line(point))
     else:
-        lines = _get_file_lines(file_name)
-        line = lines[row] if 0 <= row < len(lines) else ''
+        line = _get_file_line(file_name, row)
     return line.strip() if strip else line
 
 

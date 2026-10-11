@@ -376,7 +376,6 @@ class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
 class LspSelectCompletionCommand(LspTextCommand):
 
     completions: ClassVar[dict[SessionName, CompletionsStore]] = {}
-    reverse_insert_mode: ClassVar[bool] = False
 
     def want_event(self) -> bool:
         return False

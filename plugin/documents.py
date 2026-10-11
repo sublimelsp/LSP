@@ -658,19 +658,23 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         completion_list = sublime.CompletionList()
         triggered_manually = self._auto_complete_triggered_manually
         self._auto_complete_triggered_manually = False  # reset state for next completion popup
+        # Captured so that committing a completion can tell whether anything was typed while the popup was open.
+        query_change_count = self.view.change_count()
         sublime.set_timeout_async(
-            lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
+            lambda: self._on_query_completions_async(
+                completion_list, locations[0], triggered_manually, query_change_count))
         return completion_list
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
     def _on_query_completions_async(
-        self, clist: sublime.CompletionList, location: int, triggered_manually: bool
+        self, clist: sublime.CompletionList, location: int, triggered_manually: bool, query_change_count: int
     ) -> None:
         if self._completions_task:
             self._completions_task.cancel_async()
         on_done = partial(self._on_query_completions_resolved_async, clist)
-        self._completions_task = QueryCompletionsTask(self.view, location, triggered_manually, on_done)
+        self._completions_task = QueryCompletionsTask(
+            self.view, location, triggered_manually, on_done, query_change_count)
         sessions = list(self.sessions_async('completionProvider'))
         if not sessions or not self.view.is_valid():
             self._completions_task.cancel_async()

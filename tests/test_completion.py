@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 from .setup import TextDocumentTestCase
+from .setup import TIMEOUT_TIME
 from copy import deepcopy
+from LSP.plugin.completion import completion_trigger
 from LSP.plugin.completion import completion_with_defaults
 from LSP.plugin.completion import format_completion
+from LSP.plugin.completion import LspApplyCompletionCommand
 from LSP.protocol import CompletionItem
 from LSP.protocol import CompletionItemDefaults
 from LSP.protocol import CompletionItemKind
 from LSP.protocol import CompletionItemLabelDetails
 from LSP.protocol import CompletionItemTag
 from LSP.protocol import InsertTextFormat
-from setup import TIMEOUT_TIME
 from typing import Any
 from typing import Generator
 from unittest import TestCase
+from unittest.mock import patch
+import json
 import sublime
 
 additional_edits = {
@@ -57,19 +61,22 @@ class CompletionsTestsBase(TextDocumentTestCase):
     def create_commit_completion_closure(
         self, commit_completion_command: str = "commit_completion"
     ) -> Generator:
-        committed = False
-        current_change_count = self.view.change_count()
+        # The completion is applied by the "lsp_apply_completion" command, which runs asynchronously when the item
+        # needs to be resolved first. Neither a change of the change count nor a "textDocument/didChange" notification
+        # can tell when that has happened, because ST's KEEP_PREFIX rollback modifies the buffer too, so wait for the
+        # command itself.
+        applied = False
+        original_run = LspApplyCompletionCommand.run
 
-        def commit_completion() -> Generator:
+        def run(command: LspApplyCompletionCommand, *args: Any, **kwargs: Any) -> None:
+            nonlocal applied
+            original_run(command, *args, **kwargs)
+            applied = True
+
+        with patch.object(LspApplyCompletionCommand, 'run', run):
             yield {"condition": self.view.is_auto_complete_visible, "timeout": TIMEOUT_TIME}
-            nonlocal committed, current_change_count
-            if not committed:
-                self.view.run_command(commit_completion_command)
-                committed = True
-            yield from self.await_message("textDocument/didChange")
-            yield self.view.change_count() > current_change_count
-
-        yield from commit_completion()
+            self.view.run_command(commit_completion_command)
+            yield {"condition": lambda: applied, "timeout": TIMEOUT_TIME}
 
     def select_completion(self) -> Generator:
         self.view.run_command('auto_complete')
@@ -646,7 +653,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "deprecated": True
         }
-        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", {}, self.view.id())
+        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", {}, self.view.id(), 0)
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_show_deprecated_tag(self) -> None:
@@ -655,7 +662,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "tags": [CompletionItemTag.Deprecated]
         }
-        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id())
+        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id(), 0)
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_strips_carriage_return_in_insert_text(self) -> Generator:
@@ -690,7 +697,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp: CompletionItem = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id(), 0)
             self.assertRegex(native.details, expected_regex)
 
         check(
@@ -741,7 +748,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp: CompletionItem = {"label": label}
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id(), 0)
             self.assertRegex(native.trigger, expected_regex)
 
         check(
@@ -908,14 +915,26 @@ class ItemDefaultTests(TestCase):
 class FormatCompletionsUnitTests(TestCase):
 
     def _verify_completion(
-        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = '', flags: int = 0
+        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = ''
     ) -> None:
         item = format_completion(
-            payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0)
+            payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0,
+            query_change_count=0)
         self.assertEqual(item.trigger, trigger)
+        # "lsp_select_completion" recomputes the trigger with this function, so it must match.
+        self.assertEqual(completion_trigger(payload), trigger)
         self.assertEqual(item.annotation, annotation)
         self.assertEqual(item.details, details)
-        self.assertEqual(item.flags, flags)
+        # All items are committed with KEEP_PREFIX, and the prefix is removed by "lsp_apply_completion".
+        self.assertEqual(item.flags, sublime.CompletionItemFlags.KEEP_PREFIX)
+
+    def test_command_arguments(self) -> None:
+        item = format_completion(
+            {"label": '"key"'}, index=3, can_resolve_completion_items=False, session_name='abc', item_defaults={},
+            view_id=0, query_change_count=42)
+        command, args = item.completion.split(' ', 1)
+        self.assertEqual(command, 'lsp_select_completion')
+        self.assertEqual(json.loads(args), {"index": 3, "session_name": "abc", "query_change_count": 42})
 
     def test_label(self) -> None:
         self._verify_completion(

@@ -1,15 +1,17 @@
 from __future__ import annotations
-from ...protocol import DocumentUri
-from ...protocol import Range
+
+from .constants import ST_PACKAGES_PATH
 from .constants import ST_PLATFORM
 from .constants import ST_VERSION
 from .logging import exception_log
 from .promise import Promise
 from .promise import ResolveFunc
 from .protocol import UINT_MAX
+from .type_converters import range_to_region
 from .url import parse_uri
-from .views import range_to_region
-from urllib.parse import unquote, urlparse
+from typing import TYPE_CHECKING
+from urllib.parse import unquote
+from urllib.parse import urlparse
 import os
 import re
 import sublime
@@ -17,8 +19,11 @@ import sublime_plugin
 import subprocess
 import webbrowser
 
+if TYPE_CHECKING:
+    from ...protocol import DocumentUri
+    from ...protocol import Range
 
-opening_files: dict[str, tuple[Promise[sublime.View | None], ResolveFunc[sublime.View | None]]] = {}
+g_opening_files: dict[str, tuple[Promise[sublime.View | None], ResolveFunc[sublime.View | None]]] = {}
 FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')
 
 
@@ -46,7 +51,6 @@ def lsp_range_from_uri_fragment(fragment: str) -> Range | None:
 def open_file_uri(
     window: sublime.Window, uri: DocumentUri, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1
 ) -> Promise[sublime.View | None]:
-
     decoded_uri = unquote(uri)  # decode percent-encoded characters
     open_promise = open_file(window, decoded_uri, flags, group)
     if fragment := urlparse(decoded_uri).fragment:
@@ -73,8 +77,8 @@ def _return_existing_view(flags: int, existing_view_group: int, active_group: in
 
 def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> sublime.View | None:
     """A replacement for Window.find_open_file that prefers the active view instead of the leftmost one."""
-    _group = window.active_group() if group == -1 else group
-    view = window.active_view_in_group(_group)
+    group_ = window.active_group() if group == -1 else group
+    view = window.active_view_in_group(group_)
     if view and fname == view.file_name():
         return view
     return window.find_open_file(fname, group) if ST_VERSION >= 4136 else window.find_open_file(fname)
@@ -86,7 +90,7 @@ def open_file(
     """
     Open a file asynchronously.
     It is only safe to call this function from the UI thread.
-    The provided uri MUST be a file URI
+    The provided uri MUST be a file URI.
     """
     file = parse_uri(uri)[1]
     # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's supposed
@@ -96,6 +100,11 @@ def open_file(
         return Promise.resolve(view)
 
     was_already_open = view is not None
+    if not was_already_open and not os.path.isfile(file):
+        # window.open_file creates a new view with empty content if the path from the given URI doesn't exist as a file
+        # on disk, but we don't want that here. If the language server wants to create a new file for a given URI, it
+        # must use the CreateFile resource operation in a WorkspaceEdit.
+        return Promise.resolve(None)
     view = window.open_file(file, flags, group)
     if not view.is_loading():
         if was_already_open and (flags & sublime.NewFileFlags.SEMI_TRANSIENT):
@@ -106,26 +115,42 @@ def open_file(
         return Promise.resolve(view)
 
     # Is the view opening right now? Then return the associated unresolved promise
-    for fn, value in opening_files.items():
+    for fn, value in g_opening_files.items():
         if fn == file or os.path.samefile(fn, file):
             # Return the unresolved promise. A future on_load event will resolve the promise.
             return value[0]
 
     # Prepare a new promise to be resolved by a future on_load event (see the event listener in main.py)
     def fullfill(resolve: ResolveFunc[sublime.View | None]) -> None:
-        global opening_files
         # Save the promise in the first element of the tuple -- except we cannot yet do that here
-        opening_files[file] = (None, resolve)  # type: ignore
+        g_opening_files[file] = (None, resolve)  # type: ignore
 
     promise = Promise(fullfill)
-    tup = opening_files[file]
+    tup = g_opening_files[file]
     # Save the promise in the first element of the tuple so that the for-loop above can return it
-    opening_files[file] = (promise, tup[1])
+    g_opening_files[file] = (promise, tup[1])
     return promise
 
 
+def open_resource(window: sublime.Window, uri: DocumentUri, group: int = -1) -> sublime.View | None:
+    """
+    Open a resource file.
+    It is only safe to call this function from the UI thread.
+    The provided uri MUST be a res URI.
+    """
+    prefix = 'res:/Packages/'
+    if not uri.startswith(prefix):
+        return None
+    if group != -1:
+        window.focus_group(group)
+    resource_path = uri[len(prefix):]
+    window.run_command('open_file', {'file': f'${{packages}}/{resource_path}'})
+    file = os.path.join(ST_PACKAGES_PATH, *resource_path.split('/'))
+    return _find_open_file(window, file, group)
+
+
 def center_selection(view: sublime.View, r: Range) -> sublime.View:
-    selection = range_to_region(r, view)
+    selection = range_to_region(view, r)
     view.run_command("lsp_selection_set", {"regions": [(selection.a, selection.a)]})
     if window := view.window():
         window.focus_view(view)
@@ -141,19 +166,16 @@ def open_in_browser(uri: str) -> None:
         sublime.status_message("failed to open: " + uri)
 
 
-def open_externally(uri: str, take_focus: bool) -> bool:
-    """
-    A blocking function that invokes the OS's "open with default extension"
-    """
+def open_externally(uri: str) -> bool:
+    """A blocking function that invokes the OS's `open with default extension`."""
     try:
-        # TODO: handle take_focus
         if ST_PLATFORM == "windows":
             os.startfile(uri)  # type: ignore
         elif ST_PLATFORM == "osx":
             subprocess.check_call(("/usr/bin/open", uri))
         else:  # linux
-            subprocess.check_call(("xdg-open", uri))
-        return True
+            subprocess.check_call(("xdg-open", uri))  # ruff: ignore[start-process-with-partial-path]
     except Exception as ex:
         exception_log(f"Failed to open {uri}", ex)
         return False
+    return True

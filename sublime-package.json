@@ -16,6 +16,16 @@
               "default": false,
               "markdownDescription": "If supported, format a file before saving. This option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files."
             },
+            "lsp_code_actions_on_format": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "boolean"
+              },
+              "propertyNames": {
+                "pattern": "^source\\."
+              },
+              "markdownDescription": "A dictionary of code action identifiers that should be triggered on format. These will also be triggered when `lsp_format_on_save` is enabled.\n\nCode action identifiers are not officially standardized so refer to specific server's documentation on what is supported but `source.fixAll` is commonly used to apply fix-on-format code actions.\n\nThis option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files. Settings from all those places will be merged and more specific (syntax and project) settings will override less specific (from LSP or Sublime settings).\n\nOnly \"source.*\" actions are supported."
+            },
             "lsp_code_actions_on_save": {
               "type": "object",
               "additionalProperties": {
@@ -26,20 +36,19 @@
               },
               "markdownDescription": "A dictionary of code action identifiers that should be triggered on save.\n\nCode action identifiers are not officially standardized so refer to specific server's documentation on what is supported but `source.fixAll` is commonly used to apply fix-on-save code actions.\n\nThis option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files. Settings from all those places will be merged and more specific (syntax and project) settings will override less specific (from LSP or Sublime settings).\n\nOnly \"source.*\" actions are supported."
             },
-            // Deprecated syntaxes and scopes
-            "useSelectorInstead": {
-              "type": "string",
-              "deprecationMessage": "Use the \"selector\" key instead."
-            },
             "FileWatcher": {
               "type": "object",
               "examples": [
                 {
-                  "patterns": ["{**/*.js,**/*.ts,**/*.json}"],
+                  "patterns": [
+                    "{**/*.js,**/*.ts,**/*.json}"
+                  ],
                 }
               ],
               "additionalProperties": false,
-              "required": ["patterns"],
+              "required": [
+                "patterns"
+              ],
               "properties": {
                 "patterns": {
                   "type": "array",
@@ -87,7 +96,7 @@
             },
             "ClientAutoCompleteSelector": {
               "type": "string",
-              "markdownDescription": "When specified, this [selector](https://www.sublimetext.com/docs/3/selectors.html) is used as the `\"selector\"` key in an entry of the `\"auto_complete_triggers\"` of the view applicable to this configuration. You don't have to necessarily provide this value. Because your language server registers so-called trigger characters in any case. However, this selector allows you to fine-tune the auto-complete behavior if the registered trigger characters of the language server result in an unpleasent auto-complete experience. Note that the behavior of this selector will depend on the .sublime-syntax in use.\n\nThis value is _not_ applied to the **global** `\"auto_complete_selector\"` setting of the view."
+              "markdownDescription": "When specified, this [selector](https://www.sublimetext.com/docs/selectors.html) is used as the `\"selector\"` key in an entry of the `\"auto_complete_triggers\"` of the view applicable to this configuration. You don't have to necessarily provide this value. Because your language server registers so-called trigger characters in any case. However, this selector allows you to fine-tune the auto-complete behavior if the registered trigger characters of the language server result in an unpleasent auto-complete experience. Note that the behavior of this selector will depend on the .sublime-syntax in use.\n\nThis value is _not_ applied to the **global** `\"auto_complete_selector\"` setting of the view."
             },
             "ClientIgnoreServerTriggerChars": {
               "type": "boolean",
@@ -97,6 +106,10 @@
             "ClientInitializationOptions": {
               "type": "object",
               "markdownDescription": "The initializationOptions that are passed to the language server process during the _initialize_ phase. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
+            },
+            "ClientInitializationOptionsDeprecated": {
+              "type": "object",
+              "deprecationMessage": "Use \"initialization_options\" instead."
             },
             "ClientSettings": {
               "type": "object",
@@ -268,24 +281,13 @@
               "type": "object",
               "markdownDescription": "Specify environment variables to pass to the language server process on startup.",
               "additionalProperties": {
-                "oneOf": [
-                  {
-                    "type": "string",
-                    "markdownDescription": "The value for this environment variable."
-                  },
-                  {
-                    "type": "array",
-                    "markdownDescription": "A list of values. The list will be joined into a string with your native file system's path separator. For example, `[\"a\", \"b\"]` will turn into `\"a;b\"` on Windows.",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                ]
+                "type": "string",
+                "markdownDescription": "The value for this environment variable."
               }
             },
             "ClientSelector": {
               // \u00A0 is used as a workaround for https://github.com/sublimehq/sublime_text/issues/3373
-              "markdownDescription": "A [selector](https://www.sublimetext.com/docs/3/selectors.html) that defines to which views this language server should be attached, in the same way that a selector for a [Build\u00A0System](https://www.sublimetext.com/docs/3/build_systems.html) is used to filter the Build System to particular views. The selector is matched against the base scope of the syntax of the view. If the selector matches with the base scope of the the file, the associated language server is started. To determine the base scope of your view, click on Tools > Developer > Show Scope Name. The first line in the popup is the base scope.",
+              "markdownDescription": "A [selector](https://www.sublimetext.com/docs/selectors.html) that defines to which views this language server should be attached, in the same way that a selector for a [Build\u00A0System](https://www.sublimetext.com/docs/build_systems.html) is used to filter the Build System to particular views. The selector is matched against the base scope of the syntax of the view. If the selector matches with the base scope of the the file, the associated language server is started. To determine the base scope of your view, click on Tools > Developer > Show Scope Name. The first line in the popup is the base scope.",
               "type": "string",
             },
             "ClientSchemes": {
@@ -304,20 +306,25 @@
               ]
             },
             "ClientDiagnosticsMode": {
-              "markdownDescription": "Controls whether diagnostics are ignored for files that are not within the project folders. If the server supports \"pull diagnostics\", this also controls whether diagnostics are requested only for open files, or for all files contained in the project folders.",
+              "markdownDescription": "Controls whether diagnostics are shown for files that are not within the project folders.",
               "type": "string",
               "enum": [
-                "open_files",
+                "all_files",
                 "workspace"
               ],
               "markdownEnumDescriptions": [
-                "Diagnostics are requested only for open files and they are cleared when the file closes.",
-                "Diagnostics are requested for all files in the project folders (only for servers with `diagnosticProvider.workspaceDiagnostics` capability). Diagnostics for files not within the project folders are ignored."
+                "Diagnostics are shown for all files.",
+                "Diagnostics for files not within the project folders are ignored."
               ],
-              "default": "open_files"
+              "default": "all_files"
             },
             "ClientPrioritySelector": {
               "markdownDescription": "While the `\"selector\"` is used to determine which views belong to which language server configuration, the `\"priority_selector\"` is used to determine which language server wins at the caret position in case there are multiple language servers attached to a view. For instance, there can only be one signature help popup visible at any given time. This selector is use to decide which one to use for such capabilities. This setting is optional and you won't need to set it if you're planning on using a single language server for a particular type of view."
+            },
+            "ClientTcpPort": {
+              "type": "integer",
+              "default": 0,
+              "markdownDescription": "When set to a positive number bigger than 0, specifies the TCP port to use to connect to the language server process listening on the given port. When set to zero, a free TCP port is chosen. The chosen TCP port number can be accessed through a template variable, i.e. as `${port}` in the `\"command\"`.\n\nSet this to a negative number to make the LSP client act as TCP server awaiting connection from the LSP server. Using `-1` opens a random port. To use a fixed port number, use `-X` as the value for `tcp_port`, where `X` is the desired (positive) port number.\n\nIf not specified, STDIO is used as the transport"
             },
             // The ClientConfig class
             "ClientConfig": {
@@ -335,10 +342,7 @@
                   "$ref": "sublime://settings/LSP#/definitions/FileWatcher"
                 },
                 "tcp_port": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "default": 0,
-                  "markdownDescription": "When specified, the TCP port to use to connect to the language server process. If not specified, STDIO is used as the transport. When set to zero, a free TCP port is chosen. You can use that free TCP port number as a template variable, i.e. as `${tcp_port}` in the `\"command\"`."
+                  "$ref": "#/definitions/ClientTcpPort"
                 },
                 "auto_complete_selector": {
                   "$ref": "#/definitions/ClientAutoCompleteSelector"
@@ -355,8 +359,11 @@
                 "priority_selector": {
                   "$ref": "#/definitions/ClientPrioritySelector",
                 },
-                "initializationOptions": {
+                "initialization_options": {
                   "$ref": "#/definitions/ClientInitializationOptions"
+                },
+                "initializationOptions": {
+                  "$ref": "#/definitions/ClientInitializationOptionsDeprecated"
                 },
                 "settings": {
                   "$ref": "#/definitions/ClientSettings"
@@ -370,35 +377,69 @@
                 "env": {
                   "$ref": "#/definitions/ClientEnv"
                 },
-                "languageId": {
-                  "$ref": "#/definitions/useSelectorInstead"
-                },
-                "document_selector": {
-                  "$ref": "#/definitions/useSelectorInstead"
-                },
-                "feature_selector": {
-                  "$ref": "#/definitions/useSelectorInstead"
-                },
                 "diagnostics_mode": {
                   "$ref": "#/definitions/ClientDiagnosticsMode"
                 },
-                "syntaxes": {
-                  "type": "array",
-                  "$ref": "#/definitions/useSelectorInstead"
+                "semantic_tokens": {
+                  "$ref": "#/definitions/SemanticTokens"
                 },
-                "scopes": {
-                  "type": "array",
-                  "$ref": "#/definitions/useSelectorInstead"
+                "markdown_language_map": {
+                  "$ref": "#/definitions/ClientMarkdownLanguageMap"
                 },
-                "languages": {
-                  "type": "array",
-                  "$ref": "#/definitions/useSelectorInstead"
-                }
+                "syntax_map": {
+                  "$ref": "#/definitions/ClientSyntaxMap"
+                },
               }
             },
             "SemanticTokens": {
               "type": "object",
               "items": {
+                "type": "string"
+              }
+            },
+            "ClientMarkdownLanguageMap": {
+              "type": "object",
+              "markdownDescription": "A mapping of markdown language identifiers to aliases and Sublime Text syntaxes, used for syntax-highlighting fenced code blocks in popups.\n\nEach key is a fenced-code-block language tag (e.g. `\"js\"`). Each value is a two-element array: the first element is an array of additional aliases, and the second is an array of Sublime Text syntaxes associated with that language (e.g. `[\"MyPackage/MySyntaxLanguage\"]`) or `scope:BASE_SCOPE` selectors (e.g. `[\"scope:source.js\"]`).\n\nSee [mdpopups `sublime_user_lang_map`](https://facelessuser.github.io/sublime-markdown-popups/settings/#mdpopupssublime_user_lang_map) for the full format description.",
+              "additionalProperties": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "markdownDescription": "Additional aliases for given language."
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "markdownDescription": "Syntax files associated with given language / alias."
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "defaultSnippets": [
+                {
+                  "body": {
+                    "language": [
+                      [
+                        "mapping_alias"
+                      ],
+                      [
+                        "MyPackage/MySyntaxLanguage"
+                      ]
+                    ]
+                  }
+                }
+              ]
+            },
+            "ClientSyntaxMap": {
+              "type": "object",
+              "markdownDescription": "A mapping of custom URI schemes to Sublime Text syntaxes, used when fetching dynamic document content from the server via [`workspace/textDocumentContent`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workspace_textDocumentContent) request.",
+              "additionalProperties": {
                 "type": "string"
               }
             }
@@ -438,6 +479,11 @@
               "default": 2000,
               "deprecationMessage": "Use the \"on_save_task_timeout_ms\" setting instead."
             },
+            "format_on_type": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Enable on-type-formatting functionality that allows a language server to format parts of the document during typing."
+            },
             "on_save_task_timeout_ms": {
               "type": "integer",
               "default": 2000,
@@ -450,6 +496,13 @@
               "default": 0,
               "markdownDescription": "Open the diagnostics panel automatically **on save** when diagnostics level is equal to or less than:\n\n- _none_: `0` (this means never show the panel automatically),\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`\n\nThe panel is not shown when there is already another panel open. The panel is never _closed_ automatically. To close the panel, press the <kbd>Esc</kbd> key."
             },
+            "show_messages_panel_level": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "default": 3,
+              "markdownDescription": "Messages that servers want to show to the user (`window/showMessage`) are collected in the \"LSP Messages\" panel. Open that panel automatically when a message with a level equal to or less than the following is received:\n\n- _none_: `0` (this means never show the panel automatically),\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _log_: `4`,\n- _debug_: `5`\n\nMessages that don't open the panel are additionally shown in the status bar. Requests that need a response from the user (`window/showMessageRequest`) always open the panel."
+            },
             "show_diagnostics_count_in_view_status": {
               "type": "boolean",
               "default": false,
@@ -460,6 +513,9 @@
             },
             "lsp_format_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
+            },
+            "lsp_code_actions_on_format": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_format",
             },
             "lsp_code_actions_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save",
@@ -516,25 +572,55 @@
             "diagnostics_highlight_style": {
               "oneOf": [
                 {
-                  "enum": ["box", "underline", "stippled", "squiggly", ""],
+                  "enum": [
+                    "box",
+                    "underline",
+                    "stippled",
+                    "squiggly",
+                    ""
+                  ],
                 },
                 {
                   "type": "object",
                   "properties": {
                     "error": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "squiggly"
                     },
                     "warning": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "squiggly"
                     },
                     "info": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "stippled"
                     },
                     "hint": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "stippled"
                     },
                   },
@@ -558,7 +644,7 @@
                 ""
               ],
               "default": "underline",
-              "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor.\n\nSee https://lsp.sublimetext.io/customization/#document-highlights for how to customize the color."
+              "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor.\n\nSee https://lsp.sublimetext.io/features/#highlights for how to customize the color."
             },
             "show_multiline_document_highlights": {
               "type": "boolean",
@@ -574,7 +660,7 @@
                 ""
               ],
               "default": "",
-              "markdownDescription": "Highlight style of the word or range for which a hover popup is shown.\n\nSee https://lsp.sublimetext.io/customization/#hover-highlights for how to customize the color."
+              "markdownDescription": "Highlight style of the word or range for which a hover popup is shown.\n\nSee https://lsp.sublimetext.io/features/#hover for how to customize the color."
             },
             "diagnostics_gutter_marker": {
               "enum": [
@@ -590,16 +676,22 @@
             "link_highlight_style": {
               "enum": [
                 "underline",
-                "none",
-                "disabled"
+                "none", // For backwards-compatibility, same as ""
+                "disabled", // For backwards-compatibility, same as ""
+                ""
               ],
-              "default": "underline",
-              "markdownDescription": "Highlight style of links to internal or external resources, like another text document or a web site."
+              "default": "",
+              "markdownDescription": "Highlight style of links to internal or external resources, for example another file or a website."
             },
             "semantic_highlighting": {
               "type": "boolean",
               "default": false,
               "markdownDescription": "Enable semantic highlighting in addition to standard syntax highlighting."
+            },
+            "show_signature_help": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show the signature help popup when typing the arguments of a function call."
             },
             "show_code_actions": {
               "enum": [
@@ -669,7 +761,10 @@
             "completion_insert_mode": {
               "type": "string",
               "default": "insert",
-              "enum": ["insert", "replace"],
+              "enum": [
+                "insert",
+                "replace"
+              ],
               "markdownDescription": "The mode used for inserting completions:\n\n - `insert` would insert the completion text in a middle of the word\n\n - `replace` would replace the existing word with a new completion text\n\n An LSP keybinding `lsp_commit_completion_with_opposite_insert_mode`\n can be used to insert completion using the opposite mode to the one selected here.\n\n Note: Must be supported by the language server."
             },
             "show_references_in_quick_panel": {
@@ -704,7 +799,9 @@
               "oneOf": [
                 {
                   "type": "array",
-                  "default": ["panel"],
+                  "default": [
+                    "panel"
+                  ],
                   "items": {
                     "type": "string",
                     "enum": [
@@ -729,16 +826,12 @@
               "markdownDescription": "When logging to the `\"panel\"` (see `\"log_server\"`), if the params of the request or response or notification exceed this many characters, then print a `<snip>` to the panel instead. If you don't want a limit, set this to zero."
             },
             "clients": {
+              "type": "object",
+              "deprecationMessage": "Use `LanguageServers.sublime-settings` instead (\"Preferences: LSP Server Configurations\" from the command palette).",
               "additionalProperties": {
                 "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
               },
               "markdownDescription": "The dictionary of your configured language servers. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`)."
-            },
-            "default_clients": {
-              "additionalProperties": {
-                "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
-              },
-              "markdownDescription": "**DO NOT MODIFY THIS SETTING!** Use `\"clients\"` to override settings instead!",
             },
             "show_inlay_hints": {
               "type": "boolean",
@@ -798,6 +891,18 @@
       },
       {
         "file_patterns": [
+          "/LanguageServers.sublime-settings"
+        ],
+        "schema": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
+          },
+          "markdownDescription": "The dictionary of your configured language servers. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`)."
+        }
+      },
+      {
+        "file_patterns": [
           "/lsp_utils.sublime-settings"
         ],
         "schema": {
@@ -839,15 +944,18 @@
         "schema": {
           "properties": {
             "lsp_format_on_paste": {
-              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste",
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
             },
             "lsp_format_on_save": {
-              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save",
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
+            },
+            "lsp_code_actions_on_format": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_format"
             },
             "lsp_code_actions_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
             }
-          }
+          },
         }
       },
       {
@@ -858,6 +966,18 @@
           "properties": {
             "settings": {
               "properties": {
+                "lsp_format_on_paste": {
+                  "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
+                },
+                "lsp_format_on_save": {
+                  "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
+                },
+                "lsp_code_actions_on_format": {
+                  "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_format"
+                },
+                "lsp_code_actions_on_save": {
+                  "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
+                },
                 "LSP": {
                   "type": "object",
                   "markdownDescription": "The dictionary of your configured language servers or overrides for existing configurations. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`).",
@@ -867,6 +987,14 @@
                       "additionalProperties": {
                         "type": "string"
                       }
+                    }
+                  },
+                  "patternProperties": {
+                    // Overrides for configurations provided by LSP-* packages. Those can define custom top-level
+                    // settings so the strict ClientConfig schema would report them as not allowed. The packages
+                    // contribute their own schema for their key so this only provides the common settings.
+                    "^LSP-": {
+                      "$ref": "sublime://settings/LSP-plugin-base"
                     }
                   },
                   "additionalProperties": {
@@ -891,6 +1019,9 @@
             "file_watcher": {
               "$ref": "sublime://settings/LSP#/definitions/FileWatcher"
             },
+            "tcp_port": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientTcpPort"
+            },
             "selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientSelector"
             },
@@ -903,8 +1034,11 @@
             "priority_selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientPrioritySelector"
             },
-            "initializationOptions": {
+            "initialization_options": {
               "$ref": "sublime://settings/LSP#/definitions/ClientInitializationOptions"
+            },
+            "initializationOptions": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientInitializationOptionsDeprecated"
             },
             "settings": {
               "$ref": "sublime://settings/LSP#/definitions/ClientSettings"
@@ -926,6 +1060,12 @@
             },
             "semantic_tokens": {
               "$ref": "sublime://settings/LSP#/definitions/SemanticTokens"
+            },
+            "markdown_language_map": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientMarkdownLanguageMap"
+            },
+            "syntax_map": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientSyntaxMap"
             },
           }
         }

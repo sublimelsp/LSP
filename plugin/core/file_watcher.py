@@ -1,13 +1,16 @@
 from __future__ import annotations
+
 from ...protocol import FileChangeType
 from ...protocol import WatchKind
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
-from typing import Literal, Protocol, Tuple, Union
+from typing import Literal
+from typing import Protocol
+from typing import Tuple
 
 DEFAULT_WATCH_KIND = WatchKind.Create | WatchKind.Change | WatchKind.Delete
 
-FileWatcherEventType = Union[Literal['create'], Literal['change'], Literal['delete']]
+FileWatcherEventType = Literal['create', 'change', 'delete']
 FilePath = str
 FileWatcherEvent = Tuple[FileWatcherEventType, FilePath]
 
@@ -42,7 +45,7 @@ class FileWatcherProtocol(Protocol):
         ...
 
 
-class FileWatcher(metaclass=ABCMeta):
+class FileWatcher(ABC):
     """
     A public interface of a file watcher implementation.
 
@@ -73,9 +76,7 @@ class FileWatcher(metaclass=ABCMeta):
 
     @abstractmethod
     def destroy(self) -> None:
-        """
-        Called before the file watcher is disabled.
-        """
+        """Called before the file watcher is disabled."""
         pass
 
 

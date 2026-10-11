@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from ..protocol import CodeAction
 from ..protocol import CodeActionKind
+from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
 from .core.promise import Promise
@@ -9,37 +11,76 @@ from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
-from .core.sessions import AbstractViewListener
-from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.views import entire_content_region
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import kind_contains_other_kind
 from .core.views import text_document_code_action_params
-from .save_command import LspSaveCommand
-from .save_command import SaveTask
-from abc import ABCMeta
+from .lsp_task import LspTask
+from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import TYPE_CHECKING, Any, List, Tuple, Union
+from typing import Any
 from typing import cast
+from typing import final
+from typing import List
+from typing import Tuple
+from typing import TYPE_CHECKING
+from typing import Union
+from typing_extensions import override
 import sublime
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterator
-    from typing import TypeGuard
+    from .core.sessions import AbstractViewListener
+    from .core.sessions import SessionBufferProtocol
+    from collections.abc import Callable
+    from collections.abc import Generator
+    from collections.abc import Iterator
+    from typing_extensions import TypeGuard
 
 
 ConfigName = str
 CodeActionOrCommand = Union[CodeAction, Command]
 CodeActionsByConfigName = Tuple[ConfigName, List[CodeActionOrCommand]]
 
-MENU_ACTIONS_KINDS = [CodeActionKind.Refactor, CodeActionKind.Source]
+MENU_ACTIONS_KINDS: list[str | CodeActionKind] = [CodeActionKind.Refactor, CodeActionKind.Source]
 
 
 def is_command(action: CodeActionOrCommand) -> TypeGuard[Command]:
     return isinstance(action.get('command'), str)
+
+
+def is_code_action_with_diagnostics(action: Command | CodeAction) -> TypeGuard[CodeAction]:
+    return bool(action.get('diagnostics'))
+
+
+def is_quickfix(action: Command | CodeAction) -> bool:
+    # We consider code actions without `kind` property also to be a "quickfix".
+    # https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_codeAction
+    # > In version 1.0 of the protocol, there weren't any source or refactoring code actions. Code actions were solely
+    # > used to (quick) fix code, not to write / rewrite code. So if a client asks for code actions without any kind,
+    # > the standard quick fix code actions should be returned.
+    return kind_contains_other_kind(CodeActionKind.QuickFix, action.get('kind', CodeActionKind.QuickFix))
+
+
+def filter_quickfix_actions(
+    only_with_diagnostics: bool, response: list[Command | CodeAction] | Error | None
+) -> list[Command | CodeAction]:
+    if isinstance(response, Error) or not response:
+        return []
+    if only_with_diagnostics:
+        # If there are multiple diagnostics for the region, in the hover popup we can only use those code actions which
+        # include the "diagnostics" property, because each code action needs to be matched with its corresponding
+        # diagnostics.
+        return [
+            action for action in response
+            if is_code_action_with_diagnostics(action) and is_quickfix(action) and not action.get('disabled', False)
+        ]
+    # If code actions are displayed independently of diagnostics, or if there is only a single diagnostic from this
+    # server, all enabled quickfix code actions can be used. Strictly speaking, for the latter case the code actions
+    # aren't necessarily associated with the diagnostic, but this heuristic works quite well in practice.
+    return [action for action in response if is_quickfix(action) and not action.get('disabled', False)]
 
 
 class CodeActionsManager:
@@ -56,8 +97,10 @@ class CodeActionsManager:
         view: sublime.View,
         region: sublime.Region,
         session_buffer_diagnostics: list[tuple[SessionBufferProtocol, list[Diagnostic]]],
-        only_kinds: list[CodeActionKind] | None = None,
+        only_kinds: list[str | CodeActionKind] | None = None,
+        *,
         manual: bool = False,
+        progress: bool = False,
     ) -> Promise[list[CodeActionsByConfigName]]:
         """
         Requests code actions with provided diagnostics and specified region. If there are
@@ -75,21 +118,20 @@ class CodeActionsManager:
                 cache_key, task = self._response_cache
                 if location_cache_key == cache_key:
                     return task
-                else:
-                    self._response_cache = None
+                self._response_cache = None
         elif only_kinds == MENU_ACTIONS_KINDS:
             self.menu_actions_cache_key = f"{view.buffer_id()}#{view.change_count()}:{region}"
             self.refactor_actions_cache.clear()
             self.source_actions_cache.clear()
 
-        def request_factory(sb: SessionBufferProtocol) -> Request | None:
+        def request_factory(sb: SessionBufferProtocol) -> Request[CodeActionParams, list[CodeActionOrCommand] | None]:
             diagnostics: list[Diagnostic] = []
             for diag_sb, diags in session_buffer_diagnostics:
                 if diag_sb == sb:
                     diagnostics = diags
                     break
             params = text_document_code_action_params(view, region, diagnostics, only_kinds, manual)
-            return Request.codeAction(params, view)
+            return Request.codeAction(params, view, progress=progress)
 
         def response_filter(sb: SessionBufferProtocol, actions: list[CodeActionOrCommand]) -> list[CodeActionOrCommand]:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
@@ -125,7 +167,7 @@ class CodeActionsManager:
     def _collect_code_actions_async(
         self,
         listener: AbstractViewListener,
-        request_factory: Callable[[SessionBufferProtocol], Request | None],
+        request_factory: Callable[[SessionBufferProtocol], Request[CodeActionParams, list[CodeActionOrCommand] | None] | None],  # ruff: ignore[line-too-long]
         response_filter: Callable[[SessionBufferProtocol, list[CodeActionOrCommand]], list[CodeActionOrCommand]],
     ) -> Promise[list[CodeActionsByConfigName]]:
 
@@ -133,7 +175,7 @@ class CodeActionsManager:
             sb: SessionBufferProtocol, response: Error | list[CodeActionOrCommand] | None
         ) -> CodeActionsByConfigName:
             actions = []
-            if response and not isinstance(response, Error) and response_filter:
+            if response and not isinstance(response, Error):
                 actions = response_filter(sb, response)
             return (sb.session.config.name, actions)
 
@@ -145,14 +187,14 @@ class CodeActionsManager:
                 listener.purge_changes_async()
                 sb.do_document_diagnostic_async(listener.view, listener.view.change_count())
                 response_handler = partial(on_response, sb)
-                task: Promise[list[CodeActionOrCommand] | None | Error] = session.send_request_task(request)
+                task = session.send_request_task(request)
                 tasks.append(task.then(response_handler))
         # Return only results for non-empty lists.
         return Promise.all(tasks) \
             .then(lambda actions_list: list(filter(lambda actions: len(actions[1]), actions_list)))
 
-    def request_on_save_async(
-        self, view: sublime.View, on_save_actions: dict[str, bool]
+    def request_on_save_or_format_async(
+        self, view: sublime.View, code_actions: dict[str, bool]
     ) -> Generator[Promise[CodeActionsByConfigName]]:
         listener = windows.listener_for_view(view)
         if not listener:
@@ -167,12 +209,12 @@ class CodeActionsManager:
                 # Since older servers don't support the "context.only" property, those will return all
                 # actions that need to be then manually filtered.
                 session_kinds = get_session_kinds(sb)
-                matching_kinds = get_matching_on_save_kinds(on_save_actions, session_kinds)
+                matching_kinds = get_matching_kinds(code_actions, session_kinds)
                 actions = [a for a in response if a.get('kind') in matching_kinds and not a.get('disabled')]
             return (sb.session.config.name, actions)
 
         for sb in listener.session_buffers_async('codeActionProvider'):
-            matching_kinds = get_matching_on_save_kinds(on_save_actions, get_session_kinds(sb))
+            matching_kinds = get_matching_kinds(code_actions, get_session_kinds(sb))
             for kind in matching_kinds:
                 listener.purge_changes_async()
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
@@ -190,9 +232,7 @@ def get_session_kinds(sb: SessionBufferProtocol) -> list[CodeActionKind]:
     return sb.get_capability('codeActionProvider.codeActionKinds') or []
 
 
-def get_matching_on_save_kinds(
-    user_actions: dict[str, bool], session_kinds: list[CodeActionKind]
-) -> list[CodeActionKind]:
+def get_matching_kinds(code_actions: dict[str, bool], session_kinds: list[CodeActionKind]) -> list[CodeActionKind]:
     """
     Filters user-enabled or disabled actions so that only ones matching the session kinds
     are returned. Returned kinds are those that are enabled and are not overridden by more
@@ -209,7 +249,7 @@ def get_matching_on_save_kinds(
         action_parts = session_kind.split('.')
         for i in range(len(action_parts)):
             current_part = '.'.join(action_parts[0:i + 1])
-            user_value = user_actions.get(current_part, None)
+            user_value = code_actions.get(current_part)
             if isinstance(user_value, bool):
                 enabled = user_value
         if enabled:
@@ -217,32 +257,37 @@ def get_matching_on_save_kinds(
     return matching_kinds
 
 
-class CodeActionOnSaveTask(SaveTask):
-    """
-    The main task that requests code actions from sessions and runs them.
+class CodeActionsTaskBase(LspTask):
+    """The base task that requests code actions from sessions and runs them."""
 
-    The amount of time the task is allowed to run is defined by user-controlled setting. If the task
-    runs longer, the native save will be triggered before waiting for results.
-    """
+    SETTING_NAME: str
+    """Override in your subclass to specific `lsp_code_actions_on_*` setting that should be read."""
 
     @classmethod
+    @override
     def is_applicable(cls, view: sublime.View) -> bool:
-        return bool(view.window()) and bool(cls._get_code_actions_on_save(view))
+        return bool(view.window()) and bool(cls.get_code_action_kinds(view))
 
     @classmethod
-    def _get_code_actions_on_save(cls, view: sublime.View) -> dict[str, bool]:
-        view_code_actions = cast('dict[str, bool]', view.settings().get('lsp_code_actions_on_save') or {})
-        code_actions = userprefs().lsp_code_actions_on_save.copy()
-        code_actions.update(view_code_actions)
+    def format_on_save_enabled(cls, view: sublime.View) -> bool:
+        view_format_on_save = view.settings().get('lsp_format_on_save', None)
+        return view_format_on_save if isinstance(view_format_on_save, bool) else userprefs().lsp_format_on_save
+
+    @classmethod
+    def get_code_action_kinds(cls, view: sublime.View) -> dict[str, bool]:
+        view_code_action_kinds = cast('dict[str, bool]', view.settings().get(cls.SETTING_NAME) or {})
+        code_action_kinds = getattr(userprefs(), cls.SETTING_NAME, {}).copy()
+        code_action_kinds.update(view_code_action_kinds)
         return {
-            key: value for key, value in code_actions.items() if key.startswith('source.')
+            kind: enabled for kind, enabled in code_action_kinds.items() if kind.startswith(CodeActionKind.Source)
         }
 
+    @override
     def run_async(self) -> None:
         super().run_async()
         view = self._task_runner.view
-        on_save_actions = self._get_code_actions_on_save(view)
-        request_iterator = actions_manager.request_on_save_async(view, on_save_actions)
+        code_action_kinds = self.get_code_action_kinds(view)
+        request_iterator = actions_manager.request_on_save_or_format_async(view, code_action_kinds)
         self._process_next_request(request_iterator)
 
     def _process_next_request(self, request_iterator: Iterator[Promise[CodeActionsByConfigName]]) -> None:
@@ -259,7 +304,7 @@ class CodeActionOnSaveTask(SaveTask):
         if self._cancelled:
             return
         view = self._task_runner.view
-        tasks: list[Promise] = []
+        tasks: list[Promise[None]] = []
         config_name, code_actions = response
         session = self._task_runner.session_by_name(config_name, 'codeActionProvider')
         if session and code_actions:
@@ -269,7 +314,54 @@ class CodeActionOnSaveTask(SaveTask):
         Promise.all(tasks).then(lambda _: self._process_next_request(request_iterator))
 
 
-LspSaveCommand.register_task(CodeActionOnSaveTask)
+@final
+class CodeActionsOnSaveTask(CodeActionsTaskBase):
+    """
+    Request code actions from sessions before save and run them.
+
+    The amount of time the task is allowed to run is defined by user-controlled setting. If the task
+    runs longer, the native save will be triggered before waiting for results.
+    """
+
+    SETTING_NAME: str = "lsp_code_actions_on_save"
+
+    @classmethod
+    @override
+    def is_applicable(cls, view: sublime.View) -> bool:
+        return super().is_applicable(view) and not cls.format_on_save_enabled(view)
+
+
+class CodeActionsOnFormatTask(CodeActionsTaskBase):
+    """Run code actions on format."""
+
+    SETTING_NAME: str = "lsp_code_actions_on_format"
+
+
+@final
+class CodeActionsOnFormatOnSaveTask(CodeActionsOnFormatTask):
+    """
+    Run code actions on format when format_on_save is enabled.
+
+    Code actions enabled in either 'lsp_code_actions_on_save' or 'lsp_code_actions_on_format' will be run.
+    """
+
+    @classmethod
+    @override
+    def get_code_action_kinds(cls, view: sublime.View) -> dict[str, bool]:
+        code_action_kinds_on_save = CodeActionsOnSaveTask.get_code_action_kinds(view)
+        code_action_kinds_on_format = super().get_code_action_kinds(view)
+        # Merge the code action kinds which should be run. A duplicate code action kind will be enabled when
+        # it's enabled in one of the two available settings.
+        action_kinds = set(code_action_kinds_on_save.keys()).union(code_action_kinds_on_format.keys())
+        return {
+            kind: code_action_kinds_on_save.get(kind, False) or code_action_kinds_on_format.get(kind, False)
+            for kind in action_kinds
+        }
+
+    @classmethod
+    @override
+    def is_applicable(cls, view: sublime.View) -> bool:
+        return super().is_applicable(view) and cls.format_on_save_enabled(view)
 
 
 class LspCodeActionsCommand(LspTextCommand):
@@ -280,7 +372,7 @@ class LspCodeActionsCommand(LspTextCommand):
         self,
         event: dict | None = None,
         point: int | None = None,
-        only_kinds: list[CodeActionKind] | None = None
+        only_kinds: list[str | CodeActionKind] | None = None
     ) -> bool:
         if self.applies_to_context_menu(event):
             return self.is_enabled(event, point)
@@ -290,7 +382,7 @@ class LspCodeActionsCommand(LspTextCommand):
         self,
         edit: sublime.Edit,
         event: dict | None = None,
-        only_kinds: list[CodeActionKind] | None = None,
+        only_kinds: list[str | CodeActionKind] | None = None,
         code_actions_by_config: list[CodeActionsByConfigName] | None = None
     ) -> None:
         if code_actions_by_config:
@@ -298,7 +390,7 @@ class LspCodeActionsCommand(LspTextCommand):
             return
         self._run_async(only_kinds)
 
-    def _run_async(self, only_kinds: list[CodeActionKind] | None = None) -> None:
+    def _run_async(self, only_kinds: list[str | CodeActionKind] | None = None) -> None:
         view = self.view
         region = first_selection_region(view)
         if region is None:
@@ -307,9 +399,9 @@ class LspCodeActionsCommand(LspTextCommand):
         if not listener:
             return
         session_buffer_diagnostics = listener.get_diagnostics_async(region)
-        actions_manager \
-            .request_for_region_async(view, region, session_buffer_diagnostics, only_kinds, manual=True) \
-            .then(lambda actions: sublime.set_timeout(lambda: self._handle_code_actions(actions)))
+        actions_manager.request_for_region_async(
+            view, region, session_buffer_diagnostics, only_kinds, manual=True, progress=True
+        ).then(lambda actions: sublime.set_timeout(lambda: self._handle_code_actions(actions)))
 
     def _handle_code_actions(self, response: list[CodeActionsByConfigName], run_first: bool = False) -> None:
         # Flatten response to a list of (config_name, code_action) tuples.
@@ -347,11 +439,11 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {str(response)}")
+            sublime.error_message(f"{session_name}: {response}")
 
 
 # This command must be a WindowCommand in order to reliably hide corresponding menu entries when no view has focus.
-class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
+class LspMenuActionCommand(LspWindowCommand, ABC):
     """Handles a particular kind of code actions with the purpose to list them as items in a submenu."""
 
     capability = 'codeActionProvider'
@@ -392,6 +484,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
     def description(self, index: int, event: dict | None = None) -> str | None:
         if -1 < index < len(self.actions_cache):
             return self.actions_cache[index][1]['title']
+        return None
 
     def want_event(self) -> bool:
         return True
@@ -408,7 +501,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {str(response)}")
+            sublime.error_message(f"{session_name}: {response}")
 
     def _is_cache_valid(self, event: dict | None) -> bool:
         view = self.view
@@ -435,7 +528,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
         if not view:
             return
         if (region := self._get_region(event)) is not None:
-            actions_manager.request_for_region_async(view, region, [], MENU_ACTIONS_KINDS, True)
+            actions_manager.request_for_region_async(view, region, [], MENU_ACTIONS_KINDS, manual=True)
 
 
 class LspRefactorCommand(LspMenuActionCommand):

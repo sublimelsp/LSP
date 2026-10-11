@@ -1,18 +1,26 @@
 from __future__ import annotations
-from LSP.plugin.core.promise import Promise
-from LSP.plugin.core.logging import debug
-from LSP.plugin.core.protocol import Notification, Request
+
+from .test_mocks import basic_responses
+from LSP.plugin.core.collections import DottedDict
+from LSP.plugin.core.protocol import Notification
+from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.settings import client_configs
-from LSP.plugin.core.types import ClientConfig, ClientStates
+from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import ClientStates
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
-from test_mocks import basic_responses
-from typing import Any, Generator
+from typing import Any
+from typing import TYPE_CHECKING
 from unittesting import DeferrableTestCase
 import sublime
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from LSP.plugin.core.promise import Promise
+    from LSP.plugin.core.protocol import ServerRequest
 
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
@@ -39,30 +47,52 @@ class YieldPromise:
         return self.__result
 
 
-def make_stdio_test_config() -> ClientConfig:
+def make_stdio_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
+    """Create a config for starting the fake language server in STDIO mode."""
     return ClientConfig(
-        name="TEST",
+        name=name,
         command=["python3", join("$packages", "LSP", "tests", "server.py")],
         selector="text.plain",
+        initialization_options=DottedDict(init_options),
         enabled=True,
     )
 
 
-def make_tcp_test_config() -> ClientConfig:
+def make_tcp_server_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
+    """
+    Create a config for starting the fake server in TCP mode, and make it act as the TCP server, awaiting a single
+    client connection.
+    """
     return ClientConfig(
-        name="TEST",
-        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
+        name=name,
+        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port", "--mode=server"],
         selector="text.plain",
+        initialization_options=DottedDict(init_options),
         tcp_port=0,  # select a free one for me
         enabled=True,
     )
 
 
-def add_config(config):
+def make_tcp_client_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
+    """
+    Create a config for starting the fake server in TCP mode, and make it act as the TCP client, where it connects to
+    the LSP plugin.
+    """
+    return ClientConfig(
+        name=name,
+        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port", "--mode=client"],
+        selector="text.plain",
+        initialization_options=DottedDict(init_options),
+        tcp_port=-1,  # select a free one for me
+        enabled=True,
+    )
+
+
+def add_config(config: ClientConfig) -> None:
     client_configs.add_for_testing(config)
 
 
-def remove_config(config):
+def remove_config(config: ClientConfig) -> None:
     client_configs.remove_for_testing(config)
 
 
@@ -80,7 +110,7 @@ def expand(s: str, w: sublime.Window) -> str:
 class TextDocumentTestCase(DeferrableTestCase):
     @classmethod
     def get_stdio_test_config(cls) -> ClientConfig:
-        return make_stdio_test_config()
+        return make_stdio_test_config("TEST")
 
     @classmethod
     def setUpClass(cls) -> Generator:
@@ -92,7 +122,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         open_view = window.find_open_file(filename)
         yield from close_test_view(open_view)
         cls.config = cls.get_stdio_test_config()
-        cls.config.init_options.set("serverResponse", server_capabilities)
+        cls.config.initialization_options.set("serverResponse", server_capabilities)
         add_config(cls.config)
         cls.wm = windows.lookup(window)
         cls.view = window.open_file(filename)
@@ -112,7 +142,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         if not open_view:
             self.__class__.view = window.open_file(filename)
             yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
-            self.assertTrue(self.wm.get_config_manager().match_view(self.view))
+            self.assertTrue(self.wm.get_config_manager().match_view(self.view, self.wm.workspace_folders))
         self.init_view_settings()
         yield self.ensure_document_listener_created
         params = yield from self.await_message("textDocument/didOpen")
@@ -151,7 +181,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         return False
 
     @classmethod
-    def await_message(cls, method: str, promise: YieldPromise | None = None) -> Generator:
+    def await_message(cls, method: str, promise: YieldPromise | None = None) -> Generator[Any, None, Any]:
         """
         Awaits until server receives a request with a specified method.
 
@@ -165,7 +195,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         :returns:   A generator with resolved value.
         """
         # cls.assertIsNotNone(cls.session)
-        assert cls.session  # mypy
+        assert cls.session
         if promise is None:
             promise = YieldPromise()
 
@@ -173,11 +203,11 @@ class TextDocumentTestCase(DeferrableTestCase):
             promise.fulfill(params)
 
         def error_handler(params: Any) -> None:
-            debug("Got error:", params, "awaiting timeout :(")
+            print("Got error:", params, "awaiting timeout :(")
 
         cls.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
         yield from cls.await_promise(promise)
-        return promise.result()
+        return promise.result()  # ruff: ignore[return-in-generator]
 
     def make_server_do_fake_request(self, method: str, params: Any) -> YieldPromise:
         promise = YieldPromise()
@@ -193,14 +223,14 @@ class TextDocumentTestCase(DeferrableTestCase):
         return promise
 
     @classmethod
-    def await_promise(cls, promise: YieldPromise | Promise) -> Generator:
+    def await_promise(cls, promise: YieldPromise | Promise) -> Generator[Any, None, Any]:
         if isinstance(promise, YieldPromise):
             yielder = promise
         else:
             yielder = YieldPromise()
-            promise.then(lambda result: yielder.fulfill(result))
+            promise.then(yielder.fulfill)
         yield {"condition": yielder, "timeout": TIMEOUT_TIME}
-        return yielder.result()
+        return yielder.result()  # ruff: ignore[return-in-generator]
 
     def await_run_code_action(self, code_action: dict[str, Any]) -> Generator:
         promise = YieldPromise()
@@ -213,34 +243,63 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def set_response(self, method: str, response: Any) -> None:
         self.assertIsNotNone(self.session)
-        assert self.session  # mypy
+        assert self.session
         self.session.send_notification(Notification("$test/setResponse", {"method": method, "response": response}))
 
     def set_responses(self, responses: list[tuple[str, Any]]) -> Generator:
         self.assertIsNotNone(self.session)
-        assert self.session  # mypy
+        assert self.session
         promise = YieldPromise()
 
         def handler(params: Any) -> None:
             promise.fulfill(params)
 
         def error_handler(params: Any) -> None:
-            debug("Got error:", params, "awaiting timeout :(")
+            print("Got error:", params, "awaiting timeout :(")
 
         payload = [{"method": method, "response": responses} for method, responses in responses]
         self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
         yield from self.await_promise(promise)
 
-    def await_client_notification(self, method: str, params: Any = None) -> Generator:
-        self.assertIsNotNone(self.session)
-        assert self.session  # mypy
+    def set_command_response_action(self, command_name: str, action: ServerRequest) -> Generator:
+        """
+        Make the fake server send a request when workspace/executeCommand is received.
+
+        Examples:
+            yield from self.set_command_response_action("myCommand", {
+                "method": "window/showDocument",
+                "params": {"uri": "file:///test.txt", "takeFocus": True}
+            })
+            yield from self.set_command_response_action("rename", {
+                "method": "workspace/applyEdit",
+                "params": {"edit": {"changes": {...}}}
+            })
+        """
+        assert self.session
         promise = YieldPromise()
 
         def handler(params: Any) -> None:
             promise.fulfill(params)
 
         def error_handler(params: Any) -> None:
-            debug("Got error:", params, "awaiting timeout :(")
+            print("Got error:", params, "awaiting timeout :(")
+
+        self.session.send_request(Request("$test/setupCommandAction", {
+            "commandName": command_name,
+            **action
+        }), handler, error_handler)
+        yield from self.await_promise(promise)
+
+    def await_client_notification(self, method: str, params: Any = None) -> Generator:
+        self.assertIsNotNone(self.session)
+        assert self.session
+        promise = YieldPromise()
+
+        def handler(params: Any) -> None:
+            promise.fulfill(params)
+
+        def error_handler(params: Any) -> None:
+            print("Got error:", params, "awaiting timeout :(")
 
         req = Request("$test/sendNotification", {"method": method, "params": params})
         self.session.send_request(req, handler, error_handler)
@@ -258,8 +317,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         assert isinstance(self.view, sublime.View)
 
         def condition() -> bool:
-            nonlocal self
-            nonlocal expected_change_count
+            nonlocal self, expected_change_count
             assert self.view
             v = self.view
             return v.change_count() == expected_change_count

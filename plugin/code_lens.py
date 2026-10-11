@@ -1,19 +1,23 @@
 from __future__ import annotations
-from ..protocol import CodeLens
-from ..protocol import Command
-from ..protocol import Range
+
 from .core.constants import CODE_LENS_ENABLED_KEY
 from .core.protocol import Error
 from .core.protocol import ResolvedCodeLens
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
-from .core.views import range_to_region
+from .core.type_converters import range_to_region
 from functools import partial
 from typing import cast
+from typing import TYPE_CHECKING
 from typing_extensions import TypeGuard
 import itertools
 import sublime
+
+if TYPE_CHECKING:
+    from ..protocol import CodeLens
+    from ..protocol import Command
+    from ..protocol import Range
 
 
 def is_resolved(code_lens: CodeLens | ResolvedCodeLens) -> TypeGuard[ResolvedCodeLens]:
@@ -26,7 +30,7 @@ class HashableRange:
         start, end = r['start'], r['end']
         self.data = (start['line'], start['character'], end['line'], end['character'])
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.data)
 
     def __eq__(self, rhs: object) -> bool:
@@ -91,11 +95,11 @@ class CodeLensCache:
         visible_region = view.visible_region()
         return [
             cl for cl in itertools.chain.from_iterable(self.code_lenses.values())
-            if not is_resolved(cl.data) and range_to_region(cl.data['range'], view).intersects(visible_region)
+            if not is_resolved(cl.data) and range_to_region(view, cl.data['range']).intersects(visible_region)
         ]
 
     def code_lenses_with_command(self) -> list[ResolvedCodeLens]:
-        """ Returns only the code lenses that are either resolved, or have a cached command. """
+        """Returns only the code lenses that are either resolved, or have a cached command."""
         code_lenses: list[ResolvedCodeLens] = []
         for cached_code_lens in itertools.chain.from_iterable(self.code_lenses.values()):
             code_lens = cached_code_lens.data.copy()
@@ -103,7 +107,7 @@ class CodeLensCache:
                 code_lenses.append(code_lens)
             elif cached_command := cached_code_lens.cached_command:
                 code_lens['command'] = cached_command
-                code_lens = cast(ResolvedCodeLens, code_lens)
+                code_lens = cast('ResolvedCodeLens', code_lens)
                 code_lens['uses_cached_command'] = True
                 code_lenses.append(code_lens)
         return code_lenses
@@ -150,11 +154,10 @@ class LspCodeLensCommand(LspTextCommand):
         for region in self.view.sel():
             for sv in listener.session_views_async():
                 session_name = sv.session.config.name
-                for command in sv.get_code_lenses_for_region(region):
-                    commands.append((session_name, command))
+                commands.extend((session_name, command) for command in sv.get_code_lenses_for_region(region))
         if not commands:
             return
-        elif len(commands) == 1:
+        if len(commands) == 1:
             self.on_select(commands, 0)
         elif window := self.view.window():
             window.show_quick_panel(
@@ -166,10 +169,9 @@ class LspCodeLensCommand(LspTextCommand):
         return False
 
     def on_select(self, commands: list[tuple[str, Command]], index: int) -> None:
-        try:
-            session_name, command = commands[index]
-        except IndexError:
+        if index == -1:
             return
+        session_name, command = commands[index]
         args = {
             "session_name": session_name,
             "command_name": command["command"],

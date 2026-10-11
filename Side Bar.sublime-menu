@@ -1,0 +1,4 @@
+[
+    { "caption": "-", "id": "lsp" },
+    { "caption": "LSP: Rename…", "command": "lsp_rename_path", "args": {"paths": []} }
+]

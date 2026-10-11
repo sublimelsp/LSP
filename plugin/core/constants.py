@@ -1,19 +1,34 @@
 from __future__ import annotations
+
 from ...protocol import CodeActionKind
 from ...protocol import CompletionItemKind
 from ...protocol import DiagnosticSeverity
+from ...protocol import DiagnosticTag
 from ...protocol import DocumentHighlightKind
 from ...protocol import LanguageKind
 from ...protocol import MessageType
 from ...protocol import SymbolKind
 from .typing import StrEnum
+from enum import auto
+from enum import IntEnum
 from enum import IntFlag
-from os.path import dirname, join
+from os.path import dirname
+from os.path import join
+from typing import Dict
 from typing import Tuple
+from typing import TYPE_CHECKING
 import sublime
 
+if TYPE_CHECKING:
+    from sublime_types import Kind
 
-SublimeKind = Tuple[int, str, str]
+try:
+    from mdpopups.marko import __version__ as marko_version  # pyright: ignore[reportMissingImports]
+except ImportError:
+    marko_version = None
+
+
+MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
 
 ST_CACHE_PATH = sublime.cache_path()
@@ -21,6 +36,7 @@ ST_INSTALLED_PACKAGES_PATH = sublime.installed_packages_path()
 ST_PACKAGES_PATH = sublime.packages_path()
 ST_PLATFORM = sublime.platform()
 ST_VERSION = int(sublime.version())
+# TODO: Convert to `Path` once `AbstractPlugin` is removed.
 ST_STORAGE_PATH = join(dirname(ST_CACHE_PATH), "Package Storage")
 """
 The "Package Storage" is a way to store server data without influencing the
@@ -31,14 +47,19 @@ where $DATA means:
 - on Windows: %LocalAppData%/Sublime Text
 - on Linux: ~/.cache/sublime-text
 """
+MARKO_MD_PARSER_VERSION: str | None = marko_version
+# Brackets that are commonly auto-paired by ST.
+AUTO_CLOSE_BRACKETS = ('{}', '()', '[]')
 
 
 class RequestFlags(IntFlag):
     """
-    A bitflag that indicates how some of the requests are prioritized between the sessions.
-    This is used for multi-session configurations, where the best session is selected for each of the relevant features
-    below and the corresponding request is made only by that one session.
+    A bitflag that holds information about selecting a subset of request types.
+
+    This is used for example to prioritize certain requests between different sessions in a multi-session configuration,
+    and to mark some requests as pending for refresh in a given document.
     """
+
     NONE = 0
     DOCUMENT_COLOR = 1
     """ textDocument/documentColor """
@@ -46,14 +67,31 @@ class RequestFlags(IntFlag):
     """ textDocument/inlayHint """
     SEMANTIC_TOKENS = 4
     """ textDocument/semanticTokens """
+    ON_TYPE_FORMATTING = 8
+    """ textDocument/onTypeFormatting """
+    CODE_LENS = 16
+    """ textDocument/codeLens """
+    DIAGNOSTIC = 32
+    """ textDocument/diagnostic """
 
 
 class RegionKey(StrEnum):
-    """ Key names for use with the `View.add_regions` method. """
+    """Key names for use with the `View.add_regions` method."""
+
     CODE_ACTION = 'lsp_code_action'
     DOCUMENT_LINK = 'lsp_document_link'
     HOVER_HIGHLIGHT = 'lsp_hover_highlight'
     REFERENCE_HIGHLIGHT = 'lsp_reference_highlight'
+
+
+class ChangeEventAction(IntEnum):
+    CUT = auto()
+    INSERT_NEWLINE = auto()
+    OTHER = auto()
+    PASTE = auto()
+    REDO = auto()
+    TYPE = auto()
+    UNDO = auto()
 
 
 # Setting keys
@@ -62,7 +100,8 @@ HOVER_ENABLED_KEY = 'lsp_show_hover_popups'
 SHOW_DEFINITIONS_KEY = 'show_definitions'
 
 # Region flags
-DOCUMENT_LINK_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+DIAGNOSTIC_ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
+DOCUMENT_LINK_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
 REGIONS_INITIALIZE_FLAGS = sublime.RegionFlags.HIDDEN | sublime.RegionFlags.NO_UNDO
 SEMANTIC_TOKEN_FLAGS = sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO
 
@@ -112,7 +151,7 @@ KIND_QUICKFIX = (sublime.KindId.COLOR_YELLOWISH, "f", "QuickFix")
 KIND_REFACTOR = (sublime.KindId.COLOR_CYANISH, "r", "Refactor")
 KIND_SOURCE = (sublime.KindId.COLOR_PURPLISH, "s", "Source")
 
-COMPLETION_KINDS: dict[CompletionItemKind, SublimeKind] = {
+COMPLETION_KINDS: dict[CompletionItemKind, Kind] = {
     CompletionItemKind.Text: KIND_TEXT,
     CompletionItemKind.Method: KIND_METHOD,
     CompletionItemKind.Function: KIND_FUNCTION,
@@ -140,7 +179,7 @@ COMPLETION_KINDS: dict[CompletionItemKind, SublimeKind] = {
     CompletionItemKind.TypeParameter: KIND_TYPEPARAMETER
 }
 
-SYMBOL_KINDS: dict[SymbolKind, SublimeKind] = {
+SYMBOL_KINDS: dict[SymbolKind, Kind] = {
     SymbolKind.File: KIND_FILE,
     SymbolKind.Module: KIND_MODULE,
     SymbolKind.Namespace: KIND_NAMESPACE,
@@ -169,26 +208,18 @@ SYMBOL_KINDS: dict[SymbolKind, SublimeKind] = {
     SymbolKind.TypeParameter: KIND_TYPEPARAMETER
 }
 
-DIAGNOSTIC_KINDS: dict[DiagnosticSeverity, SublimeKind] = {
+DIAGNOSTIC_KINDS: dict[DiagnosticSeverity, Kind] = {
     DiagnosticSeverity.Error: KIND_ERROR,
     DiagnosticSeverity.Warning: KIND_WARNING,
     DiagnosticSeverity.Information: KIND_INFORMATION,
     DiagnosticSeverity.Hint: KIND_HINT
 }
 
-CODE_ACTION_KINDS: dict[CodeActionKind, SublimeKind] = {
+CODE_ACTION_KINDS: dict[CodeActionKind, Kind] = {
     CodeActionKind.QuickFix: KIND_QUICKFIX,
     CodeActionKind.Refactor: KIND_REFACTOR,
     CodeActionKind.Source: KIND_SOURCE
 }
-
-
-DOCUMENT_HIGHLIGHT_KIND_NAMES: dict[DocumentHighlightKind, str] = {
-    DocumentHighlightKind.Text: "text",
-    DocumentHighlightKind.Read: "read",
-    DocumentHighlightKind.Write: "write"
-}
-
 
 MESSAGE_TYPE_LEVELS: dict[MessageType, str] = {
     MessageType.Error: "ERROR",
@@ -200,20 +231,53 @@ MESSAGE_TYPE_LEVELS: dict[MessageType, str] = {
 
 
 # Symbol scope to kind mapping, based on https://github.com/sublimetext-io/docs.sublimetext.io/issues/30
-SUBLIME_KIND_SCOPES: dict[SublimeKind, str] = {
-    sublime.KIND_KEYWORD: "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language",  # noqa: E501
-    sublime.KIND_TYPE: "entity.name.type | entity.name.class | entity.name.enum | entity.name.trait | entity.name.struct | entity.name.impl | entity.name.interface | entity.name.union | support.type | support.class",  # noqa: E501
-    sublime.KIND_FUNCTION: "entity.name.function | entity.name.method | entity.name.macro | meta.method entity.name.function | support.function | meta.function-call variable.function | meta.function-call support.function | support.method | meta.method-call variable.function",  # noqa: E501
+SUBLIME_KIND_SCOPES: dict[Kind, str] = {
+    sublime.KIND_KEYWORD: "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language",  # ruff: ignore[line-too-long]
+    sublime.KIND_TYPE: "entity.name.type | entity.name.class | entity.name.enum | entity.name.trait | entity.name.struct | entity.name.impl | entity.name.interface | entity.name.union | support.type | support.class",  # ruff: ignore[line-too-long]
+    sublime.KIND_FUNCTION: "entity.name.function | entity.name.method | entity.name.macro | meta.method entity.name.function | support.function | meta.function-call variable.function | meta.function-call support.function | support.method | meta.method-call variable.function",  # ruff: ignore[line-too-long]
     sublime.KIND_NAMESPACE: "entity.name.module | entity.name.namespace | support.module | support.namespace",
     sublime.KIND_NAVIGATION: "entity.name.definition | entity.name.label | entity.name.section",
     sublime.KIND_MARKUP: "entity.other.attribute-name | entity.name.tag | meta.toc-list.id.html",
-    sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
+    sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # ruff: ignore[line-too-long]
 }
+
+DIAGNOSTIC_SEVERITY_SCOPES: dict[DiagnosticSeverity, str] = {
+    DiagnosticSeverity.Error: 'region.redish markup.error.lsp',
+    DiagnosticSeverity.Warning: 'region.yellowish markup.warning.lsp',
+    DiagnosticSeverity.Information: 'region.bluish markup.info.lsp',
+    DiagnosticSeverity.Hint: 'region.bluish markup.info.hint.lsp'
+}
+
+DIAGNOSTIC_TAG_SCOPES: dict[DiagnosticTag, str] = {
+    DiagnosticTag.Unnecessary: 'markup.unnecessary.lsp',
+    DiagnosticTag.Deprecated: 'markup.deprecated.lsp'
+}
+
+SUPPORTED_DIAGNOSTIC_TAGS = list(DIAGNOSTIC_TAG_SCOPES)
 
 DOCUMENT_HIGHLIGHT_KIND_SCOPES: dict[DocumentHighlightKind, str] = {
     DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
     DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
     DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
+}
+
+CODE_ACTION_ANNOTATION_SCOPE = 'region.bluish markup.accent.codeaction.lsp'
+CODE_LENS_ANNOTATION_SCOPE = 'region.greenish markup.accent.codelens.lsp'
+SIGNATURE_HELP_FUNCTION_SCOPE = 'meta.signature-help.lsp'
+SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp variable.parameter.sighelp.active.lsp'
+SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp'
+LIGHTBULB_SCOPE = 'region.yellowish lightbulb.lsp'
+
+COMMAND_TO_CHANGE_EVENT_ACTION: dict[str, ChangeEventAction] = {
+    'cut': ChangeEventAction.CUT,
+    'duplicate_line': ChangeEventAction.OTHER,
+    'paste': ChangeEventAction.PASTE,
+    'paste_and_indent': ChangeEventAction.PASTE,
+    'redo': ChangeEventAction.REDO,
+    'redo_or_repeat': ChangeEventAction.REDO,
+    'soft_redo': ChangeEventAction.REDO,
+    'soft_undo': ChangeEventAction.UNDO,
+    'undo': ChangeEventAction.UNDO,
 }
 
 # These are the "exceptional" base scopes. If a base scope is not in this map, nor the first two components or more
@@ -226,6 +290,8 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "source.cs": LanguageKind.CSharp,
     "source.dosbatch": LanguageKind.WindowsBat,
     "source.fixedform-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
+    "source.gjs": "glimmer-js",
+    "source.gts": "glimmer-ts",
     "source.js": LanguageKind.JavaScript,
     "source.js.react": LanguageKind.JavaScriptReact,  # https://github.com/Thom1729/Sublime-JS-Custom
     "source.json-tmlanguage": "jsonc",  # https://github.com/SublimeText/PackageDev
@@ -245,10 +311,13 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "source.yaml.helm": 'helm',  # https://github.com/SublimeText/YamlPipelines
     "text.advanced_csv": "csv",  # https://github.com/SublimeText/AFileIcon
     "text.django": LanguageKind.HTML,  # https://github.com/willstott101/django-sublime-syntax
+    "text.git.commit": LanguageKind.GitCommit,
+    "text.git.rebase": LanguageKind.GitRebase,
     "text.html.handlebars": LanguageKind.Handlebars,
     "text.html.markdown": LanguageKind.Markdown,
     "text.html.markdown.rmarkdown": LanguageKind.R,  # https://github.com/REditorSupport/sublime-ide-r
     "text.html.rails": "erb",
+    "text.html.svelte": "svelte",
     "text.html.vue": "vue",
     "text.jinja": LanguageKind.HTML,  # https://github.com/Sublime-Instincts/BetterJinja
     "text.plain": "plaintext",
@@ -279,7 +348,7 @@ SEMANTIC_TOKENS_MAP = {
     "struct.declaration": "entity.name.struct.lsp",
     "struct.defaultLibrary": "support.struct.lsp",
     "struct.definition": "entity.name.struct.lsp",
-    "typeParameter": "variable.parameter.generic.lsp",
+    "typeParameter": "variable.parameter.type.lsp",
     "parameter": "variable.parameter.lsp",
     "variable": "variable.other.lsp",
     "variable.readonly": "variable.other.constant.lsp",

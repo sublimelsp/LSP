@@ -1,26 +1,29 @@
 from __future__ import annotations
-from ..protocol import Location
+
 from .core.constants import RegionKey
-from .core.protocol import Point
 from .core.protocol import Request
+from .core.protocol import TextPosition
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
-from .core.sessions import Session
 from .core.settings import userprefs
-from .core.types import ClientConfig
+from .core.type_converters import position_to_offset
 from .core.views import get_line
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
-from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
 from typing import Literal
+from typing import TYPE_CHECKING
 import functools
 import linecache
 import os
 import sublime
 
+if TYPE_CHECKING:
+    from ..protocol import Location
+    from .core.sessions import Session
+    from .core.types import ClientConfig
 
 OutputMode = Literal['output_panel', 'quick_panel']
 
@@ -56,8 +59,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         # We include "output panel" and "quick panel" variants of `LSP: Find References` in the Command Palette
         # but we only show the one that is not the same as the default one (per the `show_references_in_quick_panel`
         # setting).
-        if output_mode == 'output_panel' and not userprefs().show_references_in_quick_panel or \
-                output_mode == 'quick_panel' and userprefs().show_references_in_quick_panel:
+        if (output_mode == 'output_panel' and not userprefs().show_references_in_quick_panel) or \
+                (output_mode == 'quick_panel' and userprefs().show_references_in_quick_panel):
             return False
         if self.applies_to_context_menu(event):
             return self.is_enabled(
@@ -178,7 +181,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         placeholder = "References to " + word
         kind = get_symbol_kind_from_scope(self.view.scope_name(position))
         index = 0
-        locations.sort(key=lambda location: (location['uri'], Point.from_lsp(location['range']['start'])))
+        locations.sort(key=lambda location: (location['uri'], TextPosition.from_lsp(location['range']['start'])))
         if len(selection):
             pt = selection[0].b
             view_filename = self.view.file_name()
@@ -186,7 +189,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 if view_filename != session.config.map_server_uri_to_client_path(location['uri']):
                     continue
                 index = idx
-                if position_to_offset(location['range']['start'], self.view) > pt:
+                if position_to_offset(self.view, location['range']['start']) > pt:
                     break
         LocationPicker(self.view, session, locations, side_by_side, force_group, group, placeholder, kind, index)
 
@@ -241,13 +244,13 @@ def _group_locations_by_uri(
     window: sublime.Window,
     config: ClientConfig,
     locations: list[Location]
-) -> dict[str, list[tuple[Point, str]]]:
+) -> dict[str, list[tuple[TextPosition, str]]]:
     """Return a dictionary that groups locations by the URI it belongs."""
-    grouped_locations: dict[str, list[tuple[Point, str]]] = {}
+    grouped_locations: dict[str, list[tuple[TextPosition, str]]] = {}
     for location in locations:
         uri, position = get_uri_and_position_from_location(location)
         file_path = config.map_server_uri_to_client_path(uri)
-        point = Point.from_lsp(position)
+        point = TextPosition.from_lsp(position)
         # get line of the reference, to showcase its use
         reference_line = get_line(window, file_path, point.row)
         if grouped_locations.get(file_path) is None:

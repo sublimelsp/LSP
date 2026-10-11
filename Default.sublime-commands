@@ -8,6 +8,14 @@
         }
     },
     {
+        "caption": "Preferences: LSP Server Configurations",
+        "command": "edit_settings",
+        "args": {
+            "base_file": "${packages}/LSP/LanguageServers.sublime-settings",
+            "default": "{\n\t$0\n}\n"
+        }
+    },
+    {
         "caption": "Preferences: LSP Key Bindings",
         "command": "edit_settings",
         "args": {
@@ -99,13 +107,6 @@
     },
     {
         "caption": "LSP: Goto Diagnostic",
-        "command": "lsp_goto_diagnostic",
-        "args": {
-            "uri": "$view_uri"
-        }
-    },
-    {
-        "caption": "LSP: Goto Diagnostic in Project",
         "command": "lsp_goto_diagnostic"
     },
     {
@@ -139,7 +140,15 @@
         "command": "lsp_show_diagnostics_panel"
     },
     {
-        "caption": "LSP: Rename",
+        "caption": "LSP: Toggle Messages Panel",
+        "command": "lsp_toggle_messages_panel"
+    },
+    {
+        "caption": "LSP: Rename Path",
+        "command": "lsp_rename_path"
+    },
+    {
+        "caption": "LSP: Rename Symbol",
         "command": "lsp_symbol_rename"
     },
     {

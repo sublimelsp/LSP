@@ -1,20 +1,22 @@
 from __future__ import annotations
-from .sessions import SessionViewProtocol
+
 from .progress import ProgressReporter
 from .progress import ViewProgressReporter
 from .progress import WindowProgressReporter
-from .protocol import Request
 from typing import Any
+from typing import TYPE_CHECKING
 from weakref import ref
 import sublime
 
+if TYPE_CHECKING:
+    from .protocol import Request
+    from .sessions import SessionViewProtocol
+
 
 class ActiveRequest:
-    """
-    Holds state per request.
-    """
+    """Holds state per request."""
 
-    def __init__(self, sv: SessionViewProtocol, request_id: int, request: Request) -> None:
+    def __init__(self, sv: SessionViewProtocol, request_id: int, request: Request[Any, Any]) -> None:
         # sv is the parent object; there is no need to keep it alive explicitly.
         self.weaksv = ref(sv)
         self.request_id = request_id
@@ -61,9 +63,8 @@ class ActiveRequest:
         if self.request.view is not None:
             key = f"lspprogressview-{sv.session.config.name}-{self.request.view.id()}-{self.request_id}"
             return ViewProgressReporter(self.request.view, key, title, message, percentage)
-        else:
-            key = f"lspprogresswindow-{sv.session.config.name}-{sv.session.window.id()}-{self.request_id}"
-            return WindowProgressReporter(sv.session.window, key, title, message, percentage)
+        key = f"lspprogresswindow-{sv.session.config.name}-{sv.session.window.id()}-{self.request_id}"
+        return WindowProgressReporter(sv.session.window, key, title, message, percentage)
 
     def update_progress_async(self, params: dict[str, Any]) -> None:
         if self.canceled:

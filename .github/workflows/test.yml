@@ -1,0 +1,42 @@
+name: Test & Lint
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - ".github/workflows/docs.yml"
+      - "docs/**"
+  pull_request:
+    paths-ignore:
+      - ".github/workflows/docs.yml"
+      - "docs/**"
+
+jobs:
+  Unittesting:
+    name: Unittesting (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: SublimeText/UnitTesting/actions/setup@v1
+      - uses: SublimeText/UnitTesting/actions/run-tests@v1
+        with:
+          coverage: true
+
+  Lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - run: pip3 install tox --user
+      - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - run: tox

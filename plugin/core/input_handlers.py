@@ -1,16 +1,20 @@
 from __future__ import annotations
+
 from .constants import ST_VERSION
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
-from typing import Any, Callable, List, Tuple, Union
+from typing import Any
+from typing import Callable
 from typing import final
+from typing import List
+from typing import Tuple
+from typing import Union
 from typing_extensions import ParamSpec
 import functools
 import sublime
 import sublime_plugin
 import time
 import weakref
-
 
 ListItemsReturn = Union[List[str], Tuple[List[str], int], List[Tuple[str, Any]], Tuple[List[Tuple[str, Any]], int],
                         List[sublime.ListInputItem], Tuple[List[sublime.ListInputItem], int]]
@@ -19,12 +23,13 @@ P = ParamSpec('P')
 
 
 def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
-    """ A decorator which debounces the calls to a function.
+    """
+    A decorator which debounces the calls to a function.
 
     Note that the return value of the function will be discarded, so it only makes sense to use this decorator for
     functions that return None. The function will run on Sublime's main thread.
     """
-    DEBOUNCE_TIME = 0.5  # seconds
+    DEBOUNCE_TIME = 0.5  # seconds  # ruff: ignore[non-lowercase-variable-in-function]
 
     @functools.wraps(user_function)
     def wrapped_function(*args: P.args, **kwargs: P.kwargs) -> None:
@@ -36,7 +41,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
                     setattr(wrapped_function, '_target_time', None)
                     sublime.set_timeout(check_call_function, int(additional_delay * 1000))
                     return
-            delattr(wrapped_function, '_target_time')
+            delattr(wrapped_function, '_target_time')  # ruff: ignore[del-attr-with-constant]
             user_function(*args, **kwargs)
         if hasattr(wrapped_function, '_target_time'):
             setattr(wrapped_function, '_target_time', time.monotonic() + DEBOUNCE_TIME)
@@ -46,8 +51,9 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
     return wrapped_function
 
 
-class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
-    """ A ListInputHandler which can preselect a value.
+class PreselectedListInputHandler(sublime_plugin.ListInputHandler, ABC):
+    """
+    A ListInputHandler which can preselect a value.
 
     Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but instead `get_list_items`,
     i.e. just prepend `get_` to the regular `list_items` method.
@@ -60,7 +66,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
     """
 
     def __init__(
-        self, window: sublime.Window, initial_value: str | sublime.ListInputItem | None = None
+        self, window: sublime.Window, initial_value: str | sublime.ListInputItem[Any] | None = None
     ) -> None:
         super().__init__()
         self._window = window
@@ -71,8 +77,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
         if self._initial_value is not None:
             sublime.set_timeout(self._select_and_reset)
             return [self._initial_value], 0  # pyright: ignore[reportReturnType]
-        else:
-            return self.get_list_items()
+        return self.get_list_items()
 
     def _select_and_reset(self) -> None:
         self._initial_value = None
@@ -81,11 +86,12 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
 
     @abstractmethod
     def get_list_items(self) -> ListItemsReturn:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
-class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
-    """ A ListInputHandler which can update its items while typing in the input field.
+class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):
+    """
+    A ListInputHandler which can update its items while typing in the input field.
 
     Subclasses of DynamicListInputHandler must not implement the `list_items` method, but can override
     `get_list_items` for the initial list items. The `on_modified` method will be called after a small delay (debounced)
@@ -134,16 +140,15 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
             self.listener.detach()
 
     @final
-    def list_items(self) -> list[sublime.ListInputItem]:
+    def list_items(self) -> list[sublime.ListInputItem[Any]]:
         if not self.text:  # Show initial items when the command was just invoked
             return self.get_list_items() or [sublime.ListInputItem("No Results", "")]
         if items := getattr(self.command, '_items', None):  # Items were updated after typing
             if ST_VERSION >= 4157:
                 return items
-            else:
-                # Trick to select the topmost item; see https://github.com/sublimehq/sublime_text/issues/6162
-                sublime.set_timeout(self._select_first_row)
-                return [sublime.ListInputItem("", "")] + items
+            # Trick to select the topmost item; see https://github.com/sublimehq/sublime_text/issues/6162
+            sublime.set_timeout(self._select_first_row)
+            return [sublime.ListInputItem("", ""), *items]
         return [sublime.ListInputItem(f'No Symbol found: "{self.text}"', "")]
 
     def _select_first_row(self) -> None:
@@ -168,15 +173,15 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         self._detach_listener()
 
     def on_modified(self, text: str) -> None:
-        """ Called after changes have been made to the input, with the text of the input field passed as argument. """
+        """Called after changes have been made to the input, with the text of the input field passed as argument."""
         pass
 
-    def get_list_items(self) -> list[sublime.ListInputItem]:
-        """ The list items which are initially shown. """
+    def get_list_items(self) -> list[sublime.ListInputItem[Any]]:
+        """The list items which are initially shown."""
         return []
 
-    def update(self, items: list[sublime.ListInputItem]) -> None:
-        """ Call this method to update the list items. """
+    def update(self, items: list[sublime.ListInputItem[Any]]) -> None:
+        """Call this method to update the list items."""
         if not self.input_view:
             return
         setattr(self.command, '_items', items)

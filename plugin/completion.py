@@ -1,43 +1,58 @@
 from __future__ import annotations
-from ..protocol import EditRangeWithInsertReplace
+
 from ..protocol import CompletionItem
 from ..protocol import CompletionItemDefaults
 from ..protocol import CompletionItemKind
 from ..protocol import CompletionItemTag
 from ..protocol import CompletionList
 from ..protocol import CompletionParams
+from ..protocol import EditRangeWithInsertReplace
 from ..protocol import InsertReplaceEdit
 from ..protocol import InsertTextFormat
-from ..protocol import MarkupContent, MarkedString, MarkupKind
+from ..protocol import MarkedString
+from ..protocol import MarkupContent
+from ..protocol import MarkupKind
 from ..protocol import Range
 from ..protocol import TextEdit
 from .core.constants import COMPLETION_KINDS
+from .core.constants import MarkdownLangMap
 from .core.edit import apply_text_edits
 from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
-from .core.sessions import Session
 from .core.settings import userprefs
-from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
-from .core.views import MarkdownLangMap
+from .core.type_converters import range_to_region
+from .core.views import FORMAT_MARKUP_CONTENT
+from .core.views import FORMAT_STRING
+from .core.views import html_wrapper
 from .core.views import minihtml
-from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
-from typing import Any, Callable, ClassVar, Generator, List, Tuple, Union
+from typing import Any
+from typing import Callable
 from typing import cast
-from typing_extensions import TypeAlias, TypeGuard
+from typing import ClassVar
+from typing import Generator
+from typing import List
+from typing import Tuple
+from typing import TYPE_CHECKING
+from typing import Union
+from typing_extensions import TypeAlias
+from typing_extensions import TypeGuard
 import functools
 import html
 import sublime
 import weakref
 import webbrowser
 
+if TYPE_CHECKING:
+    from .core.sessions import Session
+
 SessionName: TypeAlias = str
-CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, None]
-ResolvedCompletions: TypeAlias = Tuple[Union[CompletionResponse, Error], 'weakref.ref[Session]']
+CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, Error, None]
+ResolvedCompletions: TypeAlias = Tuple[CompletionResponse, 'weakref.ref[Session]']
 CompletionsStore: TypeAlias = Tuple[List[CompletionItem], CompletionItemDefaults]
 
 
@@ -65,8 +80,7 @@ def format_completion(
     details: list[str] = []
     if can_resolve_completion_items or item.get('documentation'):
         # Not using "make_command_link" in a hot path to avoid slow json.dumps.
-        args = '{{"view_id":{},"command":"lsp_resolve_docs","args":{{"index":{},"session_name":"{}"}}}}'.format(
-            view_id, index, session_name)
+        args = f'{{"view_id":{view_id},"command":"lsp_resolve_docs","args":{{"index":{index},"session_name":"{session_name}"}}}}'  # ruff: ignore[line-too-long]
         href = f'subl:lsp_run_text_command_helper {args}'
         details.append(f"<a href='{href}'>More</a>")
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
@@ -102,27 +116,26 @@ def format_completion(
         command_url = "subl:lsp_commit_completion_with_opposite_insert_mode"
         details.append(f"<a href='{command_url}'>{oposite_insert_mode}</a>")
     flags = sublime.CompletionItemFlags.KEEP_PREFIX if text_edit else sublime.CompletionItemFlags.NONE
-    completion = sublime.CompletionItem(
+    return sublime.CompletionItem(
         trigger,
         annotation,
         # Not using "sublime.format_command" in a hot path to avoid slow json.dumps.
-        f'lsp_select_completion {{"index":{index},"session_name":"{session_name}","flags":{flags}}}',
+        f'lsp_select_completion {{"index":{index},"session_name":"{session_name}"}}',
         sublime.CompletionFormat.COMMAND,
         kind,
         flags=flags,
         details=" | ".join(details)
     )
-    return completion
 
 
 def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit, *, reverse_insert_mode: bool) -> Range:
     if 'insert' in text_edit and 'replace' in text_edit:
-        text_edit = cast(InsertReplaceEdit, text_edit)
+        text_edit = cast('InsertReplaceEdit', text_edit)
         insert_mode = userprefs().completion_insert_mode
         if reverse_insert_mode:
             insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
         return text_edit.get(insert_mode)  # type: ignore
-    text_edit = cast(TextEdit, text_edit)
+    text_edit = cast('TextEdit', text_edit)
     return text_edit['range']
 
 
@@ -193,10 +206,10 @@ class QueryCompletionsTask:
 
     def query_completions_async(self, sessions: list[Session]) -> None:
         promises = [self._create_completion_request_async(session) for session in sessions]
-        Promise.all(promises).then(lambda response: self._resolve_completions_async(response))
+        Promise.all(promises).then(self._resolve_completions_async)
 
     def _create_completion_request_async(self, session: Session) -> Promise[ResolvedCompletions]:
-        params = cast(CompletionParams, text_document_position_params(self._view, self._location))
+        params = cast('CompletionParams', text_document_position_params(self._view, self._location))
         request = Request.complete(params, self._view)
         promise, request_id = session.send_request_task_2(request)
         weak_session = weakref.ref(session)
@@ -204,7 +217,7 @@ class QueryCompletionsTask:
         return promise.then(lambda response: self._on_completion_response_async(response, request_id, weak_session))
 
     def _on_completion_response_async(
-        self, response: CompletionResponse | Error, request_id: int, weak_session: weakref.ref[Session]
+        self, response: CompletionResponse, request_id: int, weak_session: weakref.ref[Session]
     ) -> ResolvedCompletions:
         self._pending_completion_requests.pop(request_id, None)
         return (response, weak_session)
@@ -305,9 +318,11 @@ class LspResolveDocsCommand(LspTextCommand):
             documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
         if detail:
-            minihtml_content += f"<div class='highlight'>{detail}</div>"
+            minihtml_content += html_wrapper(detail)
         if documentation:
-            minihtml_content += documentation
+            if detail:
+                minihtml_content += '<hr class="m-0">'
+            minihtml_content += html_wrapper(documentation)
 
         def run_on_main_thread() -> None:
             if not self.view.is_valid():
@@ -343,6 +358,7 @@ class LspResolveDocsCommand(LspTextCommand):
 
 
 class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
+    active = False
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
         LspSelectCompletionCommand.reverse_insert_mode = True
@@ -383,7 +399,7 @@ class LspSelectCompletionCommand(LspTextCommand):
 
     def _resolve_async(self, session_name: str, item: CompletionItem) -> Promise[CompletionItem]:
         if session := self.session_by_name(session_name):
-            promise: Promise[CompletionItem] = session.send_request_task(Request.resolveCompletionItem(item, self.view))
+            promise = session.send_request_task(Request.resolveCompletionItem(item, self.view))
             return promise.then(lambda response: self._on_resolved_async(item, response))
         return Promise.resolve(item)
 
@@ -410,7 +426,7 @@ class LspApplyCompletionCommand(LspTextCommand):
         if text_edit := item.get("textEdit"):
             new_text = text_edit["newText"].replace("\r", "")
             edit_region = range_to_region(
-                get_text_edit_range(text_edit, reverse_insert_mode=reverse_insert_mode), self.view)
+                self.view, get_text_edit_range(text_edit, reverse_insert_mode=reverse_insert_mode))
             for region in self._translated_regions(edit_region):
                 self.view.erase(edit, region)
         else:
@@ -422,6 +438,7 @@ class LspApplyCompletionCommand(LspTextCommand):
             self.view.run_command("insert", {"characters": new_text})
         self.apply_additional_text_edits(self.view, item)
         if command := item.get("command"):
+            debug(f'Running server command "{command}" for view {self.view.id()}')
             args = {
                 "command_name": command["command"],
                 "command_args": command.get("arguments"),
@@ -437,5 +454,4 @@ class LspApplyCompletionCommand(LspTextCommand):
             # To do that, translate, or offset, the LSP edit region into the non-"primary" regions.
             # The concept of "primary" is our own, and there is no mention of it in the LSP spec.
             translation = region.b - primary_cursor_position
-            translated_edit_region = sublime.Region(edit_region.a + translation, edit_region.b + translation)
-            yield translated_edit_region
+            yield sublime.Region(edit_region.a + translation, edit_region.b + translation)

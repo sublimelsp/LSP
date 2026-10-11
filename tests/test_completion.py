@@ -1,19 +1,20 @@
 from __future__ import annotations
+
+from .setup import TextDocumentTestCase
 from copy import deepcopy
-from LSP.plugin.completion import format_completion
 from LSP.plugin.completion import completion_with_defaults
+from LSP.plugin.completion import format_completion
 from LSP.protocol import CompletionItem
 from LSP.protocol import CompletionItemDefaults
 from LSP.protocol import CompletionItemKind
 from LSP.protocol import CompletionItemLabelDetails
 from LSP.protocol import CompletionItemTag
 from LSP.protocol import InsertTextFormat
-from setup import TextDocumentTestCase
 from setup import TIMEOUT_TIME
-from typing import Any, Generator
+from typing import Any
+from typing import Generator
 from unittest import TestCase
 import sublime
-
 
 additional_edits = {
     'label': 'asdf',
@@ -53,14 +54,15 @@ class CompletionsTestsBase(TextDocumentTestCase):
         s.clear()
         s.add(point)
 
-    def create_commit_completion_closure(self, commit_completion_command="commit_completion") -> Generator:
+    def create_commit_completion_closure(
+        self, commit_completion_command: str = "commit_completion"
+    ) -> Generator:
         committed = False
         current_change_count = self.view.change_count()
 
         def commit_completion() -> Generator:
             yield {"condition": self.view.is_auto_complete_visible, "timeout": TIMEOUT_TIME}
-            nonlocal committed
-            nonlocal current_change_count
+            nonlocal committed, current_change_count
             if not committed:
                 self.view.run_command(commit_completion_command)
                 committed = True
@@ -87,6 +89,7 @@ class CompletionsTestsBase(TextDocumentTestCase):
         self.set_response("textDocument/completion", completion_items)
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
+        yield from self.await_message("textDocument/didChange")
         self.assertEqual(self.read_file(), expected_text)
 
 
@@ -141,7 +144,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def test_var_prefix_added_in_insertText(self) -> Generator:
         """
-        https://github.com/sublimelsp/LSP/issues/294
+        https://github.com/sublimelsp/LSP/issues/294.
 
         User types '$env:U', server replaces '$env:U' with '$env:USERPROFILE'
         """
@@ -171,7 +174,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def test_pure_insertion_text_edit(self) -> Generator:
         """
-        https://github.com/sublimelsp/LSP/issues/368
+        https://github.com/sublimelsp/LSP/issues/368.
 
         User types '$so', server returns pure insertion completion 'meParam', completing it to '$someParam'.
 
@@ -200,9 +203,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             expected_text="$someParam")
 
     def test_space_added_in_label(self) -> Generator:
-        """
-        Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)
-        """
+        """Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)."""
         yield from self.verify(
             completion_items=[{
                 "label": " const",
@@ -231,7 +232,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def test_dash_missing_from_label(self) -> Generator:
         """
-        Powershell: label="UniqueId", trigger="-UniqueIdd, text to be inserted = "-UniqueId"
+        Powershell: label="UniqueId", trigger="-UniqueIdd, text to be inserted = "-UniqueId".
 
         (https://github.com/sublimelsp/LSP/issues/572)
         """
@@ -262,9 +263,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             expected_text="-UniqueId")
 
     def test_edit_before_cursor(self) -> Generator:
-        """
-        https://github.com/sublimelsp/LSP/issues/536
-        """
+        """https://github.com/sublimelsp/LSP/issues/536."""
         yield from self.verify(
             completion_items=[{
                 'insertTextFormat': 2,
@@ -297,9 +296,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             expected_text='override def myFunction(): Unit = ???')
 
     def test_edit_after_nonword(self) -> Generator:
-        """
-        https://github.com/sublimelsp/LSP/issues/645
-        """
+        """https://github.com/sublimelsp/LSP/issues/645."""
         yield from self.verify(
             completion_items=[{
                 "textEdit": {
@@ -331,7 +328,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def test_filter_text_is_not_a_prefix_of_label(self) -> Generator:
         """
-        Metals: "Implement all members"
+        Metals: "Implement all members".
 
         The filterText is 'e', so when the user types 'e', one of the completion items should be
         "Implement all members".
@@ -470,7 +467,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def verify_multi_cursor(self, completion: dict[str, Any]) -> Generator:
         """
-        This checks whether `fd` gets replaced by `fmod` when the cursor is at `fd|`.
+        Check whether `fd` gets replaced by `fmod` when the cursor is at `fd|`.
         Turning the `d` into an `m` is an important part of the test.
         """
         self.type('fd\nfd\nfd')
@@ -728,7 +725,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f\(X&amp; x\)$",  # noqa: E501
+            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f\(X&amp; x\)$",
             label="f",
             label_details={"detail": "(X& x)", "description": "does things"}
         )
@@ -768,11 +765,12 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
 
 class QueryCompletionsNoResolverTests(CompletionsTestsBase):
-    '''
+    """
     The difference between QueryCompletionsTests and QueryCompletionsNoResolverTests
     is that QueryCompletionsTests has the completion item resolve capability enabled
-    and the QueryCompletionsNoResolverTests has the resolve capability disabled
-    '''
+    and the QueryCompletionsNoResolverTests has the resolve capability disabled.
+    """
+
     @classmethod
     def get_test_server_capabilities(cls) -> dict:
         capabilities = deepcopy(super().get_test_server_capabilities())
@@ -805,7 +803,7 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
 
 
 class ItemDefaultTests(TestCase):
-    def test_respects_defaults_for_completion(self):
+    def test_respects_defaults_for_completion(self) -> None:
         item: CompletionItem = {
             'label': 'Hello'
         }
@@ -831,7 +829,7 @@ class ItemDefaultTests(TestCase):
         }
         self.assertEqual(completion_with_defaults(item, item_defaults), expected)
 
-    def test_defaults_should_not_override_completion_fields_if_present(self):
+    def test_defaults_should_not_override_completion_fields_if_present(self) -> None:
         item: CompletionItem = {
             'label': 'Hello',
             'textEdit': {
@@ -872,7 +870,7 @@ class ItemDefaultTests(TestCase):
         }
         self.assertEqual(completion_with_defaults(item, item_defaults), expected)
 
-    def test_conversion_of_edit_range_to_text_edit_when_it_includes_insert_replace_fields(self):
+    def test_conversion_of_edit_range_to_text_edit_when_it_includes_insert_replace_fields(self) -> None:
         item: CompletionItem = {
             'label': 'Hello',
             'textEditText': 'Text to insert'

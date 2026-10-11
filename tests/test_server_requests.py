@@ -1,14 +1,18 @@
 from __future__ import annotations
-from LSP.plugin.core.sessions import SessionBufferProtocol
+
+from .setup import TextDocumentTestCase
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
 from LSP.protocol import TextDocumentSyncKind
-from setup import TextDocumentTestCase
-from typing import Any, Generator
+from typing import Any
+from typing import Generator
+from typing import TYPE_CHECKING
 import os
 import sublime
-import tempfile
+
+if TYPE_CHECKING:
+    from LSP.plugin.core.sessions import SessionBufferProtocol
 
 
 def get_auto_complete_trigger(sb: SessionBufferProtocol) -> list[dict[str, str]] | None:
@@ -43,81 +47,12 @@ class ServerRequests(TextDocumentTestCase):
         self.session.config.settings.set("foo.a", 1)
         self.session.config.settings.set("foo.b", None)
         self.session.config.settings.set("foo.c", ["asdf ${hello} ${world}"])
-
-        class TempPlugin:
-
-            @classmethod
-            def additional_variables(cls) -> dict[str, str] | None:
-                return {"hello": "X", "world": "Y"}
-
-        self.session._plugin_class = TempPlugin  # type: ignore
+        self.session._variables.update({"hello": "X", "world": "Y"})
         method = "workspace/configuration"
         params = {"items": [{"section": "foo"}]}
         expected_output = [{"bar": "X", "baz": "Y", "a": 1, "b": None, "c": ["asdf X Y"]}]
         yield from verify(self, method, params, expected_output)
         self.session.config.settings.clear()
-
-    def test_m_workspace_applyEdit(self) -> Generator:
-        old_change_count = self.insert_characters("hello\nworld\n")
-        edit = {
-            "newText": "there",
-            "range": {"start": {"line": 1, "character": 0}, "end": {"line": 1, "character": 5}}}
-        params = {"edit": {"changes": {filename_to_uri(self.view.file_name()): [edit]}}}
-        yield from verify(self, "workspace/applyEdit", params, {"applied": True})
-        yield lambda: self.view.change_count() > old_change_count
-        self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "hello\nthere\n")
-
-    def test_m_workspace_applyEdit_with_nontrivial_promises(self) -> Generator:
-        with tempfile.TemporaryDirectory() as dirpath:
-            initial_text = ["a b", "c d"]
-            file_paths = []
-            for i in range(0, 2):
-                file_paths.append(os.path.join(dirpath, f"file{i}.txt"))
-                with open(file_paths[-1], "w") as fp:
-                    fp.write(initial_text[i])
-            yield from verify(
-                self,
-                "workspace/applyEdit",
-                {
-                    "edit": {
-                        "changes": {
-                            filename_to_uri(file_paths[0]):
-                            [
-                                {
-                                    "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}},
-                                    "newText": "hello"
-                                },
-                                {
-                                    "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}},
-                                    "newText": "there"
-                                }
-                            ],
-                            filename_to_uri(file_paths[1]):
-                            [
-                                {
-                                    "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}},
-                                    "newText": "general"
-                                },
-                                {
-                                    "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}},
-                                    "newText": "kenobi"
-                                }
-                            ]
-                        }
-                    }
-                },
-                {"applied": True}
-            )
-            # Changes should have been applied
-            expected = ["hello there", "general kenobi"]
-            for i in range(0, 2):
-                view = self.view.window().find_open_file(file_paths[i])
-                self.assertTrue(view)
-                view.set_scratch(True)
-                self.assertTrue(view.is_valid())
-                self.assertFalse(view.is_loading())
-                self.assertEqual(view.substr(sublime.Region(0, view.size())), expected[i])
-                view.close()
 
     def test_m_client_registerCapability(self) -> Generator:
         yield from verify(

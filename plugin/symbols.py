@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import DocumentSymbol
 from ..protocol import DocumentSymbolParams
 from ..protocol import Location
@@ -14,20 +15,23 @@ from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Point
 from .core.protocol import Request
+from .core.protocol import ResponseError
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
+from .core.type_converters import range_to_region
 from .core.views import offset_to_point
-from .core.views import range_to_region
 from .core.views import text_document_identifier
 from functools import partial
-from typing import Any, List, TypedDict
+from typing import Any
 from typing import cast
-from typing_extensions import NotRequired, TypeGuard
+from typing import overload
+from typing import TypedDict
+from typing_extensions import NotRequired
+from typing_extensions import TypeGuard
 import os
 import sublime
 import sublime_plugin
-
 
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
 
@@ -61,66 +65,86 @@ SYMBOL_KIND_NAMES: dict[SymbolKind, str] = {
 }
 
 
-DocumentSymbolValue = TypedDict('DocumentSymbolValue', {
-    'deprecated': bool,
-    'kind': int,
-    'range': Range
-})
+class DocumentSymbolValue(TypedDict):
+    deprecated: bool
+    kind: int
+    range: Range
 
-WorkspaceSymbolValue = TypedDict('WorkspaceSymbolValue', {
-    'deprecated': bool,
-    'kind': int,
-    'location': NotRequired[Location],
-    'session': str,
-    'workspaceSymbol': NotRequired[WorkspaceSymbol]
-})
+
+class WorkspaceSymbolValue(TypedDict):
+    deprecated: bool
+    kind: int
+    location: NotRequired[Location]
+    session: str
+    workspaceSymbol: NotRequired[WorkspaceSymbol]
 
 
 def is_document_symbol_value(val: Any) -> TypeGuard[DocumentSymbolValue]:
     return isinstance(val, dict) and all(key in val for key in ('deprecated', 'kind', 'range'))
 
 
+@overload
+def symbol_to_list_input_item(
+    item: DocumentSymbol | SymbolInformation,
+    hierarchy: str = '',
+    session_name: None = None
+) -> sublime.ListInputItem[DocumentSymbolValue]: ...
+
+
+@overload
+def symbol_to_list_input_item(
+    item: WorkspaceSymbol | SymbolInformation,
+    hierarchy: str = '',
+    *,
+    session_name: str
+) -> sublime.ListInputItem[WorkspaceSymbolValue]: ...
+
+
 def symbol_to_list_input_item(
     item: DocumentSymbol | WorkspaceSymbol | SymbolInformation,
     hierarchy: str = '',
     session_name: str | None = None
-) -> sublime.ListInputItem:
+) -> sublime.ListInputItem[DocumentSymbolValue] | sublime.ListInputItem[WorkspaceSymbolValue]:
     name = item['name']
     kind = item['kind']
     st_kind = SYMBOL_KINDS.get(kind, sublime.KIND_AMBIGUOUS)
     details: list[str] = []
     deprecated = SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False)
-    value = {'kind': kind, 'deprecated': deprecated}
-    details_separator = " • "
     if selection_range := item.get('selectionRange'):  # Response from textDocument/documentSymbol request
-        item = cast(DocumentSymbol, item)
+        item = cast('DocumentSymbol', item)
         detail = item.get('detail')
         if detail:
             details.append(detail)
         if hierarchy:
             details.append(hierarchy + " > " + name)
-        value['range'] = selection_range
+        document_value: DocumentSymbolValue = {'kind': kind, 'deprecated': deprecated, 'range': selection_range}
     elif session_name is None:  # Response from textDocument/documentSymbol request
-        item = cast(SymbolInformation, item)
+        item = cast('SymbolInformation', item)
         if container_name := item.get('containerName'):
             details.append(container_name)
-        value['range'] = item['location']['range']
+        document_value = {'kind': kind, 'deprecated': deprecated, 'range': item['location']['range']}
     else:  # Response from workspace/symbol request
-        item = cast(WorkspaceSymbol, item)  # Either WorkspaceSymbol or SymbolInformation, but possibly undecidable
-        details_separator = " > "
+        item = cast('WorkspaceSymbol', item)  # Either WorkspaceSymbol or SymbolInformation, but possibly undecidable
         location = item['location']
         details.append(os.path.basename(location['uri']))
         if container_name := item.get('containerName'):
             details.append(container_name)
+        workspace_value: WorkspaceSymbolValue = {'kind': kind, 'deprecated': deprecated, 'session': session_name}
         if 'range' in location:
-            value['location'] = location
+            workspace_value['location'] = location
         else:
-            value['workspaceSymbol'] = item
-        value['session'] = session_name
+            workspace_value['workspaceSymbol'] = item
+        return sublime.ListInputItem(
+            name,
+            workspace_value,
+            details=" > ".join(details),
+            annotation=st_kind[2],
+            kind=st_kind
+        )
     return sublime.ListInputItem(
         name,
-        value,
-        details=details_separator.join(details),
+        document_value,
+        details=" • ".join(details),
         annotation=st_kind[2],
         kind=st_kind
     )
@@ -159,7 +183,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self.items: list[sublime.ListInputItem] = []
+        self.items: list[sublime.ListInputItem[DocumentSymbolValue]] = []
         self.kind = 0
         self.cached = False
         self.has_matching_symbols = True
@@ -175,7 +199,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             if not self.has_matching_symbols:
                 self.has_matching_symbols = True
                 if window := self.view.window():
-                    kind_name = SYMBOL_KIND_NAMES.get(cast(SymbolKind, self.kind))
+                    kind_name = SYMBOL_KIND_NAMES.get(cast('SymbolKind', self.kind))
                     window.status_message(f'No symbols of kind "{kind_name}" in this file')
                 return
             self.kind = kind
@@ -195,7 +219,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             window = self.view.window()
             if not window:
                 return None
-            symbol_kind = cast(SymbolKind, self.kind)
+            symbol_kind = cast('SymbolKind', self.kind)
             initial_value = sublime.ListInputItem(
                 SYMBOL_KIND_NAMES.get(symbol_kind, 'All Kinds'),
                 self.kind,
@@ -208,11 +232,11 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.items.clear()
         if response and self.view.is_valid():
             if 'selectionRange' in response[0]:
-                items = cast(List[DocumentSymbol], response)
+                items = cast('list[DocumentSymbol]', response)
                 for item in items:
                     self.items.extend(self.process_document_symbol_recursive(item))
             else:
-                items = cast(List[SymbolInformation], response)
+                items = cast('list[SymbolInformation]', response)
                 for item in items:
                     self.items.append(symbol_to_list_input_item(item))
             self.items.sort(key=lambda item: Point.from_lsp(item.value['range']['start']))
@@ -220,7 +244,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 self.cached = True
                 window.run_command('show_overlay', {'overlay': 'command_palette', 'command': self.name()})
 
-    def handle_response_error(self, error: Any) -> None:
+    def handle_response_error(self, error: ResponseError) -> None:
         self._reset_suppress_input()
         print_to_status_bar(error)
 
@@ -229,7 +253,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def process_document_symbol_recursive(
         self, item: DocumentSymbol, hierarchy: str = ''
-    ) -> list[sublime.ListInputItem]:
+    ) -> list[sublime.ListInputItem[DocumentSymbolValue]]:
         name = item['name']
         name_hierarchy = hierarchy + " > " + name if hierarchy else name
         items = [symbol_to_list_input_item(item, hierarchy)]
@@ -243,9 +267,9 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
     def __init__(
         self,
         window: sublime.Window,
-        initial_value: sublime.ListInputItem,
+        initial_value: sublime.ListInputItem[int],
         view: sublime.View,
-        items: list[sublime.ListInputItem],
+        items: list[sublime.ListInputItem[DocumentSymbolValue]],
     ) -> None:
         super().__init__(window, initial_value)
         self.view = view
@@ -259,19 +283,15 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
     def placeholder(self) -> str:
         return "Symbol Kind"
 
-    def get_list_items(self) -> tuple[list[sublime.ListInputItem], int]:
+    def get_list_items(self) -> tuple[list[sublime.ListInputItem[int]], int]:
         items = [sublime.ListInputItem('All Kinds', 0, kind=sublime.KIND_AMBIGUOUS)]
         items.extend([
             sublime.ListInputItem(SYMBOL_KIND_NAMES[lsp_kind], lsp_kind, kind=st_kind)
             for lsp_kind, st_kind in SYMBOL_KINDS.items()
             if any(item.value['kind'] == lsp_kind for item in self.items)
         ])
-        for index, item in enumerate(items):
-            if item.value == self.last_selected:
-                break
-        else:
-            index = 0
-        return items, index
+        selected_index = next((i for i, item in enumerate(items) if item.value == self.last_selected), 0)
+        return items, selected_index
 
     def confirm(self, text: int) -> None:
         self.last_selected = text
@@ -279,12 +299,17 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
     def next_input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
         if (kind := args.get('kind')) is not None:
             return DocumentSymbolsInputHandler(self.view, kind, self.items, self.old_selection)
+        return None
 
 
 class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
 
     def __init__(
-        self, view: sublime.View, kind: int, items: list[sublime.ListInputItem], old_selection: list[sublime.Region]
+        self,
+        view: sublime.View,
+        kind: int,
+        items: list[sublime.ListInputItem[DocumentSymbolValue]],
+        old_selection: list[sublime.Region]
     ) -> None:
         super().__init__()
         self.view = view
@@ -295,7 +320,7 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
     def name(self) -> str:
         return 'index'
 
-    def list_items(self) -> tuple[list[sublime.ListInputItem], int]:
+    def list_items(self) -> tuple[list[sublime.ListInputItem[DocumentSymbolValue]], int]:
         items = [item for item in self.items if not self.kind or item.value['kind'] == self.kind]
         selected_index = 0
         if self.old_selection:
@@ -303,7 +328,7 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
             for index, item in enumerate(items):
                 start = item.value['range']['start']
                 if start['line'] < caret_point.row or \
-                        start['line'] == caret_point.row and start['character'] <= caret_point.col:
+                        (start['line'] == caret_point.row and start['character'] <= caret_point.col):
                     selected_index = index
                 else:
                     break
@@ -311,7 +336,7 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
 
     def preview(self, text: DocumentSymbolValue | None) -> str | sublime.Html | None:
         if is_document_symbol_value(text):
-            region = range_to_region(text['range'], self.view)
+            region = range_to_region(self.view, text['range'])
             self.view.run_command('lsp_selection_set', {'regions': [(region.a, region.b)]})
             self.view.show_at_center(region.a)
             if text['deprecated']:
@@ -333,9 +358,9 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
         if session := self.session_by_name(session_name):
             if location := symbol.get('location'):
                 session.open_location_async(location, sublime.NewFileFlags.ENCODED_POSITION)
-            else:
+            elif workspace_symbol := symbol.get('workspaceSymbol'):
                 session.send_request(
-                    Request.resolveWorkspaceSymbol(symbol['workspaceSymbol']),  # type: ignore
+                    Request.resolveWorkspaceSymbol(workspace_symbol),
                     partial(self._on_resolved_symbol_async, session_name))
 
     def input(self, args: dict[str, Any]) -> sublime_plugin.ListInputHandler | None:
@@ -345,7 +370,7 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
 
     def _on_resolved_symbol_async(self, session_name: str, response: WorkspaceSymbol) -> None:
         if session := self.session_by_name(session_name):
-            location = cast(Location, response['location'])
+            location = cast('Location', response['location'])
             session.open_location_async(location, sublime.NewFileFlags.ENCODED_POSITION)
 
 
@@ -366,8 +391,8 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
         if not self.input_view:
             return
         change_count = self.input_view.change_count()
-        self.command = cast(LspWindowCommand, self.command)
-        promises: list[Promise[list[sublime.ListInputItem]]] = [
+        self.command = cast('LspWindowCommand', self.command)
+        promises: list[Promise[list[sublime.ListInputItem[WorkspaceSymbolValue]]]] = [
             session.send_request_task(Request.workspaceSymbol({"query": text}))
             .then(partial(self._handle_response_async, session.config.name))
             for session in self.command.sessions()
@@ -376,7 +401,7 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
 
     def _handle_response_async(
         self, session_name: str, response: list[SymbolInformation] | list[WorkspaceSymbol] | Error | None
-    ) -> list[sublime.ListInputItem]:
+    ) -> list[sublime.ListInputItem[WorkspaceSymbolValue]]:
         if response and not isinstance(response, Error):
             return [
                 symbol_to_list_input_item(item, session_name=session_name)
@@ -384,9 +409,11 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
             ]
         return []
 
-    def _on_all_responses(self, change_count: int, item_lists: list[list[sublime.ListInputItem]]) -> None:
+    def _on_all_responses(
+        self, change_count: int, item_lists: list[list[sublime.ListInputItem[WorkspaceSymbolValue]]]
+    ) -> None:
         if self.input_view and self.input_view.change_count() == change_count:
-            items: list[sublime.ListInputItem] = []
+            items: list[sublime.ListInputItem[WorkspaceSymbolValue]] = []
             for item_list in item_lists:
                 items.extend(item_list)
             self.update(items)

@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: tox
+        name: tox
+        language: python
+        entry: tox
+        pass_filenames: false
+        always_run: true
+        additional_dependencies: [tox]

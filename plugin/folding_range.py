@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import FoldingRange
 from ..protocol import FoldingRangeKind
 from ..protocol import FoldingRangeParams
@@ -6,7 +7,7 @@ from ..protocol import Range
 from .core.protocol import Request
 from .core.protocol import UINT_MAX
 from .core.registry import LspTextCommand
-from .core.views import range_to_region
+from .core.type_converters import range_to_region
 from .core.views import text_document_identifier
 from functools import partial
 import sublime
@@ -40,7 +41,8 @@ def sorted_folding_ranges(folding_ranges: list[FoldingRange]) -> list[FoldingRan
 
 
 class LspFoldCommand(LspTextCommand):
-    """A command to fold at the current caret position or at a given point.
+    """
+    A command to fold at the current caret position or at a given point.
 
     Optional command arguments:
 
@@ -116,9 +118,9 @@ class LspFoldCommand(LspTextCommand):
                 return "LSP <debug>"  # is_visible will return False
             pt = selection[0].b
         for folding_range in sorted_folding_ranges(self.folding_ranges):
-            region = range_to_region(folding_range_to_range(folding_range), self.view)
-            if (strict and region.contains(pt) or
-                    not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(pt)) and \
+            region = range_to_region(self.view, folding_range_to_range(folding_range))
+            if ((strict and region.contains(pt)) or
+                    (not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(pt))) and \
                     not self.view.is_folded(region):
                 # Store the relevant folding region, so that we don't need to do the same computation again in
                 # self.is_visible and self.run
@@ -126,10 +128,9 @@ class LspFoldCommand(LspTextCommand):
                 kind = folding_range.get('kind')
                 if kind == FoldingRangeKind.Imports:
                     return "LSP: Fold Imports"
-                elif kind:
+                if kind:
                     return f"LSP: Fold this {kind.title()}"
-                else:
-                    return "LSP: Fold"
+                return "LSP: Fold"
         return "LSP <debug>"  # is_visible will return False
 
     def run(
@@ -163,9 +164,9 @@ class LspFoldCommand(LspTextCommand):
     def _handle_response_manual_async(self, point: int, strict: bool, response: list[FoldingRange] | None) -> None:
         if response:
             for folding_range in sorted_folding_ranges(response):
-                region = range_to_region(folding_range_to_range(folding_range), self.view)
-                if (strict and region.contains(point) or
-                        not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(point)) and \
+                region = range_to_region(self.view, folding_range_to_range(folding_range))
+                if ((strict and region.contains(point)) or
+                        (not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(point))) and \
                         not self.view.is_folded(region):
                     self.view.fold(region)
                     return
@@ -187,7 +188,7 @@ class LspFoldAllCommand(LspTextCommand):
         if not response:
             return
         regions = [
-            range_to_region(folding_range_to_range(folding_range), self.view)
+            range_to_region(self.view, folding_range_to_range(folding_range))
             for folding_range in response if not kind or kind == folding_range.get('kind')
         ]
         if not regions:

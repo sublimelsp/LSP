@@ -1,0 +1,18 @@
+[
+    {
+        "caption": "Clear",
+        "command": "lsp_clear_messages_panel",
+    },
+    {
+        "caption": "-"
+    },
+    {
+        "command": "copy"
+    },
+    {
+        "caption": "-"
+    },
+    {
+        "command": "select_all"
+    },
+]

@@ -1,0 +1,59 @@
+=> 2.9.0
+
+# Features
+
+- add "notification_handler" and "request_handler" API decorators in plugin API (#2755) (Rafał Chłodnicki)
+- add "show_signature_help" setting (#2793) (jwortmann)
+- add "lsp_code_actions_on_format" setting (#2747) (Martijn Jacobs)
+- support ignoring specific tokens in the "semantic_tokens" setting by mapping them to an empty string (#2829) (jwortmann)
+- expose unknown settings in ClientConfig and support project overrides (#2765) (Rafał Chłodnicki)
+- implement On Type Formatting (enable with "format_on_type") (#2776) (Rafal Chlodnicki)
+
+# Fixes
+
+- clear all progress reports when session ends (#2799) (jwortmann)
+- ensure refresh flags are reset when requests triggered due to reload (#2786) (jwortmann)
+- fix custom semantic tokens in initialize params (#2808) (jwortmann)
+- fix diagnostic tag regions not having correct key (#2752) (Rafał Chłodnicki)
+- fix `lsp_check_applicable` starting disabled config (#2782) (Rafał Chłodnicki)
+- fix missing punctuation scope in log syntax (#2805) (deathaxe)
+- fix pull diagnostics after reload/revert (#2785) (Rafał Chłodnicki)
+- fix Session not being garbage collected (#2801) (Rafał Chłodnicki)
+- handle repeated crashes also for clients defined in project settings (#2762) (Martijn Jacobs)
+- show code actions with diagnostics in hover popup (#2818) (jwortmann)
+- trigger diagnostic requests after provider registration (#2766) (jwortmann)
+
+# Enhancements
+
+- add caching for diagnostic annotation colors (#2757) (jwortmann)
+- add caching for styles in signature help popup (#2756) (jwortmann)
+- add more caching for color scheme rules (#2754) (jwortmann)
+- add PackageDev hints for project settings (#2796) (deathaxe)
+- adjust scopes and default style in signature help popup (#2794) (jwortmann)
+- create single LSP status per view (#2771) (Rafał Chłodnicki)
+- don't replace builtin rename_path command (#2764) (jwortmann)
+- include view settings in project files schema (#2790) (Rafał Chłodnicki)
+- modernize popup style (#2788) (Rafał Chłodnicki)
+- update capabilities for pull diagnostics (#2804) (jwortmann)
+- update fallback scope for typeParameter token (#2838) (jwortmann)
+- use scheme color for lightbulb icon in popup (#2807) (jwortmann)
+
+# Refactors
+
+- add generated Requests/Responses/Notifications to protocol (#2781) (Rafał Chłodnicki)
+- deprecate "initializationOptions" in favor of "initialization_options" (#2779) (jwortmann)
+- refactor diagnostic CSS classes (#2809) (Rafał Chłodnicki)
+- refactor SaveTask -> LspTask (#2751) (Rafał Chłodnicki)
+- remove deprecated properties of ClientConfig (#2767) (Rafał Chłodnicki)
+- setup imports formatting (#2763) (Rafał Chłodnicki)
+- simplify refresh state handling for SessionBuffer requests (#2787) (jwortmann)
+- update mdpopups stubs (#2825) (jwortmann)
+- use ruff for linting (#2753) (Rafał Chłodnicki)
+
+# Documentation
+
+- add bitbake/yocto instruction (#2810) (kn)
+- add instructions for JETLS (#2750) (jwortmann)
+- add TOML LSP instructions for Taplo and Tombi (#2803) (Guillermo)
+- rewrite features page (#2792) (jwortmann)
+- update JETLS config (Janos Wortmann)

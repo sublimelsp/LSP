@@ -1,24 +1,27 @@
 from __future__ import annotations
+
+from .api import get_plugin
+from .api import LspPlugin
+from .api import OnPreStartContext
+from .api import PluginStartError
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
-from .core.sessions import get_plugin
-from .core.transports import create_transport
-from .core.transports import Transport
 from .core.transports import TransportCallbacks
-from .core.types import Capabilities
+from .core.transports import TransportWrapper
 from .core.types import ClientConfig
 from .core.version import __version__
 from .core.views import extract_variables
 from .core.views import make_command_link
 from .core.workspace import ProjectFolders
 from .core.workspace import sorted_workspace_folders
-from .session_buffer import SessionBuffer
 from base64 import b64decode
 from base64 import b64encode
 from subprocess import list2cmdline
-from typing import Any, Callable
+from typing import Any
+from typing import Callable
 from typing import cast
+from typing import TYPE_CHECKING
 import json
 import mdpopups
 import os
@@ -27,6 +30,10 @@ import sublime_plugin
 import textwrap
 import urllib.parse
 import urllib.request
+
+if TYPE_CHECKING:
+    from .core.types import Capabilities
+    from .session_buffer import SessionBuffer
 
 
 def _translate_description(translations: dict[str, str] | None, descr: str) -> tuple[str, bool]:
@@ -43,7 +50,7 @@ def _translate_description(translations: dict[str, str] | None, descr: str) -> t
 
 def _preprocess_properties(translations: dict[str, str] | None, properties: dict[str, Any]) -> None:
     """
-    Preprocess the server settings from a package.json file:
+    Preprocess the server settings from a package.json file.
 
     - Replace description translation placeholders by their English translation
     - Discard the "scope" key
@@ -244,7 +251,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                                     "properties": {
                                         "settings": {
                                             "additionalProperties": False,
-                                            "properties": {k: v for k, v in properties.items()}
+                                            "properties": dict(properties.items())
                                         }
                                     },
                                 },
@@ -254,7 +261,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                                     "$ref": "sublime://settings/LSP-plugin-base"
                                 },
                                 {
-                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"  # noqa: E501
+                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"
                                 }
                             ]
                         }
@@ -270,7 +277,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                                         "LSP": {
                                             "properties": {
                                                 f"LSP-{base_package_name}": {
-                                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"  # noqa: E501
+                                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"
                                                 }
                                             }
                                         }
@@ -325,24 +332,25 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
                               active_view: sublime.View, output_sheet: sublime.HtmlSheet) -> None:
         server = ServerTestRunner(
             config, window, active_view,
-            lambda resolved_command, output, exit_code: self.update_sheet(
-                config, active_view, output_sheet, resolved_command, output, exit_code))
+            lambda resolved_command, cwd, output, exit_code: self.update_sheet(
+                config, active_view, output_sheet, resolved_command, cwd, output, exit_code))
         # Store the instance so that it's not GC'ed before it's finished.
         self.test_runner: ServerTestRunner | None = server
 
     def update_sheet(self, config: ClientConfig, active_view: sublime.View | None, output_sheet: sublime.HtmlSheet,
-                     resolved_command: list[str], server_output: str, exit_code: int) -> None:
+                     resolved_command: list[str], cwd: str | None, server_output: str, exit_code: int) -> None:
         self.test_runner = None
         frontmatter = mdpopups.format_frontmatter({'allow_code_wrap': True})
-        contents = self.get_contents(config, active_view, resolved_command, server_output, exit_code)
+        contents = self.get_contents(config, active_view, resolved_command, cwd, server_output, exit_code)
         # The href needs to be encoded to avoid having markdown parser ruin it.
-        copy_link = make_command_link('lsp_copy_to_clipboard_from_base64', '<kbd>Copy to clipboard</kbd>',
+        copy_link = make_command_link('lsp_copy_to_clipboard_from_base64', 'Copy to clipboard',
                                       {'contents': b64encode(contents.encode()).decode()})
+        copy_link = f'<kbd>{copy_link}</kbd>'
         formatted = f'{frontmatter}{copy_link}\n{contents}'
         mdpopups.update_html_sheet(output_sheet, formatted, css=css().sheets, wrapper_class=css().sheets_classname)
 
     def get_contents(self, config: ClientConfig, active_view: sublime.View | None, resolved_command: list[str],
-                     server_output: str, exit_code: int) -> str:
+                     cwd: str | None, server_output: str, exit_code: int) -> str:
         lines = []
 
         def line(s: str) -> None:
@@ -356,14 +364,16 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
 
         line('## Server Test Run')
         line(f' - exit code: {exit_code}\n - output\n{self.code_block(server_output)}')
+        line(' - working directory\n{}'.format(
+            self.code_block(cwd if cwd is not None else f'{os.getcwd()} (inherited from Sublime Text)')))
 
         line('## Server Configuration')
         line(f' - command\n{self.json_dump(config.command)}')
         line(' - shell command\n{}'.format(self.code_block(list2cmdline(resolved_command), 'sh')))
         line(f' - selector\n{self.code_block(config.selector)}')
         line(f' - priority_selector\n{self.code_block(config.priority_selector)}')
-        line(' - init_options')
-        line(self.json_dump(config.init_options.get()))
+        line(' - initialization_options')
+        line(self.json_dump(config.initialization_options.get()))
         line(' - settings')
         line(self.json_dump(config.settings.get()))
         line(' - env')
@@ -426,9 +436,7 @@ class LspCopyToClipboardFromBase64Command(sublime_plugin.ApplicationCommand):
 
 
 class LspDumpWindowConfigs(sublime_plugin.WindowCommand):
-    """
-    Very basic command to dump all of the window's resolved configurations.
-    """
+    """Very basic command to dump all of the window's resolved configurations."""
 
     def run(self) -> None:
         wm = windows.lookup(self.window)
@@ -444,9 +452,7 @@ class LspDumpWindowConfigs(sublime_plugin.WindowCommand):
 
 
 class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
-    """
-    Very basic command to dump the current view's static and dynamically registered capabilities.
-    """
+    """Very basic command to dump the current view's static and dynamically registered capabilities."""
 
     def run(self, edit: sublime.Edit) -> None:
         wm = windows.lookup(self.view.window())
@@ -475,7 +481,7 @@ class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
             p("## Global capabilities\n")
             p(print_capabilities(sv.session.capabilities) + "\n")
             p("## View-specific capabilities\n")
-            p(print_capabilities(cast(SessionBuffer, sv.session_buffer).capabilities) + "\n")
+            p(print_capabilities(cast("SessionBuffer", sv.session_buffer).capabilities) + "\n")
 
 
 class ServerTestRunner(TransportCallbacks):
@@ -492,33 +498,41 @@ class ServerTestRunner(TransportCallbacks):
         config: ClientConfig,
         window: sublime.Window,
         initiating_view: sublime.View,
-        on_close: Callable[[list[str], str, int], None]
+        on_close: Callable[[list[str], str | None, str, int], None]
     ) -> None:
         self._on_close = on_close
-        self._transport: Transport | None = None
+        self._transport: TransportWrapper | None = None
         self._resolved_command: list[str] = []
+        self._cwd: str | None = None
         self._stderr_lines: list[str] = []
         try:
+            config = ClientConfig.from_config(config, {})
             variables = extract_variables(window)
             plugin_class = get_plugin(config.name)
             workspace = ProjectFolders(window)
             workspace_folders = sorted_workspace_folders(workspace.folders, initiating_view.file_name() or '')
-            cwd = None
-            if plugin_class is not None:
-                if plugin_class.needs_update_or_installation():
-                    plugin_class.install_or_update()
-                additional_variables = plugin_class.additional_variables()
-                if isinstance(additional_variables, dict):
-                    variables.update(additional_variables)
-                cannot_start_reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
-                if cannot_start_reason:
-                    raise Exception(f'Plugin.can_start() prevented the start due to: {cannot_start_reason}')
-                cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
-            if not cwd and workspace_folders:
-                cwd = workspace_folders[0].path
-            transport_config = config.resolve_transport_config(variables)
-            self._resolved_command = transport_config.command
-            self._transport = create_transport(transport_config, cwd, self)
+            cwd = workspace_folders[0].path if workspace_folders else None
+            if plugin_class:
+                # TODO: We should share this common code with WindowManager.start_async
+                plugin_context = OnPreStartContext(config, variables, initiating_view, cwd, workspace_folders)
+                if issubclass(plugin_class, LspPlugin):
+                    plugin_class.on_pre_start_async(plugin_context)
+                    cwd = plugin_context.working_directory
+                else:
+                    if plugin_class.needs_update_or_installation():
+                        plugin_class.install_or_update()
+                    additional_variables = plugin_class.additional_variables()
+                    if isinstance(additional_variables, dict):
+                        variables.update(additional_variables)
+                    reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
+                    if reason:
+                        raise PluginStartError(f'Plugin.can_start() prevented the start due to: {reason}')
+                    if new_cwd := plugin_class.on_pre_start(window, initiating_view, workspace_folders, config):
+                        cwd = new_cwd
+            self._cwd = cwd
+            transport_config = config.create_transport_config()
+            self._transport = transport_config.start(config.command, config.env, cwd, variables, self)
+            self._resolved_command = self._transport.process_args
             sublime.set_timeout_async(self.force_close_transport, self.CLOSE_TIMEOUT_SEC * 1000)
         except Exception as ex:
             self.on_transport_close(-1, ex)
@@ -536,7 +550,7 @@ class ServerTestRunner(TransportCallbacks):
     def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
         self._transport = None
         output = str(exception) if exception else '\n'.join(self._stderr_lines).rstrip()
-        sublime.set_timeout(lambda: self._on_close(self._resolved_command, output, exit_code))
+        sublime.set_timeout(lambda: self._on_close(self._resolved_command, self._cwd, output, exit_code))
 
 
 class LspOnDoubleClickCommand(sublime_plugin.TextCommand):

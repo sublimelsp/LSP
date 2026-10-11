@@ -1,0 +1,13 @@
+=> 2.8.2
+
+# Fixes
+
+- Refactor handling of progress notification for diagnostics (#2740) (Rafał Chłodnicki)
+- Fix diagnostics request for not visible views after refresh (#2743) (jwortmann)
+- Fix diagnostic dynamic registration and rework Goto Diagnostic command (#2727) (jwortmann)
+- Fix dotted dict processing dots in second+ level keys (#2745) (Rafał Chłodnicki)
+- fix missing request duration in logs (#2736) (Rafał Chłodnicki)
+
+# Refactors
+
+- Type parameters and return value of Request (#2741) (Rafał Chłodnicki)

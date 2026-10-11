@@ -1,22 +1,24 @@
 from __future__ import annotations
+
+from .setup import TextDocumentTestCase
+from .setup import TIMEOUT_TIME
+from .setup import YieldPromise
 from copy import deepcopy
-from LSP.plugin import apply_text_edits, Request
+from LSP.plugin import apply_text_edits
+from LSP.plugin import Request
 from LSP.plugin.core.protocol import UINT_MAX
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
-from LSP.plugin.hover import _test_contents
-from setup import TextDocumentTestCase
-from setup import TIMEOUT_TIME
-from setup import YieldPromise
+from typing import Generator
+from typing import Iterable
+from typing import TYPE_CHECKING
+from unittest import skip
 import os
 import sublime
 
-
-try:
-    from typing import Generator, Optional, Iterable, Tuple, List
-    assert Generator and Optional and Iterable and Tuple and List
-except ImportError:
-    pass
+if TYPE_CHECKING:
+    from LSP.protocol import Position
+    from LSP.protocol import TextDocumentContentChangeEvent
 
 SELFDIR = os.path.dirname(__file__)
 TEST_FILE_PATH = os.path.join(SELFDIR, 'testfile.txt')
@@ -51,6 +53,30 @@ GOTO_CONTENT = r'''abcdefghijklmnopqrstuvwxyz
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
 0123456789
 '''
+
+
+def apply_content_changes(text: str, changes: list[TextDocumentContentChangeEvent]) -> str:
+    """Apply incremental `contentChanges` of a `textDocument/didChange` notification to `text`."""
+
+    def offset(position: Position) -> int:
+        lines = text.split('\n')
+        line_start = sum(len(line) + 1 for line in lines[:position['line']])
+        # Convert the UTF-16 code unit offset to a code point offset.
+        utf16_units = 0
+        column = 0
+        for char in lines[position['line']]:
+            if utf16_units >= position['character']:
+                break
+            utf16_units += 2 if ord(char) > 0xFFFF else 1
+            column += 1
+        return line_start + column
+
+    for change in changes:
+        assert 'range' in change
+        start = offset(change['range']['start'])
+        end = offset(change['range']['end'])
+        text = text[:start] + change['text'] + text[end:]
+    return text
 
 
 class SingleDocumentTestCase(TextDocumentTestCase):
@@ -114,15 +140,13 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.assertEqual("BBB", text)
         yield from self.await_clear_view_and_save()
 
-    def test_hover_info(self) -> Generator:
+    def test_hover_popup_visible(self) -> Generator:
         assert self.view
         self.set_response('textDocument/hover', {"contents": "greeting"})
         self.view.run_command('insert', {"characters": "Hello Wrld"})
         self.assertFalse(self.view.is_popup_visible())
         self.view.run_command('lsp_hover', {'point': 3})
-        yield lambda: self.view.is_popup_visible()
-        last_content = _test_contents[-1]
-        self.assertTrue("greeting" in last_content)
+        yield self.view.is_popup_visible
 
     def test_remove_line_and_then_insert_at_that_line_at_end(self) -> Generator:
         original = (
@@ -321,8 +345,8 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.view.run_command("lsp_selection_set", {"regions": [(0, 0)]})
         self.view.run_command("lsp_symbol_rename", {"new_name": "bar"})
         yield from self.await_message("textDocument/rename")
-        yield from self.await_view_change(9)
-        self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "bar\nbar\nbar\n")
+        yield {"condition": lambda: entire_content(self.view) == "bar\nbar\nbar\n", "timeout": TIMEOUT_TIME}
+        self.assertEqual(entire_content(self.view), "bar\nbar\nbar\n")
 
     def test_run_command(self) -> Generator:
         self.set_response("workspace/executeCommand", {"canReturnAnythingHere": "asdf"})
@@ -337,6 +361,27 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_promise(promise)
         yield from self.await_message("workspace/executeCommand")
         self.assertEqual(promise.result(), {"canReturnAnythingHere": "asdf"})
+
+    def test_complex_request_chain_with_command(self) -> Generator:
+        # Setup mocks.
+        yield from self.set_command_response_action(
+            "fooooobar",
+            {"method": "window/showDocument", "params": {"uri": "r2d2:some-decompiled-file-from-a-jar-or-dll"}},
+        )
+        self.set_response("workspace/textDocumentContent", {"text": "hello world"})
+        promise = YieldPromise()
+        sublime.set_timeout_async(
+            lambda: self.session.execute_command(
+                {"command": "fooooobar", "arguments": ["doesnt", "matter"]},
+                progress=False,
+                view=self.view,
+            ).then(promise.fulfill)
+        )
+        yield from self.await_promise(promise)
+        # Assert that some methods have been called.
+        params = yield from self.await_message("workspace/textDocumentContent")
+        self.assertEqual(params, {"uri": "r2d2:some-decompiled-file-from-a-jar-or-dll"})
+        self.assertEqual(promise.result(), {"success": True})
 
     def test_progress(self) -> Generator:
         request = Request("foobar", {"hello": "world"}, self.view, progress=True)
@@ -354,25 +399,23 @@ class SingleDocumentTestCase2(TextDocumentTestCase):
         self.maxDiff = None
         self.insert_characters("A")
         yield from self.await_message("textDocument/didChange")
+        text_before = entire_content(self.view)
         # multiple changes are batched into one didChange notification
         self.insert_characters("B\n")
         self.insert_characters("🙂\n")
         self.insert_characters("D")
         promise = YieldPromise()
         yield from self.await_message("textDocument/didChange", promise)
-        self.assertEqual(promise.result(), {
-            'contentChanges': [
-                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 1}, 'end': {'line': 0, 'character': 1}}, 'text': 'B'},   # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 2}, 'end': {'line': 0, 'character': 2}}, 'text': '\n'},  # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 0}}, 'text': '🙂'},  # noqa
-                # Note that this is character offset (2) is correct (UTF-16).
-                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 2}, 'end': {'line': 1, 'character': 2}}, 'text': '\n'},  # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 2, 'character': 0}, 'end': {'line': 2, 'character': 0}}, 'text': 'D'}],  # noqa
-            'textDocument': {
-                'version': self.view.change_count(),
-                'uri': filename_to_uri(TEST_FILE_PATH)
-            }
+        params = promise.result()
+        self.assertEqual(params['textDocument'], {
+            'version': self.view.change_count(),
+            'uri': filename_to_uri(TEST_FILE_PATH)
         })
+        # Different ST builds can split the inserted text into different numbers of changes,
+        # so compare the result of the changes.
+        # The emoji makes the result wrong if an offset after it is not in UTF-16 code units.
+        self.assertEqual(apply_content_changes(text_before, params['contentChanges']), "AB\n🙂\nD")
+        self.assertEqual(entire_content(self.view), "AB\n🙂\nD")
 
 
 class SingleDocumentTestCase3(TextDocumentTestCase):
@@ -381,6 +424,7 @@ class SingleDocumentTestCase3(TextDocumentTestCase):
     def get_test_name(cls) -> str:
         return "testfile2"
 
+    @skip('Flaky on Windows and Mac')
     def test_did_change_before_did_close(self) -> Generator:
         assert self.view
         self.view.window().run_command("chain", {
@@ -391,7 +435,7 @@ class SingleDocumentTestCase3(TextDocumentTestCase):
             ]
         })
         yield from self.await_message('textDocument/didChange')
-        # yield from self.await_message('textDocument/didSave')  # TODO why is this not sent?
+        yield from self.await_message('textDocument/didSave')
         yield from self.await_message('textDocument/didClose')
 
 

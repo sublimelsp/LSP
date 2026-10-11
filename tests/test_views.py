@@ -1,19 +1,24 @@
 from __future__ import annotations
+
+from .setup import make_stdio_test_config
 from copy import deepcopy
+from LSP.plugin.core.constants import MARKO_MD_PARSER_VERSION
 from LSP.plugin.core.protocol import Point
-from LSP.plugin.core.types import Any
+from LSP.plugin.core.type_converters import point_to_offset
+from LSP.plugin.core.type_converters import range_to_region
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_open
 from LSP.plugin.core.views import did_save
 from LSP.plugin.core.views import document_color_params
 from LSP.plugin.core.views import format_diagnostic_for_html
-from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from LSP.plugin.core.views import FORMAT_MARKED_STRING
+from LSP.plugin.core.views import FORMAT_MARKUP_CONTENT
+from LSP.plugin.core.views import FORMAT_STRING
 from LSP.plugin.core.views import lsp_color_to_html
 from LSP.plugin.core.views import lsp_color_to_phantom
+from LSP.plugin.core.views import minihtml
 from LSP.plugin.core.views import MissingUriError
-from LSP.plugin.core.views import point_to_offset
-from LSP.plugin.core.views import range_to_region
 from LSP.plugin.core.views import selection_range_params
 from LSP.plugin.core.views import text2html
 from LSP.plugin.core.views import text_document_code_action_params
@@ -24,9 +29,13 @@ from LSP.plugin.core.views import uri_from_view
 from LSP.plugin.core.views import will_save
 from LSP.plugin.core.views import will_save_wait_until
 from LSP.protocol import CodeActionKind
+from LSP.protocol import ColorInformation
 from LSP.protocol import Diagnostic
 from LSP.protocol import DiagnosticSeverity
-from setup import make_stdio_test_config
+from LSP.protocol import MarkedString
+from LSP.protocol import MarkupContent
+from LSP.protocol import MarkupKind
+from typing import Any
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase
 import re
@@ -56,7 +65,7 @@ class ViewsTest(DeferrableTestCase):
 
         class MockSettings:
 
-            def get(value: str, default: Any) -> Any:
+            def get(self, value: str, default: Any | None = None) -> Any:
                 return "file:///hello/there.txt"
 
         mock_settings = MockSettings()
@@ -154,18 +163,18 @@ class ViewsTest(DeferrableTestCase):
 
     def test_point_to_offset(self) -> None:
         first_line_length = len(self.view.line(0))
-        self.assertEqual(point_to_offset(Point(1, 2), self.view), first_line_length + 3)
-        self.assertEqual(point_to_offset(Point(0, first_line_length + 9999), self.view), first_line_length)
+        self.assertEqual(point_to_offset(self.view, Point(1, 2)), first_line_length + 3)
+        self.assertEqual(point_to_offset(self.view, Point(0, first_line_length + 9999)), first_line_length)
 
     def test_point_to_offset_utf16(self) -> None:
         self.view.run_command("insert", {"characters": "🍺foo"})
         foobarbaz_length = len("foo bar baz")
-        offset = point_to_offset(Point(1, foobarbaz_length), self.view)
+        offset = point_to_offset(self.view, Point(1, foobarbaz_length))
         # Sanity check
         self.assertEqual(self.view.substr(offset), "🍺")
         # When we move two UTF-16 points further, we should encompass the beer emoji.
         # So that means that the code point offsets should have a difference of 1.
-        self.assertEqual(point_to_offset(Point(1, foobarbaz_length + 2), self.view) - offset, 1)
+        self.assertEqual(point_to_offset(self.view, Point(1, foobarbaz_length + 2)) - offset, 1)
 
     def test_selection_range_params(self) -> None:
         self.view.run_command("lsp_selection_set", {"regions": [(0, 5), (6, 11)]})
@@ -183,17 +192,17 @@ class ViewsTest(DeferrableTestCase):
 
     def test_minihtml_no_allowed_formats(self) -> None:
         content = "<div>text\n</div>"
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             minihtml(self.view, content, allowed_formats=0)
 
     def test_minihtml_conflicting_formats(self) -> None:
         content = "<div>text\n</div>"
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKED_STRING)
 
     def test_minihtml_format_string(self) -> None:
         content = "<div>text\n</div>"
-        expect = "<p>&lt;div&gt;text<br>&lt;/div&gt;</p>"
+        expect = "<span>&lt;div&gt;text<br>&lt;/div&gt;</span>"
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_STRING), expect)
 
     def test_minihtml_format_marked_string(self) -> None:
@@ -202,41 +211,43 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING), expect)
 
     def test_minihtml_format_markup_content(self) -> None:
-        content = {'value': 'This is **bold** text', 'kind': 'markdown'}
+        content: MarkupContent = {'value': 'This is **bold** text', 'kind': MarkupKind.Markdown}
         expect = "<p>This is <strong>bold</strong> text</p>"
-        self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
+        formatted = self._normalize_newlines(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT))
+        self.assertEqual(formatted, expect)
 
     def test_minihtml_handles_markup_content_plaintext(self) -> None:
-        content = {'value': 'type TVec2i = specialize TGVec2<Integer>', 'kind': 'plaintext'}
-        expect = "<p>type TVec2i = specialize TGVec2&lt;Integer&gt;</p>"
+        content: MarkupContent = {'value': 'type TVec2i = specialize TGVec2<Integer>', 'kind': MarkupKind.PlainText}
+        expect = "<span>type TVec2i = specialize TGVec2&lt;Integer&gt;</span>"
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
         self.assertEqual(minihtml(self.view, content, allowed_formats=allowed_formats), expect)
 
     def test_minihtml_handles_marked_string(self) -> None:
-        content = {'value': 'import json', 'language': 'python'}
+        content: MarkedString = {'value': 'import json', 'language': 'python'}
         expect = '<div class="highlight"><pre><span>import</span><span> </span><span>json</span><br></pre></div>'
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-        formatted = self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats))
+        formatted = self._normalize_newlines(
+            self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats)))
         self.assertEqual(formatted, expect)
 
     def test_minihtml_handles_marked_string_mutiple_spaces(self) -> None:
-        content = {'value': 'import  json', 'language': 'python'}
+        content: MarkedString = {'value': 'import  json', 'language': 'python'}
         expect = '<div class="highlight"><pre><span>import</span><span>&nbsp; </span><span>json</span><br></pre></div>'
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-        formatted = self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats))
+        formatted = self._normalize_newlines(
+            self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats)))
         self.assertEqual(formatted, expect)
 
     def test_minihtml_handles_marked_string_array(self) -> None:
-        content = [
+        content: list[MarkedString] = [
             {'value': 'import sys', 'language': 'python'},
             {'value': 'let x', 'language': 'js'}
         ]
-        expect = '\n\n'.join([
-            '<div class="highlight"><pre><span>import</span><span> </span><span>sys</span><br></pre></div>',
-            '<div class="highlight"><pre><span>let</span><span> </span><span>x</span><br></pre></div>'
-        ])
+        expect = ('<div class="highlight"><pre><span>import</span><span> </span><span>sys</span><br></pre></div>\n'
+                  '<div class="highlight"><pre><span>let</span><span> </span><span>x</span><br></pre></div>')
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-        formatted = self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats))
+        formatted = self._normalize_newlines(
+            self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats)))
         self.assertEqual(formatted, expect)
 
     def test_minihtml_ignores_non_allowed_string(self) -> None:
@@ -245,32 +256,41 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
 
     def test_minihtml_ignores_non_allowed_marked_string(self) -> None:
-        content = {'value': 'import sys', 'language': 'python'}
+        content: MarkedString = {'value': 'import sys', 'language': 'python'}
         expect = ""
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
 
     def test_minihtml_ignores_non_allowed_marked_string_array(self) -> None:
-        content = ["a", "b"]
+        content: list[MarkedString] = ["a", "b"]
         expect = ""
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
 
     def test_minihtml_ignores_non_allowed_markup_content(self) -> None:
-        content = {'value': 'a<span>b</span>', 'kind': 'plaintext'}
+        content: MarkupContent = {'value': 'a<span>b</span>', 'kind': MarkupKind.PlainText}
         expect = ""
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_STRING), expect)
 
     def test_minihtml_magiclinks(self) -> None:
-        content = {'value': 'https://github.com/sublimelsp/LSP', 'kind': 'markdown'}
+        content: MarkupContent = {'value': 'https://github.com/sublimelsp/LSP', 'kind': MarkupKind.Markdown}
         expect_attributes = [
             'class="magiclink magiclink-github magiclink-repository"',
             'href="https://github.com/sublimelsp/LSP"',
             'title="GitHub Repository: sublimelsp/LSP"'
         ]
-        expect = '<p><a {}>sublimelsp/LSP</a></p>'.format(' '.join(expect_attributes))
-        self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
+        if MARKO_MD_PARSER_VERSION:
+            # The Marko parser does not use the `pymdownx.magiclink` extension.
+            expect = '<p><a href="https://github.com/sublimelsp/LSP">https://github.com/sublimelsp/LSP</a></p>'
+        else:
+            expect = '<p><a {}>sublimelsp/LSP</a></p>'.format(' '.join(expect_attributes))
+        formatted = self._normalize_newlines(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT))
+        self.assertEqual(formatted, expect)
 
     def _strip_style_attributes(self, content: str) -> str:
         return re.sub(r'\s+style="[^"]+"', '', content)
+
+    def _normalize_newlines(self, content: str) -> str:
+        """Remove differences in newlines between block elements, which depend on the Markdown parser."""
+        return re.sub(r'\n{2,}', '\n', content).strip()
 
     def test_text2html_replaces_tabs_with_br(self) -> None:
         self.assertEqual(text2html("Hello,\t world "), "Hello,&nbsp;&nbsp;&nbsp;&nbsp; world ")
@@ -311,7 +331,7 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(text2html(content), expect)
 
     def test_lsp_color_to_phantom(self) -> None:
-        response = [
+        response: list[ColorInformation] = [
             {
                 "color": {
                     "green": 0.9725490196078431,
@@ -333,7 +353,7 @@ class ViewsTest(DeferrableTestCase):
         ]
         phantom = lsp_color_to_phantom(self.view, response[0])
         self.assertEqual(phantom.content, lsp_color_to_html(response[0]))
-        self.assertEqual(phantom.region, range_to_region(response[0]["range"], self.view))
+        self.assertEqual(phantom.region, range_to_region(self.view, response[0]["range"]))
 
     def test_document_color_params(self) -> None:
         self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
@@ -389,21 +409,19 @@ class ViewsTest(DeferrableTestCase):
         diagnostic2.pop("relatedInformation")
         self.assertIn("relatedInformation", diagnostic1)
         self.assertNotIn("relatedInformation", diagnostic2)
-        client_config = make_stdio_test_config()
+        client_config = make_stdio_test_config("TEST")
         # They should result in the same minihtml.
         self.assertEqual(
-            format_diagnostic_for_html(client_config, diagnostic1, "/foo/bar"),
-            format_diagnostic_for_html(client_config, diagnostic2, "/foo/bar")
+            format_diagnostic_for_html(self.view, client_config, diagnostic1, [], '#ffffff', "/foo/bar"),
+            format_diagnostic_for_html(self.view, client_config, diagnostic2, [], '#ffffff', "/foo/bar")
         )
 
     def test_escaped_newline_in_markdown(self) -> None:
-        self.assertEqual(
-            minihtml(self.view, {"kind": "markdown", "value": "hello\\\nworld"}, FORMAT_MARKUP_CONTENT),
-            "<p>hello\\\nworld</p>"
-        )
+        # The Marko parser follows CommonMark, where a backslash at the end of a line is a hard line break.
+        expect = "<p>hello<br />\nworld</p>" if MARKO_MD_PARSER_VERSION else "<p>hello\\\nworld</p>"
+        formatted = minihtml(self.view, {"kind": MarkupKind.Markdown, "value": "hello\\\nworld"}, FORMAT_MARKUP_CONTENT)
+        self.assertEqual(self._normalize_newlines(formatted), expect)
 
     def test_single_backslash_in_markdown(self) -> None:
-        self.assertEqual(
-            minihtml(self.view, {"kind": "markdown", "value": "A\\B"}, FORMAT_MARKUP_CONTENT),
-            "<p>A\\B</p>"
-        )
+        formatted = minihtml(self.view, {"kind": MarkupKind.Markdown, "value": "A\\B"}, FORMAT_MARKUP_CONTENT)
+        self.assertEqual(self._normalize_newlines(formatted), "<p>A\\B</p>")

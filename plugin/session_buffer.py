@@ -1,29 +1,51 @@
 from __future__ import annotations
+
+from ..protocol import CodeAction
+from ..protocol import CodeActionContext
+from ..protocol import CodeActionKind
+from ..protocol import CodeActionParams
+from ..protocol import CodeActionTriggerKind
 from ..protocol import CodeLens
 from ..protocol import ColorInformation
+from ..protocol import Command
 from ..protocol import Diagnostic
+from ..protocol import DiagnosticSeverity
+from ..protocol import DiagnosticTag
 from ..protocol import DocumentDiagnosticParams
 from ..protocol import DocumentDiagnosticReport
 from ..protocol import DocumentDiagnosticReportKind
 from ..protocol import DocumentLink
+from ..protocol import DocumentOnTypeFormattingOptions
+from ..protocol import DocumentOnTypeFormattingParams
 from ..protocol import DocumentUri
 from ..protocol import FullDocumentDiagnosticReport
 from ..protocol import InlayHint
 from ..protocol import InlayHintParams
 from ..protocol import LSPErrorCodes
-from ..protocol import SemanticTokensDeltaParams
-from ..protocol import SemanticTokensParams
-from ..protocol import SemanticTokensRangeParams
+from ..protocol import RelatedFullDocumentDiagnosticReport
+from ..protocol import SemanticTokens
+from ..protocol import SemanticTokensDelta
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
+from ..protocol import TextEdit
+from ..protocol import UnchangedDocumentDiagnosticReport
+from .api import AbstractPlugin
+from .api import LspPlugin
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
+from .core.constants import AUTO_CLOSE_BRACKETS
+from .core.constants import ChangeEventAction
+from .core.constants import CODE_LENS_ANNOTATION_SCOPE
+from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.constants import SEMANTIC_TOKENS_MAP
+from .core.constants import SUPPORTED_DIAGNOSTIC_TAGS
+from .core.edit import apply_text_edits
 from .core.promise import Promise
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.protocol import ResponseError
@@ -31,11 +53,13 @@ from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
+from .core.type_converters import range_to_region
 from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
-from .core.types import WORKSPACE_DIAGNOSTICS_TIMEOUT
+from .core.types import SemanticToken
+from .core.url import normalize_uri
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
 from .core.views import did_change
@@ -44,65 +68,73 @@ from .core.views import did_open
 from .core.views import did_save
 from .core.views import document_color_params
 from .core.views import entire_content_range
+from .core.views import first_selection_region
+from .core.views import formatting_options
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
-from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
+from .core.views import text_document_position_params
 from .core.views import will_save
+from .diagnostics import DiagnosticsIdentifier
+from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
 from .inlay_hint import inlay_hint_to_phantom
-from .semantic_highlighting import SemanticToken
+from dataclasses import dataclass
 from functools import partial
-from typing import Any, Callable, Iterable, List, Protocol
+from typing import Any
+from typing import Callable
 from typing import cast
-from typing_extensions import TypeGuard
+from typing_extensions import Concatenate
 from typing_extensions import deprecated
+from typing_extensions import ParamSpec
+from typing_extensions import TypeGuard
 from weakref import WeakSet
 import itertools
 import sublime
 import time
 
+P = ParamSpec('P')
 
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
 HUGE_FILE_SIZE = 50000
 
 
-class CallableWithOptionalArguments(Protocol):
-    def __call__(self, *args: Any) -> None:
-        ...
+def is_full_document_diagnostic_report(
+    diagnostic_report: FullDocumentDiagnosticReport | UnchangedDocumentDiagnosticReport
+) -> TypeGuard[FullDocumentDiagnosticReport]:
+    return diagnostic_report['kind'] == DocumentDiagnosticReportKind.Full
 
 
-def is_full_document_diagnostic_report(response: DocumentDiagnosticReport) -> TypeGuard[FullDocumentDiagnosticReport]:
-    return response['kind'] == DocumentDiagnosticReportKind.Full
+def is_related_full_document_diagnostic_report(
+    diagnostic_report: DocumentDiagnosticReport
+) -> TypeGuard[RelatedFullDocumentDiagnosticReport]:
+    return diagnostic_report['kind'] == DocumentDiagnosticReportKind.Full
 
 
 class PendingChanges:
 
     __slots__ = ('version', 'changes')
 
-    def __init__(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
+    def __init__(self, version: int, changes: list[sublime.TextChange]) -> None:
         self.version = version
         self.changes = list(changes)
 
-    def update(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
+    def update(self, version: int, changes: list[sublime.TextChange]) -> None:
         self.version = version
         self.changes.extend(changes)
 
 
+@dataclass
 class PendingDocumentDiagnosticRequest:
-
-    __slots__ = ('version', 'request_id')
-
-    def __init__(self, version: int, request_id: int) -> None:
-        self.version = version
-        self.request_id = request_id
+    version: int
+    request_id: int
 
 
 class SemanticTokensData:
 
     __slots__ = (
-        'data', 'result_id', 'active_region_keys', 'tokens', 'view_change_count', 'needs_refresh', 'pending_response')
+        'data', 'result_id', 'active_region_keys', 'tokens', 'view_change_count', 'pending_response')
 
     def __init__(self) -> None:
         self.data: list[int] = []
@@ -110,7 +142,6 @@ class SemanticTokensData:
         self.active_region_keys: set[int] = set()
         self.tokens: list[SemanticToken] = []
         self.view_change_count = 0
-        self.needs_refresh = False
         self.pending_response: int | None = None
 
 
@@ -134,17 +165,17 @@ class SessionBuffer:
         self._last_known_uri = uri
         self._id = buffer_id
         self._pending_changes: PendingChanges | None = None
+        self.pending_refreshes: RequestFlags = RequestFlags.NONE
         self._diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
-        self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
-        self._diagnostics_version = -1
+        self.diagnostics_data_per_severity: dict[tuple[DiagnosticSeverity, bool], DiagnosticSeverityData] = {}
+        self._diagnostics_versions: dict[DiagnosticsIdentifier, int] = {}
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
-        self.document_diagnostic_needs_refresh = False
-        self._document_diagnostic_pending_request: PendingDocumentDiagnosticRequest | None = None
+        self.supported_diagnostic_tags: set[DiagnosticTag] = set()
+        self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # ruff: ignore[line-too-long]
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
-        self._workspace_diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self._document_links: list[DocumentLink] = []
         self.semantic_tokens = SemanticTokensData()
@@ -153,15 +184,16 @@ class SessionBuffer:
         self._supported_custom_tokens: set[str] = set()
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
-        self.inlay_hints_needs_refresh = False
-        self.code_lenses_needs_refresh = False
         self._is_saving = False
         self._has_changed_during_save = False
         self._code_lenses = CodeLensCache()
+        self.code_lens_annotation_color: str = ''
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
+        self._on_type_formatting_triggers: tuple[str, ...] = ()
         self._update_supported_commands()
-        self.evaluate_semantic_tokens_color_scheme_support(view)
+        self._update_on_type_formatting_triggers()
+        self._update_color_scheme_rules(view)
 
     @property
     def session(self) -> Session:
@@ -201,7 +233,7 @@ class SessionBuffer:
             if request_flags & RequestFlags.INLAY_HINT:
                 self.do_inlay_hints_async(view)
             self.do_code_lenses_async(view)
-            if userprefs().link_highlight_style in ("underline", "none"):
+            if userprefs().link_highlight_style == 'underline':
                 self._do_document_link_async(view, version)
             self.session.notify_plugin_on_session_buffer_change(self)
 
@@ -221,7 +253,9 @@ class SessionBuffer:
             return sv.get_language_id()
         return None
 
-    def get_view_in_group(self, group: int) -> sublime.View:
+    def get_view_in_group(self, group: int = -1) -> sublime.View:
+        if group == -1:
+            group = self.session.window.active_group()
         for sv in self.session_views:
             if view := sv.get_view_for_group(group):
                 return view
@@ -230,9 +264,7 @@ class SessionBuffer:
     @property
     @deprecated("Use get_language_id() instead")
     def language_id(self) -> str:
-        """
-        Deprecated: use get_language_id
-        """
+        """Deprecated: use get_language_id."""
         return self.get_language_id() or ""
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:
@@ -247,10 +279,14 @@ class SessionBuffer:
 
     def _on_before_destroy(self, view: sublime.View) -> None:
         self.remove_all_inlay_hints()
-        if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
-            self.session.m_textDocument_publishDiagnostics({'uri': self._last_known_uri, 'diagnostics': []})
-        if wm := self.session.manager():
-            wm.on_diagnostics_updated()
+        # With pull diagnostics, the client is responsible to update or clear diagnostics when appropriate.
+        # Clear all diagnostics for this view if the file is outside of the workspace folders, so that they don't
+        # clutter the diagnostics panel and the Goto Diagnostics quick panel.
+        if self.session.diagnostics.has_provider() and (
+                not (workspace_folders := self.session.get_workspace_folders()) or
+                not any(folder.includes_uri(self._last_known_uri) for folder in workspace_folders)
+            ):
+            self.session.clear_diagnostics_for_uri(self._last_known_uri)
         self._color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
@@ -285,6 +321,8 @@ class SessionBuffer:
             elif capability_path == "executeCommandProvider":
                 self._dynamically_registered_commands[registration_id] = options['commands']
                 self._update_supported_commands()
+            elif capability_path == "documentOnTypeFormattingProvider":
+                self._update_on_type_formatting_triggers()
 
     def unregister_capability_async(
         self,
@@ -300,6 +338,8 @@ class SessionBuffer:
         if capability_path == "executeCommandProvider":
             self._dynamically_registered_commands.pop(registration_id)
             self._update_supported_commands()
+        elif capability_path == "documentOnTypeFormattingProvider":
+            self._update_on_type_formatting_triggers()
 
     def get_capability(self, capability_path: str) -> Any | None:
         if self.session.config.is_disabled_capability(capability_path):
@@ -328,34 +368,43 @@ class SessionBuffer:
     def should_notify_did_close(self) -> bool:
         return self.capabilities.should_notify_did_close() or self.session.should_notify_did_close()
 
-    def on_text_changed_async(self, view: sublime.View, change_count: int,
-                              changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed_async(
+        self, view: sublime.View, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
+    ) -> None:
         if change_count <= self._last_synced_version:
             return
         self._last_text_change_time = time.time()
-        last_change = list(changes)[-1]
-        if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
+        last_change = changes[-1]
+        if last_change.a.pt == 0 and last_change.b.pt == 0 and not last_change.str and view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
-            # A special situation when changes externally. We receive two changes,
+            # A special situation when view changes externally. We receive two changes,
             # one that removes all content and one that has 0,0,'' parameters.
-            pass
-        else:
-            purge = False
-            if self._pending_changes is None:
-                self._pending_changes = PendingChanges(change_count, changes)
-                purge = True
-            elif self._pending_changes.version < change_count:
-                self._pending_changes.update(change_count, changes)
-                purge = True
-            if purge:
-                self._cancel_pending_requests_async()
+            return
+        purge = False
+        if self._pending_changes is None:
+            self._pending_changes = PendingChanges(change_count, changes)
+            purge = True
+        elif self._pending_changes.version < change_count:
+            self._pending_changes.update(change_count, changes)
+            purge = True
+        if purge:
+            self._cancel_pending_requests_async()
+            if (
+                userprefs().format_on_type and last_change.len_utf16 == 0
+                and (params := self._get_on_type_formatting_params_async(view, action, last_change.str))
+            ):
+                self.purge_changes_async(view)
+                self.session.send_request_task(Request.onTypeFormatting(params, view)) \
+                    .then(partial(self._on_type_formatting_result_async, view, change_count))
+            else:
                 debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
                           lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
 
     def _cancel_pending_requests_async(self) -> None:
-        if self._document_diagnostic_pending_request:
-            self.session.cancel_request_async(self._document_diagnostic_pending_request.request_id)
-            self._document_diagnostic_pending_request = None
+        for identifier, pending_request in self._document_diagnostic_pending_requests.items():
+            if pending_request:
+                self.session.cancel_request_async(pending_request.request_id)
+                self._document_diagnostic_pending_requests[identifier] = None
         if self.semantic_tokens.pending_response:
             self.session.cancel_request_async(self.semantic_tokens.pending_response)
             self.semantic_tokens.pending_response = None
@@ -402,14 +451,9 @@ class SessionBuffer:
             if request_flags & RequestFlags.DOCUMENT_COLOR:
                 self._do_color_boxes_async(view, version)
             self.do_document_diagnostic_async(view, version)
-            if self.session.config.diagnostics_mode == "workspace" and \
-                    not self.session.workspace_diagnostics_pending_response and \
-                    self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
-                self._workspace_diagnostics_debouncer_async.debounce(
-                    self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
                 self.do_semantic_tokens_async(view)
-            if userprefs().link_highlight_style in ("underline", "none"):
+            if userprefs().link_highlight_style == 'underline':
                 self._do_document_link_async(view, version)
             if request_flags & RequestFlags.INLAY_HINT:
                 self.do_inlay_hints_async(view)
@@ -438,15 +482,23 @@ class SessionBuffer:
         if self._has_changed_during_save:
             self._has_changed_during_save = False
             self._on_after_change_async(view, view.change_count())
+        self.session.do_workspace_diagnostics_async()
 
     def on_userprefs_changed_async(self) -> None:
-        self._redraw_document_links_async()
+        if userprefs().link_highlight_style == 'underline':
+            if view := self.some_view():
+                self._do_document_link_async(view, view.change_count())
+        else:
+            self._redraw_document_links_async()
         if userprefs().semantic_highlighting:
-            self.semantic_tokens.needs_refresh = True
+            self.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
         else:
             self.clear_semantic_tokens_async()
         for sv in self.session_views:
             sv.on_userprefs_changed_async()
+
+    def on_color_scheme_changed(self, view: sublime.View) -> None:
+        self._update_color_scheme_rules(view)
 
     def some_view(self) -> sublime.View | None:
         if not self.session_views:
@@ -461,19 +513,60 @@ class SessionBuffer:
                 return sv.view
         return None
 
-    def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> CallableWithOptionalArguments:
+    def set_pending_refresh(self, flags: RequestFlags) -> None:
         """
-        Ensures that the view is at the same version when we were called, before calling the `f` function.
+        Mark the request type(s) given by `flags` as pending for refresh. New requests according to the marked types
+        will be sent the next time when a view of this SessionBuffer gets activated.
         """
-        def handler(*args: Any) -> None:
+        self.pending_refreshes |= flags
+
+    def _reset_pending_refresh(self, flags: RequestFlags) -> None:
+        """Reset the refresh marker for the request type(s) given by `flags`."""
+        self.pending_refreshes &= ~flags
+
+    def _if_view_unchanged(self, f: Callable[Concatenate[sublime.View, P], None], version: int) -> Callable[P, None]:
+        """Ensures that the view is at the same version when we were called, before calling the `f` function."""
+        def handler(*args: P.args, **kwargs: P.kwargs) -> None:
             if (view := self.some_view()) and view.change_count() == version:
-                f(view, *args)
+                f(view, *args, **kwargs)
 
         return handler
 
+    def _update_color_scheme_rules(self, view: sublime.View) -> None:
+        # Color scheme rules for diagnostic tags
+        self.supported_diagnostic_tags = set(
+            tag for tag, scope in DIAGNOSTIC_TAG_SCOPES.items() if 'background' in view.style_for_scope(scope)
+        )
+        # Color scheme rule for code lens annotations
+        self.code_lens_annotation_color = view.style_for_scope(CODE_LENS_ANNOTATION_SCOPE)['foreground']
+        # Color scheme rules for semantic highlighting
+        token_general_style = view.style_for_scope('meta.semantic-token')
+        self._semantic_highlighting_supported_by_color_scheme = 'background' in token_general_style
+        self._supported_custom_tokens.clear()
+        if not self._semantic_highlighting_supported_by_color_scheme:
+            self.clear_semantic_tokens_async()
+            return
+        token_types: list[str] | None = self.get_capability('semanticTokensProvider.legend.tokenTypes')
+        if not token_types:
+            return
+        source_line = token_general_style['source_line']
+        source_column = token_general_style['source_column']
+        for token_type in token_types:
+            if token_type in SEMANTIC_TOKENS_MAP:
+                continue
+            token_type_style = view.style_for_scope(f'meta.semantic-token.{token_type.lower()}')
+            if token_type_style['source_line'] != source_line or token_type_style['source_column'] != source_column:
+                # If the source location for this token type differs from the generic semantic tokens rule, it means
+                # that there is a specific rule in the color scheme for this token type.
+                self._supported_custom_tokens.add(token_type)
+
     def _update_supported_commands(self) -> None:
-        self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
+        self._supported_commands = {'editor.action.showReferences'}  # Handled on client side in Session.execute_command
+        if commands := self.session.get_capability('executeCommandProvider.commands'):
+            self._supported_commands.update(commands)
         self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
+        if isinstance(self.session.plugin, LspPlugin):
+            self._supported_commands.update(self.session.plugin._command_handler_map.keys())
 
     def _get_request_flags(self, view: sublime.View) -> RequestFlags:
         if session_view := self.session.session_view_for_view_async(view):
@@ -489,11 +582,8 @@ class SessionBuffer:
                 self._if_view_unchanged(self._on_color_boxes_async, version)
             )
 
-    def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation]) -> None:
-        if response is None:  # Guard against spec violation from certain language servers
-            self._color_phantoms.update([])
-            return
-        phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response]
+    def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation] | None) -> None:
+        phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response] if response else []
         sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
 
     def clear_color_boxes_async(self) -> None:
@@ -517,7 +607,7 @@ class SessionBuffer:
             view = self.some_view()
             if not view:
                 return
-            regions = [range_to_region(link["range"], view) for link in self._document_links]
+            regions = [range_to_region(view, link["range"]) for link in self._document_links]
             for sv in self.session_views:
                 sv.view.add_regions(
                     RegionKey.DOCUMENT_LINK, regions, scope="markup.underline.link.lsp", flags=DOCUMENT_LINK_FLAGS)
@@ -527,7 +617,7 @@ class SessionBuffer:
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> DocumentLink | None:
         for link in self._document_links:
-            if range_to_region(link["range"], view).contains(point):
+            if range_to_region(view, link["range"]).contains(point):
                 return link
         return None
 
@@ -543,91 +633,108 @@ class SessionBuffer:
 
     def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = False) -> None:
         mgr = self.session.manager()
-        if not mgr or not self.has_capability("diagnosticProvider"):
-            return
-        if mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
+        if not mgr or mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
             return
         if version < view.change_count():
+            # If the document content changed in the meanwhile, new diagnostic requests will automatically be triggered
+            # from _on_after_change_async after the didChange notification.
             return
-        if version == self._diagnostics_version and not forced_update:
+        for identifier in self.session.diagnostics.get_identifiers(view):
+            self._do_document_diagnostic_async(view, identifier, version, forced_update=forced_update)
+        self._reset_pending_refresh(RequestFlags.DIAGNOSTIC)
+
+    def _do_document_diagnostic_async(
+        self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, *, forced_update: bool = False
+    ) -> None:
+        if version == self._diagnostics_versions.get(identifier, -1) and not forced_update:
             return
-        if self._document_diagnostic_pending_request:
-            if self._document_diagnostic_pending_request.version == version and not forced_update:
+        if pending_request := self._document_diagnostic_pending_requests.get(identifier):
+            if pending_request.version == version and not forced_update:
                 return
-            self.session.cancel_request_async(self._document_diagnostic_pending_request.request_id)
+            self.session.cancel_request_async(pending_request.request_id)
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
-        identifier = self.get_capability("diagnosticProvider.identifier")
         if identifier:
             params['identifier'] = identifier
-        result_id = self.session.diagnostics_result_ids.get(self._last_known_uri)
-        if result_id is not None:
+        if (result_id := self.session.diagnostics_result_ids.get((self._last_known_uri, identifier))) is not None:
             params['previousResultId'] = result_id
         request_id = self.session.send_request_async(
             Request.documentDiagnostic(params, view),
-            partial(self._on_document_diagnostic_async, version),
-            partial(self._on_document_diagnostic_error_async, version)
+            partial(self._on_document_diagnostic_async, identifier, version),
+            partial(self._on_document_diagnostic_error_async, view, identifier, version)
         )
-        self._document_diagnostic_pending_request = PendingDocumentDiagnosticRequest(version, request_id)
+        self._document_diagnostic_pending_requests[identifier] = \
+            PendingDocumentDiagnosticRequest(version, request_id)
 
-    def _on_document_diagnostic_async(self, version: int, response: DocumentDiagnosticReport) -> None:
-        self._document_diagnostic_pending_request = None
-        self._if_view_unchanged(self._apply_document_diagnostic_async, version)(response)
+    def _on_document_diagnostic_async(
+        self, identifier: DiagnosticsIdentifier, version: int, response: DocumentDiagnosticReport
+    ) -> None:
+        self._diagnostics_versions[identifier] = version
+        self._document_diagnostic_pending_requests[identifier] = None
+        self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
+        diagnostics = response['items'] if is_related_full_document_diagnostic_report(response) else None
+        self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, diagnostics)
+        if related_documents := response.get('relatedDocuments'):
+            for uri, report in related_documents.items():
+                uri = normalize_uri(uri)
+                self.session.diagnostics_result_ids[(uri, identifier)] = report.get('resultId')
+                diagnostics = report['items'] if is_full_document_diagnostic_report(report) else None
+                self.session.handle_diagnostics_async(uri, identifier, None, diagnostics)
 
-    def _apply_document_diagnostic_async(self, view: sublime.View | None, response: DocumentDiagnosticReport) -> None:
-        self.session.diagnostics_result_ids[self._last_known_uri] = response.get('resultId')
-        if is_full_document_diagnostic_report(response):
-            self.session.m_textDocument_publishDiagnostics(
-                {'uri': self._last_known_uri, 'diagnostics': response['items']})
-        if 'relatedDocuments' in response:
-            for uri, diagnostic_report in response['relatedDocuments'].items():
-                if sb := self.session.get_session_buffer_for_uri_async(uri):
-                    cast(SessionBuffer, sb)._apply_document_diagnostic_async(
-                        None, cast(DocumentDiagnosticReport, diagnostic_report))
-
-    def _on_document_diagnostic_error_async(self, version: int, error: ResponseError) -> None:
-        self._document_diagnostic_pending_request = None
+    def _on_document_diagnostic_error_async(
+        self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, error: ResponseError
+    ) -> None:
+        self._document_diagnostic_pending_requests[identifier] = None
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
-                # Retrigger the request after a short delay, but only if there were no additional changes to the buffer
-                # (in that case the request will be retriggered automatically anyway)
+                # Retrigger the request after a short delay, but only if there are no additional changes to the buffer
+                # in the meanwhile, because in that case a new request will be sent automatically after the didChange
+                # notification.
+                if version != view.change_count():
+                    return
                 sublime.set_timeout_async(
-                    lambda: self._if_view_unchanged(self.do_document_diagnostic_async, version)(version), 500)
-
-    def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.document_diagnostic_needs_refresh = needs_refresh
+                    lambda: self._if_view_unchanged(self._do_document_diagnostic_async, version)(identifier, version),
+                    DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
+                )
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
     def on_diagnostics_async(
-        self, raw_diagnostics: list[Diagnostic], version: int, visible_session_views: set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         view = self.some_view()
         if view is None:
             return
-        if version != view.change_count():
+        change_count = view.change_count()
+        if version is None:
+            version = change_count
+        elif version != change_count:
             return
         diagnostics_version = version
         diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
-        data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
+        data_per_severity: dict[tuple[DiagnosticSeverity, bool], DiagnosticSeverityData] = {}
         for diagnostic in raw_diagnostics:
-            region = range_to_region(diagnostic["range"], view)
+            region = range_to_region(view, diagnostic["range"])
             severity = diagnostic_severity(diagnostic)
             key = (severity, len(view.split_by_newlines(region)) > 1)
             data = data_per_severity.get(key)
             if data is None:
-                data = DiagnosticSeverityData(severity)
+                data = DiagnosticSeverityData()
                 data_per_severity[key] = data
             if tags := diagnostic.get('tags', []):
+                has_supported_tag = False
                 for tag in tags:
-                    data.regions_with_tag.setdefault(tag, []).append(region)
+                    if tag in SUPPORTED_DIAGNOSTIC_TAGS:
+                        data.regions_with_tag.setdefault(tag, []).append(region)
+                        has_supported_tag = True
+                if not has_supported_tag:
+                    data.regions.append(region)
             else:
                 data.regions.append(region)
             diagnostics.append((diagnostic, region))
         self.diagnostics_data_per_severity = data_per_severity
 
         def present() -> None:
-            self._diagnostics_version = diagnostics_version
             self._diagnostics = diagnostics
             self._diagnostics_are_visible = bool(diagnostics)
             for sv in self.session_views:
@@ -653,8 +760,58 @@ class SessionBuffer:
 
     def has_latest_diagnostics(self) -> bool:
         if view := self.some_view():
-            return self._diagnostics_version == view.change_count()
+            view_version = view.change_count()
+            return all(
+                self._diagnostics_versions.get(identifier) == view_version
+                for identifier in self.session.diagnostics.get_identifiers(view)
+            )
         return False
+
+    # --- textDocument/onTypeFormatting --------------------------------------------------------------------------------
+
+    def _update_on_type_formatting_triggers(self) -> None:
+        capability: DocumentOnTypeFormattingOptions | None = self.get_capability('documentOnTypeFormattingProvider')
+        if capability:
+            trigger_characters = (capability['firstTriggerCharacter'], *capability.get('moreTriggerCharacter', []))
+            # Two-character pairs where the first character matches the trigger character.
+            trigger_pairs = (pair for pair in AUTO_CLOSE_BRACKETS if pair[0] in trigger_characters)
+            self._on_type_formatting_triggers = (*trigger_characters, *trigger_pairs)
+        else:
+            self._on_type_formatting_triggers = ()
+
+    def _get_on_type_formatting_params_async(
+        self, view: sublime.View, action: ChangeEventAction, text: str
+    ) -> DocumentOnTypeFormattingParams | None:
+        if not self._on_type_formatting_triggers or \
+                not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
+            return None
+        if action == ChangeEventAction.TYPE:
+            for trigger in self._on_type_formatting_triggers:
+                if text.endswith(trigger):
+                    return self._create_on_type_formatting_params_async(view, trigger)
+            return None
+        if action == ChangeEventAction.INSERT_NEWLINE:
+            if '\n' in self._on_type_formatting_triggers and text.rstrip(' ').endswith('\n'):
+                return self._create_on_type_formatting_params_async(view, '\n')
+            return None
+        return None
+
+    def _create_on_type_formatting_params_async(
+        self, view: sublime.View, trigger: str
+    ) -> DocumentOnTypeFormattingParams | None:
+        if (selection := first_selection_region(view)) is not None:
+            return {
+                **text_document_position_params(view, selection.a),
+                'options': formatting_options(view.settings()),
+                'ch': trigger[0],
+            }
+        return None
+
+    def _on_type_formatting_result_async(
+        self, view: sublime.View, version: int, result: list[TextEdit] | Error | None
+    ) -> None:
+        if result and not isinstance(result, Error) and version == view.change_count():
+            apply_text_edits(view, result)
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 
@@ -668,39 +825,47 @@ class SessionBuffer:
         if self.semantic_tokens.pending_response:
             self.session.cancel_request_async(self.semantic_tokens.pending_response)
         self.semantic_tokens.view_change_count = view.change_count()
-        params: dict[str, Any] = {"textDocument": text_document_identifier(view)}
         if only_viewport and self.has_capability("semanticTokensProvider.range"):
-            params["range"] = region_to_range(view, view.visible_region())
-            request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
+            request = Request.semanticTokensRange({
+                "textDocument": text_document_identifier(view),
+                "range": region_to_range(view, view.visible_region())
+            }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, partial(self._on_semantic_tokens_viewport_async, view), self._on_semantic_tokens_error_async)
         elif self.semantic_tokens.result_id and self.has_capability("semanticTokensProvider.full.delta"):
-            params["previousResultId"] = self.semantic_tokens.result_id
-            request = Request.semanticTokensFullDelta(cast(SemanticTokensDeltaParams, params), view)
+            request = Request.semanticTokensFullDelta({
+                "textDocument": text_document_identifier(view),
+                "previousResultId": self.semantic_tokens.result_id
+            }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_delta_async, self._on_semantic_tokens_error_async)
         elif self.has_capability("semanticTokensProvider.full"):
-            request = Request.semanticTokensFull(cast(SemanticTokensParams, params), view)
+            request = Request.semanticTokensFull({
+                "textDocument": text_document_identifier(view),
+            }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
         elif self.has_capability("semanticTokensProvider.range"):
-            params["range"] = entire_content_range(view)
-            request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
+            request = Request.semanticTokensRange({
+                "textDocument": text_document_identifier(view),
+                "range": entire_content_range(view)
+            }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
+        self._reset_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
 
-    def _on_semantic_tokens_async(self, response: dict | None) -> None:
+    def _on_semantic_tokens_async(self, response: SemanticTokens | None) -> None:
         self.semantic_tokens.pending_response = None
         if response:
             self.semantic_tokens.result_id = response.get("resultId")
             self.semantic_tokens.data = response["data"]
             self._draw_semantic_tokens_async()
 
-    def _on_semantic_tokens_viewport_async(self, view: sublime.View, response: dict | None) -> None:
+    def _on_semantic_tokens_viewport_async(self, view: sublime.View, response: SemanticTokens | None) -> None:
         self._on_semantic_tokens_async(response)
         self.do_semantic_tokens_async(view)  # now request semantic tokens for the full file
 
-    def _on_semantic_tokens_delta_async(self, response: dict | None) -> None:
+    def _on_semantic_tokens_delta_async(self, response: SemanticTokens | SemanticTokensDelta | None) -> None:
         self.semantic_tokens.pending_response = None
         if response:
             self.semantic_tokens.result_id = response.get("resultId")
@@ -714,11 +879,9 @@ class SessionBuffer:
                         self.semantic_tokens.data[start:start] = data
             elif "data" in response:  # response is of type SemanticTokens
                 self.semantic_tokens.data = response["data"]
-            else:
-                return
             self._draw_semantic_tokens_async()
 
-    def _on_semantic_tokens_error_async(self, _: dict) -> None:
+    def _on_semantic_tokens_error_async(self, _: ResponseError) -> None:
         self.semantic_tokens.pending_response = None
         self.semantic_tokens.result_id = None
 
@@ -727,11 +890,11 @@ class SessionBuffer:
         if view is None:
             return
         self.semantic_tokens.tokens.clear()
-        scope_regions: dict[int, tuple[str, list[sublime.Region]]] = dict()
+        scope_regions: dict[int, tuple[str, list[sublime.Region]]] = {}
         prev_line = 0
         prev_col_utf16 = 0
-        types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
-        modifiers_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
+        types_legend = tuple(cast('list[str]', self.get_capability('semanticTokensProvider.legend.tokenTypes')))
+        modifiers_legend = tuple(cast('list[str]', self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
         for idx in range(0, len(self.semantic_tokens.data), 5):
             delta_line = self.semantic_tokens.data[idx]
             delta_start_utf16 = self.semantic_tokens.data[idx + 1]
@@ -760,7 +923,7 @@ class SessionBuffer:
             return
         session_name = self.session.config.name
         for region_key in self.semantic_tokens.active_region_keys.copy():
-            if region_key not in scope_regions.keys():
+            if region_key not in scope_regions:
                 self.semantic_tokens.active_region_keys.remove(region_key)
                 for sv in self.session_views:
                     sv.view.erase_regions(f"lsp_semantic_{session_name}_{region_key}")
@@ -782,40 +945,12 @@ class SessionBuffer:
         for region_key in self.semantic_tokens.active_region_keys:
             view.erase_regions(f"lsp_semantic_{session_name}_{region_key}")
 
-    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.semantic_tokens.needs_refresh = needs_refresh
-
     def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
 
     def clear_semantic_tokens_async(self) -> None:
         for sv in self.session_views:
             self._clear_semantic_token_regions(sv.view)
-
-    def evaluate_semantic_tokens_color_scheme_support(self, view: sublime.View) -> None:
-        """
-        Check whether semantic highlighting is supported by the color scheme and which of the custom token types from
-        this server are supported.
-        """
-        token_general_style = view.style_for_scope('meta.semantic-token')
-        self._semantic_highlighting_supported_by_color_scheme = 'background' in token_general_style
-        self._supported_custom_tokens.clear()
-        if not self._semantic_highlighting_supported_by_color_scheme:
-            self.clear_semantic_tokens_async()
-            return
-        token_types: list[str] | None = self.get_capability('semanticTokensProvider.legend.tokenTypes')
-        if not token_types:
-            return
-        source_line = token_general_style['source_line']
-        source_column = token_general_style['source_column']
-        for token_type in token_types:
-            if token_type in SEMANTIC_TOKENS_MAP:
-                continue
-            token_type_style = view.style_for_scope(f'meta.semantic-token.{token_type.lower()}')
-            if token_type_style['source_line'] != source_line or token_type_style['source_column'] != source_column:
-                # If the source location for this token type differs from the generic semantic tokens rule, it means
-                # that there is a specific rule in the color scheme for this token type.
-                self._supported_custom_tokens.add(token_type)
 
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 
@@ -833,6 +968,7 @@ class SessionBuffer:
             "range": entire_content_range(view)
         }
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
+        self._reset_pending_refresh(RequestFlags.INLAY_HINT)
 
     def _on_inlay_hints_async(self, response: list[InlayHint] | None) -> None:
         if response:
@@ -842,23 +978,46 @@ class SessionBuffer:
             phantoms = [inlay_hint_to_phantom(view, inlay_hint, self.session) for inlay_hint in response]
             sublime.set_timeout(lambda: self.present_inlay_hints(phantoms))
         else:
-            sublime.set_timeout(lambda: self.remove_all_inlay_hints())
+            sublime.set_timeout(self.remove_all_inlay_hints)
 
     def present_inlay_hints(self, phantoms: list[sublime.Phantom]) -> None:
         self._inlay_hints_phantom_set.update(phantoms)
 
-    def set_inlay_hints_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.inlay_hints_needs_refresh = needs_refresh
-
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         new_phantoms = list(filter(
-            lambda p: getattr(p, 'lsp_uuid') != phantom_uuid,
+            lambda p: getattr(p, 'lsp_uuid', None) != phantom_uuid,
             self._inlay_hints_phantom_set.phantoms)
         )
         self._inlay_hints_phantom_set.update(new_phantoms)
 
     def remove_all_inlay_hints(self) -> None:
         self._inlay_hints_phantom_set.update([])
+
+    # --- textDocument/codeAction --------------------------------------------------------------------------------------
+
+    def request_code_actions_async(
+        self,
+        view: sublime.View,
+        region: sublime.Region,
+        diagnostics: list[Diagnostic],
+        kinds: list[str | CodeActionKind] | None = None,
+        trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic,
+        *,
+        progress: bool = False,
+    ) -> Promise[list[Command | CodeAction] | Error | None]:
+        context: CodeActionContext = {
+            'diagnostics': diagnostics,
+            'triggerKind': trigger_kind
+        }
+        if kinds:
+            context['only'] = kinds
+        params: CodeActionParams = {
+            'textDocument': text_document_identifier(view),
+            'range': region_to_range(view, region),
+            'context': context
+        }
+        request = Request.codeAction(params, view, progress=progress)
+        return self.session.send_request_task(request)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
@@ -875,6 +1034,7 @@ class SessionBuffer:
                 break
         request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
         self.session.send_request_async(request, partial(self._on_code_lenses_async, view))
+        self._reset_pending_refresh(RequestFlags.CODE_LENS)
 
     def _on_code_lenses_async(self, view: sublime.View, response: list[CodeLens] | None) -> None:
         self._code_lenses.handle_response_async(response or [])
@@ -890,29 +1050,26 @@ class SessionBuffer:
         Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async())
 
     def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
-        code_lenses = self._code_lenses.code_lenses_with_command()
-        if self.session.uses_plugin():
-            # TODO should plugins announce the commands that they can handle, so we can filter out the unsupported
-            # commands here as well?
-            return code_lenses
-        else:
-            supported_code_lenses: list[ResolvedCodeLens] = []
-            # Filter out CodeLenses with commands that are not handled directly by the language server
-            for code_lens in code_lenses:
-                command_name = code_lens['command']['command']
-                if command_name in self._supported_commands:
-                    supported_code_lenses.append(code_lens)
-                else:
-                    self.session.check_log_unsupported_command(command_name)
-            return supported_code_lenses
+        code_lenses_with_command = self._code_lenses.code_lenses_with_command()
+        if isinstance(self.session.plugin, AbstractPlugin):
+            # We can't filter out any commands, because we don't know which commands are handled by the
+            # AbstractPlugin.on_pre_server_command API method. Code lenses which are not handled by that method or by
+            # the server will be shown, but are not functional.
+            return code_lenses_with_command
+        supported_code_lenses: list[ResolvedCodeLens] = []
+        # Filter out CodeLenses with commands that are not handled by the language server or plugin
+        for code_lens in code_lenses_with_command:
+            command_name = code_lens['command']['command']
+            if command_name in self._supported_commands:
+                supported_code_lenses.append(code_lens)
+            else:
+                self.session.check_log_unsupported_command(command_name)
+        return supported_code_lenses
 
     def _on_visible_code_lenses_resolved_async(self) -> None:
         supported_code_lenses = self._filter_supported_code_lenses()
         for sv in self.session_views:
             sv.handle_code_lenses_async(supported_code_lenses)
-
-    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.code_lenses_needs_refresh = needs_refresh
 
     # ------------------------------------------------------------------------------------------------------------------
 

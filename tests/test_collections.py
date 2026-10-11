@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from LSP.plugin.core.collections import DottedDict
 from typing import Any
 from unittest import TestCase
@@ -24,6 +25,25 @@ class DottedDictTests(TestCase):
         self.verify(d, "foo", "world")
         d.set("foo.bar.baz", {"some": "dict"})
         self.verify(d, "foo.bar.baz.some", "dict")
+
+    def test_does_not_expand_at_second_nesting_level(self) -> None:
+        d = DottedDict({"editor.codeActionsOnSave": {"source.fixAll": "explicit"}})
+        self.verify(d, "editor.codeActionsOnSave", {"source.fixAll": "explicit"})
+        self.assertIsNone(d.get("editor.codeActionsOnSave.source"))
+
+    def test_overwrite_int_with_dict(self) -> None:
+        d = DottedDict({'foo.bar': 1})
+        d.set('foo.bar', {
+            "a": "a",
+        })
+        self.verify(d, "foo.bar", {"a": "a"})
+
+    def test_overwrite_dict_with_dict(self) -> None:
+        d = DottedDict({'foo.bar': {'a': 'a'}})
+        d.set('foo.bar', {
+            "b": "b",
+        })
+        self.verify(d, "foo.bar", {"b": "b"})
 
     def test_remove(self) -> None:
         d = DottedDict()

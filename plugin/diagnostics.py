@@ -1,12 +1,122 @@
 from __future__ import annotations
+
 from ..protocol import Diagnostic
+from ..protocol import DiagnosticOptions
+from ..protocol import DiagnosticRegistrationOptions
 from ..protocol import DiagnosticSeverity
+from ..protocol import DocumentUri
 from .core.constants import DIAGNOSTIC_KINDS
+from .core.constants import DIAGNOSTIC_SEVERITY_SCOPES
 from .core.constants import REGIONS_INITIALIZE_FLAGS
+from .core.protocol import Point
 from .core.settings import userprefs
+from .core.types import DocumentSelectorMatcher
+from .core.url import normalize_uri
 from .core.views import diagnostic_severity
+from .core.views import DIAGNOSTIC_STYLES
 from .core.views import format_diagnostics_for_annotation
+from typing import Union
+import itertools
 import sublime
+
+DiagnosticsIdentifier = Union[str, None]
+
+# Delay in milliseconds that applies when a pull diagnostics request is retriggered after being cancelled by the server
+# with the retriggerRequest flag.
+DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY = 500
+WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY = 3000
+
+
+class DiagnosticsStorage:
+    """Per session storage for diagnostics from pull diangostics streams and from publishDiagnostics notifications."""
+
+    def __init__(self) -> None:
+        self._providers: dict[str | None, DiagnosticOptions | DiagnosticRegistrationOptions] = {}
+        self._identifiers: set[DiagnosticsIdentifier] = set()
+        self._workspace_diagnostics_identifiers: set[DiagnosticsIdentifier] = set()
+        self._diagnostics: dict[DocumentUri, dict[DiagnosticsIdentifier, list[Diagnostic]]] = {}
+        self._identifiers_cache: dict[int, set[DiagnosticsIdentifier]] = {}
+
+    def get_identifiers(self, view: sublime.View) -> set[DiagnosticsIdentifier]:
+        view_id = view.id()
+        if (identifiers := self._identifiers_cache.get(view_id)) is not None:
+            return identifiers
+        identifiers = set(
+            diagnostic_options.get('identifier') for diagnostic_options in self._providers.values()
+            if DocumentSelectorMatcher(diagnostic_options.get('documentSelector') or []).matches(view)
+        )
+        self._identifiers_cache[view_id] = identifiers
+        return identifiers
+
+    def clear_identifiers_cache_for_view(self, view: sublime.View) -> None:
+        self._identifiers_cache.pop(view.id(), None)
+
+    @property
+    def workspace_diagnostics_identifiers(self) -> set[DiagnosticsIdentifier]:
+        return self._workspace_diagnostics_identifiers
+
+    def _update_identifiers(self) -> None:
+        self._identifiers = set(options.get('identifier') for options in self._providers.values())
+        self._workspace_diagnostics_identifiers = set(
+            options.get('identifier') for options in self._providers.values() if options['workspaceDiagnostics']
+        )
+        self._identifiers_cache = {}
+
+    def register_provider(
+        self, registration_id: str | None, options: DiagnosticOptions | DiagnosticRegistrationOptions
+    ) -> None:
+        # Note that the registration ID can be None when using static registration, in which case the provider cannot be
+        # unregistered later.
+        self._providers[registration_id] = options
+        self._update_identifiers()
+
+    def unregister_provider(self, registration_id: str) -> None:
+        self._providers.pop(registration_id)
+        self._update_identifiers()
+
+    def has_provider(self) -> bool:
+        return bool(self._providers)
+
+    def set_diagnostics(
+        self, uri: DocumentUri, identifier: DiagnosticsIdentifier, diagnostics: list[Diagnostic]
+    ) -> None:
+        if identifier is not None and identifier not in self._identifiers:
+            raise ValueError(f'diagnostic stream with identifier {identifier} must be registered first')
+        normalized_uri = normalize_uri(uri)
+        self._diagnostics.setdefault(normalized_uri, {})[identifier] = diagnostics
+
+    def clear_diagnostics(self, uri: DocumentUri) -> None:
+        self._diagnostics.pop(normalize_uri(uri), None)
+
+    def _sorted_diagnostics_for_uri(self, uri: DocumentUri, max_severity: int) -> list[Diagnostic]:
+        return sorted(
+            (
+                diagnostic for diagnostic
+                in itertools.chain.from_iterable(self._diagnostics.get(uri, {}).values())
+                if diagnostic_severity(diagnostic) <= max_severity
+            ),
+            key=lambda diagnostic: (Point.from_lsp(diagnostic['range']['start']), diagnostic_severity(diagnostic))
+        )
+
+    def get_diagnostics(self, max_severity: int = DiagnosticSeverity.Hint) -> dict[DocumentUri, list[Diagnostic]]:
+        return {uri: self._sorted_diagnostics_for_uri(uri, max_severity) for uri in self._diagnostics}
+
+    def get_diagnostics_for_uri(
+        self, uri: DocumentUri, max_severity: int = DiagnosticSeverity.Hint
+    ) -> list[Diagnostic]:
+        return self._sorted_diagnostics_for_uri(normalize_uri(uri), max_severity)
+
+    def total_errors_and_warnings(self) -> tuple[int, int]:
+        total_errors = 0
+        total_warnings = 0
+        for diagnostics in self._diagnostics.values():
+            for diagnostic in itertools.chain.from_iterable(diagnostics.values()):
+                severity = diagnostic_severity(diagnostic)
+                if severity == DiagnosticSeverity.Error:
+                    total_errors += 1
+                elif severity == DiagnosticSeverity.Warning:
+                    total_warnings += 1
+        return total_errors, total_warnings
 
 
 class DiagnosticsAnnotationsView:
@@ -14,10 +124,11 @@ class DiagnosticsAnnotationsView:
     def __init__(self, view: sublime.View, config_name: str) -> None:
         self._view = view
         self._config_name = config_name
+        self._severity_colors = self._get_severity_colors()
 
     def initialize_region_keys(self) -> None:
         r = [sublime.Region(0, 0)]
-        for severity in DIAGNOSTIC_KINDS.keys():
+        for severity in DIAGNOSTIC_KINDS:
             self._view.add_regions(self._annotation_region_key(severity), r, flags=REGIONS_INITIALIZE_FLAGS)
 
     def _annotation_region_key(self, severity: DiagnosticSeverity) -> str:
@@ -28,7 +139,7 @@ class DiagnosticsAnnotationsView:
         max_severity_level = userprefs().show_diagnostics_annotations_severity_level
         # To achieve the correct order of annotations (most severe having priority) we have to add regions from the
         # most to the least severe.
-        for severity in DIAGNOSTIC_KINDS.keys():
+        for severity in DIAGNOSTIC_KINDS:
             if severity <= max_severity_level:
                 matching_diagnostics: tuple[list[Diagnostic], list[sublime.Region]] = ([], [])
                 for diagnostic, region in diagnostics:
@@ -36,9 +147,24 @@ class DiagnosticsAnnotationsView:
                         continue
                     matching_diagnostics[0].append(diagnostic)
                     matching_diagnostics[1].append(region)
-                annotations, color = format_diagnostics_for_annotation(matching_diagnostics[0], severity, self._view)
+                css_class = DIAGNOSTIC_STYLES[severity].css_class
+                annotations = format_diagnostics_for_annotation(self._view, matching_diagnostics[0], css_class)
+                color = self._severity_colors[severity]
                 self._view.add_regions(
                     self._annotation_region_key(severity), matching_diagnostics[1], flags=flags,
                     annotations=annotations, annotation_color=color)
             else:
                 self._view.erase_regions(self._annotation_region_key(severity))
+
+    def clear(self) -> None:
+        for severity in DIAGNOSTIC_KINDS:
+            self._view.erase_regions(self._annotation_region_key(severity))
+
+    def on_color_scheme_changed(self) -> None:
+        self._severity_colors = self._get_severity_colors()
+
+    def _get_severity_colors(self) -> dict[DiagnosticSeverity, str]:
+        return {
+            severity: self._view.style_for_scope(scope)['foreground']
+            for severity, scope in DIAGNOSTIC_SEVERITY_SCOPES.items()
+        }

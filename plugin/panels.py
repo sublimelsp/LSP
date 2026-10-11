@@ -1,19 +1,12 @@
 from __future__ import annotations
+
 from .core.panels import LOG_LINES_LIMIT_SETTING_NAME
 from .core.panels import PanelName
 from .core.registry import windows
-from contextlib import contextmanager
+from .core.views import mutable
 from sublime_plugin import WindowCommand
-from typing import Generator
 import sublime
 import sublime_plugin
-
-
-@contextmanager
-def mutable(view: sublime.View) -> Generator:
-    view.set_read_only(False)
-    yield
-    view.set_read_only(True)
 
 
 def clear_undo_stack(view: sublime.View) -> None:
@@ -48,6 +41,20 @@ class LspShowDiagnosticsPanelCommand(WindowCommand):
         panel_manager.toggle_output_panel(PanelName.Diagnostics)
 
 
+class LspToggleMessagesPanelCommand(WindowCommand):
+    def run(self) -> None:
+        wm = windows.lookup(self.window)
+        if wm and wm.messages_panel:
+            wm.messages_panel.toggle()
+
+
+class LspClearMessagesPanelCommand(WindowCommand):
+    def run(self) -> None:
+        wm = windows.lookup(self.window)
+        if wm and wm.messages_panel:
+            wm.messages_panel.clear()
+
+
 class LspToggleLogPanelLinesLimitCommand(sublime_plugin.TextCommand):
     @classmethod
     def is_limit_enabled(cls, window: sublime.Window | None) -> bool:
@@ -72,18 +79,15 @@ class LspToggleLogPanelLinesLimitCommand(sublime_plugin.TextCommand):
 
 
 class LspClearPanelCommand(sublime_plugin.TextCommand):
-    """
-    A clear_panel command to clear the error panel.
-    """
+    """A clear_panel command to clear the error panel."""
+
     def run(self, edit: sublime.Edit) -> None:
         with mutable(self.view):
             self.view.erase(edit, sublime.Region(0, self.view.size()))
 
 
 class LspUpdatePanelCommand(sublime_plugin.TextCommand):
-    """
-    A update_panel command to update the error panel with new text.
-    """
+    """A update_panel command to update the error panel with new text."""
 
     def run(self, edit: sublime.Edit, characters: str | None = "") -> None:
         # Clear folds
@@ -114,7 +118,7 @@ class LspUpdateLogPanelCommand(sublime_plugin.TextCommand):
                 last_region_end = 0  # Starting from point 0 in the panel ...
                 total_lines, _ = self.view.rowcol(self.view.size())
                 max_lines = LspToggleLogPanelLinesLimitCommand.get_lines_limit(self.view.window())
-                for _ in range(0, max(0, total_lines - max_lines)):
+                for _ in range(max(0, total_lines - max_lines)):
                     # ... collect all regions that span an entire line ...
                     region = self.view.full_line(last_region_end)
                     last_region_end = region.b

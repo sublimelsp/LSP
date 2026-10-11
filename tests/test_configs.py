@@ -1,41 +1,33 @@
 from __future__ import annotations
-import sublime
-from LSP.plugin.core.settings import read_client_config, update_client_config
+
+from .test_mocks import TEST_CONFIG
+from LSP.plugin.core.collections import DottedDict
+from LSP.plugin.core.transports import TransportConfig
+from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.views import get_uri_and_position_from_location
 from LSP.plugin.core.views import to_encoded_filename
 from os import environ
-from os.path import dirname, pathsep
+from os.path import dirname
+from os.path import pathsep
+from typing import Any
 from unittesting import DeferrableTestCase
-import unittest
 import sys
+import unittest
 
 test_file_path = dirname(__file__) + "/testfile.txt"
 
 
+def read_client_config(name: str, d: dict[str, Any]) -> ClientConfig:
+    return ClientConfig.from_dict(name, d)
+
+
+def update_client_config(external_config: ClientConfig, user_override_config: dict[str, Any]) -> ClientConfig:
+    return ClientConfig.from_config(external_config, user_override_config)
+
+
 class ConfigParsingTests(DeferrableTestCase):
 
-    def test_can_parse_old_client_settings(self):
-        settings = {
-            "command": ["pyls"],
-            "scopes": ["text.html.vue"],
-            "syntaxes": ["Packages/Python/Python.sublime-syntax"],  # it should use this one
-            "languageId": "java"
-        }
-        config = read_client_config("pyls", settings)
-        self.assertEqual(config.selector, "source.python")
-        self.assertEqual(config.priority_selector, "(text.html.vue)")
-
-    def test_can_parse_client_settings_with_languages(self):
-        settings = {
-            "command": ["pyls"],
-            # Check that "selector" will be "source.python"
-            "languages": [{"languageId": "python"}]
-        }
-        config = read_client_config("pyls", settings)
-        self.assertEqual(config.selector, "(source.python)")
-        self.assertEqual(config.priority_selector, "(source.python)")
-
-    def test_can_parse_settings_with_selector(self):
+    def test_can_parse_settings_with_selector(self) -> None:
         settings = {
             "command": ["pyls"],
             "selector": "source.python"
@@ -44,17 +36,15 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertEqual(config.selector, "source.python")
         self.assertEqual(config.priority_selector, "source.python")
 
-    def test_can_update_config(self):
+    def test_can_update_config(self) -> None:
         settings = {
             "command": ["pyls"],
-            "document_selector": "source.python",
-            "languageId": "python"
         }
         config = read_client_config("pyls", settings)
         config = update_client_config(config, {"enabled": True})
         self.assertEqual(config.enabled, True)
 
-    def test_can_read_experimental_capabilities(self):
+    def test_can_read_experimental_capabilities(self) -> None:
         experimental_capabilities = {
             "foo": 1,
             "bar": True,
@@ -62,14 +52,12 @@ class ConfigParsingTests(DeferrableTestCase):
         }
         settings = {
             "command": ["pyls"],
-            "document_selector": "source.python",
-            "languageId": "python",
             "experimental_capabilities": experimental_capabilities
         }
         config = read_client_config("pyls", settings)
         self.assertEqual(config.experimental_capabilities, experimental_capabilities)
 
-    def test_transport_config_extends_env_path(self):
+    def test_transport_config_extends_env_path(self) -> None:
         settings = {
             "command": ["pyls"],
             "selector": "source.python",
@@ -78,29 +66,44 @@ class ConfigParsingTests(DeferrableTestCase):
             }
         }
         config = read_client_config("pyls", settings)
-        transport_config = config.resolve_transport_config({})
+        launch_config = TransportConfig.resolve_launch_config(config.command, config.env, {})
         original_path = environ.copy()['PATH']
-        resolved_path = transport_config.env['PATH']
+        resolved_path = launch_config.env['PATH']
         self.assertEqual(resolved_path, f'/a/b/{pathsep}{original_path}')
 
-    def test_list_in_environment(self):
-        settings = {
-            "command": ["pyls"],
-            "selector": "source.python",
-            "env": {
-                "FOO": ["C:/hello", "X:/there", "Y:/$foobar"],
-                "BAR": "baz"
-            }
-        }
-        config = read_client_config("pyls", settings)
-        resolved = config.resolve_transport_config({"foobar": "asdf"})
-        if sublime.platform() == "windows":
-            self.assertEqual(resolved.env["FOO"], "C:/hello;X:/there;Y:/asdf")
-        else:
-            self.assertEqual(resolved.env["FOO"], "C:/hello:X:/there:Y:/asdf")
-        self.assertEqual(resolved.env["BAR"], "baz")
+    def test_are_equal(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {})
+        self.assertEqual(config1, config2)
 
-    def test_disabled_capabilities(self):
+    def test_are_with_different_enabled(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {'enabled': True})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {'enabled': False})
+        self.assertNotEqual(config1, config2)
+
+    def test_are_with_different_settings(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {'settings': {'foo': 'bar'}})
+        self.assertEqual(config1, config2)
+
+    def test_are_with_different_settings_after_create(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2.settings.set('foo', 'bar')
+        self.assertEqual(config1, config2)
+
+    def test_are_not_equal_selector(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {'selector': 'other'})
+        self.assertNotEqual(config1, config2)
+
+    def test_are_not_equal_initialization_options_after_create(self) -> None:
+        config1 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2 = ClientConfig.from_config(TEST_CONFIG, {})
+        config2.initialization_options.set('foo', 'bar')
+        self.assertNotEqual(config1, config2)
+
+    def test_disabled_capabilities(self) -> None:
         settings = {
             "command": ["pyls"],
             "selector": "source.python",
@@ -125,7 +128,7 @@ class ConfigParsingTests(DeferrableTestCase):
         # This one should be enabled
         self.assertFalse(config.is_disabled_capability("definitionProvider"))
 
-    def test_filter_out_disabled_capabilities_ignore_partially(self):
+    def test_filter_out_disabled_capabilities_ignore_partially(self) -> None:
         settings = {
             "command": ["pyls"],
             "selector": "source.python",
@@ -138,8 +141,54 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertNotIn("triggerCharacters", options)
         self.assertIn("resolveProvider", options)
 
+    def test_exposes_unknown_root_keys(self) -> None:
+        settings = {
+            "unknown": {
+                "foo": 1
+            },
+        }
+        config = read_client_config("test", settings)
+        self.assertEqual(config.unknown, settings['unknown'])
+
+    def test_shallow_merges_overrides_for_unknown_root_keys(self) -> None:
+        settings = {
+            "unknown": {
+                "foo": 1
+            },
+        }
+        overriddes = {
+            "unknown": {
+                "bar": 2
+            }
+        }
+        config = update_client_config(read_client_config("test", settings), overriddes)
+        self.assertEqual(config.unknown, overriddes['unknown'])
+
+    def test_attribute_access_prefers_native_keys(self) -> None:
+        settings = {
+            "settings": {
+                "setting1": 1
+            },
+        }
+        config = read_client_config("test", settings)
+        self.assertIsInstance(config.settings, DottedDict)
+
+    def test_does_not_have_subscription_access(self) -> None:
+        settings = {
+            "settings": {
+                "setting1": 1
+            },
+            "unknown": {
+                "foo": 1
+            },
+        }
+        config = read_client_config("test", settings)
+        self.assertRaises(TypeError, lambda: 'settings' in config)  # pyright: ignore[reportOperatorIssue]
+        self.assertRaises(TypeError, lambda: 'unknown' in config)  # pyright: ignore[reportOperatorIssue]
+        self.assertRaises(TypeError, lambda: config['unknown'])  # pyright: ignore[reportIndexIssue]
+
     @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
-    def test_path_maps(self):
+    def test_path_maps(self) -> None:
         config = read_client_config("asdf", {
             "command": ["asdf"],
             "selector": "source.foo",

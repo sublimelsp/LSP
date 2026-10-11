@@ -1,12 +1,15 @@
 from __future__ import annotations
-from ...protocol import WorkspaceFolder as LspWorkspaceFolder
+
 from .types import diff
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
-from typing import Any
-import sublime
+from typing import TYPE_CHECKING
 import os
+import sublime
+
+if TYPE_CHECKING:
+    from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 
 
 def is_subpath_of(file_path: str, potential_subpath: str) -> bool:
@@ -39,7 +42,7 @@ class WorkspaceFolder:
     def __str__(self) -> str:
         return self.path
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, WorkspaceFolder):
             return self.name == other.name and self.path == other.path
         return False
@@ -75,12 +78,14 @@ class ProjectFolders:
             path = folders[i]
             for pattern in folder.get('folder_exclude_patterns', []):
                 if pattern.startswith('//'):
-                    exclude_patterns.append(sublime_pattern_to_glob(pattern, True, path))
+                    exclude_patterns.append(sublime_pattern_to_glob(pattern, is_directory_pattern=True, root_path=path))
                 elif pattern.startswith('/'):
-                    exclude_patterns.append(sublime_pattern_to_glob(pattern, True))
+                    exclude_patterns.append(sublime_pattern_to_glob(pattern, is_directory_pattern=True))
                 else:
-                    exclude_patterns.append(sublime_pattern_to_glob('//' + pattern, True, path))
-                    exclude_patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, path))
+                    exclude_patterns.extend((
+                        sublime_pattern_to_glob('//' + pattern, is_directory_pattern=True, root_path=path),
+                        sublime_pattern_to_glob('//**/' + pattern, is_directory_pattern=True, root_path=path)
+                    ))
             self._folders_exclude_patterns[i] = exclude_patterns
 
     def update(self) -> bool:
@@ -98,8 +103,10 @@ class ProjectFolders:
         return True
 
     def includes_excluded_path(self, file_path: str) -> bool:
-        """Path is excluded if it's within one or more workspace folders and in at least one of the folders it's not
-        excluded using `folder_exclude_patterns`."""
+        """
+        Path is excluded if it's within one or more workspace folders and in at least one of the folders it's not
+        excluded using `folder_exclude_patterns`.
+        """
         if not self.folders:
             return False
         is_excluded = False
@@ -139,9 +146,9 @@ def sorted_workspace_folders(folders: list[str], file_path: str) -> list[Workspa
 def enable_in_project(window: sublime.Window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', dict())
-        project_lsp_settings = project_settings.setdefault('LSP', dict())
-        project_client_settings = project_lsp_settings.setdefault(config_name, dict())
+        project_settings = project_data.setdefault('settings', {})
+        project_lsp_settings = project_settings.setdefault('LSP', {})
+        project_client_settings = project_lsp_settings.setdefault(config_name, {})
         project_client_settings['enabled'] = True
         window.set_project_data(project_data)
     else:
@@ -152,9 +159,9 @@ def enable_in_project(window: sublime.Window, config_name: str) -> None:
 def disable_in_project(window: sublime.Window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', dict())
-        project_lsp_settings = project_settings.setdefault('LSP', dict())
-        project_client_settings = project_lsp_settings.setdefault(config_name, dict())
+        project_settings = project_data.setdefault('settings', {})
+        project_lsp_settings = project_settings.setdefault('LSP', {})
+        project_client_settings = project_lsp_settings.setdefault(config_name, {})
         project_client_settings['enabled'] = False
         window.set_project_data(project_data)
     else:

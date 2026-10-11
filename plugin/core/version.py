@@ -1,1 +1,3 @@
-__version__ = (2, 7, 0)
+from __future__ import annotations
+
+__version__ = (2, 15, 0)

@@ -1,13 +1,14 @@
 from __future__ import annotations
+
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextEdit
+from .code_actions import CodeActionsOnFormatTask
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.registry import LspTextCommand
 from .core.registry import windows
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import entire_content_region
 from .core.views import first_selection_region
@@ -16,11 +17,20 @@ from .core.views import text_document_formatting
 from .core.views import text_document_range_formatting
 from .core.views import text_document_ranges_formatting
 from .core.views import will_save_wait_until
-from .save_command import LspSaveCommand, SaveTask
+from .lsp_task import LspTask
+from .lsp_task import LspTextCommandWithTasks
 from functools import partial
-from typing import Callable, Iterator, List, Union
+from typing import Any
+from typing import Callable
+from typing import Iterator
+from typing import List
+from typing import TYPE_CHECKING
+from typing import Union
+from typing_extensions import override
 import sublime
 
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 FormatResponse = Union[List[TextEdit], None, Error]
 
@@ -30,8 +40,11 @@ def get_formatter(window: sublime.Window | None, base_scope: str) -> str | None:
     if not window_manager:
         return None
     project_data = window_manager.window.project_data()
-    return DottedDict(project_data).get(f'settings.LSP.formatters.{base_scope}') if \
-        isinstance(project_data, dict) else window_manager.formatters.get(base_scope)
+    if not isinstance(project_data, dict):
+        return window_manager.formatters.get(base_scope)
+    # The base scope contains dots, so it must not be part of the DottedDict path.
+    formatters = DottedDict(project_data).get('settings.LSP.formatters')
+    return formatters.get(base_scope) if isinstance(formatters, dict) else None
 
 
 def format_document(text_command: LspTextCommand, formatter: str | None = None) -> Promise[FormatResponse]:
@@ -48,7 +61,7 @@ def format_document(text_command: LspTextCommand, formatter: str | None = None) 
     return Promise.resolve(None)
 
 
-class WillSaveWaitTask(SaveTask):
+class WillSaveWaitTask(LspTask):
     @classmethod
     def is_applicable(cls, view: sublime.View) -> bool:
         return bool(view.file_name())
@@ -79,14 +92,16 @@ class WillSaveWaitTask(SaveTask):
         promise.then(lambda _: self._handle_next_session_async())
 
 
-class FormattingTask(SaveTask):
+class FormatOnSaveTask(LspTask):
     @classmethod
+    @override
     def is_applicable(cls, view: sublime.View) -> bool:
         settings = view.settings()
         view_format_on_save = settings.get('lsp_format_on_save', None)
         enabled = view_format_on_save if isinstance(view_format_on_save, bool) else userprefs().lsp_format_on_save
         return enabled and bool(view.window()) and bool(view.file_name())
 
+    @override
     def run_async(self) -> None:
         super().run_async()
         self._purge_changes_async()
@@ -104,20 +119,23 @@ class FormattingTask(SaveTask):
         promise.then(lambda _: self._on_complete())
 
 
-LspSaveCommand.register_task(WillSaveWaitTask)
-LspSaveCommand.register_task(FormattingTask)
-
-
-class LspFormatDocumentCommand(LspTextCommand):
+class LspFormatDocumentCommand(LspTextCommandWithTasks):
 
     capability = 'documentFormattingProvider'
 
+    @property
+    @override
+    def tasks(self) -> list[type[LspTask]]:
+        return [CodeActionsOnFormatTask]
+
+    @override
     def is_enabled(self, event: dict | None = None, select: bool = False) -> bool:
         if select:
             return len(list(self.sessions(self.capability))) > 1
         return super().is_enabled() or bool(self.best_session(LspFormatDocumentRangeCommand.capability))
 
-    def run(self, edit: sublime.Edit, event: dict | None = None, select: bool = False) -> None:
+    @override
+    def on_tasks_completed(self, *, select: bool = False, **kwargs: dict[str, Any]) -> None:
         session_names = [session.config.name for session in self.sessions(self.capability)]
         syntax = self.view.syntax()
         if not syntax:
@@ -159,9 +177,9 @@ class LspFormatDocumentCommand(LspTextCommand):
             window = window_manager.window
             project_data = window.project_data()
             if isinstance(project_data, dict):
-                project_settings = project_data.setdefault('settings', dict())
-                project_lsp_settings = project_settings.setdefault('LSP', dict())
-                project_formatter_settings = project_lsp_settings.setdefault('formatters', dict())
+                project_settings = project_data.setdefault('settings', {})
+                project_lsp_settings = project_settings.setdefault('LSP', {})
+                project_formatter_settings = project_lsp_settings.setdefault('formatters', {})
                 project_formatter_settings[base_scope] = session_name
                 window_manager.suppress_sessions_restart_on_project_update = True
                 window.set_project_data(project_data)
@@ -192,20 +210,31 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             listener.purge_changes_async()
         if has_single_nonempty_selection(self.view):
             session = self.best_session(self.capability)
-            selection = first_selection_region(self.view)
-            if session and selection is not None:
-                request = text_document_range_formatting(self.view, selection)
-                session.send_request_task(request).then(self._handle_response_async)
+            selection_region = first_selection_region(self.view)
+            if session and selection_region is not None:
+                request = text_document_range_formatting(self.view, selection_region)
+                session.send_request_task(request).then(self._handle_response_async).then(
+                    lambda view: self._maybe_reset_selection_start_async(selection_region.begin()) if view else None
+                )
         elif self.view.has_non_empty_selection_region():
             if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
                 request = text_document_ranges_formatting(self.view)
                 session.send_request_task(request).then(self._handle_response_async)
 
-    def _handle_response_async(self, response: FormatResponse) -> None:
+    def _handle_response_async(self, response: FormatResponse) -> Promise[sublime.View | None]:
         if isinstance(response, Error):
             sublime.status_message(f'Formatting error: {response}')
-            return
-        apply_text_edits(self.view, response, label="Format Selection")
+            return Promise.resolve(None)
+        return apply_text_edits(self.view, response, label="Format Selection") if response else Promise.resolve(None)
+
+    def _maybe_reset_selection_start_async(self, offset: int) -> None:
+        # Issue https://github.com/sublimelsp/LSP/issues/2986
+        # Some servers return TextEdits that modify content outside of the range to format, which can cause the text
+        # selection to be updated in an unexpected way. In that case reset the start point of the selection to the
+        # initial start point before formatting. Only implemented for single-range formatting.
+        if self.view.is_valid() and (region := self.view.sel()[0]).begin() != offset:
+            new_region = (offset, region.b) if region.a < region.b else (region.a, offset)
+            self.view.run_command('lsp_selection_set', {'regions': [new_region]})
 
 
 class LspFormatCommand(LspTextCommand):
@@ -219,7 +248,7 @@ class LspFormatCommand(LspTextCommand):
     def is_visible(self, event: dict | None = None, point: int | None = None) -> bool:
         return self.is_enabled(event, point)
 
-    def description(self, **kwargs) -> str:
+    def description(self, **kwargs: Any) -> str:
         return "Format Selection" if self._range_formatting_available() else "Format File"
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:

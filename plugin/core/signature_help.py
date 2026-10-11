@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...protocol import SignatureHelp
 from ...protocol import SignatureHelpTriggerKind
 from ...protocol import SignatureInformation
@@ -6,11 +7,25 @@ from .logging import debug
 from .registry import LspTextCommand
 from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
-from .views import MarkdownLangMap
+from .views import html_wrapper
 from .views import minihtml
+from typing import TYPE_CHECKING
+from typing import TypedDict
 import html
 import re
 import sublime
+
+if TYPE_CHECKING:
+    from .constants import MarkdownLangMap
+
+
+class SignatureHelpStyle(TypedDict):
+    function_color: str
+    active_parameter_color: str
+    active_parameter_bold: bool
+    active_parameter_italic: bool
+    active_parameter_underline: bool
+    inactive_parameter_color: str
 
 
 class LspSignatureHelpNavigateCommand(LspTextCommand):
@@ -39,28 +54,25 @@ class SigHelp:
     determined by what the end-user is doing.
     """
 
-    def __init__(self, state: SignatureHelp, language_map: MarkdownLangMap | None) -> None:
+    def __init__(self, state: SignatureHelp, language_map: MarkdownLangMap | None, style: SignatureHelpStyle) -> None:
         self._state = state
         self._language_map = language_map
         self._signatures = self._state["signatures"]
         self._active_signature_index = self._state.get("activeSignature") or 0
-        self._active_parameter_index = self._state.get("activeParameter") or 0
-        self._function_color = "white"
-        self._active_parameter_color = "white"
-        self._active_parameter_bold = True
-        self._active_parameter_underline = True
-        self._inactive_parameter_color = "white"
+        self._active_parameter_index = self._state.get("activeParameter", 0)
+        self._style = style
 
     @classmethod
     def from_lsp(
         cls,
         sighelp: SignatureHelp | None,
-        language_map: MarkdownLangMap | None
+        language_map: MarkdownLangMap | None,
+        style: SignatureHelpStyle
     ) -> SigHelp | None:
         """Create a SigHelp state object from a server's response to textDocument/signatureHelp."""
         if sighelp is None or not sighelp.get("signatures"):
             return None
-        return cls(sighelp, language_map)
+        return cls(sighelp, language_map, style)
 
     def render(self, view: sublime.View) -> str:
         """Render the signature help content as minihtml."""
@@ -68,32 +80,24 @@ class SigHelp:
             signature = self._signatures[self._active_signature_index]
         except IndexError:
             return ""
-        formatted: list[str] = []
+        blocks: list[str] = []
         if self.has_multiple_signatures():
-            formatted.append(self._render_intro())
-        self._function_color = view.style_for_scope("entity.name.function.sighelp.lsp")["foreground"]
-        active_parameter_style = view.style_for_scope("variable.parameter.sighelp.active.lsp")
-        self._active_parameter_color = active_parameter_style["foreground"]
-        self._inactive_parameter_color = view.style_for_scope("variable.parameter.sighelp.lsp")["foreground"]
-        if self._active_parameter_color == self._inactive_parameter_color:
-            self._active_parameter_bold = True
-            self._active_parameter_underline = True
-        else:
-            self._active_parameter_bold = active_parameter_style.get('bold', False)
-            self._active_parameter_underline = active_parameter_style.get('underline', False)
-        formatted.extend(self._render_label(signature))
-        formatted.extend(self._render_docs(view, signature))
-        return "".join(formatted)
+            blocks.append(self._render_intro())
+        blocks.append(self._render_label(signature))
+        if parameter_doc := self._parameter_documentation(view, signature):
+            blocks.append(parameter_doc)
+        formatted = [html_wrapper(''.join(blocks))]
+        if signature_doc := self._signature_documentation(view, signature):
+            formatted.extend(('<hr class="m-0">', html_wrapper(''.join(signature_doc))))
+        return ''.join(formatted)
 
     def active_signature_help(self) -> SignatureHelp:
-        """
-        Extract the state out of this state machine to send back to the language server.
-        """
+        """Extract the state out of this state machine to send back to the language server."""
         self._state["activeSignature"] = self._active_signature_index
         return self._state
 
     def has_multiple_signatures(self) -> bool:
-        """Does the current signature help state contain more than one overload?"""
+        """Check if the current signature help state contain more than one overload."""
         return len(self._signatures) > 1
 
     def select_signature(self, forward: bool) -> None:
@@ -102,18 +106,12 @@ class SigHelp:
         self._active_signature_index = max(0, min(new_index, len(self._signatures) - 1))
 
     def _render_intro(self) -> str:
-        fmt = '<p><div style="font-size: 0.9rem"><b>{}</b> of <b>{}</b> overloads ' + \
-              '(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide):</div></p>'
-        return fmt.format(
-            self._active_signature_index + 1,
-            len(self._signatures),
-        )
+        return ('<p class="signature-help-intro">'
+                f'<b>{self._active_signature_index + 1}</b> of <b>{len(self._signatures)}</b> overloads '
+                '(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide)</p>')
 
-    def _render_label(self, signature: SignatureInformation) -> list[str]:
+    def _render_label(self, signature: SignatureInformation) -> str:
         formatted: list[str] = []
-        # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
-        # its output style, we must update this literal string accordingly.
-        formatted.append('<div class="highlight"><pre>')
         label = signature["label"]
         if parameters := signature.get("parameters"):
             prev, start, end = 0, 0, 0
@@ -143,28 +141,17 @@ class SigHelp:
                 formatted.append(self._function(label[end:]))
         else:
             formatted.append(self._function(label))
-        formatted.append("</pre></div>")
-        return formatted
-
-    def _render_docs(self, view: sublime.View, signature: SignatureInformation) -> list[str]:
-        formatted: list[str] = []
-        if docs := self._parameter_documentation(view, signature):
-            formatted.append(docs)
-        if docs := self._signature_documentation(view, signature):
-            if formatted:
-                formatted.append("<hr/>")
-            formatted.append('<div style="font-size: 0.9rem">')
-            formatted.append(docs)
-            formatted.append('</div>')
-        return formatted
+        return f'<div class="highlight">{"".join(formatted)}</div>'
 
     def _parameter_documentation(self, view: sublime.View, signature: SignatureInformation) -> str | None:
         parameters = signature.get("parameters")
         if not parameters:
             return None
+        active_parameter_index = signature.get('activeParameter', self._active_parameter_index)
+        if active_parameter_index is None:
+            return None
         try:
-            active_parameter = signature.get("activeParameter")
-            parameter = parameters[active_parameter or self._active_parameter_index]
+            parameter = parameters[active_parameter_index]
         except IndexError:
             return None
         if documentation := parameter.get("documentation"):
@@ -179,19 +166,28 @@ class SigHelp:
         return None
 
     def _function(self, content: str) -> str:
-        return _wrap_with_color(content, self._function_color)
+        return _wrap_with_style(content, color=self._style['function_color'])
 
     def _parameter(self, content: str, active: bool) -> str:
         if active:
-            return _wrap_with_color(
-                content, self._active_parameter_color, self._active_parameter_bold, self._active_parameter_underline)
-        return _wrap_with_color(content, self._inactive_parameter_color)
+            return _wrap_with_style(
+                content,
+                color=self._style['active_parameter_color'],
+                bold=self._style['active_parameter_bold'],
+                italic=self._style['active_parameter_italic'],
+                underline=self._style['active_parameter_underline']
+            )
+        return _wrap_with_style(content, color=self._style['inactive_parameter_color'])
 
 
-def _wrap_with_color(content: str, color: str, bold: bool = False, underline: bool = False) -> str:
+def _wrap_with_style(
+    content: str, *, color: str, bold: bool = False, italic: bool = False, underline: bool = False
+) -> str:
     style = f'color: {color}'
     if bold:
         style += '; font-weight: bold'
+    if italic:
+        style += '; font-style: italic'
     if underline:
         style += '; text-decoration: underline'
     return f'<span style="{style}">{html.escape(content, quote=False)}</span>'

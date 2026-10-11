@@ -1,6 +1,8 @@
 from __future__ import annotations
+
+from .test_mocks import TEST_CONFIG
 from LSP.plugin.core.collections import DottedDict
-from LSP.plugin.core.protocol import Error
+from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.sessions import get_initialize_params
 from LSP.plugin.core.sessions import Logger
 from LSP.plugin.core.sessions import Manager
@@ -9,13 +11,23 @@ from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.workspace import WorkspaceFolder
 from LSP.protocol import Diagnostic
 from LSP.protocol import DocumentUri
+from LSP.protocol import FileCreate
+from LSP.protocol import FileDelete
+from LSP.protocol import FileRename
+from LSP.protocol import LogMessageParams
+from LSP.protocol import MessageActionItem
+from LSP.protocol import ShowMessageParams
+from LSP.protocol import ShowMessageRequestParams
 from LSP.protocol import TextDocumentSyncKind
-from test_mocks import TEST_CONFIG
-from typing import Any, Generator
+from typing import Any
+from typing import Generator
+from typing import TYPE_CHECKING
 import sublime
 import unittest
-import unittest.mock
 import weakref
+
+if TYPE_CHECKING:
+    from LSP.plugin.core.protocol import Error
 
 
 class MockManager(Manager):
@@ -45,6 +57,29 @@ class MockManager(Manager):
         pass
 
     def on_diagnostics_updated(self) -> None:
+        pass
+
+    def handle_message_request(
+        self, config_name: str, params: ShowMessageRequestParams
+    ) -> Promise[MessageActionItem | None]:
+        return Promise.resolve(None)
+
+    def handle_show_message(self, config_name: str, params: ShowMessageParams) -> None:
+        pass
+
+    def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
+        ...
+
+    def handle_stderr_log(self, config_name: str, message: str) -> None:
+        ...
+
+    def notify_did_create_files(self, created_files: list[FileCreate]) -> None:
+        pass
+
+    def notify_did_rename_files(self, renamed_files: list[FileRename]) -> None:
+        pass
+
+    def notify_did_delete_files(self, deleted_files: list[FileDelete]) -> None:
         pass
 
 
@@ -150,12 +185,14 @@ class SessionTest(unittest.TestCase):
     def test_initialize_params(self) -> None:
         wf = WorkspaceFolder.from_path("/foo/bar/baz")
         params = get_initialize_params(
-            {}, [wf], ClientConfig(name="test", command=[""], selector="", tcp_port=None, init_options=DottedDict()))
+            {}, [wf], ClientConfig(name="test", command=[""], selector="", tcp_port=None,
+                                   initialization_options=DottedDict()))
         self.assertIn("initializationOptions", params)
         self.assertEqual(params["initializationOptions"], {})
         params = get_initialize_params(
             {}, [wf], ClientConfig(
-                name="test", command=[""], selector="", tcp_port=None, init_options=DottedDict({"foo": "bar"})))
+                name="test", command=[""], selector="", tcp_port=None,
+                initialization_options=DottedDict({"foo": "bar"})))
         self.assertIn("initializationOptions", params)
         self.assertEqual(params["initializationOptions"], {"foo": "bar"})
 
@@ -257,5 +294,5 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(sb.get_uri(), "some-scheme://whatever")
 
     def test_get_session_buffer_for_uri_with_files(self) -> None:
-        # todo: write windows-only test
+        # TODO: write windows-only test
         pass

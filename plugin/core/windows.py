@@ -1,49 +1,67 @@
 from __future__ import annotations
+
+from ...protocol import Diagnostic
 from ...protocol import DocumentUri
+from ...protocol import FileCreate
+from ...protocol import FileDelete
+from ...protocol import FileRename
 from ...protocol import LogMessageParams
+from ...protocol import MessageActionItem
 from ...protocol import MessageType
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
+from ..api import AbstractPlugin
+from ..api import get_plugin
+from ..api import IsApplicableContext
+from ..api import LspPlugin
+from ..api import OnPreStartContext
+from ..api import PluginStartError
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
 from .configurations import WindowConfigManager
 from .constants import MESSAGE_TYPE_LEVELS
-from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
-from .message_request_handler import MessageRequestHandler
+from .messages_panel import MessagesPanel
 from .panels import LOG_LINES_LIMIT_SETTING_NAME
 from .panels import MAX_LOG_LINES_LIMIT_OFF
 from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
+from .promise import Promise
 from .protocol import Error
+from .protocol import Notification
+from .protocol import Point
 from .sessions import AbstractViewListener
-from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
 from .settings import client_configs
 from .settings import LspSettingsChangeListener
 from .settings import userprefs
-from .transports import create_transport
 from .types import ClientConfig
+from .types import match_file_operation_filters
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
+from .types import ViewStatusHandler
 from .url import parse_uri
+from .views import diagnostic_severity
 from .views import extract_variables
 from .views import format_diagnostic_for_panel
 from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+from .workspace import WorkspaceFolder
 from collections import deque
-from collections import OrderedDict
 from datetime import datetime
 from subprocess import CalledProcessError
 from time import perf_counter
-from typing import Any, Generator, TYPE_CHECKING
+from typing import Any
+from typing import Generator
+from typing import TYPE_CHECKING
+from typing_extensions import override
 from weakref import ref
 from weakref import WeakSet
 import functools
@@ -51,9 +69,8 @@ import json
 import sublime
 import threading
 
-
 if TYPE_CHECKING:
-    from tree_view import TreeViewSheet
+    from .tree_view import TreeViewSheet
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
@@ -70,7 +87,7 @@ def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> Non
         pass
 
 
-class WindowManager(Manager, WindowConfigChangeListener):
+class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._window = window
@@ -84,6 +101,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self._panel_code_phantoms: sublime.PhantomSet | None = None
         self._server_log: list[tuple[str, str]] = []
         self.panel_manager: PanelManager | None = PanelManager(self._window)
+        self.messages_panel: MessagesPanel | None = MessagesPanel(self._window, self.panel_manager)
         self.tree_view_sheets: dict[str, TreeViewSheet] = {}
         self.formatters: dict[str, str] = {}
         self.suppress_sessions_restart_on_project_update = False
@@ -91,11 +109,16 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
         self.panel_manager.ensure_log_panel()
+        self._view_statuses: dict[int, dict[str, str]] = {}  # Mapping(ViewId -> Mapping(ConfigName -> StatusText))
         self._config_manager.add_change_listener(self)
 
     @property
     def window(self) -> sublime.Window:
         return self._window
+
+    @property
+    def workspace_folders(self) -> list[WorkspaceFolder]:
+        return self._workspace.get_workspace_folders()
 
     def get_and_clear_server_log(self) -> list[tuple[str, str]]:
         log = self._server_log
@@ -151,6 +174,29 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 return listener
         return None
 
+    def recheck_is_applicable_async(self, view: sublime.View, config_name: str) -> None:
+        if not (listener := self.listener_for_view(view)):
+            debug(f'No listener for view {view}')
+            return
+        if listener == self._new_listener:
+            debug(f'Already starting relevant sessions for view {view}.')
+            return
+        scheme = parse_uri(listener.get_uri())[0]
+        if (config := self._config_manager.get_config(config_name)) and config.enabled:
+            is_applicable = config.match_view(view, scheme, self.window, self.workspace_folders)
+            if session := self.get_session(config.name, view.file_name()):
+                session_view = session.session_view_for_view_async(view)
+                if is_applicable and not session_view:
+                    listener.on_session_initialized_async(session)
+                elif not is_applicable and session_view:
+                    session.shutdown_session_view_async(session_view)
+            elif is_applicable:
+                self.start_async(config, view)
+                if self._new_session:
+                    self._sessions.add(self._new_session)
+                    listener.on_session_initialized_async(self._new_session)
+                    self._new_session = None
+
     def _dequeue_listener_async(self) -> None:
         listener: AbstractViewListener | None = None
         if self._new_listener is not None:
@@ -175,8 +221,9 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self._publish_sessions_to_listener_async(listener)
         if self._new_session:
             if not any(self._new_session.session_views_async()):
-                self._sessions.discard(self._new_session)
-                self._new_session.end_async()
+                # The view that started the session can close while the server initializes. Do not end the session
+                # now, because a pending listener (for example a view that was opened in the meantime) can use it.
+                self._new_session.end_async_if_unused()
             self._new_session = None
         if config := self._needed_config(listener.view):
             # debug("found new config for listener", listener)
@@ -199,8 +246,13 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     message = f"failed to register session {session.config.name} to listener {listener}"
                     exception_log(message, ex)
 
-    def get_session(self, config_name: str, file_path: str) -> Session | None:
-        return self._find_session(config_name, file_path)
+    def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
+        if file_path:
+            return self._find_session(config_name, file_path)
+        for session in self._sessions:
+            if session.config.name == config_name:
+                return session
+        return None
 
     def _can_start_config(self, config_name: str, file_path: str) -> bool:
         return not bool(self._find_session(config_name, file_path))
@@ -213,7 +265,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         return None
 
     def _needed_config(self, view: sublime.View) -> ClientConfig | None:
-        configs = self._config_manager.match_view(view)
+        configs = self._config_manager.match_view(view, self._workspace.get_workspace_folders())
         handled = False
         file_name = view.file_name()
         inside = self._workspace.contains(view)
@@ -224,51 +276,51 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     handled = True
                     break
             if not handled:
-                plugin = get_plugin(config.name)
-                if plugin and plugin.should_ignore(view):
-                    debug(view, "ignored by plugin", plugin.__name__)
+                if plugin := get_plugin(config.name):
+                    if issubclass(plugin, LspPlugin):
+                        context = IsApplicableContext(config, view, self._workspace.get_workspace_folders())
+                        if plugin.is_applicable_async(context):
+                            return config
+                    elif plugin.is_applicable(view, config):
+                        return config
                 else:
                     return config
         return None
 
     def start_async(self, config: ClientConfig, initiating_view: sublime.View) -> None:
         config = ClientConfig.from_config(config, {})
+        config.set_view_status_handler(self)
         file_path = initiating_view.file_name() or ''
         if not self._can_start_config(config.name, file_path):
-            # debug('Already starting on this window:', config.name)
             return
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
-            cwd: str | None = None
-            if plugin_class is not None:
-                if plugin_class.needs_update_or_installation():
+            cwd = workspace_folders[0].path if workspace_folders else None
+            context = OnPreStartContext(config, variables, initiating_view, cwd, workspace_folders)
+            if plugin_class:
+                if issubclass(plugin_class, LspPlugin):
                     config.set_view_status(initiating_view, "installing...")
-                    plugin_class.install_or_update()
-                additional_variables = plugin_class.additional_variables()
-                if isinstance(additional_variables, dict):
-                    variables.update(additional_variables)
-                cannot_start_reason = plugin_class.can_start(self._window, initiating_view, workspace_folders, config)
-                if cannot_start_reason:
-                    config.erase_view_status(initiating_view)
-                    message = f"cannot start {config.name}: {cannot_start_reason}"
-                    self._config_manager.disable_config(config.name, only_for_session=True)
-                    # Continue with handling pending listeners
-                    self._new_session = None
-                    sublime.set_timeout_async(self._dequeue_listener_async)
-                    self._window.status_message(message)
-                    return
-                cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
+                    plugin_class.on_pre_start_async(context)
+                    cwd = context.working_directory
+                else:
+                    if plugin_class.needs_update_or_installation():
+                        config.set_view_status(initiating_view, "installing...")
+                        plugin_class.install_or_update()
+                    additional_variables = plugin_class.additional_variables()
+                    if isinstance(additional_variables, dict):
+                        variables.update(additional_variables)
+                    cannot_start_reason = plugin_class.can_start(
+                        self._window, initiating_view, workspace_folders, config)
+                    if cannot_start_reason:
+                        raise PluginStartError(cannot_start_reason)
+                    if new_cwd := plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config):
+                        cwd = new_cwd
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
-            if cwd:
-                transport_cwd: str | None = cwd
-            else:
-                transport_cwd = workspace_folders[0].path if workspace_folders else None
-            transport_config = config.resolve_transport_config(variables)
-            transport = create_transport(transport_config, transport_cwd, session)
-            if plugin_class:
+            transport = config.create_transport_config().start(config.command, config.env, cwd, variables, session)
+            if plugin_class and issubclass(plugin_class, AbstractPlugin):
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(
@@ -278,13 +330,19 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 init_callback=functools.partial(self._on_post_session_initialize, initiating_view)
             )
             self._new_session = session
+        except PluginStartError as ex:
+            config.erase_view_status(initiating_view)
+            message = f"cannot start {config.name}: {ex!s}"
+            self._config_manager.disable_config(config.name, only_for_session=True)
+            # Continue with handling pending listeners
+            self._new_session = None
+            sublime.set_timeout_async(self._dequeue_listener_async)
+            self._window.status_message(message)
         except Exception as e:
-            message = "".join((
-                "Failed to start {0} - disabling for this window for the duration of the current session.\n",
-                "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
-                "\n\n--- Error: ---\n{1}"
-            )).format(config.name, str(e))
-            exception_log(f"Unable to start subprocess for {config.name}", e)
+            message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
+                        'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
+                       f'Palette.\n\n--- Error: ---\n{e}')
+            exception_log(f"Unable to initialize language server for {config.name}", e)
             if isinstance(e, CalledProcessError):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
             self._config_manager.disable_config(config.name, only_for_session=True)
@@ -317,17 +375,19 @@ class WindowManager(Manager, WindowConfigChangeListener):
             loggers.append(logger_map[logger_type])
         if len(loggers) == 0:
             return RouterLogger()  # logs nothing
-        elif len(loggers) == 1:
+        if len(loggers) == 1:
             return loggers[0](self, config_name)
-        else:
-            router_logger = RouterLogger()
-            for logger in loggers:
-                router_logger.append(logger(self, config_name))
-            return router_logger
+        router_logger = RouterLogger()
+        for logger in loggers:
+            router_logger.append(logger(self, config_name))
+        return router_logger
 
-    def handle_message_request(self, session: Session, params: ShowMessageRequestParams, request_id: Any) -> None:
-        if view := self._window.active_view():
-            MessageRequestHandler(view, session, request_id, params, session.config.name).show()
+    def handle_message_request(
+        self, config_name: str, params: ShowMessageRequestParams
+    ) -> Promise[MessageActionItem | None]:
+        if self.messages_panel:
+            return self.messages_panel.add_request(config_name, params)
+        return Promise.resolve(None)
 
     def restart_sessions_async(self, config_names: list[str]) -> None:
         self._end_sessions_async(config_names)
@@ -364,7 +424,10 @@ class WindowManager(Manager, WindowConfigChangeListener):
             return "matches a pattern in binary_file_patterns"
         if matches_pattern(path, settings.get("file_exclude_patterns")):
             return "matches a pattern in file_exclude_patterns"
-        patterns = [sublime_pattern_to_glob(pattern, True) for pattern in settings.get("folder_exclude_patterns") or []]
+        patterns = [
+            sublime_pattern_to_glob(pattern, is_directory_pattern=True)
+            for pattern in settings.get("folder_exclude_patterns")
+        ]
         if matches_pattern(path, patterns):
             return "matches a pattern in folder_exclude_patterns"
         if self._workspace.includes_excluded_path(path):
@@ -375,18 +438,18 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self._sessions.discard(session)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)
+        if self.messages_panel:
+            self.messages_panel.expire_requests(session.config.name)
         if exit_code != 0 or exception:
             config = session.config
             restart = self._config_manager.record_crash(config.name, exit_code, exception)
             if not restart:
-                msg = "".join((
-                    "The {0} server has crashed {1} times in the last {2} seconds.\n\n",
-                    "You can try to Restart it or you can choose Cancel to disable it for this window for the ",
-                    "duration of the current session. ",
-                    "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
-                )).format(config.name, RETRY_MAX_COUNT, int(RETRY_COUNT_TIMEDELTA.total_seconds()))
+                msg = (f'The {config.name} server has crashed {RETRY_MAX_COUNT} times in the last '
+                       f'{int(RETRY_COUNT_TIMEDELTA.total_seconds())} seconds.\n\nYou can try to Restart it or you can '
+                        'choose Cancel to disable it for this window for the duration of the current session. '
+                        'Re-enable by running "LSP: Enable Language Server In Project" from the Command Palette.')
                 if exception:
-                    msg += f"\n\n--- Error: ---\n{str(exception)}"
+                    msg += f"\n\n--- Error: ---\n{exception}"
                 restart = sublime.ok_cancel_dialog(msg, "Restart")
             if restart:
                 for listener in self._listeners:
@@ -396,32 +459,35 @@ class WindowManager(Manager, WindowConfigChangeListener):
 
     def destroy(self) -> None:
         """
-        This is called **from the main thread** when the plugin unloads. In that case we must destroy all sessions
-        from the main thread. That could lead to some dict/list being mutated while iterated over, so be careful
+        Called **from the main thread** when the plugin unloads. In that case we must destroy all sessions
+        from the main thread. That could lead to some dict/list being mutated while iterated over, so be careful.
         """
         self._end_sessions_async()
+        if self.messages_panel:
+            self.messages_panel.destroy()
+            self.messages_panel = None
         if self.panel_manager:
             self.panel_manager.destroy_output_panels()
             self.panel_manager = None
 
-    def handle_log_message(self, session: Session, params: LogMessageParams) -> None:
+    def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
         if not userprefs().log_debug:
             return
         message_type = params['type']
         level = MESSAGE_TYPE_LEVELS[message_type]
         message = params['message']
-        print(f"{session.config.name}: {level}: {message}")
+        print(f"{config_name}: {level}: {message}")
         if message_type == MessageType.Error:
-            self.window.status_message(f"{session.config.name}: {message}")
+            self.window.status_message(f"{config_name}: {message}")
 
-    def handle_stderr_log(self, session: Session, message: str) -> None:
-        self.handle_server_message_async(session.config.name, message)
+    def handle_stderr_log(self, config_name: str, message: str) -> None:
+        self.handle_server_message_async(config_name, message)
 
-    def handle_server_message_async(self, server_name: str, message: str) -> None:
-        sublime.set_timeout(lambda: self.log_server_message(server_name, message))
+    def handle_server_message_async(self, config_name: str, message: str) -> None:
+        sublime.set_timeout(lambda: self.log_server_message(config_name, message))
 
-    def log_server_message(self, prefix: str, message: str) -> None:
-        self._server_log.append((prefix, message))
+    def log_server_message(self, config_name: str, message: str) -> None:
+        self._server_log.append((config_name, message))
         list_len = len(self._server_log)
         max_lines = self.get_log_lines_limit()
         if list_len >= max_lines:
@@ -437,18 +503,22 @@ class WindowManager(Manager, WindowConfigChangeListener):
         panel = self.panel_manager and self.panel_manager.get_panel(PanelName.Log)
         return bool(panel and panel.settings().get(LOG_LINES_LIMIT_SETTING_NAME, True))
 
-    def handle_show_message(self, session: Session, params: ShowMessageParams) -> None:
-        level = MESSAGE_TYPE_LEVELS[params['type']]
+    def handle_show_message(self, config_name: str, params: ShowMessageParams) -> None:
+        level = MESSAGE_TYPE_LEVELS.get(params['type'], "INFO")
         message = params['message']
-        msg = f"{session.config.name}: {level}: {message}"
+        msg = f"{config_name}: {level}: {message}"
         debug(msg)
-        self.window.status_message(msg)
+        show_panel = params['type'] <= userprefs().show_messages_panel_level
+        if self.messages_panel:
+            self.messages_panel.add_message(config_name, params, show_panel)
+        if not show_panel:
+            self.window.status_message(msg)
 
     def on_diagnostics_updated(self) -> None:
         self.total_error_count = 0
         self.total_warning_count = 0
         for session in self._sessions:
-            local_errors, local_warnings = session.diagnostics.sum_total_errors_and_warnings_async()
+            local_errors, local_warnings = session.diagnostics.total_errors_and_warnings()
             self.total_error_count += local_errors
             self.total_warning_count += local_warnings
         for listener in list(self._listeners):
@@ -461,18 +531,19 @@ class WindowManager(Manager, WindowConfigChangeListener):
         prephantoms: list[tuple[int, int, str, str]] = []
         row = 0
         max_severity = userprefs().diagnostics_panel_include_severity_level
-        contributions: OrderedDict[str, list[tuple[str, int | None, str | None, str | None]]] = OrderedDict()
+        contributions: dict[DocumentUri, list[Diagnostic]] = {}
         for session in self._sessions:
-            for (_, path), contribution in session.diagnostics.filter_map_diagnostics_async(
-                    is_severity_included(max_severity), lambda _, diagnostic: format_diagnostic_for_panel(diagnostic)):
-                seen = path in contributions
-                contributions.setdefault(path, []).extend(contribution)
-                if not seen:
-                    contributions.move_to_end(path)
-        for path, contribution in contributions.items():
+            for uri, diagnostics in session.diagnostics.get_diagnostics(max_severity).items():
+                contributions.setdefault(uri, []).extend(diagnostics)
+        for uri, diagnostics in contributions.items():
+            if not diagnostics:
+                continue
+            _, path = parse_uri(uri)
             to_render.append(f"{path}:")
             row += 1
-            for content, offset, code, href in contribution:
+            for diagnostic in sorted(
+                    diagnostics, key=lambda d: (Point.from_lsp(d['range']['start']), diagnostic_severity(d))):
+                content, offset, code, href = format_diagnostic_for_panel(diagnostic)
                 to_render.append(content)
                 if offset is not None and code is not None and href is not None:
                     prephantoms.append((row, offset, code, href))
@@ -498,11 +569,63 @@ class WindowManager(Manager, WindowConfigChangeListener):
             phantoms.append(sublime.Phantom(region, f"({make_link(href, code)})", sublime.PhantomLayout.INLINE))
         self._panel_code_phantoms.update(phantoms)
 
+    def notify_did_create_files(self, created_files: list[FileCreate]) -> None:
+        for session in self.get_sessions():
+            if filters := session.get_capability('workspace.fileOperations.didCreate.filters', []):
+                if files := [
+                    file_create for file_create in created_files
+                    if match_file_operation_filters(filters, file_create['uri'])
+                ]:
+                    session.send_notification(Notification.didCreateFiles({'files': files}))
+
+    def notify_did_rename_files(self, renamed_files: list[FileRename]) -> None:
+        for session in self.get_sessions():
+            if filters := session.get_capability('workspace.fileOperations.didRename.filters', []):
+                if files := [
+                    file_rename for file_rename in renamed_files
+                    if match_file_operation_filters(filters, file_rename['oldUri'])
+                ]:
+                    session.send_notification(Notification.didRenameFiles({'files': files}))
+
+    def notify_did_delete_files(self, deleted_files: list[FileDelete]) -> None:
+        for session in self.get_sessions():
+            if filters := session.get_capability('workspace.fileOperations.didDelete.filters', []):
+                if files := [
+                    file_delete for file_delete in deleted_files
+                    if match_file_operation_filters(filters, file_delete['uri'])
+                ]:
+                    session.send_notification(Notification.didDeleteFiles({'files': files}))
+
     # --- Implements WindowConfigChangeListener ------------------------------------------------------------------------
 
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:
         config_names = [config.name for config in configs]
         sublime.set_timeout_async(lambda: self.restart_sessions_async(config_names))
+
+    def on_server_settings_changed(self, configs: list[ClientConfig]) -> None:
+        for config in configs:
+            if session := self.get_session(config.name):
+                session.on_server_settings_changed(config.settings)
+
+    # --- Implements ViewStatusHandler ---------------------------------------------------------------------------------
+
+    @override
+    def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:
+        view_id = view.id()
+        self._view_statuses.setdefault(view_id, {})
+        if status is None:
+            if config_name in self._view_statuses[view_id]:
+                del self._view_statuses[view_id][config_name]
+        else:
+            self._view_statuses[view_id][config_name] = f"{config_name} ({status})" if status else config_name
+        if userprefs().show_view_status:
+            statuses = [status.replace('LSP-', '') for status in self._view_statuses[view_id].values()]
+            if statuses:
+                statuses.sort()
+                view_status = f"LSP: {' | '.join(statuses)}"
+                view.set_status('lsp-status', view_status)
+                return
+        view.erase_status('lsp-status')
 
 
 class WindowRegistry(LspSettingsChangeListener):
@@ -557,19 +680,24 @@ class WindowRegistry(LspSettingsChangeListener):
             wm.on_diagnostics_updated()
             for session in wm.get_sessions():
                 sublime.set_timeout_async(session.on_userprefs_changed_async)
+            for listener in wm.listeners():
+                sublime.set_timeout_async(listener.on_userprefs_changed_async)
 
 
 class RequestTimeTracker:
     def __init__(self) -> None:
-        self._start_times: dict[int, float] = {}
+        self._client_initiated_start_times: dict[int | str, float] = {}
+        self._server_initiated_start_times: dict[int | str, float] = {}
 
-    def start_tracking(self, request_id: int) -> None:
-        self._start_times[request_id] = perf_counter()
+    def start_tracking(self, request_id: int | str, *, server_initiated: bool) -> None:
+        start_times = self._server_initiated_start_times if server_initiated else self._client_initiated_start_times
+        start_times[request_id] = perf_counter()
 
-    def end_tracking(self, request_id: int) -> str:
+    def end_tracking(self, request_id: int | str, *, server_initiated: bool) -> str:
         duration = '-'
-        if request_id in self._start_times:
-            start = self._start_times.pop(request_id)
+        start_times = self._server_initiated_start_times if server_initiated else self._client_initiated_start_times
+        if request_id in start_times:
+            start = start_times.pop(request_id)
             duration_ms = perf_counter() - start
             duration = f'{int(duration_ms * 1000)}ms'
         return duration
@@ -608,22 +736,22 @@ class PanelLogger(Logger):
 
         sublime.set_timeout_async(run_on_async_worker_thread)
 
-    def outgoing_response(self, request_id: Any, params: Any) -> None:
+    def outgoing_response(self, request_id: int | str, params: Any) -> None:
         if not userprefs().log_server:
             return
-        duration = self._request_time_tracker.end_tracking(request_id)
+        duration = self._request_time_tracker.end_tracking(request_id, server_initiated=True)
         self.log(self._format_response(">>>", request_id, duration), params)
 
-    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
+    def outgoing_error_response(self, request_id: int | str, error: Error) -> None:
         if not userprefs().log_server:
             return
-        duration = self._request_time_tracker.end_tracking(request_id)
+        duration = self._request_time_tracker.end_tracking(request_id, server_initiated=True)
         self.log(self._format_response("~~>", request_id, duration), error.to_lsp())
 
-    def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
+    def outgoing_request(self, request_id: int | str, method: str, params: Any) -> None:
         if not userprefs().log_server:
             return
-        self._request_time_tracker.start_tracking(request_id)
+        self._request_time_tracker.start_tracking(request_id, server_initiated=False)
         self.log(self._format_request("-->", method, request_id), params)
 
     def outgoing_notification(self, method: str, params: Any) -> None:
@@ -631,17 +759,17 @@ class PanelLogger(Logger):
             return
         self.log(self._format_notification(" ->", method), params)
 
-    def incoming_response(self, request_id: int | None, params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: int | str, params: Any, is_error: bool) -> None:
         if not userprefs().log_server:
             return
         direction = "<~~" if is_error else "<<<"
-        duration = self._request_time_tracker.end_tracking(request_id) if request_id is not None else "-"
+        duration = self._request_time_tracker.end_tracking(request_id, server_initiated=False)
         self.log(self._format_response(direction, request_id, duration), params)
 
-    def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
+    def incoming_request(self, request_id: int | str, method: str, params: Any) -> None:
         if not userprefs().log_server:
             return
-        self._request_time_tracker.start_tracking(request_id)
+        self._request_time_tracker.start_tracking(request_id, server_initiated=True)
         self.log(self._format_request("<--", method, request_id), params)
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
@@ -650,11 +778,11 @@ class PanelLogger(Logger):
         direction = "<? " if unhandled else "<- "
         self.log(self._format_notification(direction, method), params)
 
-    def _format_response(self, direction: str, request_id: Any, duration: str) -> str:
-        return "[{}] {} {} ({}) (duration: {})".format(
-            RequestTimeTracker.formatted_now(), direction, self._server_name, request_id, duration)
+    def _format_response(self, direction: str, request_id: int | str, duration: str) -> str:
+        time = RequestTimeTracker.formatted_now()
+        return f"[{time}] {direction} {self._server_name} ({request_id}) (duration: {duration})"
 
-    def _format_request(self, direction: str, method: str, request_id: Any) -> str:
+    def _format_request(self, direction: str, method: str, request_id: int | str) -> str:
         return f"[{RequestTimeTracker.formatted_now()}] {direction} {self._server_name} {method} ({request_id})"
 
     def _format_notification(self, direction: str, method: str) -> str:
@@ -684,7 +812,7 @@ class RemoteLogger(Logger):
                     debug('WebsocketServer not started - address already in use')
                     RemoteLogger._ws_server = None
                 else:
-                    raise ex
+                    raise
 
     def _start_server(self) -> None:
         def start_async() -> None:
@@ -703,16 +831,16 @@ class RemoteLogger(Logger):
 
     def _on_new_client(self, client: dict, server: WebsocketServer) -> None:
         """Called for every client connecting (after handshake)."""
-        debug("New client connected and was given id %d" % client['id'])
+        debug(f"New client connected and was given id {client['id']}")
         # server.send_message_to_all("Hey all, a new client has joined us")
 
     def _on_client_left(self, client: dict, server: WebsocketServer) -> None:
         """Called for every client disconnecting."""
-        debug("Client(%d) disconnected" % client['id'])
+        debug(f"Client({client['id']}) disconnected")
 
     def _on_message_received(self, client: dict, server: WebsocketServer, message: str) -> None:
         """Called when a client sends a message."""
-        debug("Client(%d) said: %s" % (client['id'], message))
+        debug(f"Client({client['id']}) said: {message}")
 
     def stderr_message(self, message: str) -> None:
         self._broadcast_json({
@@ -724,7 +852,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_INCOMING,
         })
 
-    def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
+    def outgoing_request(self, request_id: int | str, method: str, params: Any) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
@@ -734,7 +862,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_OUTGOING,
         })
 
-    def incoming_response(self, request_id: int | None, params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: int | str, params: Any, is_error: bool) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
@@ -744,7 +872,7 @@ class RemoteLogger(Logger):
             'isError': is_error,
         })
 
-    def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
+    def incoming_request(self, request_id: int | str, method: str, params: Any) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
@@ -754,7 +882,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_INCOMING,
         })
 
-    def outgoing_response(self, request_id: Any, params: Any) -> None:
+    def outgoing_response(self, request_id: int | str, params: Any) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
@@ -763,7 +891,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_OUTGOING,
         })
 
-    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
+    def outgoing_error_response(self, request_id: int | str, error: Error) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,

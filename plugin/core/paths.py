@@ -1,9 +1,13 @@
 from __future__ import annotations
-from ...protocol import DocumentUri
-from .sessions import Session
+
 from .views import parse_uri
 from pathlib import Path
 from typing import Iterable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...protocol import DocumentUri
+    from .sessions import Session
 
 
 def simple_path(session: Session | None, uri: DocumentUri) -> str:
@@ -15,9 +19,7 @@ def simple_path(session: Session | None, uri: DocumentUri) -> str:
 
 
 def project_path(project_folders: Iterable[Path], file_path: Path) -> Path | None:
-    """
-    The project path of `/path/to/project/file` in the project `/path/to/project` is `file`.
-    """
+    """The project path of `/path/to/project/file` in the project `/path/to/project` is `file`."""
     folder_path = split_project_path(project_folders, file_path)
     if folder_path is None:
         return None
@@ -26,9 +28,7 @@ def project_path(project_folders: Iterable[Path], file_path: Path) -> Path | Non
 
 
 def simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Path | None:
-    """
-    The simple project path of `/path/to/project/file` in the project `/path/to/project` is `project/file`.
-    """
+    """The simple project path of `/path/to/project/file` in the project `/path/to/project` is `project/file`."""
     folder_path = split_project_path(project_folders, file_path)
     if folder_path is None:
         return None
@@ -37,9 +37,7 @@ def simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Pat
 
 
 def resolve_simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Path | None:
-    """
-    The inverse of `simple_project_path()`.
-    """
+    """The inverse of `simple_project_path()`."""
     parts = file_path.parts
     folder_name = parts[0]
     for folder in project_folders:
@@ -49,9 +47,7 @@ def resolve_simple_project_path(project_folders: Iterable[Path], file_path: Path
 
 
 def project_base_dir(project_folders: Iterable[Path], file_path: Path) -> Path | None:
-    """
-    The project base dir of `/path/to/project/file` in the project `/path/to/project` is `/path/to`.
-    """
+    """The project base dir of `/path/to/project/file` in the project `/path/to/project` is `/path/to`."""
     folder_path = split_project_path(project_folders, file_path)
     if folder_path is None:
         return None

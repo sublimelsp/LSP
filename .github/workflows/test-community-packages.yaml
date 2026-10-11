@@ -1,0 +1,45 @@
+name: Test Community Packages
+
+on:
+  pull_request:
+
+jobs:
+  type-check:
+    name: Type-check community packages
+    runs-on: macOS-latest
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v7
+        with:
+          path: LSP
+
+      - name: Check out lsp_maintainers
+        uses: actions/checkout@v7
+        with:
+          repository: sublimelsp/lsp_maintainers
+          path: lsp_maintainers
+
+      - name: Check out community package repositories
+        run: |
+          python3 scripts/checkout-repos.py \
+            --preferred-branch ${{ github.head_ref }} \
+            --local LSP=${{ github.workspace }}/LSP \
+            --exclude Chialisp \
+            --exclude LSP-aurelia \
+            --exclude LSP-gnols \
+            --exclude LSP-MaaFramework \
+            --exclude LSP-pawnforge \
+            --exclude LSP-pyvoice \
+            --exclude LSP-vale-ls \
+            --exclude WolframLanguage
+        working-directory: lsp_maintainers
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      - name: Sync venv and type check
+        run: |
+          uv sync
+          uv pip install -r requirements-packages.txt
+          uv run basedpyright
+        working-directory: lsp_maintainers/repositories

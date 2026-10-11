@@ -1,0 +1,14 @@
+=> 2.10.1
+
+# Fixes
+
+- Fix initializationOptions being ignored (Tamás Bálint Misius)
+
+# Enhancements
+
+- Sort references code lens locations (Janos Wortmann)
+- Include diagnostic code when copying diagnostic text (#2875) (Rafał Chłodnicki)
+
+# Refactors
+
+- Test both TCP modes (#2866) (Raoul Wols)

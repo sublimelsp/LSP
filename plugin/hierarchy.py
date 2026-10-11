@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import CallHierarchyIncomingCall
 from ..protocol import CallHierarchyItem
 from ..protocol import CallHierarchyOutgoingCall
@@ -15,27 +16,31 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.sessions import Session
 from .core.tree_view import new_tree_view_sheet
 from .core.tree_view import TreeDataProvider
 from .core.tree_view import TreeItem
 from .core.views import make_command_link
 from .core.views import text_document_position_params
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, TypedDict, Union
-from typing import cast
+from typing import Any
+from typing import Callable
+from typing import TYPE_CHECKING
+from typing import TypedDict
+from typing import Union
 import sublime
 import weakref
 
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 HierarchyItem = Union[CallHierarchyItem, TypeHierarchyItem]
 
-HierarchyItemWrapper = TypedDict('HierarchyItemWrapper', {
-    'item': HierarchyItem,
-    'selectionRange': Range,
-})
+
+class HierarchyItemWrapper(TypedDict):
+    item: HierarchyItem
+    selectionRange: Range
 
 
 class HierarchyDataProvider(TreeDataProvider):
@@ -43,8 +48,8 @@ class HierarchyDataProvider(TreeDataProvider):
     def __init__(
         self,
         weaksession: weakref.ref[Session],
-        request: Callable[..., Request],
-        request_handler: Callable[..., list[HierarchyItemWrapper]],
+        request: Callable[[Any], Request[Any, Any]],
+        request_handler: Callable[[Any], Any],
         root_elements: list[HierarchyItemWrapper]
     ) -> None:
         self.weaksession = weaksession
@@ -63,23 +68,22 @@ class HierarchyDataProvider(TreeDataProvider):
 
     def get_tree_item(self, element: HierarchyItemWrapper) -> TreeItem:
         item = element['item']
-        selectionRange = element['selectionRange']
-        command_url = sublime.command_url('lsp_open_location', {
-            'location': {
-                'targetUri': item['uri'],
-                'targetRange': item['range'],
-                'targetSelectionRange': selectionRange
-            },
-            'session_name': self.session_name,
-            'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
-        })
+        selection_range = element['selectionRange']
         path = simple_path(self.weaksession(), item['uri'])
         return TreeItem(
             item['name'],
             kind=SYMBOL_KINDS.get(item['kind'], sublime.KIND_AMBIGUOUS),
             description=item.get('detail', ''),
             tooltip="{}:{}".format(path, item['selectionRange']['start']['line'] + 1),
-            command_url=command_url
+            action_command=('lsp_open_location', {
+                'location': {
+                    'targetUri': item['uri'],
+                    'targetRange': item['range'],
+                    'targetSelectionRange': selection_range
+                },
+                'session_name': self.session_name,
+                'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # ruff: ignore[line-too-long]
+            })
         )
 
 
@@ -97,17 +101,17 @@ def make_data_provider(
     return HierarchyDataProvider(weaksession, request, handler, response)
 
 
-def incoming_calls_handler(response: list[CallHierarchyIncomingCall] | None | Error) -> list[HierarchyItemWrapper]:
+def incoming_calls_handler(response: list[CallHierarchyIncomingCall] | Error | None) -> list[HierarchyItemWrapper]:
     return [
         to_hierarchy_data(call['from'], call['fromRanges'][0] if call['fromRanges'] else None) for call in response
     ] if isinstance(response, list) else []
 
 
-def outgoing_calls_handler(response: list[CallHierarchyOutgoingCall] | None | Error) -> list[HierarchyItemWrapper]:
+def outgoing_calls_handler(response: list[CallHierarchyOutgoingCall] | Error | None) -> list[HierarchyItemWrapper]:
     return [to_hierarchy_data(call['to']) for call in response] if isinstance(response, list) else []
 
 
-def type_hierarchy_handler(response: list[TypeHierarchyItem] | None | Error) -> list[HierarchyItemWrapper]:
+def type_hierarchy_handler(response: list[TypeHierarchyItem] | Error | None) -> list[HierarchyItemWrapper]:
     return [to_hierarchy_data(item) for item in response] if isinstance(response, list) else []
 
 
@@ -138,15 +142,15 @@ def make_header(session_name: str, sheet_name: str, direction: int, root_element
     }, tooltip=tooltip))
 
 
-class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
+class LspHierarchyCommand(LspTextCommand, ABC):
 
     @classmethod
     @abstractmethod
     def request(
         cls, params: TextDocumentPositionParams, view: sublime.View
-    ) -> Request[list[HierarchyItem] | Error | None]:
-        """ A function that generates the initial request when this command is invoked. """
-        raise NotImplementedError()
+    ) -> Request[Any, list[HierarchyItem] | None]:
+        """A function that generates the initial request when this command is invoked."""
+        raise NotImplementedError
 
     def is_visible(self, event: dict | None = None, point: int | None = None) -> bool:
         if self.applies_to_context_menu(event):
@@ -213,7 +217,7 @@ def open_first(window: sublime.Window, session_name: str, items: list[HierarchyI
                 'targetSelectionRange': item['selectionRange']
             },
             'session_name': session_name,
-            'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
+            'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # ruff: ignore[line-too-long]
         })
 
 
@@ -223,9 +227,9 @@ class LspCallHierarchyCommand(LspHierarchyCommand):
 
     @classmethod
     def request(
-        cls, params: TextDocumentPositionParams, view: sublime.View
-    ) -> Request[list[CallHierarchyItem] | Error | None]:
-        return Request.prepareCallHierarchy(cast(CallHierarchyPrepareParams, params), view)
+        cls, params: CallHierarchyPrepareParams, view: sublime.View
+    ) -> Request[CallHierarchyPrepareParams, list[CallHierarchyItem] | None]:
+        return Request.prepareCallHierarchy(params, view)
 
 
 class LspTypeHierarchyCommand(LspHierarchyCommand):
@@ -234,6 +238,6 @@ class LspTypeHierarchyCommand(LspHierarchyCommand):
 
     @classmethod
     def request(
-        cls, params: TextDocumentPositionParams, view: sublime.View
-    ) -> Request[list[TypeHierarchyItem] | Error | None]:
-        return Request.prepareTypeHierarchy(cast(TypeHierarchyPrepareParams, params), view)
+        cls, params: TypeHierarchyPrepareParams, view: sublime.View
+    ) -> Request[TypeHierarchyPrepareParams, list[TypeHierarchyItem] | None]:
+        return Request.prepareTypeHierarchy(params, view)

@@ -1,47 +1,52 @@
 from __future__ import annotations
+
 from ..protocol import Command
-from ..protocol import DiagnosticTag
+from ..protocol import DiagnosticSeverity
+from ..protocol import DocumentHighlightKind
 from ..protocol import DocumentUri
 from .core.active_request import ActiveRequest
-from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
+from .core.constants import ChangeEventAction
+from .core.constants import DIAGNOSTIC_ICON_FLAGS
+from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import RequestFlags
 from .core.constants import SHOW_DEFINITIONS_KEY
-from .core.protocol import Request
-from .core.protocol import ResolvedCodeLens
-from .core.sessions import AbstractViewListener
-from .core.sessions import Session
 from .core.settings import userprefs
-from .core.views import DIAGNOSTIC_SEVERITY
+from .core.type_converters import range_to_region
+from .core.views import diagnostic_icon
+from .core.views import DIAGNOSTIC_STYLES
+from .core.views import document_highlight_key
 from .core.views import make_command_link
-from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
-from typing import Any, Iterable
+from typing import Any
+from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakValueDictionary
 import html
 import itertools
 import sublime
 
-DIAGNOSTIC_TAG_VALUES: list[int] = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
+if TYPE_CHECKING:
+    from .core.protocol import Request
+    from .core.protocol import ResolvedCodeLens
+    from .core.sessions import AbstractViewListener
+    from .core.sessions import Session
 
 
 class TagData:
     __slots__ = ('key', 'regions', 'scope')
 
-    def __init__(self, key: str, regions: list[sublime.Region] = [], scope: str = '') -> None:
+    def __init__(self, key: str, regions: list[sublime.Region] | None = None, scope: str = '') -> None:
         self.key = key
-        self.regions = regions
+        self.regions = regions or []
         self.scope = scope
 
 
 class SessionView:
-    """
-    Holds state per session per view.
-    """
+    """Holds state per session per view."""
 
     HOVER_PROVIDER_KEY = "hoverProvider"
     AC_TRIGGERS_KEY = "auto_complete_triggers"
@@ -93,15 +98,18 @@ class SessionView:
                     self.session.cancel_request_async(request_id)
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
-        for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_icon")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_underline")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_underline")
+        for severity in reversed(DIAGNOSTIC_STYLES.keys()):
+            for multiline in (False, True):
+                key = self.diagnostics_key(severity, multiline)
+                self.view.erase_regions(f"{key}_icon")
+                self.view.erase_regions(f"{key}_underline")
+                for tag in DIAGNOSTIC_TAG_SCOPES:
+                    self.view.erase_regions(f"{key}_tags_{tag}")
+        self._diagnostic_annotations.clear()
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
         self.session_buffer.remove_session_view(self)
         if listener := self.listener():
-            listener.on_diagnostics_updated_async(False)
+            listener.on_diagnostics_updated_async(self.session_buffer, False)
 
     def on_initialized(self) -> None:
         self.session_buffer.on_session_view_initialized(self._view)
@@ -138,44 +146,39 @@ class SessionView:
           - gutter icons from region keys which were initialized _first_ are drawn
         For more context, see https://github.com/sublimelsp/LSP/issues/1593.
         """
-        keys: list[str] = []
         r = [sublime.Region(0, 0)]
         document_highlight_style = userprefs().document_highlight_style
         hover_highlight_style = userprefs().hover_highlight_style
         line_modes = ["m", "s"]
         self.view.add_regions(RegionKey.CODE_ACTION, r)  # code actions lightbulb icon should always be on top
         session_name = self.session.config.name
-        for key in range(1, 100):
-            keys.append(f"lsp_semantic_{session_name}_{key}")
-        if document_highlight_style in ("background", "fill"):
-            for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
-                for mode in line_modes:
-                    keys.append(f"lsp_highlight_{kind}{mode}")
-        if hover_highlight_style in ("background", "fill"):
+        keys = [f"lsp_semantic_{session_name}_{key}" for key in range(1, 100)]
+        if document_highlight_style in {"background", "fill"}:
+            for kind in DocumentHighlightKind:
+                keys.extend((document_highlight_key(kind, multiline=True),
+                             document_highlight_key(kind, multiline=False)))
+        if hover_highlight_style in {"background", "fill"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
             for mode in line_modes:
-                for tag in range(1, 3):
-                    keys.append(f"lsp{session_name}d{mode}{severity}_tags_{tag}")
+                keys.extend(f"lsp{session_name}d{mode}{severity}_tags_{tag}" for tag in range(1, 3))
         keys.append(RegionKey.DOCUMENT_LINK)
         for severity in range(1, 5):
-            for mode in line_modes:
-                keys.append(f"lsp{session_name}d{mode}{severity}_icon")
+            keys.extend(f"lsp{session_name}d{mode}{severity}_icon" for mode in line_modes)
         for severity in range(4, 0, -1):
-            for mode in line_modes:
-                keys.append(f"lsp{session_name}d{mode}{severity}_underline")
-        if document_highlight_style in ("underline", "stippled"):
-            for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
-                for mode in line_modes:
-                    keys.append(f"lsp_highlight_{kind}{mode}")
-        if hover_highlight_style in ("underline", "stippled"):
+            keys.extend(f"lsp{session_name}d{mode}{severity}_underline" for mode in line_modes)
+        if document_highlight_style in {"underline", "stippled"}:
+            for kind in DocumentHighlightKind:
+                keys.extend((document_highlight_key(kind, multiline=True),
+                             document_highlight_key(kind, multiline=False)))
+        if hover_highlight_style in {"underline", "stippled"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:
             self.view.add_regions(key, r, flags=REGIONS_INITIALIZE_FLAGS)
         self._diagnostic_annotations.initialize_region_keys()
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
-        '''Remove all of our modifications to the view's "auto_complete_triggers"'''
+        """Remove all of our modifications to the view's "auto_complete_triggers"."""
         triggers = settings.get(self.AC_TRIGGERS_KEY)
         if isinstance(triggers, list):
             triggers = [t for t in triggers if isinstance(t, dict) and self.session.config.name != t.get("server", "")]
@@ -212,7 +215,7 @@ class SessionView:
         trigger_chars: list[str],
         registration_id: str | None = None
     ) -> None:
-        """This method actually modifies the auto_complete_triggers entries for the view."""
+        """Modify the auto_complete_triggers entries for the view."""
         selector = self.session.config.auto_complete_selector
         if not selector:
             # If the user did not set up an auto_complete_selector for this server configuration, fallback to the
@@ -293,52 +296,47 @@ class SessionView:
         if listener := self.listener():
             listener.on_session_shutdown_async(self.session)
 
-    def diagnostics_key(self, severity: int, multiline: bool) -> str:
+    def diagnostics_key(self, severity: DiagnosticSeverity, multiline: bool) -> str:
         return "lsp{}d{}{}".format(self.session.config.name, "m" if multiline else "s", severity)
-
-    def diagnostics_tag_scope(self, tag: int) -> str | None:
-        for k, v in DiagnosticTag.__dict__.items():
-            if v == tag:
-                return f'markup.{k.lower()}.lsp'
-        return None
 
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
         self._redraw_diagnostics_async()
         if listener := self.listener():
-            listener.on_diagnostics_updated_async(is_view_visible)
+            listener.on_diagnostics_updated_async(self.session_buffer, is_view_visible)
 
     def _redraw_diagnostics_async(self) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
-        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
         level = userprefs().show_diagnostics_severity_level
-        for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self._draw_diagnostics(sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], multiline=False)
-            self._draw_diagnostics(sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], multiline=True)
+        for sev, style in reversed(DIAGNOSTIC_STYLES.items()):
+            self._draw_diagnostics(sev, level, flags[sev - 1] or style.single_line_region_flags, multiline=False)
+            self._draw_diagnostics(sev, level, multiline_flags or style.multi_line_region_flags, multiline=True)
         self._diagnostic_annotations.draw(self.session_buffer.diagnostics)
 
     def _draw_diagnostics(
         self,
-        severity: int,
+        severity: DiagnosticSeverity,
         max_severity_level: int,
         flags: sublime.RegionFlags,
         multiline: bool
     ) -> None:
-        ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
         key = self.diagnostics_key(severity, multiline)
-        tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_VALUES}
+        tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_SCOPES}
         data = self._session_buffer.diagnostics_data_per_severity.get((severity, multiline))
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
-                tag_scope = self.diagnostics_tag_scope(tag)
-                # Trick to only add tag regions if there is a corresponding color scheme scope defined.
-                if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
+                tag_scope = DIAGNOSTIC_TAG_SCOPES[tag]
+                # Only add tag regions if there is a corresponding color scheme scope defined
+                if tag in self.session_buffer.supported_diagnostic_tags:
                     tags[tag].regions = regions
                     tags[tag].scope = tag_scope
                 else:
                     non_tag_regions.extend(regions)
-            self.view.add_regions(f"{key}_icon", non_tag_regions, data.scope, data.icon, ICON_FLAGS)
-            self.view.add_regions(f"{key}_underline", non_tag_regions, data.scope, "", flags)
+            region_scope = DIAGNOSTIC_STYLES[severity].region_scope
+            icon = diagnostic_icon(severity)
+            self.view.add_regions(f"{key}_icon", non_tag_regions, region_scope, icon, DIAGNOSTIC_ICON_FLAGS)
+            self.view.add_regions(f"{key}_underline", non_tag_regions, region_scope, "", flags)
         else:
             self.view.erase_regions(f"{key}_icon")
             self.view.erase_regions(f"{key}_underline")
@@ -353,7 +351,7 @@ class SessionView:
             else:
                 self.view.erase_regions(data.key)
 
-    def on_request_started_async(self, request_id: int, request: Request) -> None:
+    def on_request_started_async(self, request_id: int, request: Request[Any, Any]) -> None:
         self._active_requests[request_id] = ActiveRequest(self, request_id, request)
 
     def on_request_finished_async(self, request_id: int) -> None:
@@ -367,8 +365,10 @@ class SessionView:
         if request := self._active_requests.get(request_id, None):
             request.update_progress_async(params)
 
-    def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
-        self.session_buffer.on_text_changed_async(self.view, change_count, changes)
+    def on_text_changed_async(
+        self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
+    ) -> None:
+        self.session_buffer.on_text_changed_async(self.view, change_count, changes, action)
 
     def on_revert_async(self) -> None:
         self.session_buffer.on_revert_async(self.view)
@@ -389,6 +389,9 @@ class SessionView:
         self._redraw_diagnostics_async()
         self._redraw_code_lenses_async(clear=True)
 
+    def on_color_scheme_changed(self) -> None:
+        self._diagnostic_annotations.on_color_scheme_changed()
+
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
     def handle_code_lenses_async(self, code_lenses: list[ResolvedCodeLens]) -> None:
@@ -407,8 +410,11 @@ class SessionView:
             key = self._code_lens_key()
             regions = [self._code_lens_region(code_lens) for code_lens in self._code_lenses]
             flags = sublime.RegionFlags.NO_UNDO
-            annotations = [self._code_lens_annotation(code_lens) for code_lens in self._code_lenses]
-            annotation_color = self.view.style_for_scope('region.greenish markup.accent.codelens.lsp')['foreground']
+            annotations = [
+                f'<span style="font-family: system">{self._code_lens_html(code_lens)}</span>'
+                for code_lens in self._code_lenses
+            ]
+            annotation_color = self.session_buffer.code_lens_annotation_color
             self.view.add_regions(key, regions, flags=flags, annotations=annotations, annotation_color=annotation_color)
         elif userprefs().show_code_lens == 'phantom':
             # Workaround for https://github.com/sublimehq/sublime_text/issues/6188
@@ -419,11 +425,9 @@ class SessionView:
             phantoms: list[sublime.Phantom] = []
             for region, group in itertools.groupby(self._code_lenses, key=self._code_lens_region):
                 phantom_region = self._get_phantom_region(region)
-                html = '<body id="lsp-code-lens">{}</body>'.format(
-                    '\n<small style="font-family: system">|</small>\n'.join(
-                        self._code_lens_annotation(code_lens) for code_lens in group
-                    )
-                )
+                phantom_css = 'body {font-family: system}'
+                content = ' | '.join(self._code_lens_html(code_lens) for code_lens in group)
+                html = f'<body id="lsp-code-lens"><style>{phantom_css}</style><small>{content}</small></body>'
                 phantoms.append(sublime.Phantom(phantom_region, html, sublime.PhantomLayout.BELOW))
             self._code_lens_phantoms.update(phantoms)
 
@@ -431,21 +435,19 @@ class SessionView:
         return f'lsp_code_lens.{self.session.config.name}'
 
     def _code_lens_region(self, code_lens: ResolvedCodeLens) -> sublime.Region:
-        return range_to_region(code_lens['range'], self.view)
+        return range_to_region(self.view, code_lens['range'])
 
-    def _code_lens_annotation(self, code_lens: ResolvedCodeLens) -> str:
+    def _code_lens_html(self, code_lens: ResolvedCodeLens) -> str:
         command = code_lens['command']
         if code_lens.get('uses_cached_command', False):
             # Only show the cached command title but don't create a clickable link until the code lens gets resolved
             # with the actual command.
-            annotation = html.escape(command['title'])
-        else:
-            annotation = make_command_link('lsp_execute', command['title'], {
-                'session_name': self.session.config.name,
-                'command_name': command['command'],
-                'command_args': command.get('arguments', [])
-            }, view_id=self.view.id())
-        return f'<small style="font-family: system">{annotation}</small>'
+            return html.escape(command['title'])
+        return make_command_link('lsp_execute', command['title'], {
+            'session_name': self.session.config.name,
+            'command_name': command['command'],
+            'command_args': command.get('arguments', [])
+        }, view_id=self.view.id())
 
     def _get_phantom_region(self, region: sublime.Region) -> sublime.Region:
         line = self.view.line(region)

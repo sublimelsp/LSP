@@ -1,34 +1,25 @@
 # Client Configuration
 
-## Custom client configuration
+## Custom server configuration
 
 !!! Note
-    The external LSP-* helper packages already come with their setting file and a client configuration and you don't need to add anything to the global LSP settings. This section is only relevant if you want to add a new client configuration for a server that doesn't have a corresponding helper package.
+    The external LSP-* helper packages already come with their setting file and a configuration and you don't need to add anything to the custom server configurations file.
+    This section is only relevant if you want to add a new configuration for a server that doesn't have a corresponding helper package.
 
-After you have installed a language server, the LSP settings need to be configured to enable communication between LSP and that server for suitable filetypes.
-LSP ships with configurations for a few language servers, but these need to be enabled before they will start.
-To globally enable a server, open the Command Palette and choose "LSP: Enable Language Server Globally".
-This will add `"enabled": true` to the corresponding language server setting under the `"clients"` key in your user-settings file for LSP.
-Your user-settings file is stored at `Packages/User/LSP.sublime-settings` and can be opened via "Preferences > Package Settings > LSP > Settings" from the menu or with the `Preferences: LSP Settings` command from the Command Palette.
-If your language server is missing or not configured correctly, you need to add/override further settings which are explained below.
+After you have installed a language server, LSP needs to be configured to enable communication between LSP and that server for suitable filetypes.
+Your server configurations file is stored at `Packages/User/LanguageServers.sublime-settings` and can be opened via "Preferences > Package Settings > LSP > Server Configurations" from the menu or with the `Preferences: LSP Server Configurations` entry from the Command Palette.
 
-Below is an example of the `LSP.sublime-settings` file with configurations for the [Phpactor](https://phpactor.readthedocs.io/en/master/usage/language-server.html#language-server) server.
+Below is an example configuration for the [Phpactor](https://phpactor.readthedocs.io/en/master/usage/language-server.html#language-server) server.
 
-```jsonc title="Packages/User/LSP.sublime-settings"
+```jsonc title="Packages/User/LanguageServers.sublime-settings"
 {
-  // General settings
-  "show_diagnostics_panel_on_save": 0,
-
-  // Language server configurations
-  "clients": {
-    "phpactor": {
-      // enable this configuration
-      "enabled": true,
-      // the startup command -- what you would type in a terminal
-      "command": ["PATH/TO/phpactor", "language-server"],
-      // the selector that selects which type of buffers this language server attaches to
-      "selector": "source.php"
-    }
+  "phpactor": {
+    // enable this configuration
+    "enabled": true,
+    // the startup command -- what you would type in a terminal
+    "command": ["PATH/TO/phpactor", "language-server"],
+    // the selector that selects which type of buffers this language server attaches to
+    "selector": "source.php"
   }
 }
 ```
@@ -37,15 +28,18 @@ Below is an example of the `LSP.sublime-settings` file with configurations for t
 | ------- | ----------- |
 | enabled | enables a language server (default is disabled) |
 | command | must be on PATH or specify a full path, add arguments (can be empty if starting manually, then TCP transport must be configured) |
-| env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
-| settings | per-project settings (equivalent to VS Code's Workspace Settings) |
-| initializationOptions | options to send to the server at startup (rarely used) |
 | selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. For more information, see https://www.sublimetext.com/docs/3/selectors.html |
-| priority_selector | Used to prioritize a certain language server when choosing which one to query on views with multiple servers active. Certain LSP actions have to pick which server to query and this setting can be used to decide which one to pick based on the current scopes at the cursor location. For example when having both HTML and PHP servers running on a PHP file, this can be used to give priority to the HTML one in HTML blocks and to PHP one otherwise. That would be done by setting "priority_selector" to `text.html` for HTML server and `source.php` to PHP server. Note: when the "priority_selector" is missing, it will be the same as the "document_selector".
-| diagnostics_mode | Set to `"workspace"` (default is `"open_files"`) to ignore diagnostics for files that are not within the project (window) folders. If project has no folders then this option has no effect and diagnostics are shown for all files. If the server supports _pull diagnostics_ (`diagnosticProvider`), this setting also controls whether diagnostics are requested only for open files (`"open_files"`), or for all files in the project folders (`"workspace"`). |
+| env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
+| settings | server-specific settings |
+| initialization_options | options to send to the server at startup |
+| priority_selector | Used to prioritize a certain language server when choosing which one to query on views with multiple servers active. Certain LSP actions have to pick which server to query and this setting can be used to decide which one to pick based on the current scopes at the cursor location. For example when having both HTML and PHP servers running on a PHP file, this can be used to give priority to the HTML one in HTML blocks and to PHP one otherwise. That would be done by setting "priority_selector" to `text.html` for HTML server and `source.php` to PHP server.
+| diagnostics_mode | Set to `"workspace"` (default is `"all_files"`) to ignore diagnostics for files that are not within the project (window) folders. If project has no folders then this option has no effect and diagnostics are shown for all files. |
+| markdown_language_map | A mapping of markdown language identifiers to aliases and Sublime Text syntaxes, used for syntax-highlighting fenced code blocks in popups. Each key is a fenced-code-block language tag (e.g. `"js"`). Each value is a two-element array: the first element is an array of additional aliases, and the second is an array of Sublime Text syntaxes associated with that language (e.g. `["MyPackage/MySyntaxLanguage"]`) or `scope:BASE_SCOPE` selectors (e.g. `["scope:source.js"]`). See [mdpopups `sublime_user_lang_map`](https://facelessuser.github.io/sublime-markdown-popups/settings/#mdpopupssublime_user_lang_map) for the full format description. |
+| syntax_map | A mapping of custom URI schemes to Sublime Text syntaxes, used when fetching dynamic document content from the server via [`workspace/textDocumentContent`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workspace_textDocumentContent) request. |
 | tcp_port | see instructions below |
 | experimental_capabilities | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
 | disabled_capabilities | Disables specific capabilities of a language server. This is a dictionary with key being a capability key and being `true`. Refer to the `ServerCapabilities` structure in [LSP capabilities](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) to find capabilities that you might want to disable. Note that the value should be `true` rather than `false` for capabilites that you want to disable. For example: `"signatureHelpProvider": true` |
+| auto_complete_selector | A [selector](https://www.sublimetext.com/docs/selectors.html) that controls where the completion popup opens automatically in a file supported by the server. LSP adds an entry to the `"auto_complete_triggers"` setting of the view, with this value as the `"selector"` and the trigger characters of the server as the `"characters"`. If the server has no trigger characters, the entry has only the selector, and the completion popup then opens when you type in a matching scope. If not specified, the trigger characters of the server use the `"auto_complete_selector"` setting of the view (defined in the global Sublime Text Preferences). |
 
 You can figure out the scope of the current view with `Tools > Developer > Show Scope`.
 
@@ -79,7 +73,7 @@ The port number can be inserted into the server's startup `command` in your clie
 
 ## Per-project overrides
 
-Global LSP settings (which currently are `lsp_format_on_save`, `lsp_format_on_paste` and `lsp_code_actions_on_save`) can be overridden per-project in `.sublime-project` file:
+Global LSP settings (which currently are `lsp_format_on_save`, `lsp_format_on_paste`, `lsp_code_actions_on_save` and `lsp_code_actions_on_format`) can be overridden per-project in `.sublime-project` file:
 
 ```jsonc
 {
@@ -91,13 +85,16 @@ Global LSP settings (which currently are `lsp_format_on_save`, `lsp_format_on_pa
   ],
   "settings": {
     "lsp_format_on_save": true,
+    "lsp_code_actions_on_format": {
+      "source.fixAll": true,
+    },
   }
 }
 ```
 
 Also global language server settings can be added or overridden per-project by adding an `LSP` object within the `settings` object. A new server configurations can be added there or existing global configurations can be overridden (either fully or partially). Those can override server configurations defined within the `clients` key in `LSP.sublime-settings` or those provided by external helper packages.
 
-> **Note**: The `settings` and `initializationOptions` objects for server configurations will be merged with globally defined server configurations so it's possible to override only certain properties from those objects.
+> **Note**: The `settings` and `initialization_options` objects for server configurations will be merged with globally defined server configurations so it's possible to override only certain properties from those objects.
 
 ```jsonc
 {

@@ -17,18 +17,91 @@ The issues also allow you to gather some feedback and help from other contributo
 
 ## Coding
 
-Sublime Text bundles a Python 3.3, please be sure to set up your environment to match.
-LSP uses `LSP-pyright`, `flake8` and `mypy` to provide some code quality assurances.
-Run `tox` to check your work.
-Consider using `LSP-pyright` or `LSP-pylsp` as a language server.
-To reload the plugin, save the file boot.py.
-Saving any other file does not reload the plugin.
+LSP uses [Pyright](https://microsoft.github.io/pyright) for type-checking and [Ruff](https://docs.astral.sh/ruff/) for linting and import sorting.
+Run `tox` to check your work before submitting — this runs the same checks that CI enforces.
+
+> [!NOTE]
+> Changes in the plugin code only apply after restarting Sublime Text.
+
+### Recommended editor setup
+
+For the best in-editor experience, install [LSP-pyright](https://packages.sublimetext.io/packages/LSP-pyright) and
+[LSP-ruff](https://packages.sublimetext.io/packages/LSP-ruff) packages.
+
+**LSP-pyright** - enable the following setting to ensure that `sublime` and `sublime_plugin` module types are resolved
+correctly. Add this to your `LSP-pyright` settings or to your project-specific settings:
+
+```json
+"settings": {
+    "pyright.dev_environment": "sublime_text_38"
+}
+```
+
+**LSP-ruff** - enable auto-fix on save so that linting violations and import ordering are corrected automatically.
+Add this to your `LSP` settings or to your project-specific settings:
+
+```json
+"lsp_code_actions_on_save": {
+    "source.fixAll.ruff": true,
+    "source.organizeImports.ruff": true,
+}
+```
+
+## Pre-commit hooks
+
+The repository ships a [pre-commit](https://pre-commit.com) configuration that runs linting and type-checking before every commit, matching the checks that run in CI via `tox`.
+
+The hook delegates to `tox`, which manages the exact tool versions itself. pre-commit installs `tox` into its own isolated environment, so the checks work regardless of your shell environment or Git client.
+
+**One-time setup:**
+
+```sh
+# Install pre-commit (uv, pipx, or pip)
+uv tool install pre-commit
+
+# Install the git hook
+pre-commit install
+```
+
+To run the checks manually:
+
+```sh
+pre-commit run --all-files
+```
 
 ## Testing
 
 Please consider testing your work with other language servers, even if you do not use them.
-There is also a test suite in tests/. To run the tests, use the UnitTesting package from randy3k.
-The configuration file for the tests is in unittesting.json.
+There is also a test suite in `tests/`.
+To run the tests, use the [UnitTesting](https://packages.sublimetext.io/packages/UnitTesting) package.
+The configuration file for the tests is in `unittesting.json`.
+
+### Running the tests in Docker
+
+You can also run the tests headlessly in a Docker container, without a local Sublime Text installation.
+You must have [Docker](https://docs.docker.com/get-docker/) and a clone of the
+[UnitTesting](https://github.com/SublimeText/UnitTesting) repository.
+From the root of the LSP repository, run:
+
+```sh
+/path/to/UnitTesting/docker/ut-run-tests .
+```
+
+On Windows, use `ut-run-tests.cmd`.
+The first run builds the Docker image and installs Sublime Text in a Docker volume.
+Later runs use that volume and are faster.
+The tests run on Linux, so the tests that need Windows are skipped.
+
+Useful options:
+
+* `--file tests/test_views.py` - run only the tests in one file. You cannot use this option together with the `--no-*`
+  options.
+* `--pattern "test_url*.py"` - run only the test files that match a pattern.
+* `--failfast` - stop at the first failure.
+* `--no-syntax-tests --no-syntax-compatibility-checks` - run only the Python unit tests.
+
+You cannot select a single test class or method.
+For all options, see the [README of the Docker runner](https://github.com/SublimeText/UnitTesting/tree/master/docker).
 
 ## Submitting
 

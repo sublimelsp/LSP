@@ -1,22 +1,27 @@
 from __future__ import annotations
-from ...protocol import Diagnostic
-from ...protocol import Location
-from ...protocol import LocationLink
-from .sessions import AbstractViewListener
-from .sessions import Session
+
+from .settings import userprefs
+from .type_converters import position_to_offset
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
-from .views import position_to_offset
 from .views import uri_from_view
 from .windows import WindowManager
 from .windows import WindowRegistry
 from functools import partial
-from typing import Any, Generator, Iterable
+from typing import Generator
+from typing import Iterable
+from typing import TYPE_CHECKING
 import operator
 import sublime
 import sublime_plugin
 
+if TYPE_CHECKING:
+    from ...protocol import Diagnostic
+    from ...protocol import Location
+    from ...protocol import LocationLink
+    from .sessions import AbstractViewListener
+    from .sessions import Session
 
 windows = WindowRegistry()
 
@@ -54,17 +59,25 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
 
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
     # capability attached to a view in the window.
-    capability = ''
+    capability: str = ''
 
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
     # name attached to a view in the window.
-    session_name = ''
+    session_name: str = ''
+
+    def __init__(self, window: sublime.Window) -> None:
+        super().__init__(window)
+        if not self.session_name:
+            # Auto-detect session_name based on package name. In case of the LSP package use empty string.
+            package_name = self.__module__.split('.')[0]
+            if package_name != 'LSP':
+                self.session_name = package_name
 
     def is_enabled(self) -> bool:
         return self.session() is not None
 
     def session(self) -> Session | None:
-        wm = windows.lookup(self.window)
+        wm = self.manager()
         if not wm:
             return None
         for session in wm.get_sessions():
@@ -75,10 +88,10 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             return session
         return None
 
-    def sessions(self) -> Generator[Session, None, None]:
-        wm = windows.lookup(self.window)
+    def sessions(self) -> Generator[Session]:
+        wm = self.manager()
         if not wm:
-            return None
+            return
         for session in wm.get_sessions():
             if self.capability and not session.has_capability(self.capability, check_views=True):
                 continue
@@ -87,7 +100,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             yield session
 
     def session_by_name(self, session_name: str) -> Session | None:
-        wm = windows.lookup(self.window)
+        wm = self.manager()
         if not wm:
             return None
         for session in wm.get_sessions():
@@ -96,6 +109,9 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             if session.config.name == session_name:
                 return session
         return None
+
+    def manager(self) -> WindowManager | None:
+        return windows.lookup(self.window)
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
@@ -106,11 +122,19 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
     # capability attached to the active view.
-    capability = ''
+    capability: str = ''
 
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
-    # name attached to the active view.
-    session_name = ''
+    # name attached to the active view. By default it will default to the name of the pacakge it's defined in.
+    session_name: str = ''
+
+    def __init__(self, view: sublime.View) -> None:
+        super().__init__(view)
+        if not self.session_name:
+            # Auto-detect session_name based on package name. In case of the LSP package use empty string.
+            package_name = self.__module__.split('.')[0]
+            if package_name != 'LSP':
+                self.session_name = package_name
 
     def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if self.capability:
@@ -144,14 +168,13 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return listener.session_async(capability, point) if listener else None
 
     def session_by_name(self, name: str | None = None, capability_path: str | None = None) -> Session | None:
-        target = name if name else self.session_name
+        target = name or self.session_name
         if listener := self.get_listener():
             for sv in listener.session_views_async():
                 if sv.session.config.name == target:
                     if capability_path is None or sv.has_capability_async(capability_path):
                         return sv.session
-                    else:
-                        return None
+                    return None
         return None
 
     def sessions(self, capability_path: str | None = None) -> Generator[Session, None, None]:
@@ -162,9 +185,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
 
 class LspOpenLocationCommand(LspWindowCommand):
-    """
-    A command to be used by third-party ST packages that need to open an URI with some abstract scheme.
-    """
+    """A command to be used by third-party ST packages that need to open an URI with some abstract scheme."""
 
     def run(
         self,
@@ -177,7 +198,7 @@ class LspOpenLocationCommand(LspWindowCommand):
         if event:
             if modifier_keys := event.get('modifier_keys'):
                 if 'primary' in modifier_keys:
-                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
+                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # ruff: ignore[line-too-long]
                 elif 'shift' in modifier_keys:
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
         sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
@@ -201,7 +222,7 @@ class LspOpenLocationCommand(LspWindowCommand):
 
 class LspRestartServerCommand(LspTextCommand):
 
-    def run(self, edit: Any, config_name: str | None = None) -> None:
+    def run(self, edit: sublime.Edit, config_name: str | None = None) -> None:
         wm = windows.lookup(self.view.window())
         if not wm:
             return
@@ -226,7 +247,19 @@ class LspRestartServerCommand(LspTextCommand):
         sublime.set_timeout_async(run_async)
 
 
-def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = True) -> None:
+class LspCheckApplicableCommand(sublime_plugin.TextCommand):
+
+    def run(self, edit: sublime.Edit, session_name: str) -> None:
+        sublime.set_timeout_async(lambda: self._run_async(session_name))
+
+    def _run_async(self, session_name: str) -> None:
+        if wm := windows.lookup(self.view.window()):
+            wm.recheck_is_applicable_async(self.view, session_name)
+
+
+def navigate_diagnostics(
+    view: sublime.View, point: int | None, severity_level: int | None, *, forward: bool = True
+) -> None:
     try:
         uri = uri_from_view(view)
     except MissingUriError:
@@ -234,9 +267,11 @@ def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = 
     wm = windows.lookup(view.window())
     if not wm:
         return
+    if severity_level is None:
+        severity_level = userprefs().show_diagnostics_severity_level
     diagnostics: list[Diagnostic] = []
     for session in wm.get_sessions():
-        diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
+        diagnostics.extend(session.diagnostics.get_diagnostics_for_uri(uri, severity_level))
     if not diagnostics:
         return
     # Sort diagnostics by location
@@ -248,22 +283,27 @@ def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = 
     # this view after/before the cursor
     op_func = operator.gt if forward else operator.lt
     for diagnostic in diagnostics:
-        diag_pos = position_to_offset(diagnostic['range']['start'], view)
+        diag_pos = position_to_offset(view, diagnostic['range']['start'])
         if op_func(diag_pos, point):
             break
     else:
-        diag_pos = position_to_offset(diagnostics[0]['range']['start'], view)
+        diag_pos = position_to_offset(view, diagnostics[0]['range']['start'])
     view.run_command('lsp_selection_set', {'regions': [(diag_pos, diag_pos)]})
     view.show_at_center(diag_pos)
     # We need a small delay before showing the popup to wait for the scrolling animation to finish. Otherwise ST would
     # immediately hide the popup.
-    sublime.set_timeout_async(lambda: view.run_command('lsp_hover', {'only_diagnostics': True, 'point': diag_pos}), 200)
+    sublime.set_timeout(lambda: _show_diagnostic_popup(view, diag_pos), 250)
+
+
+def _show_diagnostic_popup(view: sublime.View, point: int) -> None:
+    view.hide_popup()
+    view.run_command('lsp_hover', {'only_diagnostics': True, 'point': point})
 
 
 class LspNextDiagnosticCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, point: int | None = None) -> None:
-        navigate_diagnostics(self.view, point, forward=True)
+    def run(self, edit: sublime.Edit, point: int | None = None, severity_level: int | None = None) -> None:
+        navigate_diagnostics(self.view, point, severity_level, forward=True)
 
     def want_event(self) -> bool:
         return False
@@ -271,8 +311,8 @@ class LspNextDiagnosticCommand(LspTextCommand):
 
 class LspPrevDiagnosticCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, point: int | None = None) -> None:
-        navigate_diagnostics(self.view, point, forward=False)
+    def run(self, edit: sublime.Edit, point: int | None = None, severity_level: int | None = None) -> None:
+        navigate_diagnostics(self.view, point, severity_level, forward=False)
 
     def want_event(self) -> bool:
         return False

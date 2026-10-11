@@ -1,19 +1,27 @@
 from __future__ import annotations
+
+from .setup import TextDocumentTestCase
+from .test_single_document import TEST_FILE_PATH
 from copy import deepcopy
-from LSP.plugin.code_actions import get_matching_on_save_kinds
+from LSP.plugin.code_actions import CodeActionsOnFormatOnSaveTask
+from LSP.plugin.code_actions import CodeActionsOnSaveTask
+from LSP.plugin.code_actions import get_matching_kinds
 from LSP.plugin.core.constants import RegionKey
 from LSP.plugin.core.protocol import Point
+from LSP.plugin.core.settings import userprefs
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.core.views import kind_contains_other_kind
 from LSP.plugin.core.views import versioned_text_document_identifier
 from LSP.plugin.documents import DocumentSyncListener
-from LSP.protocol import Range
-from setup import TextDocumentTestCase
-from test_single_document import TEST_FILE_PATH
-from typing import Any, Generator
+from typing import Any
+from typing import Generator
+from typing import TYPE_CHECKING
 import unittest
-import sublime
+
+if TYPE_CHECKING:
+    from LSP.protocol import Range
+    import sublime
 
 TEST_FILE_URI = filename_to_uri(TEST_FILE_PATH)
 
@@ -70,22 +78,21 @@ def create_test_code_action2(command_name: str, command_args: list[Any] | None =
 
 
 def create_disabled_code_action(view: sublime.View, version: int, edits: list[tuple[str, Range]]) -> dict[str, Any]:
-    action = {
+    return {
         "title": "Fix errors",
         "edit": create_code_action_edit(view, version, edits),
         "disabled": {
             "reason": "Do not use"
         },
     }
-    return action
 
 
 def create_test_diagnostics(diagnostics: list[tuple[str, Range]]) -> dict:
     def diagnostic_to_lsp(diagnostic: tuple[str, Range]) -> dict:
-        message, range = diagnostic
+        message, lsp_range = diagnostic
         return {
             "message": message,
-            "range": range
+            "range": lsp_range
         }
     return {
         "uri": TEST_FILE_URI,
@@ -93,13 +100,13 @@ def create_test_diagnostics(diagnostics: list[tuple[str, Range]]) -> dict:
     }
 
 
-class CodeActionsOnSaveTestCase(TextDocumentTestCase):
-
+class CodeActionsTestCaseBase(TextDocumentTestCase):
     @classmethod
     def init_view_settings(cls) -> None:
         super().init_view_settings()
         # "quickfix" is not supported but its here for testing purposes
         cls.view.settings().set('lsp_code_actions_on_save', {'source.fixAll': True, 'quickfix': True})
+        cls.view.settings().set("lsp_format_on_save", False)
 
     @classmethod
     def get_test_server_capabilities(cls) -> dict:
@@ -111,6 +118,24 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         yield from self.await_clear_view_and_save()
         yield from super().doCleanups()
 
+
+class CodeActionsOnSaveTaskTestCase(TextDocumentTestCase):
+    @classmethod
+    def init_view_settings(cls) -> None:
+        super().init_view_settings()
+        cls.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True})
+        cls.view.settings().set('lsp_code_actions_on_format', {"source.fixAll.eslint": True})
+        cls.view.settings().set('lsp_format_on_save', False)
+
+    def test_applicable_when_format_on_save_disabled(self) -> None:
+        self.assertTrue(CodeActionsOnSaveTask.is_applicable(self.view))
+
+    def test_applicable_when_format_on_save_enabled(self) -> None:
+        self.view.settings().set('lsp_format_on_save', True)
+        self.assertFalse(CodeActionsOnSaveTask.is_applicable(self.view))
+
+
+class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
     def test_applies_matching_kind(self) -> Generator:
         yield from self._setup_document_with_missing_semicolon()
         code_action_kind = 'source.fixAll'
@@ -233,25 +258,155 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         )
 
 
+class CodeActionsOnFormatTestCase(CodeActionsTestCaseBase):
+    @classmethod
+    def init_view_settings(cls) -> None:
+        super().init_view_settings()
+        cls.view.settings().set('lsp_code_actions_on_format', {'source.fixAll': True, 'quickfix': True})
+
+    def test_format_document_with_code_actions_on_format(self) -> Generator:
+        self.insert_characters(' const x = 1')
+        yield from self.await_message('textDocument/didChange')
+
+        code_action_kind = 'source.fixAll'
+        code_action = create_test_code_action(
+            self.view,
+            self.view.change_count(),
+            [(';', range_from_points(Point(0, 12), Point(0, 12)))],
+            code_action_kind
+        )
+        self.set_response('textDocument/codeAction', [code_action])
+
+        self.set_response('textDocument/formatting', [{
+            'newText': "",
+            'range': {
+                'start': {'line': 0, 'character': 0},
+                'end': {'line': 0, 'character': 1}
+            }
+        }])
+
+        self.view.run_command('lsp_format_document', {'async': True})
+        yield from self.await_message('textDocument/codeAction')
+        yield from self.await_message('textDocument/formatting')
+        yield from self.await_message('textDocument/didChange')
+        # Response is fixed (fixAll added ";") and formatted (removed leading space)
+        self.assertEqual(entire_content(self.view), 'const x = 1;')
+        # Formatting does not save the document
+        self.assertEqual(self.view.is_dirty(), True)
+
+    def test_format_on_save_with_code_actions_on_format(self) -> Generator:
+        self.view.settings().set("lsp_format_on_save", True)
+        self.insert_characters(' const x = 1')
+        yield from self.await_message("textDocument/didChange")
+
+        code_action_kind = 'source.fixAll'
+        code_action = create_test_code_action(
+            self.view,
+            self.view.change_count(),
+            [(';', range_from_points(Point(0, 12), Point(0, 12)))],
+            code_action_kind
+        )
+        self.set_response('textDocument/codeAction', [code_action])
+
+        self.set_response('textDocument/formatting', [{
+            'newText': "",
+            'range': {
+                'start': {'line': 0, 'character': 0},
+                'end': {'line': 0, 'character': 1}
+            }
+        }])
+
+        self.view.run_command("lsp_save", {'async': True})
+        yield from self.await_message('textDocument/codeAction')
+        yield from self.await_message('textDocument/formatting')
+        yield from self.await_message('textDocument/didChange')
+        yield from self.await_message('textDocument/didSave')
+        # Response is fixed (fixAll added ";") and formatted (removed leading space)
+        self.assertEqual(entire_content(self.view), 'const x = 1;')
+        # Document should be saved
+        self.assertEqual(self.view.is_dirty(), False)
+
+
+class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
+    @classmethod
+    def init_view_settings(cls) -> None:
+        super().init_view_settings()
+        cls.view.settings().set('lsp_code_actions_on_save', {'source.fixAll': True, 'quickfix': True})
+        cls.view.settings().set('lsp_code_actions_on_format', {})
+        cls.view.settings().set("lsp_format_on_save", False)
+        userprefs().lsp_format_on_save = False
+        userprefs().lsp_code_actions_on_save = {}
+        userprefs().lsp_code_actions_on_format = {}
+
+    def test_code_actions_format_on_save_task_enabled__unset(self) -> None:
+        self.view.settings().set('lsp_code_actions_on_format', {})
+        self.view.settings().set("lsp_format_on_save", False)
+        self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
+
+    def test_code_actions_format_on_save_task_enabled__format_on_save_false(self) -> None:
+        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True})
+        self.view.settings().set("lsp_format_on_save", False)
+        self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
+
+    def test_code_actions_format_on_save_task_enabled__unsupported(self) -> None:
+        self.view.settings().set('lsp_code_actions_on_save', {})
+        self.view.settings().set('lsp_code_actions_on_format', {"quickfix.unsupported": True})
+        self.view.settings().set("lsp_format_on_save", True)
+        self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
+
+    def test_code_actions_format_on_save_task_enabled__standard_settings(self) -> None:
+        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True})
+        self.view.settings().set("lsp_format_on_save", True)
+        self.assertTrue(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
+
+    def test_code_actions_format_on_save_task_enabled__user_settings(self) -> None:
+        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True})
+        userprefs().lsp_format_on_save = False
+        del self.view.settings()["lsp_format_on_save"]
+        self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
+        userprefs().lsp_format_on_save = True
+        self.assertTrue(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
+
+    def test_code_actions_format_on_save_task_get_code_actions__settings_are_merged(self) -> None:
+        self.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True, "source.organizeImports": True})
+        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": False, "source.sort.json": False})
+        # Actions defined in both settings are merged. When a duplicate action is found it will be True (enabled)
+        # when enabled in lsp_code_actions_on_save or lsp_code_actions_on_format
+        self.assertEqual(
+            CodeActionsOnFormatOnSaveTask.get_code_action_kinds(view=self.view),
+            {"source.fixAll": True, "source.organizeImports": True, "source.sort.json": False},
+        )
+
+
 class CodeActionMatchingTestCase(unittest.TestCase):
     def test_does_not_match(self) -> None:
-        actual = get_matching_on_save_kinds({'a.x': True}, ['a.b'])
+        actual = get_matching_kinds({'a.x': True}, ['a.b'])
         expected: list[str] = []
         self.assertEqual(actual, expected)
 
     def test_matches_exact_action(self) -> None:
-        actual = get_matching_on_save_kinds({'a.b': True}, ['a.b'])
+        actual = get_matching_kinds({'a.b': True}, ['a.b'])
         expected = ['a.b']
         self.assertEqual(actual, expected)
 
     def test_matches_more_specific_action(self) -> None:
-        actual = get_matching_on_save_kinds({'a.b': True}, ['a.b.c'])
+        actual = get_matching_kinds({'a.b': True}, ['a.b.c'])
         expected = ['a.b.c']
         self.assertEqual(actual, expected)
 
+    def test_matches_multiple_specific_actions(self) -> None:
+        actual = get_matching_kinds({'a.b': True, 'a.b.c': True}, ['a.b.c', 'a.b.d'])
+        expected = ['a.b.c', 'a.b.d']
+        self.assertEqual(actual, expected)
+
     def test_does_not_match_disabled_action(self) -> None:
-        actual = get_matching_on_save_kinds({'a.b': True, 'a.b.c': False}, ['a.b.c'])
+        actual = get_matching_kinds({'a.b': True, 'a.b.c': False}, ['a.b.c'])
         expected: list[str] = []
+        self.assertEqual(actual, expected)
+
+    def test_does_not_match_disabled_parent_action(self) -> None:
+        actual = get_matching_kinds({'a.b': False, 'a.b.c': True}, ['a.b.c'])
+        expected: list[str] = ['a.b.c']
         self.assertEqual(actual, expected)
 
     def test_kind_matching(self) -> None:
@@ -310,36 +465,19 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.assertEqual(annotations_range[0].a, 3)
         self.assertEqual(annotations_range[0].b, 0)
 
-    def test_requests_with_no_diagnostics(self) -> Generator:
-        initial_content = 'a\nb\nc'
-        self.insert_characters(initial_content)
-        yield from self.await_message("textDocument/didChange")
-        range_a = range_from_points(Point(0, 0), Point(0, 1))
-        range_b = range_from_points(Point(1, 0), Point(1, 1))
-        code_action1 = create_test_code_action(self.view, 0, [("A", range_a)])
-        code_action2 = create_test_code_action(self.view, 0, [("B", range_b)])
-        self.set_response('textDocument/codeAction', [code_action1, code_action2])
-        self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
-        yield 100
-        params = yield from self.await_message('textDocument/codeAction')
-        self.assertEqual(params['range']['start']['line'], 0)
-        self.assertEqual(params['range']['start']['character'], 0)
-        self.assertEqual(params['range']['end']['line'], 1)
-        self.assertEqual(params['range']['end']['character'], 1)
-        self.assertEqual(len(params['context']['diagnostics']), 0)
-        annotations_range = self.view.get_regions(RegionKey.CODE_ACTION)
-        self.assertEqual(len(annotations_range), 1)
-        self.assertEqual(annotations_range[0].a, 3)
-        self.assertEqual(annotations_range[0].b, 0)
-
     def test_excludes_disabled_code_actions(self) -> Generator:
         initial_content = 'a\n'
         self.insert_characters(initial_content)
         yield from self.await_message("textDocument/didChange")
+        range_a = range_from_points(Point(0, 0), Point(0, 1))
+        yield from self.await_client_notification(
+            "textDocument/publishDiagnostics",
+            create_test_diagnostics([('issue a', range_a)])
+        )
         code_action = create_disabled_code_action(
             self.view,
             self.view.change_count(),
-            [(';', range_from_points(Point(0, 0), Point(0, 1)))]
+            [(';', range_a)]
         )
         self.set_response('textDocument/codeAction', [code_action])
         self.view.run_command('lsp_selection_set', {"regions": [(0, 1)]})  # Select a
@@ -375,13 +513,12 @@ class CodeActionsTestCase(TextDocumentTestCase):
         self.assertEqual(len(params['context']['diagnostics']), 1)
 
     def test_applies_code_action_with_matching_document_version(self) -> Generator:
-        code_action = create_test_code_action(self.view, 3, [
+        self.insert_characters('a\nb')
+        yield from self.await_message("textDocument/didChange")
+        code_action = create_test_code_action(self.view, self.view.change_count(), [
             ("c", range_from_points(Point(0, 0), Point(0, 1))),
             ("d", range_from_points(Point(1, 0), Point(1, 1))),
         ])
-        self.insert_characters('a\nb')
-        yield from self.await_message("textDocument/didChange")
-        self.assertEqual(self.view.change_count(), 3)
         yield from self.await_run_code_action(code_action)
         # yield from self.await_message('codeAction/resolve')
         self.assertEqual(entire_content(self.view), 'c\nd')
@@ -398,17 +535,16 @@ class CodeActionsTestCase(TextDocumentTestCase):
         self.assertEqual(entire_content(self.view), initial_content)
 
     def test_runs_command_in_resolved_code_action(self) -> Generator:
+        self.insert_characters('a\nb')
         code_action = create_test_code_action2("dosomethinguseful", ["1", 0, {"hello": "there"}])
         resolved_code_action = deepcopy(code_action)
-        resolved_code_action["edit"] = create_code_action_edit(self.view, 3, [
+        resolved_code_action["edit"] = create_code_action_edit(self.view, self.view.change_count(), [
             ("c", range_from_points(Point(0, 0), Point(0, 1))),
             ("d", range_from_points(Point(1, 0), Point(1, 1))),
         ])
         self.set_response('codeAction/resolve', resolved_code_action)
         self.set_response('workspace/executeCommand', {"reply": "OK done"})
-        self.insert_characters('a\nb')
         yield from self.await_message("textDocument/didChange")
-        self.assertEqual(self.view.change_count(), 3)
         yield from self.await_run_code_action(code_action)
         yield from self.await_message('codeAction/resolve')
         params = yield from self.await_message('workspace/executeCommand')

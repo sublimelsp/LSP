@@ -1,21 +1,15 @@
-# Welcome to MkDocs
+# Welcome to Zensical
 
 Install:
- - MkDocs - https://www.mkdocs.org/#installing-mkdocs
- - Material Theme - https://squidfunk.github.io/mkdocs-material/getting-started/#installation
- - mkdocs-redirects - https://github.com/mkdocs/mkdocs-redirects
+ - uv - https://docs.astral.sh/uv/getting-started/installation/
 
-```sh
-pip install mkdocs mkdocs-material mkdocs-redirects
-```
-
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+Zensical is installed automatically by uv, using the version pinned in `requirements.txt`.
 
 ## Commands
 
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+* `make serve` - Start the live-reloading docs server.
+* `make build` - Build the documentation site.
+* `make clean` - Remove the built site.
 
 ## Project layout
 
@@ -24,10 +18,3 @@ For full documentation visit [mkdocs.org](https://www.mkdocs.org).
         index.md  # The documentation homepage.
         ...       # Other markdown pages, images and other files.
 
-Useful links:
-
-- Material for MkDocs
-https://squidfunk.github.io/mkdocs-material/
-
-- Admonitions (tip, warning, info boxes)
-https://squidfunk.github.io/mkdocs-material/reference/admonitions/

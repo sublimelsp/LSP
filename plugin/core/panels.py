@@ -1,9 +1,13 @@
 from __future__ import annotations
+
 from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
 from typing import Iterable
+from typing import Literal
+from typing import Optional
+from typing import Tuple
+import html
 import sublime
-
 
 LOG_LINES_LIMIT_SETTING_NAME = 'lsp_limit_lines'
 MAX_LOG_LINES_LIMIT_ON = 500
@@ -28,18 +32,69 @@ OUTPUT_PANEL_SETTINGS = {
     "word_wrap": False
 }
 
+# The link target, the label and the optional style of a button.
+PanelButton = Tuple[str, str, Optional[Literal['primary', 'secondary']]]
+
+BUTTONS_TEMPLATE = """
+<style>
+    html {{
+        background-color: transparent;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }}
+    a {{
+        line-height: 1.6rem;
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+        border-width: 1px;
+        border-style: solid;
+        border-color: #fff4;
+        border-radius: 4px;
+        color: #cccccc;
+        background-color: #3f3f3f;
+        text-decoration: none;
+    }}
+    html.light a {{
+        border-color: #000a;
+        color: white;
+        background-color: #636363;
+    }}
+    a.primary, html.light a.primary {{
+        background-color: color(var(--accent) min-contrast(white 6.0));
+    }}
+    a.secondary, html.light a.secondary {{
+        color: color(var(--foreground) alpha(0.7));
+        background-color: transparent;
+    }}
+</style>
+<body id='lsp-buttons'>{buttons}</body>"""
+
+
+def buttons_html(buttons: Iterable[PanelButton]) -> str:
+    """
+    Render a row of buttons for a phantom in an output panel.
+
+    Each button is given as a tuple of the link target, the label and an optional style, which is either `primary` for
+    a highlighted button or `secondary` for a less prominent one.
+    """
+    return BUTTONS_TEMPLATE.format(buttons="&nbsp;".join(
+        "<a href='{}'{}>{}</a>".format(href, f" class='{style}'" if style else "", html.escape(label))
+        for href, label, style in buttons
+    ))
+
 
 class PanelName:
     Diagnostics = "diagnostics"
     References = "references"
-    Rename = "rename"
+    WorkspaceEdit = "Workspace Edit"
     Log = "LSP Log Panel"
+    Messages = "LSP Messages"
 
 
 class PanelManager:
     def __init__(self, window: sublime.Window) -> None:
         self._window = window
-        self._rename_panel_buttons: sublime.PhantomSet | None = None
+        self._workspace_edit_panel_buttons: sublime.PhantomSet | None = None
 
     def destroy_output_panels(self) -> None:
         for field in filter(lambda a: not a.startswith('__'), PanelName.__dict__.keys()):
@@ -48,7 +103,7 @@ class PanelManager:
             if panel and panel.is_valid():
                 panel.settings().set("syntax", "Packages/Text/Plain text.tmLanguage")
                 self._window.destroy_output_panel(panel_name)
-        self._rename_panel_buttons = None
+        self._workspace_edit_panel_buttons = None
 
     def toggle_output_panel(self, panel_type: str) -> None:
         panel_name = f"output.{panel_type}"
@@ -78,12 +133,16 @@ class PanelManager:
         return self.ensure_panel(PanelName.Log, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax",
                                  "Context LSP Log Panel.sublime-menu")
 
+    def ensure_messages_panel(self) -> sublime.View | None:
+        return self.ensure_panel(PanelName.Messages, "", "", "Packages/LSP/Syntaxes/Messages.sublime-syntax",
+                                 "Context LSP Messages Panel.sublime-menu")
+
     def ensure_references_panel(self) -> sublime.View | None:
         return self.ensure_panel("references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                                  "Packages/LSP/Syntaxes/References.sublime-syntax")
 
-    def ensure_rename_panel(self) -> sublime.View | None:
-        return self.ensure_panel(PanelName.Rename, PANEL_FILE_REGEX, PANEL_LINE_REGEX,
+    def ensure_workspace_edit_panel(self) -> sublime.View | None:
+        return self.ensure_panel(PanelName.WorkspaceEdit, PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                                  "Packages/LSP/Syntaxes/References.sublime-syntax")
 
     def get_panel(self, panel_name: str) -> sublime.View | None:
@@ -94,8 +153,8 @@ class PanelManager:
         panel = self.create_output_panel(name)
         if not panel:
             return None
-        if name == PanelName.Rename:
-            self._rename_panel_buttons = sublime.PhantomSet(panel, "lsp_rename_buttons")
+        if name == PanelName.WorkspaceEdit:
+            self._workspace_edit_panel_buttons = sublime.PhantomSet(panel, "lsp_rename_buttons")
         settings = panel.settings()
         if result_file_regex:
             settings.set("result_file_regex", result_file_regex)
@@ -127,6 +186,6 @@ class PanelManager:
         if self.is_panel_open(PanelName.Diagnostics):
             self.toggle_output_panel(PanelName.Diagnostics)
 
-    def update_rename_panel_buttons(self, phantoms: Iterable[sublime.Phantom]) -> None:
-        if self._rename_panel_buttons:
-            self._rename_panel_buttons.update(phantoms)
+    def update_workspace_edit_panel_buttons(self, phantoms: Iterable[sublime.Phantom]) -> None:
+        if self._workspace_edit_panel_buttons:
+            self._workspace_edit_panel_buttons.update(phantoms)

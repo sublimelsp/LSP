@@ -206,11 +206,6 @@
       },
       {
         "caption": "LSP: Goto Diagnostic…",
-        "command": "lsp_goto_diagnostic",
-        "args": {"uri": "$view_uri"}
-      },
-      {
-        "caption": "LSP: Goto Diagnostic in Project…",
         "command": "lsp_goto_diagnostic"
       },
       {
@@ -218,7 +213,7 @@
         "command": "lsp_symbol_references"
       },
       {
-        "caption": "LSP: Follow Link",
+        "caption": "LSP: Open Link",
         "command": "lsp_open_link"
       }
     ]
@@ -249,6 +244,10 @@
           {
             "caption": "Toggle Diagnostics Panel",
             "command": "lsp_show_diagnostics_panel"
+          },
+          {
+            "caption": "Toggle Messages Panel",
+            "command": "lsp_toggle_messages_panel"
           },
           {
             "id": "lsp-server-configurations",
@@ -296,6 +295,14 @@
                 "args": {
                   "base_file": "${packages}/LSP/LSP.sublime-settings",
                   "default": "// Settings in here override those in \"LSP/LSP.sublime-settings\"\n{\n\t$0\n}\n"
+                }
+              },
+              {
+                "caption": "Server Configurations",
+                "command": "edit_settings",
+                "args": {
+                  "base_file": "${packages}/LSP/LanguageServers.sublime-settings",
+                  "default": "{\n\t$0\n}\n"
                 }
               },
               {

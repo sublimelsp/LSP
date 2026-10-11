@@ -66,6 +66,7 @@ from weakref import ref
 from weakref import WeakSet
 import functools
 import json
+import os
 import sublime
 import threading
 
@@ -255,7 +256,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         return None
 
     def _can_start_config(self, config_name: str, file_path: str) -> bool:
-        return not bool(self._find_session(config_name, file_path))
+        return os.path.exists(file_path) and not bool(self._find_session(config_name, file_path))
 
     def _find_session(self, config_name: str, file_path: str) -> Session | None:
         inside = self._workspace.contains(file_path)

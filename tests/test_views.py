@@ -7,6 +7,7 @@ from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.type_converters import point_to_offset
 from LSP.plugin.core.type_converters import range_to_region
 from LSP.plugin.core.url import filename_to_uri
+from LSP.plugin.core.views import clear_line_cache
 from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_open
 from LSP.plugin.core.views import did_save
@@ -15,6 +16,7 @@ from LSP.plugin.core.views import format_diagnostic_for_html
 from LSP.plugin.core.views import FORMAT_MARKED_STRING
 from LSP.plugin.core.views import FORMAT_MARKUP_CONTENT
 from LSP.plugin.core.views import FORMAT_STRING
+from LSP.plugin.core.views import get_line
 from LSP.plugin.core.views import lsp_color_to_html
 from LSP.plugin.core.views import lsp_color_to_phantom
 from LSP.plugin.core.views import minihtml
@@ -38,8 +40,10 @@ from LSP.protocol import MarkupKind
 from typing import Any
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase
+import pathlib
 import re
 import sublime
+import tempfile
 
 
 class ViewsTest(DeferrableTestCase):
@@ -55,6 +59,21 @@ class ViewsTest(DeferrableTestCase):
     def tearDown(self) -> None:
         self.view.close()
         return super().tearDown()
+
+    def test_get_line_from_non_utf8_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = pathlib.Path(temp_dir) / 'latin1.txt'
+            file_path.write_bytes('first\ncaf\u00e9 = 1\nlast'.encode('latin-1'))
+            try:
+                window = sublime.active_window()
+                file_name = str(file_path)
+                self.assertEqual(get_line(window, file_name, 0), 'first')
+                self.assertEqual(get_line(window, file_name, 1), 'caf\ufffd = 1')
+                self.assertEqual(get_line(window, file_name, 1, strip=False), 'caf\ufffd = 1\n')
+                self.assertEqual(get_line(window, file_name, 2), 'last')
+                self.assertEqual(get_line(window, file_name, 3), '')
+            finally:
+                clear_line_cache()
 
     def test_missing_uri(self) -> None:
         self.view.settings().erase("lsp_uri")

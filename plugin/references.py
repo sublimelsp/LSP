@@ -8,6 +8,7 @@ from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import userprefs
 from .core.type_converters import position_to_offset
+from .core.views import clear_line_cache
 from .core.views import get_line
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
@@ -16,7 +17,6 @@ from .locationpicker import LocationPicker
 from typing import Literal
 from typing import TYPE_CHECKING
 import functools
-import linecache
 import os
 import sublime
 
@@ -257,5 +257,5 @@ def _group_locations_by_uri(
             grouped_locations[file_path] = []
         grouped_locations[file_path].append((point, reference_line))
     # we don't want to cache the line, we always want to get fresh data
-    linecache.clearcache()
+    clear_line_cache()
     return grouped_locations

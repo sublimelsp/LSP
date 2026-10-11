@@ -74,8 +74,8 @@ from typing import TYPE_CHECKING
 from typing_extensions import deprecated
 import html
 import itertools
-import linecache
 import mdpopups
+import pathlib
 import re
 import sublime
 import sublime_plugin
@@ -161,9 +161,35 @@ def mutable(view: sublime.View) -> Generator:
         view.set_read_only(True)
 
 
+_file_lines_cache: dict[str, list[str]] = {}
+
+
+def _get_file_lines(file_name: str) -> list[str]:
+    """
+    Return the lines of a file on disk, keeping line endings. Lines are cached until `clear_line_cache` is called.
+
+    Bytes that are not valid UTF-8 are replaced instead of failing, so that files in other encodings still produce a
+    usable preview.
+    """
+    if (lines := _file_lines_cache.get(file_name)) is not None:
+        return lines
+    try:
+        with pathlib.Path(file_name).open(encoding='utf-8-sig', errors='replace') as f:
+            lines = f.readlines()
+    except OSError:
+        return []
+    _file_lines_cache[file_name] = lines
+    return lines
+
+
+def clear_line_cache() -> None:
+    """Clear the cache of file lines used by `get_line`."""
+    _file_lines_cache.clear()
+
+
 def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
     """
-    Get the line from the buffer if the view is open, else get line from linecache.
+    Get the line from the buffer if the view is open, else read it from the file on disk.
     row - is 0 based. If you want to get the first line, you should pass 0.
     """
     if view := window.find_open_file(file_name):
@@ -171,9 +197,8 @@ def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = Tru
         point = view.text_point(row, 0)
         line = view.substr(view.line(point))
     else:
-        # get from linecache
-        # linecache row is not 0 based, so we increment it by 1 to get the correct line.
-        line = linecache.getline(file_name, row + 1)
+        lines = _get_file_lines(file_name)
+        line = lines[row] if 0 <= row < len(lines) else ''
     return line.strip() if strip else line
 
 

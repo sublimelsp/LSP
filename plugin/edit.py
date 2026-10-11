@@ -12,6 +12,7 @@ from .core.promise import Promise
 from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.url import parse_uri
+from .core.views import clear_line_cache
 from .core.views import get_line
 from contextlib import contextmanager
 from typing import Any
@@ -322,6 +323,8 @@ def _render_workspace_edit_panel(
                     ROWCOL_PREFIX.format(start_row + 1, start_col + 1, new_line_content.strip() + "\n"))
             else:
                 to_render.append(original_line)
+    # we don't want to cache the lines, we always want to get fresh data
+    clear_line_cache()
     first_uri = next(iter(changes_per_uri))
     base_dir = wm.get_project_path(parse_uri(first_uri)[1]) if first_uri else None
     if base_dir:

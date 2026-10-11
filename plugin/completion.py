@@ -128,11 +128,11 @@ def format_completion(
     return completion
 
 
-def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit) -> Range:
+def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit, *, reverse_insert_mode: bool) -> Range:
     if 'insert' in text_edit and 'replace' in text_edit:
         text_edit = cast('InsertReplaceEdit', text_edit)
         insert_mode = userprefs().completion_insert_mode
-        if LspCommitCompletionWithOppositeInsertMode.active:
+        if reverse_insert_mode:
             insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
         return text_edit.get(insert_mode)  # type: ignore
     text_edit = cast('TextEdit', text_edit)
@@ -371,11 +371,15 @@ class LspSelectCompletionCommand(LspTextCommand):
     completions: dict[SessionName, CompletionsStore] = {}
 
     def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
+        # This command runs synchronously from within "commit_completion", so this is where the flag can be read
+        # reliably. Pass it on explicitly rather than reading it later, for example after the item was resolved.
+        reverse_insert_mode = LspCommitCompletionWithOppositeInsertMode.active
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
         if text_edit := item.get("textEdit"):
             new_text = text_edit["newText"].replace("\r", "")
-            edit_region = range_to_region(self.view, get_text_edit_range(text_edit))
+            edit_region = range_to_region(
+                self.view, get_text_edit_range(text_edit, reverse_insert_mode=reverse_insert_mode))
             for region in self._translated_regions(edit_region):
                 self.view.erase(edit, region)
         else:

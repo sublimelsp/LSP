@@ -1,6 +1,6 @@
 # Migrating from non-async LspPlugin to async LspPlugin
 
-The LSP package now uses `asyncio`. Many methods have been refactored to use `async` constructs, and your `LspPlugin` gains asynchronous capabilities too.
+The LSP package now uses [`asyncio`](https://docs.python.org/3/library/asyncio.html). Many methods have been refactored to use `async` constructs, and your `LspPlugin` gains asynchronous capabilities too.
 
 !!! note
     This is a migration guide for packages that are using the `LspPlugin` class instead of the `AbstractPlugin` class. For migrating from `AbstractPlugin` to `LspPlugin`, please follow [this guide first](migrating_to_lsp_plugin.md).
@@ -43,7 +43,7 @@ Use `Session.request` instead; see its docstring for details. Because it is an a
 
 ### Replace `sublime.set_timeout_async` with `run_coroutine` or `run_on_asyncio_thread`
 
-Before the LSP package used `asyncio` and `async` functions, the common pattern to use a `Session` object and its methods was to run code on Sublime's worker thread (the thread that `sublime.set_timeout_async` targets).
+Before the LSP package used `asyncio` and `async` functions, the common pattern to use a `Session` object and its methods was to run code on Sublime's worker thread (the thread that [`sublime.set_timeout_async`](https://www.sublimetext.com/docs/api_reference.html#sublime.set_timeout_async) targets).
 
 The pattern used to be:
 
@@ -237,7 +237,7 @@ The `on_pre_start_async` method of `LspPlugin` is supposed to download and unzip
 
 There exist asynchronous counterparts to these functions, but they're not trivial to replace. Here is a non-exhaustive replacement list:
 
-- Downloading a file asynchronously can be done with the [`aiosonic`](https://aiosonic.readthedocs.io/en/latest/examples.html#download-file) library. To use aiosonic in ST, follow the instructions [in this git commit of packagecontrol/channel](https://github.com/packagecontrol/channel/commit/e433f8bbc42d2a318f1e2073c2e0f8473d6680ec). Alternatively, [Package Control may soon vendor the `httpx2` library](https://github.com/sublimehq/package_control/tree/five-point-oh/httpx2-py314/package_control/vendor/httpx2), in which case [`httpx2`](https://pydantic.dev/docs/httpx2/get-started/) may be used.
+- Downloading a file asynchronously can be done with the [`aiosonic`](https://aiosonic.readthedocs.io/en/latest/examples.html#download-file) library. To use aiosonic in ST, follow the instructions [in this git commit of packagecontrol/channel](https://github.com/packagecontrol/channel/commit/e433f8bbc42d2a318f1e2073c2e0f8473d6680ec). Alternatively, [Package Control may soon vendor the `httpx2` library](https://github.com/sublimehq/package_control/tree/five-point-oh/httpx2-py314/package_control/vendor/httpx2), in which case [`httpx2`](https://pydantic.dev/docs/httpx2/guides/async/) may be used.
 - Unzipping/untarring: use the `tarfile` or `zipfile` module like you normally would, but invoke them via `LSP.plugin.run_on_threadpool`.
 - Running a tool: use [`asyncio.subprocess`](https://docs.python.org/3/library/asyncio-subprocess.html).
 

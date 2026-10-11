@@ -372,14 +372,15 @@ class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
     active = False
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
-        LspSelectCompletionCommand.reverse_insert_mode = True
+        LspCommitCompletionWithOppositeInsertMode.active = True
         self.view.run_command("commit_completion")
+        LspCommitCompletionWithOppositeInsertMode.active = False
 
 
 class LspSelectCompletionCommand(LspTextCommand):
 
     completions: ClassVar[dict[SessionName, CompletionsStore]] = {}
-    reverse_insert_mode = False
+    reverse_insert_mode: ClassVar[bool] = False
 
     def want_event(self) -> bool:
         return False

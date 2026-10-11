@@ -27,6 +27,12 @@ If you want to create a new key binding that is different from the ones that are
 
 Generally, you should not need to restrict your key bindings to specific scopes and just rely on checking the capability context.
 
+### Save key binding
+
+LSP overrides the <kbd>Ctrl</kbd> <kbd>S</kbd> key binding (<kbd>Command</kbd> <kbd>S</kbd> on macOS) with the `lsp_save` command in views that have a language server attached. This is required for the `"lsp_format_on_save"` and `"lsp_code_actions_on_save"` features, which need to wait for responses from the language server before the file is saved. These features don't run when the file is saved in a different way, for example from the main menu.
+
+If this key binding conflicts with a key binding from another package, it can be disabled by setting `"disable_lsp_save"` to `true` in `Preferences.sublime-settings`. Since this is a regular view setting, it can also be set in syntax-specific settings, or by another package on specific views only.
+
 
 ## Mouse map configuration
 

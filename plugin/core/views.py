@@ -74,8 +74,8 @@ from typing import TYPE_CHECKING
 from typing_extensions import deprecated
 import html
 import itertools
-import linecache
 import mdpopups
+import pathlib
 import re
 import sublime
 import sublime_plugin
@@ -161,20 +161,33 @@ def mutable(view: sublime.View) -> Generator:
         view.set_read_only(True)
 
 
-def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
+def _read_file_lines(file_name: str) -> list[str]:
     """
-    Get the line from the buffer if the view is open, else get line from linecache.
-    row - is 0 based. If you want to get the first line, you should pass 0.
+    Return the lines of a file on disk, keeping line endings, or an empty list if it can't be read.
+
+    Bytes that are not valid UTF-8 are replaced instead of failing, so that files in other encodings still produce a
+    usable preview.
+    """
+    try:
+        with pathlib.Path(file_name).open(encoding='utf-8-sig', errors='replace') as f:
+            return f.readlines()
+    except OSError:
+        return []
+
+
+def get_file_lines(window: sublime.Window, file_name: str, rows: Iterable[int], strip: bool = True) -> list[str]:
+    """
+    Get the lines of a file at the given rows, in the same order. Rows are 0 based.
+
+    The lines are taken from the buffer if the file is open in the window, else from the file on disk, which is read
+    once. An empty string is returned for a line that can't be read.
     """
     if view := window.find_open_file(file_name):
-        # get from buffer
-        point = view.text_point(row, 0)
-        line = view.substr(view.line(point))
+        lines = [view.substr(view.line(view.text_point(row, 0))) for row in rows]
     else:
-        # get from linecache
-        # linecache row is not 0 based, so we increment it by 1 to get the correct line.
-        line = linecache.getline(file_name, row + 1)
-    return line.strip() if strip else line
+        file_lines = _read_file_lines(file_name)
+        lines = [file_lines[row] if 0 <= row < len(file_lines) else '' for row in rows]
+    return [line.strip() for line in lines] if strip else lines
 
 
 def extract_variables(window: sublime.Window) -> dict[str, str]:

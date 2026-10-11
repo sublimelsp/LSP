@@ -8,7 +8,7 @@ from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import userprefs
 from .core.type_converters import position_to_offset
-from .core.views import get_line
+from .core.views import get_file_lines
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
 from .core.views import text_document_position_params
@@ -16,7 +16,6 @@ from .locationpicker import LocationPicker
 from typing import Literal
 from typing import TYPE_CHECKING
 import functools
-import linecache
 import os
 import sublime
 
@@ -246,16 +245,14 @@ def _group_locations_by_uri(
     locations: list[Location]
 ) -> dict[str, list[tuple[TextPosition, str]]]:
     """Return a dictionary that groups locations by the URI it belongs."""
-    grouped_locations: dict[str, list[tuple[TextPosition, str]]] = {}
+    points_by_file: dict[str, list[TextPosition]] = {}
     for location in locations:
         uri, position = get_uri_and_position_from_location(location)
         file_path = config.map_server_uri_to_client_path(uri)
-        point = TextPosition.from_lsp(position)
-        # get line of the reference, to showcase its use
-        reference_line = get_line(window, file_path, point.row)
-        if grouped_locations.get(file_path) is None:
-            grouped_locations[file_path] = []
-        grouped_locations[file_path].append((point, reference_line))
-    # we don't want to cache the line, we always want to get fresh data
-    linecache.clearcache()
+        points_by_file.setdefault(file_path, []).append(TextPosition.from_lsp(position))
+    grouped_locations: dict[str, list[tuple[TextPosition, str]]] = {}
+    for file_path, points in points_by_file.items():
+        # get line of each reference, to showcase its use
+        reference_lines = get_file_lines(window, file_path, [point.row for point in points])
+        grouped_locations[file_path] = list(zip(points, reference_lines))
     return grouped_locations

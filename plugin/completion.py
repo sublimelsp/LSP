@@ -93,8 +93,7 @@ def format_completion(
     can_resolve_completion_items: bool,
     session_name: str,
     item_defaults: CompletionItemDefaults,
-    view_id: int,
-    query_change_count: int
+    view_id: int
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     lsp_label_description = (item.get('labelDetails') or {}).get('description') or ""
@@ -128,7 +127,7 @@ def format_completion(
         trigger,
         annotation,
         # Not using "sublime.format_command" in a hot path to avoid slow json.dumps.
-        f'lsp_select_completion {{"index":{index},"session_name":"{session_name}","query_change_count":{query_change_count}}}',  # ruff: ignore[line-too-long]
+        f'lsp_select_completion {{"index":{index},"session_name":"{session_name}"}}',
         sublime.CompletionFormat.COMMAND,
         kind,
         flags=sublime.CompletionItemFlags.KEEP_PREFIX,
@@ -203,14 +202,12 @@ class QueryCompletionsTask:
         view: sublime.View,
         location: int,
         triggered_manually: bool,
-        on_done_async: Callable[[list[sublime.CompletionItem], sublime.AutoCompleteFlags], None],
-        query_change_count: int
+        on_done_async: Callable[[list[sublime.CompletionItem], sublime.AutoCompleteFlags], None]
     ) -> None:
         self._view = view
         self._location = location
         self._triggered_manually = triggered_manually
         self._on_done_async = on_done_async
-        self._query_change_count = query_change_count
         self._resolved = False
         self._pending_completion_requests: dict[int, weakref.ref[Session]] = {}
 
@@ -264,8 +261,7 @@ class QueryCompletionsTask:
             config_name = session.config.name
             items.extend(
                 format_completion(
-                    response_item, index, can_resolve_completion_items, config_name, item_defaults, self._view.id(),
-                    self._query_change_count)
+                    response_item, index, can_resolve_completion_items, config_name, item_defaults, self._view.id())
                 for index, response_item in enumerate(response_items)
                 if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:
@@ -385,7 +381,7 @@ class LspSelectCompletionCommand(LspTextCommand):
     def want_event(self) -> bool:
         return False
 
-    def run(self, edit: sublime.Edit, index: int, session_name: str, query_change_count: int) -> None:
+    def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
         # This command runs synchronously from within "commit_completion", so this is where the flag can be read
         # reliably. Pass it on explicitly rather than reading it later, for example after the item was resolved.
         reverse_insert_mode = LspCommitCompletionWithOppositeInsertMode.active
@@ -395,12 +391,9 @@ class LspSelectCompletionCommand(LspTextCommand):
         trigger = completion_trigger(item).trigger
         # The completion items are committed with the KEEP_PREFIX flag, so before running this command ST rolls the
         # buffer back to its state at the time completions were queried (dropping characters typed while the popup was
-        # open). That restores the document the server computed the completions for, but not the change count, so an
-        # unchanged count means that nothing was typed. This mirrors the "must_insert" value that ST passes to
-        # "insert_completion" itself.
-        must_insert = self.view.change_count() == query_change_count
-        # Resolve the text edit range now, while the buffer matches the server's document. The "textEdit" property is
-        # not resolved lazily, so it doesn't change after "completionItem/resolve".
+        # open). Resolve the text edit range now, while the buffer matches the document the server computed the
+        # completions for. The "textEdit" property is not resolved lazily, so it doesn't change after
+        # "completionItem/resolve".
         edit_region: list[int] | None = None
         if text_edit := item.get('textEdit'):
             region = range_to_region(self.view, get_text_edit_range(text_edit, reverse_insert_mode=reverse_insert_mode))
@@ -413,11 +406,10 @@ class LspSelectCompletionCommand(LspTextCommand):
             sublime.set_timeout_async(
                 lambda: self._resolve_async(session_name, item)
                 .then(lambda item: self._apply_completion(
-                    session_name, item, trigger, reverse_insert_mode, must_insert, edit_region, change_count,
-                    change_id)))
+                    session_name, item, trigger, reverse_insert_mode, edit_region, change_count, change_id)))
         else:
             self._apply_completion(
-                session_name, item, trigger, reverse_insert_mode, must_insert, edit_region, change_count, change_id)
+                session_name, item, trigger, reverse_insert_mode, edit_region, change_count, change_id)
 
     def _resolve_async(self, session_name: str, item: CompletionItem) -> Promise[CompletionItem]:
         if session := self.session_by_name(session_name):
@@ -437,7 +429,6 @@ class LspSelectCompletionCommand(LspTextCommand):
         item: CompletionItem,
         trigger: str,
         reverse_insert_mode: bool,
-        must_insert: bool,
         edit_region: list[int] | None,
         change_count: int,
         change_id: list[int]
@@ -447,7 +438,6 @@ class LspSelectCompletionCommand(LspTextCommand):
             'item': item,
             'trigger': trigger,
             'reverse_insert_mode': reverse_insert_mode,
-            'must_insert': must_insert,
             'edit_region': edit_region,
             'change_count': change_count,
             'change_id': change_id,
@@ -468,7 +458,6 @@ class LspApplyCompletionCommand(LspTextCommand):
         item: CompletionItem,
         trigger: str,
         reverse_insert_mode: bool,
-        must_insert: bool = False,
         edit_region: list[int] | None = None,
         change_count: int | None = None,
         change_id: list[int] | None = None
@@ -487,12 +476,11 @@ class LspApplyCompletionCommand(LspTextCommand):
                 self.view.run_command("insert", {"characters": new_text})
         else:
             new_text = (item.get("insertText") or item["label"]).replace("\r", "")
-            # Without a text edit, remove the prefix exactly like ST would for a non-KEEP_PREFIX completion item.
+            # Without a text edit, let ST remove the prefix the same way it does for a non-KEEP_PREFIX completion item.
             self.view.run_command('insert_completion', {
                 'trigger': trigger,
                 'completion': new_text,
                 'format': 'snippet' if is_snippet else 'text',
-                'must_insert': must_insert,
                 'keep_prefix': False,
             })
         self.apply_additional_text_edits(self.view, item)

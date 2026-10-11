@@ -112,6 +112,14 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text='',
             expected_text='asdf')
 
+    def test_replaces_typed_prefix_as_long_as_the_trigger(self) -> Generator:
+        # Completions are queried after the last keystroke, as happens after a re-query when typing while a slow
+        # completion request is pending. The typed "edit" must be replaced even though it's as long as the trigger.
+        yield from self.verify(
+            completion_items=[{'label': 'Edit'}],
+            insert_text='sublime.edit',
+            expected_text='sublime.Edit')
+
     def test_prefer_insert_text_over_label(self) -> Generator:
         yield from self.verify(
             completion_items=[{"label": "Label text", "insertText": "Insert text"}],
@@ -653,7 +661,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "deprecated": True
         }
-        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", {}, self.view.id(), 0)
+        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", {}, self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_show_deprecated_tag(self) -> None:
@@ -662,7 +670,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "tags": [CompletionItemTag.Deprecated]
         }
-        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id(), 0)
+        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_strips_carriage_return_in_insert_text(self) -> Generator:
@@ -697,7 +705,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp: CompletionItem = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id(), 0)
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
             self.assertRegex(native.details, expected_regex)
 
         check(
@@ -748,7 +756,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp: CompletionItem = {"label": label}
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id(), 0)
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
             self.assertRegex(native.trigger, expected_regex)
 
         check(
@@ -918,8 +926,7 @@ class FormatCompletionsUnitTests(TestCase):
         self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = ''
     ) -> None:
         item = format_completion(
-            payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0,
-            query_change_count=0)
+            payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0)
         self.assertEqual(item.trigger, trigger)
         # "lsp_select_completion" recomputes the trigger with this function, so it must match.
         self.assertEqual(completion_trigger(payload).trigger, trigger)
@@ -931,10 +938,10 @@ class FormatCompletionsUnitTests(TestCase):
     def test_command_arguments(self) -> None:
         item = format_completion(
             {"label": '"key"'}, index=3, can_resolve_completion_items=False, session_name='abc', item_defaults={},
-            view_id=0, query_change_count=42)
+            view_id=0)
         command, args = item.completion.split(' ', 1)
         self.assertEqual(command, 'lsp_select_completion')
-        self.assertEqual(json.loads(args), {"index": 3, "session_name": "abc", "query_change_count": 42})
+        self.assertEqual(json.loads(args), {"index": 3, "session_name": "abc"})
 
     def test_label(self) -> None:
         self._verify_completion(

@@ -175,24 +175,19 @@ def _read_file_lines(file_name: str) -> list[str]:
         return []
 
 
-def get_lines(window: sublime.Window, positions: Iterable[tuple[str, int]], strip: bool = True) -> list[str]:
+def get_file_lines(window: sublime.Window, file_name: str, rows: Iterable[int], strip: bool = True) -> list[str]:
     """
-    Get the lines at the given `(file_name, row)` positions, in the same order. Rows are 0 based.
+    Get the lines of a file at the given rows, in the same order. Rows are 0 based.
 
-    A line is taken from the buffer if the file is open in the window, else from the file on disk. Each file on disk is
-    read at most once per call. An empty string is returned for a line that can't be read.
+    The lines are taken from the buffer if the file is open in the window, else from the file on disk, which is read
+    once. An empty string is returned for a line that can't be read.
     """
-    file_lines: dict[str, list[str]] = {}
-    lines: list[str] = []
-    for file_name, row in positions:
-        if view := window.find_open_file(file_name):
-            line = view.substr(view.line(view.text_point(row, 0)))
-        else:
-            if (rows := file_lines.get(file_name)) is None:
-                rows = file_lines[file_name] = _read_file_lines(file_name)
-            line = rows[row] if 0 <= row < len(rows) else ''
-        lines.append(line.strip() if strip else line)
-    return lines
+    if view := window.find_open_file(file_name):
+        lines = [view.substr(view.line(view.text_point(row, 0))) for row in rows]
+    else:
+        file_lines = _read_file_lines(file_name)
+        lines = [file_lines[row] if 0 <= row < len(file_lines) else '' for row in rows]
+    return [line.strip() for line in lines] if strip else lines
 
 
 def extract_variables(window: sublime.Window) -> dict[str, str]:

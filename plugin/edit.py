@@ -12,7 +12,7 @@ from .core.promise import Promise
 from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.url import parse_uri
-from .core.views import get_lines
+from .core.views import get_file_lines
 from contextlib import contextmanager
 from typing import Any
 from typing import Callable
@@ -301,8 +301,8 @@ def _render_workspace_edit_panel(
         to_render.append(filename_line)
         reference_document.append(filename_line)
         if scheme == 'file':
-            positions = [(file, parse_lsp_position(edit['range']['start'])[0]) for edit in changes]
-            line_contents = get_lines(wm.window, positions, strip=False)
+            rows = [parse_lsp_position(edit['range']['start'])[0] for edit in changes]
+            line_contents = get_file_lines(wm.window, file, rows, strip=False)
         else:
             line_contents = ['<no preview available>'] * len(changes)
         for edit, line_content in zip(changes, line_contents):
@@ -377,7 +377,7 @@ def utf16_to_code_points(s: str, col: int) -> int:
             break
         utf16_len += 1 if ord(c) < 65536 else 2
     else:
-        idx += 1  # get_lines function trims the trailing '\n'
+        idx += 1  # get_file_lines function trims the trailing '\n'
     return idx
 
 

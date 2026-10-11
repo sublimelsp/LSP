@@ -385,8 +385,9 @@ class LspSelectCompletionCommand(LspTextCommand):
         return False
 
     def run(self, edit: sublime.Edit, index: int, session_name: str, query_change_count: int) -> None:
-        reverse_insert_mode = LspSelectCompletionCommand.reverse_insert_mode
-        LspSelectCompletionCommand.reverse_insert_mode = False
+        # This command runs synchronously from within "commit_completion", so this is where the flag can be read
+        # reliably. Pass it on explicitly rather than reading it later, for example after the item was resolved.
+        reverse_insert_mode = LspCommitCompletionWithOppositeInsertMode.active
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
         # The same trigger that the committed ST completion item was created with.

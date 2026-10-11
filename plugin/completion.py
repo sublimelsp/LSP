@@ -70,8 +70,8 @@ class CompletionTriggerInfo(NamedTuple):
     """Whether the trigger was chosen because the label combined with `labelDetails.detail` matches `filterText`."""
 
 
-def completion_trigger(item: CompletionItem) -> CompletionTriggerInfo:
-    """Return the trigger of the ST completion item that is created for the given LSP completion item."""
+def completion_trigger_info(item: CompletionItem) -> CompletionTriggerInfo:
+    """Decide how the label, `labelDetails.detail` and `filterText` of an LSP completion item are presented in ST."""
     label = item['label']
     label_detail = (item.get('labelDetails') or {}).get('detail') or ""
     filter_text = item.get('filterText') or ""
@@ -106,7 +106,7 @@ def format_completion(
         args = f'{{"view_id":{view_id},"command":"lsp_resolve_docs","args":{{"index":{index},"session_name":"{session_name}"}}}}'  # ruff: ignore[line-too-long]
         href = f'subl:lsp_run_text_command_helper {args}'
         details.append(f"<a href='{href}'>More</a>")
-    trigger, details_label, label_detail_matched = completion_trigger(item)
+    trigger, details_label, label_detail_matched = completion_trigger_info(item)
     if details_label:
         details.append(format_details(details_label))
     if label_detail_matched or not lsp_label_description:
@@ -388,7 +388,7 @@ class LspSelectCompletionCommand(LspTextCommand):
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
         # The same trigger that the committed ST completion item was created with.
-        trigger = completion_trigger(item).trigger
+        trigger = completion_trigger_info(item).trigger
         # The completion items are committed with the KEEP_PREFIX flag, so before running this command ST rolls the
         # buffer back to its state at the time completions were queried (dropping characters typed while the popup was
         # open). Resolve the text edit range now, while the buffer matches the document the server computed the

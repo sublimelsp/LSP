@@ -3,7 +3,7 @@ from __future__ import annotations
 from .setup import TextDocumentTestCase
 from .setup import TIMEOUT_TIME
 from copy import deepcopy
-from LSP.plugin.completion import completion_trigger
+from LSP.plugin.completion import completion_trigger_info
 from LSP.plugin.completion import completion_with_defaults
 from LSP.plugin.completion import format_completion
 from LSP.plugin.completion import LspApplyCompletionCommand
@@ -929,7 +929,7 @@ class FormatCompletionsUnitTests(TestCase):
             payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0)
         self.assertEqual(item.trigger, trigger)
         # "lsp_select_completion" recomputes the trigger with this function, so it must match.
-        self.assertEqual(completion_trigger(payload).trigger, trigger)
+        self.assertEqual(completion_trigger_info(payload).trigger, trigger)
         self.assertEqual(item.annotation, annotation)
         self.assertEqual(item.details, details)
         # All items are committed with KEEP_PREFIX, and the prefix is removed by "lsp_apply_completion".

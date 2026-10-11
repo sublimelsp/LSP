@@ -161,44 +161,38 @@ def mutable(view: sublime.View) -> Generator:
         view.set_read_only(True)
 
 
-_file_lines_cache: dict[str, list[str]] = {}
-
-
-def _get_file_line(file_name: str, row: int) -> str:
+def _read_file_lines(file_name: str) -> list[str]:
     """
-    Return a line of a file on disk, keeping the line ending, or an empty string if it can't be read.
+    Return the lines of a file on disk, keeping line endings, or an empty list if it can't be read.
 
-    The lines of the file are cached until `clear_line_cache` is called. Bytes that are not valid UTF-8 are replaced
-    instead of failing, so that files in other encodings still produce a usable preview.
+    Bytes that are not valid UTF-8 are replaced instead of failing, so that files in other encodings still produce a
+    usable preview.
     """
-    lines = _file_lines_cache.get(file_name)
-    if lines is None:
-        try:
-            with pathlib.Path(file_name).open(encoding='utf-8-sig', errors='replace') as f:
-                lines = f.readlines()
-        except OSError:
-            return ''
-        _file_lines_cache[file_name] = lines
-    return lines[row] if 0 <= row < len(lines) else ''
+    try:
+        with pathlib.Path(file_name).open(encoding='utf-8-sig', errors='replace') as f:
+            return f.readlines()
+    except OSError:
+        return []
 
 
-def clear_line_cache() -> None:
-    """Clear the cache of file lines used by `get_line`."""
-    _file_lines_cache.clear()
-
-
-def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
+def get_lines(window: sublime.Window, positions: Iterable[tuple[str, int]], strip: bool = True) -> list[str]:
     """
-    Get the line from the buffer if the view is open, else read it from the file on disk.
-    row - is 0 based. If you want to get the first line, you should pass 0.
+    Get the lines at the given `(file_name, row)` positions, in the same order. Rows are 0 based.
+
+    A line is taken from the buffer if the file is open in the window, else from the file on disk. Each file on disk is
+    read at most once per call. An empty string is returned for a line that can't be read.
     """
-    if view := window.find_open_file(file_name):
-        # get from buffer
-        point = view.text_point(row, 0)
-        line = view.substr(view.line(point))
-    else:
-        line = _get_file_line(file_name, row)
-    return line.strip() if strip else line
+    file_lines: dict[str, list[str]] = {}
+    lines: list[str] = []
+    for file_name, row in positions:
+        if view := window.find_open_file(file_name):
+            line = view.substr(view.line(view.text_point(row, 0)))
+        else:
+            if (rows := file_lines.get(file_name)) is None:
+                rows = file_lines[file_name] = _read_file_lines(file_name)
+            line = rows[row] if 0 <= row < len(rows) else ''
+        lines.append(line.strip() if strip else line)
+    return lines
 
 
 def extract_variables(window: sublime.Window) -> dict[str, str]:

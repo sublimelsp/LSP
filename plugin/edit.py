@@ -12,8 +12,7 @@ from .core.promise import Promise
 from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.url import parse_uri
-from .core.views import clear_line_cache
-from .core.views import get_line
+from .core.views import get_lines
 from contextlib import contextmanager
 from typing import Any
 from typing import Callable
@@ -301,10 +300,13 @@ def _render_workspace_edit_panel(
         filename_line = '{}:'.format(_get_relative_path(wm, file) if scheme == 'file' else uri)
         to_render.append(filename_line)
         reference_document.append(filename_line)
-        for edit in changes:
+        if scheme == 'file':
+            positions = [(file, parse_lsp_position(edit['range']['start'])[0]) for edit in changes]
+            line_contents = get_lines(wm.window, positions, strip=False)
+        else:
+            line_contents = ['<no preview available>'] * len(changes)
+        for edit, line_content in zip(changes, line_contents):
             start_row, start_col_utf16 = parse_lsp_position(edit['range']['start'])
-            line_content = get_line(wm.window, file, start_row, strip=False) if scheme == 'file' else \
-                '<no preview available>'
             start_col = utf16_to_code_points(line_content, start_col_utf16)
             original_line = ROWCOL_PREFIX.format(start_row + 1, start_col + 1, line_content.strip() + "\n")
             reference_document.append(original_line)
@@ -323,8 +325,6 @@ def _render_workspace_edit_panel(
                     ROWCOL_PREFIX.format(start_row + 1, start_col + 1, new_line_content.strip() + "\n"))
             else:
                 to_render.append(original_line)
-    # we don't want to cache the lines, we always want to get fresh data
-    clear_line_cache()
     first_uri = next(iter(changes_per_uri))
     base_dir = wm.get_project_path(parse_uri(first_uri)[1]) if first_uri else None
     if base_dir:
@@ -377,7 +377,7 @@ def utf16_to_code_points(s: str, col: int) -> int:
             break
         utf16_len += 1 if ord(c) < 65536 else 2
     else:
-        idx += 1  # get_line function trims the trailing '\n'
+        idx += 1  # get_lines function trims the trailing '\n'
     return idx
 
 

@@ -4,6 +4,7 @@ from .types import diff
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
+from pathlib import Path
 from typing import TYPE_CHECKING
 import os
 import sublime
@@ -132,6 +133,9 @@ def sorted_workspace_folders(folders: list[str], file_path: str) -> list[Workspa
     other_paths: list[str] = []
 
     for folder in folders:
+        # Sublime Text keeps folders in the window even after they were deleted from disk.
+        if not Path(folder).is_dir():
+            continue
         if is_subpath_of(file_path, folder):
             if matching_paths and len(folder) > len(matching_paths[0]):
                 matching_paths.insert(0, folder)

@@ -133,7 +133,9 @@ def sorted_workspace_folders(folders: list[str], file_path: str) -> list[Workspa
     other_paths: list[str] = []
 
     for folder in folders:
-        # Sublime Text keeps folders in the window even after they were deleted from disk.
+        # Sublime Text keeps folders in the window even after they were deleted from disk. Those are filtered out here
+        # rather than in ProjectFolders.folders because ProjectFolders matches its folders to the project's "folders"
+        # entries by index (for folder_exclude_patterns), which would break if some of them were removed.
         if not Path(folder).is_dir():
             continue
         if is_subpath_of(file_path, folder):

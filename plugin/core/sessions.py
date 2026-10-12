@@ -2432,6 +2432,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     def clear_diagnostics_for_uri(self, uri: DocumentUri) -> None:
         self.diagnostics.clear_diagnostics(uri)
+        # Forget the result IDs as well, otherwise the server could respond with an unchanged report to the next pull
+        # diagnostics request and the diagnostics which were cleared here wouldn't be restored.
+        for key in [key for key in self.diagnostics_result_ids if key[0] == uri]:
+            del self.diagnostics_result_ids[key]
         if mgr := self.manager():
             mgr.on_diagnostics_updated()
 

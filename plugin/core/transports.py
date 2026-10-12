@@ -579,8 +579,8 @@ def _start_subprocess(
     cwd: str | None,
 ) -> subprocess.Popen[bytes]:
     if cwd and not Path(cwd).is_dir():
-        debug(f"working directory {cwd} does not exist, using {os.getcwd()} instead")
-        cwd = None
+        debug(f"working directory {cwd} does not exist, using current working directory instead")
+        cwd = os.getcwd()
     debug(f"starting {args} in {cwd or os.getcwd()}")
     process = subprocess.Popen(
         args=args,

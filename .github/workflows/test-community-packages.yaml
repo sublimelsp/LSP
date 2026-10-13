@@ -3,6 +3,11 @@ name: Test Community Packages
 on:
   pull_request:
 
+concurrency:
+  # Cancel superseded runs of the same pull request.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   type-check:
     name: Type-check community packages

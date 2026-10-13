@@ -175,16 +175,17 @@ class WindowConfigManagerTests(ViewTestCase):
         change_listener = WindowConfigChangeTestListener()
         change_listener.on_configs_changed = MagicMock()
         change_listener.on_server_settings_changed = MagicMock()
+        other_config = ClientConfig(name="test-other", command=[], selector="text.plain", tcp_port=None)
         global_configs = {}
         manager = WindowConfigManager(self.window, global_configs)
         manager.add_change_listener(change_listener)
         global_configs[TEST_CONFIG.name] = TEST_CONFIG
-        global_configs[DISABLED_CONFIG.name] = DISABLED_CONFIG
-        manager.update({TEST_CONFIG.name, DISABLED_CONFIG.name})
-        change_listener.on_configs_changed.assert_called_once_with([TEST_CONFIG, DISABLED_CONFIG])
+        global_configs[other_config.name] = other_config
+        manager.update({TEST_CONFIG.name, other_config.name})
+        change_listener.on_configs_changed.assert_called_once_with([TEST_CONFIG, other_config])
         change_listener.on_server_settings_changed.assert_not_called()
         self.assertIn(TEST_CONFIG.name, manager.all)
-        self.assertIn(DISABLED_CONFIG.name, manager.all)
+        self.assertIn(other_config.name, manager.all)
 
     def test_global_config_removed(self) -> None:
         change_listener = WindowConfigChangeTestListener()

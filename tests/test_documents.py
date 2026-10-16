@@ -76,9 +76,14 @@ class WindowDocumentHandlerTests(SublimeAioTestCase):
         listener = self.ensure_document_listener_created()
         self.assertIsNotNone(listener)
         assert listener
-        self.session1 = await self.wm.start(self.config1, listener)
+        self.assertFalse(self.wm.is_session_starting())
+        start = asyncio.ensure_future(self.wm.start(self.config1, listener))
+        await asyncio.sleep(0)
+        self.assertTrue(self.wm.is_session_starting())
+        self.session1 = await start
         self.session2 = await self.wm.start(self.config2, listener)
         self.session3 = await self.wm.start(self.config3, listener)
+        self.assertFalse(self.wm.is_session_starting())
         self.assertIsNotNone(self.session1)
         self.assertIsNotNone(self.session2)
         self.assertIsNotNone(self.session3)

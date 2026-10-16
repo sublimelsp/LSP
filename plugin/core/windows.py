@@ -96,6 +96,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         self._window = window
         self._config_manager = config_manager
         self._start_lock: asyncio.Lock | None = None
+        self._starting_count = 0
         self._sessions: set[Session] = set()
         self._workspace = workspace
         self._listeners: WeakSet[AbstractViewListener] = WeakSet()
@@ -132,6 +133,13 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
     def get_sessions(self) -> Generator[Session, None, None]:
         yield from self._sessions
+
+    def is_session_starting(self) -> bool:
+        """
+        Whether a session is being started in this window, which includes installing the server and waiting for the
+        response to the initialize request. Such a session is not returned by `get_sessions` yet.
+        """
+        return self._starting_count > 0
 
     def on_load_project_async(self) -> None:
         self.update_workspace_folders_async()
@@ -230,6 +238,14 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
     @override
     async def start(self, config: ClientConfig, listener: AbstractViewListener) -> Session | None:
+        # Counted from the call on, since a start can wait for the lock while another session is started.
+        self._starting_count += 1
+        try:
+            return await self._start(config, listener)
+        finally:
+            self._starting_count -= 1
+
+    async def _start(self, config: ClientConfig, listener: AbstractViewListener) -> Session | None:
         if not self._start_lock:
             self._start_lock = asyncio.Lock()
         async with self._start_lock:

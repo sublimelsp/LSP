@@ -94,6 +94,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         yield {"condition": lambda: self.session1.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield {"condition": lambda: self.session2.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield {"condition": lambda: self.session3.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
+        yield {"condition": lambda: not self.wm.is_session_starting(), "timeout": TIMEOUT_TIME}
         yield from self.await_message("initialize")
         yield from self.await_message("initialized")
         yield from self.await_message("textDocument/didOpen")

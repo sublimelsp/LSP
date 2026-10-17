@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from .core.aio import run_coroutine
+from .core.aio import run_on_asyncio_thread
+from .core.aio import run_on_main_thread
 from .core.edit import show_summary_message
 from .core.logging import debug
 from .core.open import open_file_uri
@@ -105,9 +108,14 @@ class LspRenamePathCommand(LspWindowCommand):
                 "prompt_workspace_edits": False
             }
             label = f"Rename {Path(old_path).name} -> {new_name}"
-            sublime.set_timeout_async(lambda: self.prompt_rename_async(file_rename, label, rename_command_args))
+
+            run_on_asyncio_thread(self.prompt_rename_async, file_rename, label, rename_command_args)
             return
-        self.rename_path(old_path, new_name).then(lambda success: self.on_rename_path(success, file_rename))
+
+        async def run() -> None:
+            self.on_rename_path(await self.rename_path(old_path, new_name), file_rename)
+
+        run_coroutine(run())
 
     def on_rename_path(self, success: bool, file_rename: FileRename) -> None:
         if success and (mgr := self.manager()):
@@ -154,7 +162,7 @@ class LspRenamePathCommand(LspWindowCommand):
                 .then(lambda _: accepted)
         return Promise.resolve(False)
 
-    def rename_path(self, old: str, new: str) -> Promise[bool]:
+    async def rename_path(self, old: str, new: str) -> bool:
         old_path = Path(old)
         new_path = Path(new)
         restore_files: list[tuple[str, tuple[int, int], list[sublime.Region]]] = []
@@ -167,19 +175,19 @@ class LspRenamePathCommand(LspWindowCommand):
                     last_active_view = new_file_name
                 restore_files.append((new_file_name, self.window.get_view_index(view), list(view.sel())))
                 if view.is_dirty():
-                    view.run_command('save', {'async': False})
+                    await run_on_main_thread(partial(view.run_command, 'save', {'async': False}))
                 view.close()  # LSP spec - send didClose for the old file
         if (new_dir := new_path.parent) and not new_dir.exists():
             new_dir.mkdir(parents=True)
         try:
-            old_path.rename(new_path)
+            old_path.rename(new_path)  # ruff: ignore[blocking-path-method-in-async-function]
         except Exception as error:
             sublime.status_message(f"Rename error: {error}")
-            return Promise.resolve(False)
-        return Promise.all([
-            open_file_uri(self.window, file_name, group=group[0]).then(partial(self.restore_view, selection, group))
-            for file_name, group, selection in reversed(restore_files)
-        ]).then(lambda _: self.focus_view(last_active_view)).then(lambda _: True)
+            return False
+        for file_name, group, selection in reversed(restore_files):
+            self.restore_view(selection, group, await open_file_uri(self.window, file_name, group=group[0]))
+        self.focus_view(last_active_view)
+        return True
 
     def restore_view(self, selection: list[sublime.Region], group: tuple[int, int], view: sublime.View | None) -> None:
         if not view:

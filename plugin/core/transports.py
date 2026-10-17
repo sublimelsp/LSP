@@ -9,6 +9,7 @@ from abc import ABC
 from abc import abstractmethod
 from contextlib import closing
 from functools import partial
+from pathlib import Path
 from queue import Queue
 from typing import Any
 from typing import Callable
@@ -577,6 +578,9 @@ def _start_subprocess(
     env: dict[str, str],
     cwd: str | None,
 ) -> subprocess.Popen[bytes]:
+    if cwd and not Path(cwd).is_dir():
+        debug(f"working directory {cwd} does not exist, using current working directory instead")
+        cwd = os.getcwd()
     debug(f"starting {args} in {cwd or os.getcwd()}")
     process = subprocess.Popen(
         args=args,

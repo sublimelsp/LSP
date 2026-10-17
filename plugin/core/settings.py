@@ -21,7 +21,7 @@ SERVER_CONFIGS_FILENAME = 'LanguageServers.sublime-settings'
 class LspSettingsChangeListener(ABC):
 
     @abstractmethod
-    def on_client_config_updated(self, config_name: str | None = None) -> None:
+    def on_client_config_updated(self, config_names: set[str] | None = None) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -35,12 +35,13 @@ class ClientConfigs:
         self.all: dict[str, ClientConfig] = {}
         self._external: dict[str, ClientConfig] = {}
         self._external_settings_registrations: dict[str, SettingsRegistration] = {}
+        self._pending_external_config_names: set[str] = set()
         self._listener: LspSettingsChangeListener | None = None
         self._clients_hash: int | None = None
 
-    def _notify_clients_listener(self, config_name: str | None = None) -> None:
+    def _notify_clients_listener(self, config_names: set[str] | None = None) -> None:
         if self._listener:
-            self._listener.on_client_config_updated(config_name)
+            self._listener.on_client_config_updated(config_names)
 
     def _notify_userprefs_listener(self) -> None:
         if self._listener:
@@ -66,6 +67,7 @@ class ClientConfigs:
         self._external[name] = config
         self.all[name] = config
         if notify_listener:
+            self._pending_external_config_names.add(name)
             size = len(self._external)
             # A debounced call is necessary here because of the following problem.
             # When Sublime Text starts, it loads plugins in alphabetical order.
@@ -78,8 +80,13 @@ class ClientConfigs:
             # That causes many calls to WindowConfigManager.match_view, which is relatively speaking an expensive
             # operation. To ensure that this dance is done only once, we delay notifying the WindowConfigManager until
             # all plugins have done their `register_plugin` call.
-            debounced(lambda: self._notify_clients_listener(name), 200, lambda: len(self._external) == size)
+            debounced(self._notify_pending_external_configs, 200, lambda: len(self._external) == size)
         return True
+
+    def _notify_pending_external_configs(self) -> None:
+        names = self._pending_external_config_names
+        self._pending_external_config_names = set()
+        self._notify_clients_listener(names)
 
     def remove_external_config(self, name: str, *, notify_listener: bool = True) -> None:
         if registration := self._external_settings_registrations.pop(name, None):
@@ -126,7 +133,7 @@ class ClientConfigs:
 
     def update_config(self, name: str, config: ClientConfig) -> None:
         self.all[name] = config
-        self._notify_clients_listener(name)
+        self._notify_clients_listener({name})
 
     def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
         from ..api import get_plugin

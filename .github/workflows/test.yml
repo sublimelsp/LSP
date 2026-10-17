@@ -12,6 +12,11 @@ on:
       - ".github/workflows/docs.yml"
       - "docs/**"
 
+concurrency:
+  # Cancel superseded runs of the same pull request. Runs on main get a unique group so that they are never cancelled.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   Unittesting:
     name: Unittesting (${{ matrix.os }})

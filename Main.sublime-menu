@@ -231,7 +231,7 @@
           },
           {
             "caption": "Restart Servers",
-            "command": "lsp_restart_client"
+            "command": "lsp_restart_server"
           },
           {
             "id": "lsp-panels",

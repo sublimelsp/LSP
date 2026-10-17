@@ -671,9 +671,9 @@ class WindowRegistry(LspSettingsChangeListener):
 
     # --- Implements LspSettingsChangeListener -------------------------------------------------------------------------
 
-    def on_client_config_updated(self, config_name: str | None = None) -> None:
+    def on_client_config_updated(self, config_names: set[str] | None = None) -> None:
         for wm in self._windows.values():
-            wm.get_config_manager().update(config_name)
+            wm.get_config_manager().update(config_names)
 
     def on_userprefs_updated(self) -> None:
         for wm in self._windows.values():

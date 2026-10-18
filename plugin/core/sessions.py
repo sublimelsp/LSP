@@ -133,7 +133,6 @@ from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
 from .protocol import P_contra
-from .protocol import Point
 from .protocol import R
 from .protocol import Request
 from .protocol import ResolvedCodeLens
@@ -142,6 +141,7 @@ from .protocol import ResponseError
 from .protocol import ServerNotification
 from .protocol import ServerRequest
 from .protocol import ServerResponse
+from .protocol import TextPosition
 from .settings import globalprefs
 from .settings import userprefs
 from .transports import TransportCallbacks
@@ -1421,19 +1421,17 @@ class Session(APIHandler, TransportCallbacks):
         # Handle VSCode-specific command which is often used for "References" code lenses
         if command_name == "editor.action.showReferences" and view:
             if (arguments := command.get('arguments')) and len(arguments) == 3:
-                if references := cast('list[Location]', arguments[2]):
+                if references := cast('list[Location] | list[LocationLink]', arguments[2]):
                     if len(references) == 1:
                         self.open_location_async(references[0])
                     else:
                         view_uri = uri_from_view(view)
-                        locations = sorted(
-                            references,
-                            key=lambda location: (
-                                normalize_uri(location['uri']) != view_uri,
-                                location['uri'],
-                                Point.from_lsp(location['range']['start'])
-                            )
-                        )
+
+                        def sort_key(location: Location | LocationLink) -> tuple[bool, DocumentUri, TextPosition]:
+                            uri, r = get_uri_and_range_from_location(location)
+                            return (normalize_uri(uri) != view_uri, uri, TextPosition.from_lsp(r['start']))
+
+                        locations = cast('list[Location] | list[LocationLink]', sorted(references, key=sort_key))
                         LocationPicker(view, self, locations, side_by_side=False)
             return Promise.resolve(None)
         request = Request[ExecuteCommandParams, Union[R, None]].executeCommand(command, progress=progress)

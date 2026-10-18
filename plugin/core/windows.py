@@ -131,6 +131,14 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     def get_sessions(self) -> Generator[Session, None, None]:
         yield from self._sessions
 
+    def is_session_starting(self) -> bool:
+        """
+        Whether a session is being started in this window, which includes installing the server and waiting for the
+        response to the initialize request. Such a session is not returned by `get_sessions` yet.
+        """
+        # A listener is set while sessions are started for its view, and the next ones wait in the queue.
+        return self._new_listener is not None or bool(self._pending_listeners)
+
     def on_load_project_async(self) -> None:
         self.update_workspace_folders_async()
         self._config_manager.update()

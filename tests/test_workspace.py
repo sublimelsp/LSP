@@ -3,6 +3,7 @@ from __future__ import annotations
 from LSP.plugin.core.workspace import is_subpath_of
 from LSP.plugin.core.workspace import sorted_workspace_folders
 from LSP.plugin.core.workspace import WorkspaceFolder
+from pathlib import Path
 import os
 import tempfile
 import unittest
@@ -24,8 +25,23 @@ class SortedWorkspaceFoldersTest(unittest.TestCase):
         self.assertEqual(folders[2], unrelated_folder)
 
     def test_longest_prefix(self) -> None:
-        folders = sorted_workspace_folders(["/longer-path", "/short-path"], "/short-path/file.js")
-        self.assertEqual(folders[0].path, "/short-path")
+        with tempfile.TemporaryDirectory() as root:
+            longer_path = Path(root, "longer-path")
+            short_path = Path(root, "short-path")
+            longer_path.mkdir()
+            short_path.mkdir()
+            folders = sorted_workspace_folders([str(longer_path), str(short_path)], str(short_path / "file.js"))
+            self.assertEqual(folders[0].path, str(short_path))
+
+    def test_skips_missing_folders(self) -> None:
+        existing_path = Path(__file__).parent
+        missing_path = existing_path / "this-folder-does-not-exist"
+        folders = sorted_workspace_folders([str(missing_path), str(existing_path)], str(missing_path / "file.js"))
+        self.assertEqual(folders, [WorkspaceFolder.from_path(str(existing_path))])
+
+    def test_all_folders_missing(self) -> None:
+        missing_path = Path(__file__).parent / "this-folder-does-not-exist"
+        self.assertEqual(sorted_workspace_folders([str(missing_path)], str(missing_path / "file.js")), [])
 
 
 class WorkspaceFolderTest(unittest.TestCase):

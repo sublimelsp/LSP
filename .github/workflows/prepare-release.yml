@@ -1,0 +1,64 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version bump (major, minor or patch) or an exact x.y.z version
+        required: true
+        default: minor
+        type: string
+
+concurrency:
+  group: release
+
+permissions: {}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history and tags are needed to draft the release message from the commits since the last release.
+          fetch-depth: 0
+      - name: Bump version and draft release message
+        id: prepare
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          version=$(python3 -B scripts/release.py prepare "$VERSION_INPUT")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Open release pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.prepare.outputs.version }}
+        run: |
+          branch="release/$VERSION"
+          # name and email taken from: https://github.com/actions/checkout#push-a-commit-using-the-built-in-token
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git add VERSION messages.json messages plugin/core/version.py
+          git commit -m "Cut $VERSION"
+          git push origin "HEAD:refs/heads/$branch"
+          gh pr create \
+            --base "$GITHUB_REF_NAME" \
+            --head "$branch" \
+            --title "Cut $VERSION" \
+            --body "$(cat <<BODY
+          Release $VERSION. Merging this pull request tags \`$(python3 -B scripts/release.py tag)\` and publishes the GitHub release.
+
+          Before merging, curate [\`messages/$VERSION.txt\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$branch/messages/$VERSION.txt):
+
+          - Remove changes that are not relevant to users (for example fixes for bugs that were never released).
+          - Review entries in the "Other" section and move them to a fitting section or remove them.
+
+          Commits of type \`chore\`, \`ci\`, \`build\`, \`test\` and \`style\` were left out of the draft.
+
+          Close this pull request and delete the branch to abort the release.
+          BODY
+          )"

@@ -7,6 +7,7 @@ from .logging import debug
 from .logging import exception_log
 from abc import ABC
 from abc import abstractmethod
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import final
@@ -579,6 +580,9 @@ async def _start_subprocess(
     env: dict[str, str],
     cwd: str | None,
 ) -> asyncio.subprocess.Process:
+    if cwd and not Path(cwd).is_dir():  # ruff: ignore[blocking-path-method-in-async-function]
+        debug(f"working directory {cwd} does not exist, using current working directory instead")
+        cwd = os.getcwd()
     debug(f"starting {args} in {cwd or os.getcwd()}")
     process = await asyncio.create_subprocess_exec(
         *args,

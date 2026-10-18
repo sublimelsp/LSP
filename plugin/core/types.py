@@ -560,7 +560,9 @@ _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
     'textDocument/onTypeFormatting': ('documentOnTypeFormattingProvider', None),
     'textDocument/rangeFormatting': ('documentRangeFormattingProvider', None),
     'textDocument/prepareCallHierarchy': ('callHierarchyProvider', None),
-    'textDocument/prepareTypeHierarchy': ('typeHierarchyProvider', None)
+    'textDocument/prepareTypeHierarchy': ('typeHierarchyProvider', None),
+    'workspace/willRenameFiles': ('workspace.fileOperations.willRename', None),
+    'workspace/didRenameFiles': ('workspace.fileOperations.didRename', None),
 }
 
 

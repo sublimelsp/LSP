@@ -11,9 +11,11 @@ from .api import register_plugin
 from .api import request_handler
 from .api import unregister_plugin
 from .api import uri_handler
+from .core.aio import PortableTimeoutError
 from .core.aio import run_coroutine
 from .core.aio import run_on_asyncio_thread
 from .core.aio import run_on_threadpool
+from .core.aio import run_on_worker_thread
 from .core.collections import DottedDict
 from .core.constants import MarkdownLangMap
 from .core.constants import ST_STORAGE_PATH
@@ -36,12 +38,16 @@ from .core.protocol import Response
 from .core.protocol import ServerNotification
 from .core.protocol import ServerRequest
 from .core.protocol import ServerResponse
+from .core.protocol import TextPosition
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import SessionViewProtocol
 from .core.transports import TransportWrapper
+from .core.type_converters import point_to_offset
+from .core.type_converters import position_to_offset
+from .core.type_converters import range_to_region
 from .core.types import ClientConfig
 from .core.types import DebouncerNonThreadSafe
 from .core.types import matches_pattern
@@ -49,8 +55,15 @@ from .core.url import filename_to_uri
 from .core.url import parse_uri
 from .core.url import uri_to_filename  # deprecated
 from .core.version import __version__
+from .core.views import first_selection_region
+from .core.views import offset_to_position
+from .core.views import region_to_range
+from .core.views import text_document_identifier
+from .core.views import text_document_position_params
 from .core.views import uri_from_view
 from .core.workspace import WorkspaceFolder
+from .execute_command import LspExecuteCommand
+from .locationpicker import LocationPicker
 
 # This is the public API for LSP-* packages
 __all__ = [
@@ -68,6 +81,8 @@ __all__ = [
     'FileWatcherEventType',
     'FileWatcherProtocol',
     'IsApplicableContext',
+    'LocationPicker',
+    'LspExecuteCommand',
     'LspPlugin',
     'LspTextCommand',
     'LspWindowCommand',
@@ -76,6 +91,7 @@ __all__ = [
     'OnPreStartContext',
     'PackagedTask',
     'PluginStartError',
+    'PortableTimeoutError',
     'Promise',
     'Request',
     'Response',
@@ -85,6 +101,7 @@ __all__ = [
     'Session',
     'SessionBufferProtocol',
     'SessionViewProtocol',
+    'TextPosition',
     'TransportWrapper',
     'WorkspaceFolder',
     '__version__',
@@ -92,15 +109,24 @@ __all__ = [
     'command_handler',
     'css',
     'filename_to_uri',
+    'first_selection_region',
     'matches_pattern',
     'notification_handler',
+    'offset_to_position',
     'parse_uri',
+    'point_to_offset',
+    'position_to_offset',
+    'range_to_region',
+    'region_to_range',
     'register_file_watcher_implementation',
     'register_plugin',
     'request_handler',
     'run_coroutine',
     'run_on_asyncio_thread',
     'run_on_threadpool',
+    'run_on_worker_thread',
+    'text_document_identifier',
+    'text_document_position_params',
     'unregister_plugin',
     'uri_from_view',
     'uri_handler',

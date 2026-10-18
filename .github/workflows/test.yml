@@ -8,11 +8,14 @@ on:
       - ".github/workflows/docs.yml"
       - "docs/**"
   pull_request:
-    branches:
-      - main
     paths-ignore:
       - ".github/workflows/docs.yml"
       - "docs/**"
+
+concurrency:
+  # Cancel superseded runs of the same pull request. Runs on main get a unique group so that they are never cancelled.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   Unittesting:
@@ -38,7 +41,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.14'
+          python-version: '3.15'
       - run: pip3 install tox --user
       - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       - run: tox

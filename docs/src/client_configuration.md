@@ -39,6 +39,7 @@ Below is an example configuration for the [Phpactor](https://phpactor.readthedoc
 | tcp_port | see instructions below |
 | experimental_capabilities | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
 | disabled_capabilities | Disables specific capabilities of a language server. This is a dictionary with key being a capability key and being `true`. Refer to the `ServerCapabilities` structure in [LSP capabilities](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) to find capabilities that you might want to disable. Note that the value should be `true` rather than `false` for capabilites that you want to disable. For example: `"signatureHelpProvider": true` |
+| auto_complete_selector | A [selector](https://www.sublimetext.com/docs/selectors.html) that controls where the completion popup opens automatically in a file supported by the server. LSP adds an entry to the `"auto_complete_triggers"` setting of the view, with this value as the `"selector"` and the trigger characters of the server as the `"characters"`. If the server has no trigger characters, the entry has only the selector, and the completion popup then opens when you type in a matching scope. If not specified, the trigger characters of the server use the `"auto_complete_selector"` setting of the view (defined in the global Sublime Text Preferences). |
 
 You can figure out the scope of the current view with `Tools > Developer > Show Scope`.
 

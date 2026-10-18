@@ -41,6 +41,20 @@ class LspShowDiagnosticsPanelCommand(WindowCommand):
         panel_manager.toggle_output_panel(PanelName.Diagnostics)
 
 
+class LspToggleMessagesPanelCommand(WindowCommand):
+    def run(self) -> None:
+        wm = windows.lookup(self.window)
+        if wm and wm.messages_panel:
+            wm.messages_panel.toggle()
+
+
+class LspClearMessagesPanelCommand(WindowCommand):
+    def run(self) -> None:
+        wm = windows.lookup(self.window)
+        if wm and wm.messages_panel:
+            wm.messages_panel.clear()
+
+
 class LspToggleLogPanelLinesLimitCommand(sublime_plugin.TextCommand):
     @classmethod
     def is_limit_enabled(cls, window: sublime.Window | None) -> bool:

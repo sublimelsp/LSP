@@ -321,6 +321,11 @@
             "ClientPrioritySelector": {
               "markdownDescription": "While the `\"selector\"` is used to determine which views belong to which language server configuration, the `\"priority_selector\"` is used to determine which language server wins at the caret position in case there are multiple language servers attached to a view. For instance, there can only be one signature help popup visible at any given time. This selector is use to decide which one to use for such capabilities. This setting is optional and you won't need to set it if you're planning on using a single language server for a particular type of view."
             },
+            "ClientTcpPort": {
+              "type": "integer",
+              "default": 0,
+              "markdownDescription": "When set to a positive number bigger than 0, specifies the TCP port to use to connect to the language server process listening on the given port. When set to zero, a free TCP port is chosen. The chosen TCP port number can be accessed through a template variable, i.e. as `${port}` in the `\"command\"`.\n\nSet this to a negative number to make the LSP client act as TCP server awaiting connection from the LSP server. Using `-1` opens a random port. To use a fixed port number, use `-X` as the value for `tcp_port`, where `X` is the desired (positive) port number.\n\nIf not specified, STDIO is used as the transport"
+            },
             // The ClientConfig class
             "ClientConfig": {
               "type": "object",
@@ -337,9 +342,7 @@
                   "$ref": "sublime://settings/LSP#/definitions/FileWatcher"
                 },
                 "tcp_port": {
-                  "type": "integer",
-                  "default": 0,
-                  "markdownDescription": "When set to a positive number bigger than 0, specifies the TCP port to use to connect to the language server process listening on the given port. When set to zero, a free TCP port is chosen. Chosen TCP port number can be accessed through a template variable, i.e. as `${port}` in the `\"command\"`.\n\nSet to a negative number to make the LSP client act as TCP server awaiting connection from the LSP server. Using `-1` opens a random port. To use a fixed port number, use `-X` as the value for `tcp_port`, where `X` is the desired (positive) port number.\n\nIf not specified, STDIO is used as the transport"
+                  "$ref": "#/definitions/ClientTcpPort"
                 },
                 "auto_complete_selector": {
                   "$ref": "#/definitions/ClientAutoCompleteSelector"
@@ -492,6 +495,13 @@
               "maximum": 4,
               "default": 0,
               "markdownDescription": "Open the diagnostics panel automatically **on save** when diagnostics level is equal to or less than:\n\n- _none_: `0` (this means never show the panel automatically),\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`\n\nThe panel is not shown when there is already another panel open. The panel is never _closed_ automatically. To close the panel, press the <kbd>Esc</kbd> key."
+            },
+            "show_messages_panel_level": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "default": 1,
+              "markdownDescription": "Messages that servers want to show to the user (`window/showMessage`) are collected in the \"LSP Messages\" panel. Open that panel automatically when a message with a level equal to or less than the following is received:\n\n- _none_: `0` (this means never show the panel automatically),\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _log_: `4`,\n- _debug_: `5`\n\nMessages that don't open the panel are additionally shown in the status bar. Requests that need a response from the user (`window/showMessageRequest`) always open the panel."
             },
             "show_diagnostics_count_in_view_status": {
               "type": "boolean",
@@ -979,6 +989,14 @@
                       }
                     }
                   },
+                  "patternProperties": {
+                    // Overrides for configurations provided by LSP-* packages. Those can define custom top-level
+                    // settings so the strict ClientConfig schema would report them as not allowed. The packages
+                    // contribute their own schema for their key so this only provides the common settings.
+                    "^LSP-": {
+                      "$ref": "sublime://settings/LSP-plugin-base"
+                    }
+                  },
                   "additionalProperties": {
                     "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
                   }
@@ -1000,6 +1018,9 @@
             },
             "file_watcher": {
               "$ref": "sublime://settings/LSP#/definitions/FileWatcher"
+            },
+            "tcp_port": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientTcpPort"
             },
             "selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientSelector"

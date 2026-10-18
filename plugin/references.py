@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 from .core.constants import RegionKey
-from .core.protocol import Point
 from .core.protocol import Request
+from .core.protocol import TextPosition
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import userprefs
-from .core.views import get_line
+from .core.type_converters import position_to_offset
+from .core.views import get_file_lines
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
-from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
 from typing import Literal
 from typing import TYPE_CHECKING
 import functools
-import linecache
 import os
 import sublime
 
@@ -181,7 +180,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         placeholder = "References to " + word
         kind = get_symbol_kind_from_scope(self.view.scope_name(position))
         index = 0
-        locations.sort(key=lambda location: (location['uri'], Point.from_lsp(location['range']['start'])))
+        locations.sort(key=lambda location: (location['uri'], TextPosition.from_lsp(location['range']['start'])))
         if len(selection):
             pt = selection[0].b
             view_filename = self.view.file_name()
@@ -189,7 +188,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 if view_filename != session.config.map_server_uri_to_client_path(location['uri']):
                     continue
                 index = idx
-                if position_to_offset(location['range']['start'], self.view) > pt:
+                if position_to_offset(self.view, location['range']['start']) > pt:
                     break
         LocationPicker(self.view, session, locations, side_by_side, force_group, group, placeholder, kind, index)
 
@@ -244,18 +243,16 @@ def _group_locations_by_uri(
     window: sublime.Window,
     config: ClientConfig,
     locations: list[Location]
-) -> dict[str, list[tuple[Point, str]]]:
+) -> dict[str, list[tuple[TextPosition, str]]]:
     """Return a dictionary that groups locations by the URI it belongs."""
-    grouped_locations: dict[str, list[tuple[Point, str]]] = {}
+    points_by_file: dict[str, list[TextPosition]] = {}
     for location in locations:
         uri, position = get_uri_and_position_from_location(location)
         file_path = config.map_server_uri_to_client_path(uri)
-        point = Point.from_lsp(position)
-        # get line of the reference, to showcase its use
-        reference_line = get_line(window, file_path, point.row)
-        if grouped_locations.get(file_path) is None:
-            grouped_locations[file_path] = []
-        grouped_locations[file_path].append((point, reference_line))
-    # we don't want to cache the line, we always want to get fresh data
-    linecache.clearcache()
+        points_by_file.setdefault(file_path, []).append(TextPosition.from_lsp(position))
+    grouped_locations: dict[str, list[tuple[TextPosition, str]]] = {}
+    for file_path, points in points_by_file.items():
+        # get line of each reference, to showcase its use
+        reference_lines = get_file_lines(window, file_path, [point.row for point in points])
+        grouped_locations[file_path] = list(zip(points, reference_lines))
     return grouped_locations

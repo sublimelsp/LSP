@@ -3,7 +3,7 @@ from __future__ import annotations
 from .core.edit import apply_text_edits
 from .core.protocol import Request
 from .core.registry import LspTextCommand
-from .core.views import range_to_region
+from .core.type_converters import range_to_region
 from .core.views import text_document_identifier
 from typing import TYPE_CHECKING
 import sublime
@@ -40,7 +40,7 @@ class LspColorPresentationCommand(LspTextCommand):
             return
         if self._version != self.view.change_count():
             return
-        old_text = self.view.substr(range_to_region(self._range, self.view))
+        old_text = self.view.substr(range_to_region(self.view, self._range))
         self._filtered_response: list[ColorPresentation] = []
         for item in response:
             # Filter out items that would apply no change

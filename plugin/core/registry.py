@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from .aio import run_coroutine
 from .settings import userprefs
+from .type_converters import position_to_offset
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
-from .views import position_to_offset
 from .views import uri_from_view
 from .windows import WindowManager
 from .windows import WindowRegistry
@@ -199,7 +199,7 @@ class LspOpenLocationCommand(LspWindowCommand):
         if event:
             if modifier_keys := event.get('modifier_keys'):
                 if 'primary' in modifier_keys:
-                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
+                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # ruff: ignore[line-too-long]
                 elif 'shift' in modifier_keys:
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
         run_coroutine(self._run(location, session_name, flags, group))
@@ -237,7 +237,6 @@ class LspRestartServerCommand(LspTextCommand):
     def restart_server(self, wm: WindowManager, index: int) -> None:
         if index == -1:
             return
-        # TODO: handle exception list?
         run_coroutine(wm.restart_sessions([self._config_names[index]]))
 
 
@@ -277,11 +276,11 @@ def navigate_diagnostics(
     # this view after/before the cursor
     op_func = operator.gt if forward else operator.lt
     for diagnostic in diagnostics:
-        diag_pos = position_to_offset(diagnostic['range']['start'], view)
+        diag_pos = position_to_offset(view, diagnostic['range']['start'])
         if op_func(diag_pos, point):
             break
     else:
-        diag_pos = position_to_offset(diagnostics[0]['range']['start'], view)
+        diag_pos = position_to_offset(view, diagnostics[0]['range']['start'])
     view.run_command('lsp_selection_set', {'regions': [(diag_pos, diag_pos)]})
     view.show_at_center(diag_pos)
     # We need a small delay before showing the popup to wait for the scrolling animation to finish. Otherwise ST would

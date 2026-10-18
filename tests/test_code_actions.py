@@ -286,7 +286,8 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
         self.assertEqual(entire_content(self.view), 'const x = 1;')
 
         # Check that the last mock response was NOT requested.
-        unused_mock_responses = await self.get_and_clear_unused_mock_responses()
+        unused_mocks = await self.get_and_clear_unused_mock_responses()
+        unused_mock_responses = unused_mocks["responses"]
         self.assertEqual(len(unused_mock_responses), 1)
         self.assertEqual(unused_mock_responses[0][0], 'textDocument/codeAction')
         self.assertEqual(unused_mock_responses[0][1], should_be_unused_code_actions)
@@ -639,13 +640,12 @@ class CodeActionsTestCase(TextDocumentTestCase):
         self.assertEqual(len(params['context']['diagnostics']), 1)
 
     async def test_applies_code_action_with_matching_document_version(self) -> None:
-        code_action = create_test_code_action(self.view, 3, [
+        self.insert_characters('a\nb')
+        await self.await_message("textDocument/didChange")
+        code_action = create_test_code_action(self.view, self.view.change_count(), [
             ("c", range_from_points(Point(0, 0), Point(0, 1))),
             ("d", range_from_points(Point(1, 0), Point(1, 1))),
         ])
-        self.insert_characters('a\nb')
-        await self.await_message("textDocument/didChange")
-        self.assertEqual(self.view.change_count(), 3)
         await self.await_run_code_action(code_action)
         # await self.await_message('codeAction/resolve')
         self.assertEqual(entire_content(self.view), 'c\nd')
@@ -662,17 +662,16 @@ class CodeActionsTestCase(TextDocumentTestCase):
         self.assertEqual(entire_content(self.view), initial_content)
 
     async def test_runs_command_in_resolved_code_action(self) -> None:
+        self.insert_characters('a\nb')
         code_action = create_test_code_action2("dosomethinguseful", ["1", 0, {"hello": "there"}])
         resolved_code_action = deepcopy(code_action)
-        resolved_code_action["edit"] = create_code_action_edit(self.view, 3, [
+        resolved_code_action["edit"] = create_code_action_edit(self.view, self.view.change_count(), [
             ("c", range_from_points(Point(0, 0), Point(0, 1))),
             ("d", range_from_points(Point(1, 0), Point(1, 1))),
         ])
         await self.mock_response('codeAction/resolve', resolved_code_action)
         await self.mock_response('workspace/executeCommand', {"reply": "OK done"})
-        self.insert_characters('a\nb')
         await self.await_message("textDocument/didChange")
-        self.assertEqual(self.view.change_count(), 3)
         await self.await_run_code_action(code_action)
         await self.await_message('codeAction/resolve')
         params = await self.await_message('workspace/executeCommand')

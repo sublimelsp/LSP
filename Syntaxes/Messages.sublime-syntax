@@ -1,0 +1,32 @@
+%YAML 1.2
+---
+# [Subl]: https://www.sublimetext.com/docs/syntax.html
+hidden: true
+scope: output.lsp.messages
+
+variables:
+  servername: '[[:alnum:]_.-]+'
+
+contexts:
+  main:
+    - match: ^(\d{2}:\d{2}:\d{2}) ({{servername}}) (?=\w+$)
+      captures:
+        1: constant.numeric.timestamp.lsp
+        2: variable.function.lsp
+      push: level
+    - match: ^\s+(\((?:selected|dismissed|expired)\b.*\))$
+      captures:
+        1: comment.line.outcome.lsp
+
+  level:
+    - match: ERROR
+      scope: markup.deleted.lsp markup.error.lsp
+      pop: true
+    - match: WARNING
+      scope: markup.changed.lsp markup.warning.lsp
+      pop: true
+    - match: (?:INFO|LOG|DEBUG)
+      scope: markup.inserted.lsp markup.info.lsp
+      pop: true
+    - match: $
+      pop: true

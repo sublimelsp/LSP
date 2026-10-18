@@ -82,7 +82,7 @@ class HierarchyDataProvider(TreeDataProvider):
                     'targetSelectionRange': selection_range
                 },
                 'session_name': self.session_name,
-                'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
+                'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # ruff: ignore[line-too-long]
             })
         )
 
@@ -217,7 +217,7 @@ def open_first(window: sublime.Window, session_name: str, items: list[HierarchyI
                 'targetSelectionRange': item['selectionRange']
             },
             'session_name': session_name,
-            'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
+            'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # ruff: ignore[line-too-long]
         })
 
 

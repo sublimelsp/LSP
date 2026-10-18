@@ -6,8 +6,8 @@ from .constants import ST_PLATFORM
 from .constants import ST_VERSION
 from .logging import exception_log
 from .protocol import UINT_MAX
+from .type_converters import range_to_region
 from .url import parse_uri
-from .views import range_to_region
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
 from urllib.parse import urlparse
@@ -100,7 +100,7 @@ async def open_file(
     async with _get_opening_files_lock():
         # Is the view opening right now? Then return the associated unresolved future
         for fn, fut in g_opening_files.items():
-            if fn == file or os.path.samefile(fn, file):  # noqa ASYNC240
+            if fn == file or os.path.samefile(fn, file):  # ruff: ignore[blocking-path-method-in-async-function] ASYNC240
                 # Return the unresolved future. A future on_load event will resolve the future.
                 future = fut
                 break
@@ -160,7 +160,7 @@ def open_resource(window: sublime.Window, uri: DocumentUri, group: int = -1) -> 
 
 
 def center_selection(view: sublime.View, r: Range) -> sublime.View:
-    selection = range_to_region(r, view)
+    selection = range_to_region(view, r)
     view.run_command("lsp_selection_set", {"regions": [(selection.a, selection.a)]})
     if window := view.window():
         window.focus_view(view)
@@ -184,7 +184,7 @@ def open_externally(uri: str) -> bool:
         elif ST_PLATFORM == "osx":
             subprocess.check_call(("/usr/bin/open", uri))
         else:  # linux
-            subprocess.check_call(("xdg-open", uri))  # noqa: S607
+            subprocess.check_call(("xdg-open", uri))  # ruff: ignore[start-process-with-partial-path]
     except Exception as ex:
         exception_log(f"Failed to open {uri}", ex)
         return False

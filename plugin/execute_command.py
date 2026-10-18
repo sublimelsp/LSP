@@ -3,7 +3,6 @@ from __future__ import annotations
 from .core.aio import run_coroutine
 from .core.logging import debug
 from .core.protocol import Error
-from .core.protocol import LSPAny
 from .core.registry import LspTextCommand
 from .core.views import first_selection_region
 from .core.views import offset_to_point
@@ -38,7 +37,7 @@ class LspExecuteCommand(LspTextCommand):
             run_coroutine(self._run(session, command_name, params))
 
     async def _run(self, session: Session, command_name: str, params: ExecuteCommandParams) -> None:
-        result: LSPAny | Error = await session.run_command(params, progress=True, view=self.view)
+        result = await session.run_command(params, progress=True, view=self.view)
         if isinstance(result, Error):
             self.handle_error_async(result, command_name)
         else:

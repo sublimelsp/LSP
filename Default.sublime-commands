@@ -140,6 +140,10 @@
         "command": "lsp_show_diagnostics_panel"
     },
     {
+        "caption": "LSP: Toggle Messages Panel",
+        "command": "lsp_toggle_messages_panel"
+    },
+    {
         "caption": "LSP: Rename Path",
         "command": "lsp_rename_path"
     },

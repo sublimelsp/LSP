@@ -34,6 +34,7 @@ jobs:
             echo "Tag $TAG already exists."
             exit 0
           fi
+          # name and email taken from: https://github.com/actions/checkout#push-a-commit-using-the-built-in-token
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git tag -a -m "Cut $VERSION" "$TAG" "$GITHUB_SHA"

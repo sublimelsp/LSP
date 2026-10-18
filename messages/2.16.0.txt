@@ -1,0 +1,26 @@
+=> 2.16.0
+
+# Features
+
+- Add WindowManager.is_session_starting() (#3081) (Rafał Chłodnicki)
+- Allow disabling the lsp_save key binding with a setting (#3068) (Rafał Chłodnicki)
+
+# Fixes
+
+- Add missing dynamic capability exceptions (#3084) (Raoul Wols)
+- Support LocationLink in editor.action.showReferences (#3080) (Rafał Chłodnicki)
+- Apply all external configs registered within one debounce window (#3075) (Rafał Chłodnicki)
+- Point the Restart Servers menu item at lsp_restart_server (#3083) (Roshan Ramani)
+- Match the schema default of show_messages_panel_level to the setting (#3079) (Roshan Ramani)
+- Forget diagnostic result IDs when clearing diagnostics for a URI (#3070) (Rafał Chłodnicki)
+- Highlight method names containing periods in the server log (#3062) (Rafał Chłodnicki)
+
+# Refactors
+
+- Pass the reverse insert mode to get_text_edit_range (#3066) (Rafał Chłodnicki)
+
+# Other
+
+- Don't start language servers in deleted workspace folders (#3073) (Rafał Chłodnicki)
+- Use the type-check action of lsp_maintainers (#3072) (Rafał Chłodnicki)
+- Fix reading lines from files that are not valid UTF-8 (#3067) (Rafał Chłodnicki)

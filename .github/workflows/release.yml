@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - VERSION
+
+concurrency:
+  group: release
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read release details
+        id: details
+        run: |
+          echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+          echo "tag=$(python3 -B scripts/release.py tag)" >> "$GITHUB_OUTPUT"
+          python3 -B scripts/release.py notes > "$RUNNER_TEMP/notes.md"
+      - name: Create tag
+        env:
+          VERSION: ${{ steps.details.outputs.version }}
+          TAG: ${{ steps.details.outputs.tag }}
+        run: |
+          if [ -n "$(git ls-remote --tags origin "refs/tags/$TAG")" ]; then
+            echo "Tag $TAG already exists."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a -m "Cut $VERSION" "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.details.outputs.tag }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists."
+            exit 0
+          fi
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+      # A release published with GITHUB_TOKEN does not trigger "release" workflows, so notify lsp_utils from here.
+      - name: Notify lsp_utils
+        uses: peter-evans/repository-dispatch@v4
+        with:
+          token: ${{ secrets.LSP_UTILS_REPOSITORY_DISPATCH_TOKEN }}
+          repository: sublimelsp/lsp_utils
+          event-type: new_release

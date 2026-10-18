@@ -116,10 +116,14 @@ It is best if you check your GitHub notifications in the meantime!
 
 ## Releasing a new version (for maintainers)
 
-* Get a log of commits since the previously released tag with `git log --format="- %s (%an)" <previous_tag>..main`
-* Filter out non-relevant and non-important commits (it's not relevant to report fixes for bugs that weren't released yet, for example)
-* Optionally group changes into Fixes/Features/etc.
-* Create a new file in `messages/` with a file name of the yet-to-be-released version and include the changes.
-* Run `./scripts/release.py build` which will bump the version and create a new commit with a new messages file included.
-* If something doesn't look right in the newly created commit, delete the newly created tag manually and git reset to the previous commit making sure that you don't lose the newly created messages file.
-* Run `GITHUB_TOKEN=<your_token> ./scripts/release.py publish` to push and create a new Github release.
+Releases are created by GitHub workflows:
+
+* Run the [Prepare Release](https://github.com/sublimelsp/LSP/actions/workflows/prepare-release.yml) workflow with a version bump (`major`, `minor` or `patch`) or an exact `x.y.z` version.
+  It bumps the version files, drafts `messages/<version>.txt` from the commits since the previous release and opens a `Cut <version>` pull request.
+* Curate the release message in the pull request.
+  Remove non-relevant and non-important changes (it's not relevant to report fixes for bugs that weren't released yet, for example) and move or remove the entries in the "Other" section.
+* Merge the pull request.
+  The [Release](https://github.com/sublimelsp/LSP/actions/workflows/release.yml) workflow then tags the merge commit, publishes a GitHub release with the release message and notifies `lsp_utils`.
+* To abort, close the pull request and delete its branch.
+
+The draft can also be created locally with `./scripts/release.py prepare <bump|version>`.

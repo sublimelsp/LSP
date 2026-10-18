@@ -556,7 +556,13 @@ _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
     'textDocument/willSave': ('textDocumentSync.willSave', None),
     'textDocument/willSaveWaitUntil': ('textDocumentSync.willSaveWaitUntil', None),
     'textDocument/formatting': ('documentFormattingProvider', None),
-    'textDocument/documentColor': ('colorProvider', None)
+    'textDocument/documentColor': ('colorProvider', None),
+    'textDocument/onTypeFormatting': ('documentOnTypeFormattingProvider', None),
+    'textDocument/rangeFormatting': ('documentRangeFormattingProvider', None),
+    'textDocument/prepareCallHierarchy': ('callHierarchyProvider', None),
+    'textDocument/prepareTypeHierarchy': ('typeHierarchyProvider', None),
+    'workspace/willRenameFiles': ('workspace.fileOperations.willRename', None),
+    'workspace/didRenameFiles': ('workspace.fileOperations.didRename', None),
 }
 
 
@@ -576,6 +582,7 @@ def method_to_capability(method: str) -> tuple[str, str]:
         textDocument/definition --> (definitionProvider, definitionProvider.id)
         textDocument/references --> (referencesProvider, referencesProvider.id)
         textDocument/didOpen --> (textDocumentSync.didOpen, textDocumentSync.didOpen.id)
+        textDocument/semanticTokens --> (semanticTokensProvider, semanticTokensProvider.id)
     """
     capability_path, registration_path = _METHOD_TO_CAPABILITY_EXCEPTIONS.get(method, (None, None))
     if capability_path is None:

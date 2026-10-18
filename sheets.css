@@ -15,3 +15,11 @@
 .lsp_sheet li {
     font-family: system;
 }
+.lsp_sheet kbd {
+    background-color: color(var(--mdpopups-bg) lightness(+ 5%));
+    border-color: color(var(--mdpopups-fg) alpha(0.25));
+}
+.lsp_sheet kbd a {
+    color: var(--mdpopups-fg);
+    text-decoration: none;
+}

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .core.aio import run_coroutine
 from .core.constants import ST_PACKAGES_PATH
-from .core.constants import SublimeKind
 from .core.logging import debug
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
@@ -18,6 +17,7 @@ if TYPE_CHECKING:
     from ..protocol import LocationLink
     from ..protocol import Position
     from .core.sessions import Session
+    from sublime_types import Kind
 
 
 async def open_location(
@@ -72,7 +72,7 @@ class LocationPicker:
         force_group: bool = True,
         group: int = -1,
         placeholder: str = "",
-        kind: SublimeKind = sublime.KIND_AMBIGUOUS,
+        kind: Kind = sublime.KIND_AMBIGUOUS,
         selected_index: int = -1
     ) -> None:
         self._view = view
@@ -117,8 +117,8 @@ class LocationPicker:
             session, location, uri, position = self._unpack(index)
             if not session:
                 return
-            # Note: this has to run on the main thread (and not via open_location_async)
-            # otherwise the bevior feels weird. It's the only reason why open_basic_file exists.
+            # Note: this has to run on the main thread otherwise the bevior feels weird. It's the only reason why
+            # open_basic_file exists.
             if uri.startswith(("file:", "res:")):
                 flags = sublime.NewFileFlags.ENCODED_POSITION
                 if not self._side_by_side:

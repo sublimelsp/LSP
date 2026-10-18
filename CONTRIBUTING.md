@@ -76,6 +76,33 @@ There is also a test suite in `tests/`.
 To run the tests, use the [UnitTesting](https://packages.sublimetext.io/packages/UnitTesting) package.
 The configuration file for the tests is in `unittesting.json`.
 
+### Running the tests in Docker
+
+You can also run the tests headlessly in a Docker container, without a local Sublime Text installation.
+You must have [Docker](https://docs.docker.com/get-docker/) and a clone of the
+[UnitTesting](https://github.com/SublimeText/UnitTesting) repository.
+From the root of the LSP repository, run:
+
+```sh
+/path/to/UnitTesting/docker/ut-run-tests .
+```
+
+On Windows, use `ut-run-tests.cmd`.
+The first run builds the Docker image and installs Sublime Text in a Docker volume.
+Later runs use that volume and are faster.
+The tests run on Linux, so the tests that need Windows are skipped.
+
+Useful options:
+
+* `--file tests/test_views.py` - run only the tests in one file. You cannot use this option together with the `--no-*`
+  options.
+* `--pattern "test_url*.py"` - run only the test files that match a pattern.
+* `--failfast` - stop at the first failure.
+* `--no-syntax-tests --no-syntax-compatibility-checks` - run only the Python unit tests.
+
+You cannot select a single test class or method.
+For all options, see the [README of the Docker runner](https://github.com/SublimeText/UnitTesting/tree/master/docker).
+
 ## Submitting
 
 Before you submit your pull request, please review the following:

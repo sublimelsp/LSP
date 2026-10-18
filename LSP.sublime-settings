@@ -90,6 +90,19 @@
   // hint: 4
   "show_diagnostics_panel_on_save": 0,
 
+  // Messages that servers want to show to the user (`window/showMessage`) are collected in
+  // the "LSP Messages" panel. Open that panel automatically when a message with a level equal
+  // to or less than the following is received:
+  // none: 0 (never open the panel automatically)
+  // error: 1
+  // warning: 2
+  // info: 3
+  // log: 4
+  // debug: 5
+  // Messages that don't open the panel are additionally shown in the status bar.
+  // Requests that need a response from the user (`window/showMessageRequest`) always open the panel.
+  "show_messages_panel_level": 1,
+
   // Only show diagnostics in the panel with level equal to or less than:
   // error: 1
   // warning: 2
@@ -252,8 +265,10 @@
   // Log communication from and to language servers.
   // Set to an array of values:
   // - "panel" - log to the LSP Log Panel
-  // - "remote" - start a local websocket server on port 9981. Can be connected to with
+  // - "remote" - start a websocket server on localhost:9981. Can be connected to with
   //              a websocket client to receive the log messages in real time.
+  //              A free browser-based viewer can be used here: https://lsp-log-parser.netlify.app
+  //              (Safari blocks the hosted viewer, so use Chrome or Firefox, or run the viewer locally)
   // For backward-compatibility, when set to "true", enables the "panel" logger and when
   // set to "false" disables logging.
   // This output panel can be toggled from the command palette with the

@@ -1,10 +1,12 @@
+.agents export-ignore
 .github/ export-ignore
 .pre-commit-config.yaml export-ignore
 .style.yapf export-ignore
+AGENTS.md export-ignore
 codecov.yml export-ignore
 docs/ export-ignore
-icons/convert.bat export-ignore
 icons/*.svg export-ignore
+icons/convert.bat export-ignore
 mypy.ini export-ignore
 renovate.json export-ignore
 stubs/ export-ignore

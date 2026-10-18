@@ -1,0 +1,25 @@
+=> 2.15.0
+
+# Features
+
+- Show `window/showMessage[Request]` in a panel (#3053) (Rafał Chłodnicki)
+- Expose range_to_region from public API (#3052) (Rafał Chłodnicki)
+- Add `LspPlugin.on_server_request_async` API (#3050) (Rafał Chłodnicki)
+
+# Fixes
+
+- Allow custom settings of LSP-* packages in project schema (#3059) (Rafał Chłodnicki)
+- Fix "Troubleshoot server" config handling, working directory and copy button (#3058) (Rafał Chłodnicki)
+- Run LspPlugin command handlers on the async thread (#3055) (Rafał Chłodnicki)
+- Start "Troubleshoot server" in the same working directory as a normal start (#3057) (Roshan Ramani)
+- Clear diagnostics annotations and tags on server shutdown (#3047) (Rafał Chłodnicki)
+- Do not end a new session at once when its initiating view closed (#3048) (Rafał Chłodnicki)
+
+# Refactors
+
+- Stricter ListInputItem types (#3036) (Rafał Chłodnicki)
+
+# Documentation
+
+- Add Shuck and update Tombi configuration instructions (#3054) (Evan Read)
+- Document auto_complete_selector client setting (#3044) (Rafał Chłodnicki)

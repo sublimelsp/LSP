@@ -14,15 +14,14 @@ from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import RequestFlags
 from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.settings import userprefs
+from .core.type_converters import range_to_region
 from .core.views import diagnostic_icon
 from .core.views import DIAGNOSTIC_STYLES
 from .core.views import document_highlight_key
 from .core.views import make_command_link
-from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any
-from typing import Coroutine
 from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakValueDictionary
@@ -93,19 +92,27 @@ class SessionView:
         self.clear_code_lenses_async()
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
             self._decrement_hover_count()
+        exceptions: list[Exception] = []
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            await asyncio.gather(*(data.cancel() for data in self._active_requests.values()))
+            results = await asyncio.gather(
+                *(data.cancel() for data in self._active_requests.values() if data.request.view),
+                return_exceptions=True
+            )
+            exceptions.extend(result for result in results if isinstance(result, Exception))
             await self.session.unregister_session_view(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(DIAGNOSTIC_STYLES.keys()):
-            self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_icon")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_underline")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
-            self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_underline")
+            for multiline in (False, True):
+                key = self.diagnostics_key(severity, multiline)
+                self.view.erase_regions(f"{key}_icon")
+                self.view.erase_regions(f"{key}_underline")
+                for tag in DIAGNOSTIC_TAG_SCOPES:
+                    self.view.erase_regions(f"{key}_tags_{tag}")
+        self._diagnostic_annotations.clear()
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
-        exceptions = await self.session_buffer.remove_session_view(self)
+        exceptions.extend(await self.session_buffer.remove_session_view(self))
         if listener := self.listener():
             listener.on_diagnostics_updated_async(self.session_buffer, False)
         return exceptions
@@ -306,7 +313,7 @@ class SessionView:
 
     def _redraw_diagnostics_async(self) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
-        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
         level = userprefs().show_diagnostics_severity_level
         for sev, style in reversed(DIAGNOSTIC_STYLES.items()):
             self._draw_diagnostics(sev, level, flags[sev - 1] or style.single_line_region_flags, multiline=False)
@@ -370,20 +377,20 @@ class SessionView:
     ) -> None:
         self.session_buffer.on_text_changed(self.view, change_count, changes, action)
 
-    def on_revert(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_revert(self.view)
+    async def on_revert(self) -> None:
+        await self.session_buffer.on_revert(self.view)
 
-    def on_reload(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_reload(self.view)
+    async def on_reload(self) -> None:
+        await self.session_buffer.on_reload(self.view)
 
-    def purge_changes(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.purge_changes(self.view)
+    async def purge_changes(self) -> None:
+        await self.session_buffer.purge_changes(self.view)
 
-    def on_pre_save(self) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_pre_save(self.view)
+    async def on_pre_save(self) -> None:
+        await self.session_buffer.on_pre_save(self.view)
 
-    def on_post_save(self, new_uri: DocumentUri) -> Coroutine[None, None, None]:
-        return self.session_buffer.on_post_save(self.view, new_uri)
+    async def on_post_save(self, new_uri: DocumentUri) -> None:
+        await self.session_buffer.on_post_save(self.view, new_uri)
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_diagnostics_async()
@@ -435,7 +442,7 @@ class SessionView:
         return f'lsp_code_lens.{self.session.config.name}'
 
     def _code_lens_region(self, code_lens: ResolvedCodeLens) -> sublime.Region:
-        return range_to_region(code_lens['range'], self.view)
+        return range_to_region(self.view, code_lens['range'])
 
     def _code_lens_html(self, code_lens: ResolvedCodeLens) -> str:
         command = code_lens['command']

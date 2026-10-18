@@ -1,0 +1,26 @@
+=> 3.0.0
+
+# Breaking changes
+
+- LSP now runs on `asyncio`, using the new `sublime_aio` and `websockets` dependencies, which
+  Package Control installs automatically. Most of the plugin API stays backward compatible, but
+  some APIs were deprecated or changed, and plugin code now runs on a different thread.
+  Package authors should read the migration guide:
+  https://lsp.sublimetext.io/migrating_to_async_lsp_plugin/
+
+# Features
+
+- `LspPlugin` hooks, and `@command_handler`, `@request_handler` and `@uri_handler` handlers,
+  can now be `async` functions. Handlers that return a `Promise` keep working.
+- Add `run_coroutine`, `run_on_asyncio_thread`, `run_on_threadpool`, `run_on_worker_thread`
+  and `PortableTimeoutError` to the public API.
+- Add `Session.request`, `Session.notify`, `Session.run_command` and `Session.create_task`.
+
+# Enhancements
+
+- Replace the blocking websocket server used by the "remote" `log_server` setting with an
+  asyncio-based one (#2957) (Raoul Wols)
+
+# Documentation
+
+- Add a migration guide for the async LspPlugin API (#3003) (Raoul Wols)

@@ -41,10 +41,9 @@ def filename_to_uri(file_name: str) -> str:
     prefix = ST_PACKAGES_PATH
     if file_name.startswith(prefix) and not os.path.exists(file_name):
         return _to_resource_uri(file_name, prefix)
-    # CI only exercises the CPython version bundled with Sublime Text (3.8
-    # today), so the >= 3.14 branch is not covered by the test suite until ST
-    # ships a public 3.14 build.
     if sys.version_info >= (3, 14):
+        # Python 3.14+ `pathname2url` keeps the case of the drive letter. Earlier versions make it uppercase.
+        file_name = re.sub(r"^([a-z]):", _uppercase_driveletter, file_name)
         return pathname2url(file_name, add_scheme=True)
     return urljoin('file:', pathname2url(file_name))
 
@@ -104,7 +103,8 @@ def _to_resource_uri(path: str, prefix: str) -> str:
 
     See: https://github.com/sublimehq/sublime_text/issues/3742
     """
-    return f"res:/Packages{pathname2url(path[len(prefix):])}"
+    # Python 3.14+ `pathname2url` adds an empty authority (`//`) to a path that starts with a slash.
+    return f"res:/Packages/{pathname2url(path[len(prefix):].lstrip(os.sep))}"
 
 
 def _uppercase_driveletter(match: Any) -> str:

@@ -2,4 +2,4 @@
 # TODO: Announce removal and remove this import
 from __future__ import annotations
 
-from .types import method2attr  # noqa
+from .types import method2attr  # ruff: ignore[unused-import]

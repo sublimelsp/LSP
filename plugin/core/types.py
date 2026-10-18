@@ -218,6 +218,7 @@ class DebouncerNonThreadSafe:
         self._task_container = weakref.ref(task_container)
         self._current_id = -1
         self._next_id = 0
+        self._task: asyncio.Task | None = None
 
     def debounce(
         self, f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True
@@ -242,10 +243,13 @@ class DebouncerNonThreadSafe:
 
         current_id = self._current_id = self._next_id
         self._next_id += 1
-        task_container.create_task(run(current_id))
+        self._task = task_container.create_task(run(current_id))
 
     def cancel_pending(self) -> None:
         self._current_id = -1
+        if self._task:
+            self._task.cancel()
+            self._task = None
 
 
 def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:
@@ -298,6 +302,7 @@ class Settings:
     show_diagnostics_panel_on_save = cast("int", None)
     show_diagnostics_severity_level = cast("int", None)
     show_inlay_hints = cast("bool", None)
+    show_messages_panel_level = cast("int", None)
     show_multiline_diagnostics_highlights = cast("bool", None)
     show_multiline_document_highlights = cast("bool", None)
     show_references_in_quick_panel = cast("bool", None)
@@ -347,6 +352,7 @@ class Settings:
         r("show_diagnostics_panel_on_save", 0)
         r("show_diagnostics_severity_level", 2)
         r("show_inlay_hints", False)
+        r("show_messages_panel_level", 1)
         r("show_multiline_diagnostics_highlights", True)
         r("show_multiline_document_highlights", True)
         r("show_references_in_quick_panel", True)
@@ -404,12 +410,12 @@ class Settings:
             style = default | sublime.RegionFlags.DRAW_NO_FILL
             return style, style
         if style_str == "stippled":
-            return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE  # noqa: E501
-        return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE  # noqa: E501
+            return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE  # ruff: ignore[line-too-long]
+        return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE  # ruff: ignore[line-too-long]
 
     @staticmethod
     def _style_str_to_flag(style_str: str) -> sublime.RegionFlags | None:
-        default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # noqa: E501
+        default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
         # This method could be a dict or lru_cache
         if not style_str:
             return default | sublime.RegionFlags.DRAW_NO_OUTLINE
@@ -447,12 +453,6 @@ class SemanticToken:
     region: sublime.Region
     type: str
     modifiers: list[str]
-
-
-class ClientStates:
-    STARTING = 0
-    READY = 1
-    STOPPING = 2
 
 
 def is_notebook_cell_text_document_filter(document_filter: DocumentFilter) -> TypeGuard[NotebookCellTextDocumentFilter]:

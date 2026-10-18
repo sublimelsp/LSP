@@ -2,8 +2,11 @@ name: Test Community Packages
 
 on:
   pull_request:
-    branches:
-      - main
+
+concurrency:
+  # Cancel superseded runs of the same pull request.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   type-check:
@@ -12,40 +15,9 @@ jobs:
     steps:
       - name: Check out PR branch
         uses: actions/checkout@v7
+
+      - name: Type-check community packages
+        uses: sublimelsp/lsp_maintainers@main
         with:
-          path: LSP
-
-      - name: Check out lsp_maintainers
-        uses: actions/checkout@v7
-        with:
-          repository: sublimelsp/lsp_maintainers
-          path: lsp_maintainers
-
-      - name: Check out community package repositories
-        run: |
-          python3 scripts/checkout-repos.py \
-            --preferred-branch ${{ github.head_ref }} \
-            --exclude Chialisp \
-            --exclude LSP \
-            --exclude LSP-aurelia \
-            --exclude LSP-gnols \
-            --exclude LSP-MaaFramework \
-            --exclude LSP-pyvoice \
-            --exclude LSP-vale-ls \
-            --exclude WolframLanguage
-        working-directory: lsp_maintainers
-
-      - name: Use checkout of LSP from PR
-        run: |
-          rm -rf ${{ github.workspace }}/LSP/tests
-          mv ${{ github.workspace }}/LSP/stubs lsp_maintainers/repositories/stubs
-          mv ${{ github.workspace }}/LSP lsp_maintainers/repositories
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v10.0.1
-
-      - name: Sync venv and type check
-        run: |
-          uv sync
-          uv run basedpyright
-        working-directory: lsp_maintainers/repositories
+          local: LSP=.
+          preferred-branch: ${{ github.head_ref }}

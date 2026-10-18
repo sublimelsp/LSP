@@ -3,7 +3,7 @@ from __future__ import annotations
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.views import range_to_region
+from .core.type_converters import range_to_region
 from .core.views import selection_range_params
 from typing import Any
 from typing import TYPE_CHECKING
@@ -65,7 +65,7 @@ class LspExpandSelectionCommand(LspTextCommand):
         self.view.run_command("expand_selection", {"to": "smart"})
 
     def _smallest_containing(self, region: sublime.Region, param: SelectionRange) -> tuple[int, int]:
-        r = range_to_region(param["range"], self.view)
+        r = range_to_region(self.view, param["range"])
         # Test for *strict* containment
         if r.contains(region) and (r.a < region.a or r.b > region.b):
             return r.a, r.b

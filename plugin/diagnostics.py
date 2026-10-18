@@ -156,6 +156,10 @@ class DiagnosticsAnnotationsView:
             else:
                 self._view.erase_regions(self._annotation_region_key(severity))
 
+    def clear(self) -> None:
+        for severity in DIAGNOSTIC_KINDS:
+            self._view.erase_regions(self._annotation_region_key(severity))
+
     def on_color_scheme_changed(self) -> None:
         self._severity_colors = self._get_severity_colors()
 

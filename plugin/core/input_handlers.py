@@ -29,7 +29,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
     Note that the return value of the function will be discarded, so it only makes sense to use this decorator for
     functions that return None. The function will run on Sublime's main thread.
     """
-    DEBOUNCE_TIME = 0.5  # seconds  # noqa: N806
+    DEBOUNCE_TIME = 0.5  # seconds  # ruff: ignore[non-lowercase-variable-in-function]
 
     @functools.wraps(user_function)
     def wrapped_function(*args: P.args, **kwargs: P.kwargs) -> None:
@@ -41,7 +41,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
                     setattr(wrapped_function, '_target_time', None)
                     sublime.set_timeout(check_call_function, int(additional_delay * 1000))
                     return
-            delattr(wrapped_function, '_target_time')  # noqa: B043
+            delattr(wrapped_function, '_target_time')  # ruff: ignore[del-attr-with-constant]
             user_function(*args, **kwargs)
         if hasattr(wrapped_function, '_target_time'):
             setattr(wrapped_function, '_target_time', time.monotonic() + DEBOUNCE_TIME)
@@ -66,7 +66,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, ABC):
     """
 
     def __init__(
-        self, window: sublime.Window, initial_value: str | sublime.ListInputItem | None = None
+        self, window: sublime.Window, initial_value: str | sublime.ListInputItem[Any] | None = None
     ) -> None:
         super().__init__()
         self._window = window
@@ -140,7 +140,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):
             self.listener.detach()
 
     @final
-    def list_items(self) -> list[sublime.ListInputItem]:
+    def list_items(self) -> list[sublime.ListInputItem[Any]]:
         if not self.text:  # Show initial items when the command was just invoked
             return self.get_list_items() or [sublime.ListInputItem("No Results", "")]
         if items := getattr(self.command, '_items', None):  # Items were updated after typing
@@ -176,11 +176,11 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):
         """Called after changes have been made to the input, with the text of the input field passed as argument."""
         pass
 
-    def get_list_items(self) -> list[sublime.ListInputItem]:
+    def get_list_items(self) -> list[sublime.ListInputItem[Any]]:
         """The list items which are initially shown."""
         return []
 
-    def update(self, items: list[sublime.ListInputItem]) -> None:
+    def update(self, items: list[sublime.ListInputItem[Any]]) -> None:
         """Call this method to update the list items."""
         if not self.input_view:
             return

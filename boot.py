@@ -68,9 +68,11 @@ from .plugin.hover import LspToggleHoverPopupsCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
 from .plugin.inlay_hint import LspToggleInlayHintsCommand
 from .plugin.panels import LspClearLogPanelCommand
+from .plugin.panels import LspClearMessagesPanelCommand
 from .plugin.panels import LspClearPanelCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleLogPanelLinesLimitCommand
+from .plugin.panels import LspToggleMessagesPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.panels import LspUpdateLogPanelCommand
 from .plugin.panels import LspUpdatePanelCommand
@@ -115,6 +117,7 @@ __all__ = (
     "LspCallHierarchyCommand",
     "LspCheckApplicableCommand",
     "LspClearLogPanelCommand",
+    "LspClearMessagesPanelCommand",
     "LspClearPanelCommand",
     "LspCodeActionsCommand",
     "LspCodeLensCommand",
@@ -176,6 +179,7 @@ __all__ = (
     "LspToggleHoverPopupsCommand",
     "LspToggleInlayHintsCommand",
     "LspToggleLogPanelLinesLimitCommand",
+    "LspToggleMessagesPanelCommand",
     "LspToggleServerPanelCommand",
     "LspTroubleshootServerCommand",
     "LspTypeHierarchyCommand",
@@ -225,8 +229,8 @@ def plugin_loaded() -> None:
     base_scope_map = sublime.load_settings("language-ids.sublime-settings")
     if base_scope_map.to_dict():
         def show_warning() -> None:
-            print("LSP - The language-ids.sublime-settings file is deprecated, but it looks like you have it.\nSee the migration guide -> https://github.com/sublimelsp/LSP/issues/2592")  # noqa: E501
-            sublime.status_message("LSP - The language-ids.sublime-settings file is deprecated. Open the Console for details.")  # noqa: E501
+            print("LSP - The language-ids.sublime-settings file is deprecated, but it looks like you have it.\nSee the migration guide -> https://github.com/sublimelsp/LSP/issues/2592")  # ruff: ignore[line-too-long]
+            sublime.status_message("LSP - The language-ids.sublime-settings file is deprecated. Open the Console for details.")  # ruff: ignore[line-too-long]
 
         sublime.set_timeout(show_warning, 5_000)
 

@@ -47,12 +47,14 @@ from .constants import ST_CACHE_PATH
 from .constants import ST_PLATFORM
 from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES
-from .constants import SublimeKind
 from .css import css as lsp_css
 from .protocol import Notification
-from .protocol import Point
 from .protocol import Request
+from .protocol import TextPosition
 from .settings import userprefs
+from .type_converters import point_to_offset as _point_to_offset
+from .type_converters import position_to_offset as _position_to_offset
+from .type_converters import range_to_region as _range_to_region
 from .url import encode_code_action_uri
 from .url import parse_uri
 from .workspace import is_subpath_of
@@ -69,10 +71,11 @@ from typing import Generator
 from typing import Iterable
 from typing import Sequence
 from typing import TYPE_CHECKING
+from typing_extensions import deprecated
 import html
 import itertools
-import linecache
 import mdpopups
+import pathlib
 import re
 import sublime
 import sublime_plugin
@@ -81,9 +84,10 @@ import tempfile
 if TYPE_CHECKING:
     from .sessions import SessionBufferProtocol
     from .types import ClientConfig
+    from sublime_types import Kind
 
 
-_baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+_baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
 _multilineflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO
 
 
@@ -157,20 +161,33 @@ def mutable(view: sublime.View) -> Generator:
         view.set_read_only(True)
 
 
-def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
+def _read_file_lines(file_name: str) -> list[str]:
     """
-    Get the line from the buffer if the view is open, else get line from linecache.
-    row - is 0 based. If you want to get the first line, you should pass 0.
+    Return the lines of a file on disk, keeping line endings, or an empty list if it can't be read.
+
+    Bytes that are not valid UTF-8 are replaced instead of failing, so that files in other encodings still produce a
+    usable preview.
+    """
+    try:
+        with pathlib.Path(file_name).open(encoding='utf-8-sig', errors='replace') as f:
+            return f.readlines()
+    except OSError:
+        return []
+
+
+def get_file_lines(window: sublime.Window, file_name: str, rows: Iterable[int], strip: bool = True) -> list[str]:
+    """
+    Get the lines of a file at the given rows, in the same order. Rows are 0 based.
+
+    The lines are taken from the buffer if the file is open in the window, else from the file on disk, which is read
+    once. An empty string is returned for a line that can't be read.
     """
     if view := window.find_open_file(file_name):
-        # get from buffer
-        point = view.text_point(row, 0)
-        line = view.substr(view.line(point))
+        lines = [view.substr(view.line(view.text_point(row, 0))) for row in rows]
     else:
-        # get from linecache
-        # linecache row is not 0 based, so we increment it by 1 to get the correct line.
-        line = linecache.getline(file_name, row + 1)
-    return line.strip() if strip else line
+        file_lines = _read_file_lines(file_name)
+        lines = [file_lines[row] if 0 <= row < len(file_lines) else '' for row in rows]
+    return [line.strip() for line in lines] if strip else lines
 
 
 def extract_variables(window: sublime.Window) -> dict[str, str]:
@@ -182,25 +199,30 @@ def extract_variables(window: sublime.Window) -> dict[str, str]:
     return variables
 
 
-def point_to_offset(point: Point, view: sublime.View) -> int:
-    # @see https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#position
-    # If the character value is greater than the line length it defaults back to the line length.
-    return view.text_point_utf16(point.row, point.col, clamp_column=True)
+@deprecated('Use point_to_offset(view, point) from the LSP.plugin module instead')
+def point_to_offset(point: TextPosition, view: sublime.View) -> int:
+    return _point_to_offset(view, point)
 
 
-def offset_to_point(view: sublime.View, offset: int) -> Point:
-    return Point(*view.rowcol_utf16(offset))
+def offset_to_point(view: sublime.View, offset: int) -> TextPosition:
+    return TextPosition(*view.rowcol_utf16(offset))
 
 
-def position(view: sublime.View, offset: int) -> Position:
+def offset_to_position(view: sublime.View, offset: int) -> Position:
     return offset_to_point(view, offset).to_lsp()
 
 
+@deprecated('Use offset_to_position() instead')
+def position(view: sublime.View, offset: int) -> Position:
+    return offset_to_position(view, offset)
+
+
+@deprecated('Use position_to_offset(view, position) from the LSP.plugin module instead')
 def position_to_offset(position: Position, view: sublime.View) -> int:
-    return point_to_offset(Point.from_lsp(position), view)
+    return _position_to_offset(view, position)
 
 
-def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
+def get_symbol_kind_from_scope(scope_name: str) -> Kind:
     best_kind = sublime.KIND_AMBIGUOUS
     best_kind_score = 0
     for kind, selector in SUBLIME_KIND_SCOPES.items():
@@ -211,8 +233,9 @@ def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
     return best_kind
 
 
+@deprecated('Use range_to_region(view, lsp_range) from the LSP.plugin module instead')
 def range_to_region(lsp_range: Range, view: sublime.View) -> sublime.Region:
-    return sublime.Region(position_to_offset(lsp_range['start'], view), position_to_offset(lsp_range['end'], view))
+    return _range_to_region(view, lsp_range)
 
 
 def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
@@ -318,7 +341,7 @@ def versioned_text_document_identifier(view: sublime.View, version: int) -> Vers
 
 
 def text_document_position_params(view: sublime.View, location: int) -> TextDocumentPositionParams:
-    return {"textDocument": text_document_identifier(view), "position": position(view, location)}
+    return {"textDocument": text_document_identifier(view), "position": offset_to_position(view, location)}
 
 
 def did_open_text_document_params(view: sublime.View, language_id: str) -> DidOpenTextDocumentParams:
@@ -451,7 +474,7 @@ def text_document_ranges_formatting(
 def selection_range_params(view: sublime.View) -> SelectionRangeParams:
     return {
         "textDocument": text_document_identifier(view),
-        "positions": [position(view, r.b) for r in view.sel()]
+        "positions": [offset_to_position(view, r.b) for r in view.sel()]
     }
 
 
@@ -727,7 +750,7 @@ def lsp_color_to_html(color_info: ColorInformation) -> str:
 
 
 def lsp_color_to_phantom(view: sublime.View, color_info: ColorInformation) -> sublime.Phantom:
-    region = range_to_region(color_info['range'], view)
+    region = _range_to_region(view, color_info['range'])
     return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.PhantomLayout.INLINE)
 
 

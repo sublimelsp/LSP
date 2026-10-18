@@ -7,12 +7,13 @@ from .core.edit import parse_lsp_position
 from .core.edit import parse_workspace_edit
 from .core.edit import WorkspaceChanges
 from .core.logging import debug
+from .core.panels import buttons_html
 from .core.panels import PanelName
 from .core.promise import Promise
 from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.url import parse_uri
-from .core.views import get_line
+from .core.views import get_file_lines
 from contextlib import contextmanager
 from typing import Any
 from typing import Callable
@@ -41,39 +42,6 @@ TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str]
 g_workspace_edit_panel_resolvers: dict[int, Callable[[bool], None]] = {}
 
 ROWCOL_PREFIX = " {:>4}:{:<4} {}"
-
-BUTTONS_TEMPLATE = """
-<style>
-    html {{
-        background-color: transparent;
-        margin-top: 1.5rem;
-        margin-bottom: 0.5rem;
-    }}
-    a {{
-        line-height: 1.6rem;
-        padding-left: 0.6rem;
-        padding-right: 0.6rem;
-        border-width: 1px;
-        border-style: solid;
-        border-color: #fff4;
-        border-radius: 4px;
-        color: #cccccc;
-        background-color: #3f3f3f;
-        text-decoration: none;
-    }}
-    html.light a {{
-        border-color: #000a;
-        color: white;
-        background-color: #636363;
-    }}
-    a.primary, html.light a.primary {{
-        background-color: color(var(--accent) min-contrast(white 6.0));
-    }}
-</style>
-<body id='lsp-buttons'>
-    <a href='{apply}' class='primary'>Apply</a>&nbsp;
-    <a href='{discard}'>Discard</a>
-</body>"""
 
 
 @contextmanager
@@ -126,7 +94,7 @@ class LspApplyTextDocumentEditCommand(sublime_plugin.TextCommand):
         with temporary_setting(self.view.settings(), 'translate_tabs_to_spaces', False):
             last_row = self.view.rowcol_utf16(self.view.size())[0]
             snippet_text_edit_already_applied = False
-            for text_edit in reversed(sorted(edits, key=lambda e: parse_lsp_position(e['range']['start']))):  # noqa: C413
+            for text_edit in reversed(sorted(edits, key=lambda e: parse_lsp_position(e['range']['start']))):  # ruff: ignore[unnecessary-call-around-sorted]
                 start_row, region = self._get_region(text_edit)
                 if not snippet_text_edit_already_applied and is_snippet_text_edit(text_edit) and \
                         self.view == sublime.active_window().active_view():
@@ -337,10 +305,13 @@ def _render_workspace_edit_panel(
         filename_line = '{}:'.format(_get_relative_path(wm, file) if scheme == 'file' else uri)
         to_render.append(filename_line)
         reference_document.append(filename_line)
-        for edit in changes:
+        if scheme == 'file':
+            rows = [parse_lsp_position(edit['range']['start'])[0] for edit in changes]
+            line_contents = get_file_lines(wm.window, file, rows, strip=False)
+        else:
+            line_contents = ['<no preview available>'] * len(changes)
+        for edit, line_content in zip(changes, line_contents):
             start_row, start_col_utf16 = parse_lsp_position(edit['range']['start'])
-            line_content = get_line(wm.window, file, start_row, strip=False) if scheme == 'file' else \
-                '<no preview available>'
             start_col = utf16_to_code_points(line_content, start_col_utf16)
             original_line = ROWCOL_PREFIX.format(start_row + 1, start_col + 1, line_content.strip() + "\n")
             reference_document.append(original_line)
@@ -382,28 +353,21 @@ def _render_workspace_edit_panel(
         panel.settings().set('workspace_edit.is_inline_diff_active', True)
     selection.clear()
     g_workspace_edit_panel_resolvers[wm.window.id()] = on_done
-    buttons_html = BUTTONS_TEMPLATE.format(
-        apply=sublime.command_url('chain', {
+
+    def command_url(accept: bool) -> str:
+        return sublime.command_url('chain', {
             'commands': [
                 ['hide_panel', {}],
                 ['lsp_conclude_workspace_edit_panel', {
                     'window_id': wm.window.id(),
-                    'accept': True
-                }]
-            ]
-        }),
-        discard=sublime.command_url('chain', {
-            'commands': [
-                ['hide_panel', {}],
-                ['lsp_conclude_workspace_edit_panel', {
-                    'window_id': wm.window.id(),
-                    'accept': False
+                    'accept': accept
                 }]
             ]
         })
-    )
+
+    content = buttons_html([(command_url(True), 'Apply', 'primary'), (command_url(False), 'Discard', None)])
     pm.update_workspace_edit_panel_buttons([
-        sublime.Phantom(sublime.Region(len(to_render[0]) - 1), buttons_html, sublime.PhantomLayout.BLOCK)
+        sublime.Phantom(sublime.Region(len(to_render[0]) - 1), content, sublime.PhantomLayout.BLOCK)
     ])
 
 
@@ -418,7 +382,7 @@ def utf16_to_code_points(s: str, col: int) -> int:
             break
         utf16_len += 1 if ord(c) < 65536 else 2
     else:
-        idx += 1  # get_line function trims the trailing '\n'
+        idx += 1  # get_file_lines function trims the trailing '\n'
     return idx
 
 

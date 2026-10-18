@@ -29,7 +29,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
     Note that the return value of the function will be discarded, so it only makes sense to use this decorator for
     functions that return None. The function will run on Sublime's main thread.
     """
-    DEBOUNCE_TIME = 0.5  # seconds  # noqa: N806
+    DEBOUNCE_TIME = 0.5  # seconds  # ruff: ignore[non-lowercase-variable-in-function]
 
     @functools.wraps(user_function)
     def wrapped_function(*args: P.args, **kwargs: P.kwargs) -> None:
@@ -41,7 +41,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
                     setattr(wrapped_function, '_target_time', None)
                     sublime.set_timeout(check_call_function, int(additional_delay * 1000))
                     return
-            delattr(wrapped_function, '_target_time')  # noqa: B043
+            delattr(wrapped_function, '_target_time')  # ruff: ignore[del-attr-with-constant]
             user_function(*args, **kwargs)
         if hasattr(wrapped_function, '_target_time'):
             setattr(wrapped_function, '_target_time', time.monotonic() + DEBOUNCE_TIME)

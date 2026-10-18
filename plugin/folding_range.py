@@ -9,7 +9,7 @@ from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import UINT_MAX
 from .core.registry import LspTextCommand
-from .core.views import range_to_region
+from .core.type_converters import range_to_region
 from .core.views import text_document_identifier
 from typing import TYPE_CHECKING
 import sublime
@@ -121,7 +121,7 @@ class LspFoldCommand(LspTextCommand):
                 return "LSP <debug>"  # is_visible will return False
             pt = selection[0].b
         for folding_range in sorted_folding_ranges(self.folding_ranges):
-            region = range_to_region(folding_range_to_range(folding_range), self.view)
+            region = range_to_region(self.view, folding_range_to_range(folding_range))
             if ((strict and region.contains(pt)) or
                     (not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(pt))) and \
                     not self.view.is_folded(region):
@@ -163,7 +163,7 @@ class LspFoldCommand(LspTextCommand):
         response = await session.request(Request.foldingRange(params, self.view))
         if response and not isinstance(response, Error):
             for folding_range in sorted_folding_ranges(response):
-                region = range_to_region(folding_range_to_range(folding_range), self.view)
+                region = range_to_region(self.view, folding_range_to_range(folding_range))
                 if ((strict and region.contains(pt)) or
                         (not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(pt))) and \
                         not self.view.is_folded(region):
@@ -186,7 +186,7 @@ class LspFoldAllCommand(LspTextCommand):
         if not response or isinstance(response, Error):
             return
         regions = [
-            range_to_region(folding_range_to_range(folding_range), self.view)
+            range_to_region(self.view, folding_range_to_range(folding_range))
             for folding_range in response if not kind or kind == folding_range.get('kind')
         ]
         if not regions:

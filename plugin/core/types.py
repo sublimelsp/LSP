@@ -302,6 +302,7 @@ class Settings:
     show_diagnostics_panel_on_save = cast("int", None)
     show_diagnostics_severity_level = cast("int", None)
     show_inlay_hints = cast("bool", None)
+    show_messages_panel_level = cast("int", None)
     show_multiline_diagnostics_highlights = cast("bool", None)
     show_multiline_document_highlights = cast("bool", None)
     show_references_in_quick_panel = cast("bool", None)
@@ -351,6 +352,7 @@ class Settings:
         r("show_diagnostics_panel_on_save", 0)
         r("show_diagnostics_severity_level", 2)
         r("show_inlay_hints", False)
+        r("show_messages_panel_level", 1)
         r("show_multiline_diagnostics_highlights", True)
         r("show_multiline_document_highlights", True)
         r("show_references_in_quick_panel", True)
@@ -408,12 +410,12 @@ class Settings:
             style = default | sublime.RegionFlags.DRAW_NO_FILL
             return style, style
         if style_str == "stippled":
-            return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE  # noqa: E501
-        return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE  # noqa: E501
+            return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE  # ruff: ignore[line-too-long]
+        return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE  # ruff: ignore[line-too-long]
 
     @staticmethod
     def _style_str_to_flag(style_str: str) -> sublime.RegionFlags | None:
-        default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # noqa: E501
+        default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
         # This method could be a dict or lru_cache
         if not style_str:
             return default | sublime.RegionFlags.DRAW_NO_OUTLINE

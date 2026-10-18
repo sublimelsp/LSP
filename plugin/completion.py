@@ -24,11 +24,11 @@ from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.sessions import Session
 from .core.settings import userprefs
+from .core.type_converters import range_to_region
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import FORMAT_STRING
 from .core.views import html_wrapper
 from .core.views import minihtml
-from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from typing import Any
@@ -80,7 +80,7 @@ def format_completion(
     details: list[str] = []
     if can_resolve_completion_items or item.get('documentation'):
         # Not using "make_command_link" in a hot path to avoid slow json.dumps.
-        args = f'{{"view_id":{view_id},"command":"lsp_resolve_docs","args":{{"index":{index},"session_name":"{session_name}"}}}}'  # noqa: E501
+        args = f'{{"view_id":{view_id},"command":"lsp_resolve_docs","args":{{"index":{index},"session_name":"{session_name}"}}}}'  # ruff: ignore[line-too-long]
         href = f'subl:lsp_run_text_command_helper {args}'
         details.append(f"<a href='{href}'>More</a>")
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
@@ -129,11 +129,11 @@ def format_completion(
     return completion
 
 
-def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit) -> Range:
+def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit, *, reverse_insert_mode: bool) -> Range:
     if 'insert' in text_edit and 'replace' in text_edit:
         text_edit = cast('InsertReplaceEdit', text_edit)
         insert_mode = userprefs().completion_insert_mode
-        if LspCommitCompletionWithOppositeInsertMode.active:
+        if reverse_insert_mode:
             insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
         return text_edit.get(insert_mode)  # type: ignore
     text_edit = cast('TextEdit', text_edit)
@@ -340,11 +340,15 @@ class LspSelectCompletionCommand(LspTextCommand):
     completions: dict[SessionName, CompletionsStore] = {}
 
     def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
+        # This command runs synchronously from within "commit_completion", so this is where the flag can be read
+        # reliably. Pass it on explicitly rather than reading it later, for example after the item was resolved.
+        reverse_insert_mode = LspCommitCompletionWithOppositeInsertMode.active
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
         if text_edit := item.get("textEdit"):
             new_text = text_edit["newText"].replace("\r", "")
-            edit_region = range_to_region(get_text_edit_range(text_edit), self.view)
+            edit_region = range_to_region(
+                self.view, get_text_edit_range(text_edit, reverse_insert_mode=reverse_insert_mode))
             for region in self._translated_regions(edit_region):
                 self.view.erase(edit, region)
         else:

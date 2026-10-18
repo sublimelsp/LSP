@@ -14,11 +14,11 @@ from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import RequestFlags
 from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.settings import userprefs
+from .core.type_converters import range_to_region
 from .core.views import diagnostic_icon
 from .core.views import DIAGNOSTIC_STYLES
 from .core.views import document_highlight_key
 from .core.views import make_command_link
-from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any
@@ -313,7 +313,7 @@ class SessionView:
 
     def _redraw_diagnostics_async(self) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
-        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
         level = userprefs().show_diagnostics_severity_level
         for sev, style in reversed(DIAGNOSTIC_STYLES.items()):
             self._draw_diagnostics(sev, level, flags[sev - 1] or style.single_line_region_flags, multiline=False)
@@ -442,7 +442,7 @@ class SessionView:
         return f'lsp_code_lens.{self.session.config.name}'
 
     def _code_lens_region(self, code_lens: ResolvedCodeLens) -> sublime.Region:
-        return range_to_region(code_lens['range'], self.view)
+        return range_to_region(self.view, code_lens['range'])
 
     def _code_lens_html(self, code_lens: ResolvedCodeLens) -> str:
         command = code_lens['command']

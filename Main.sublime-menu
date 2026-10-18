@@ -231,7 +231,7 @@
           },
           {
             "caption": "Restart Servers",
-            "command": "lsp_restart_client"
+            "command": "lsp_restart_server"
           },
           {
             "id": "lsp-panels",
@@ -244,6 +244,10 @@
           {
             "caption": "Toggle Diagnostics Panel",
             "command": "lsp_show_diagnostics_panel"
+          },
+          {
+            "caption": "Toggle Messages Panel",
+            "command": "lsp_toggle_messages_panel"
           },
           {
             "id": "lsp-server-configurations",

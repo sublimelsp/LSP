@@ -242,7 +242,10 @@
         "keys": ["primary+s"],
         "command": "lsp_save",
         "args": {"async": true},
-        "context": [{"key": "lsp.session_with_capability", "operand": "textDocumentSync.willSave | textDocumentSync.willSaveWaitUntil | codeActionProvider.codeActionKinds | documentFormattingProvider | documentRangeFormattingProvider"}]
+        "context": [
+            {"key": "lsp.session_with_capability", "operand": "textDocumentSync.willSave | textDocumentSync.willSaveWaitUntil | codeActionProvider.codeActionKinds | documentFormattingProvider | documentRangeFormattingProvider"},
+            {"key": "setting.disable_lsp_save", "operator": "not_equal", "operand": true}
+        ]
     },
     // Navigate in Tree Views (pending keybinding support in Sheets - https://github.com/sublimehq/sublime_text/issues/5377)
     // {

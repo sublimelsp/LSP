@@ -140,7 +140,6 @@ from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
 from .protocol import P_contra
-from .protocol import Point
 from .protocol import R
 from .protocol import Request
 from .protocol import ResolvedCodeLens
@@ -149,6 +148,7 @@ from .protocol import ResponseError
 from .protocol import ServerNotification
 from .protocol import ServerRequest
 from .protocol import ServerResponse
+from .protocol import TextPosition
 from .settings import globalprefs
 from .settings import userprefs
 from .transports import TransportCallbacks
@@ -281,7 +281,7 @@ class Manager(ABC):
     @property
     @abstractmethod
     def window(self) -> sublime.Window:
-        """Get the window associated with this manager."""
+        """The window associated with this manager."""
         raise NotImplementedError
 
     @abstractmethod
@@ -904,6 +904,11 @@ class AbstractViewListener(ABC):
     async def purge_changes(self) -> list[BaseException | None]:
         raise NotImplementedError
 
+    @deprecated("use AbstractViewListener.purge_changes instead")
+    @abstractmethod
+    def purge_changes_async(self) -> None:
+        raise NotImplementedError
+
     @abstractmethod
     async def trigger_on_pre_save(self) -> list[BaseException | None]:
         raise NotImplementedError
@@ -1134,7 +1139,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: dict[str | int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # noqa: E501
+        self._response_handlers: dict[str | int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # ruff: ignore[line-too-long]
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -1514,19 +1519,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         # Handle VSCode-specific command which is often used for "References" code lenses
         if command_name == "editor.action.showReferences" and view:
             if (arguments := command.get('arguments')) and len(arguments) == 3:
-                if references := cast('list[Location]', arguments[2]):
+                if references := cast('list[Location] | list[LocationLink]', arguments[2]):
                     if len(references) == 1:
                         await self.open_location(references[0])
                     else:
                         view_uri = uri_from_view(view)
-                        locations = sorted(
-                            references,
-                            key=lambda location: (
-                                normalize_uri(location['uri']) != view_uri,
-                                location['uri'],
-                                Point.from_lsp(location['range']['start']),
-                            ),
-                        )
+
+                        def sort_key(location: Location | LocationLink) -> tuple[bool, DocumentUri, TextPosition]:
+                            uri, r = get_uri_and_range_from_location(location)
+                            return (normalize_uri(uri) != view_uri, uri, TextPosition.from_lsp(r['start']))
+
+                        locations = cast('list[Location] | list[LocationLink]', sorted(references, key=sort_key))
                         LocationPicker(view, self, locations, side_by_side=False)
             return None
         future = self.request(Request.executeCommand(command, progress=progress))
@@ -1640,7 +1643,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             content = response['text'].replace('\r', '')
             syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
             return self._on_view_for_uri_opened(
-                await self.open_scratch_buffer(title, content, syntax, flags, group), uri, r
+                await self._open_scratch_buffer(title, content, syntax, flags, group), uri, r
             )
         # There is no pre-existing session-buffer, so we have to go through the plugin's URI handler.
         if self._plugin:
@@ -1692,16 +1695,32 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         promise, resolve = pair
         # It'd be nice to have automatic tuple unpacking continuations
-        callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # noqa: E731
+        callback = lambda a, b, c: resolve((a or 'untitled', b, c))  # ruff: ignore[lambda-assignment]
         if plugin.on_open_uri_async(uri, callback):
             title, content, syntax = await promise
-            view = await self.open_scratch_buffer(title, content, syntax, flags, group)
+            view = await self._open_scratch_buffer(title, content, syntax, flags, group)
             return self._on_view_for_uri_opened(view, uri, r)
         # resolve unused promise
         resolve(('', '', ''))
         return False
 
-    async def open_scratch_buffer(
+    def open_scratch_buffer(
+        self,
+        title: str,
+        content: str,
+        syntax: str,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1,
+    ) -> Promise[sublime.View]:
+        """
+        Open a read-only scratch buffer with the given content.
+
+        The returned Promise can be awaited or chained with `.then()` (for backwards-compatibility).
+        """
+        return self.create_task_and_wrap_in_compat_promise(
+            self._open_scratch_buffer(title, content, syntax, flags, group))
+
+    async def _open_scratch_buffer(
         self,
         title: str,
         content: str,
@@ -1744,6 +1763,33 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> sublime.View | Literal[False] | None:
         uri, r = get_uri_and_range_from_location(location)
         return await self.open_uri(uri, r, flags, group)
+
+    @deprecated("use Session.open_uri instead")
+    def open_uri_async(
+        self,
+        uri: DocumentUri,
+        r: Range | None = None,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1
+    ) -> Promise[sublime.View | None]:
+
+        async def do() -> sublime.View | None:
+            return await self.open_uri(uri, r, flags, group) or None
+
+        return self.create_task_and_wrap_in_compat_promise(do())
+
+    @deprecated("use Session.open_location instead")
+    def open_location_async(
+        self,
+        location: Location | LocationLink,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1
+    ) -> Promise[sublime.View | None]:
+
+        async def do() -> sublime.View | None:
+            return await self.open_location(location, flags, group) or None
+
+        return self.create_task_and_wrap_in_compat_promise(do())
 
     async def notify_plugin_on_session_buffer_change(self, session_buffer: SessionBufferProtocol) -> None:
         if not self._plugin:
@@ -1867,10 +1913,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             # The delete commands run asynchronously and do not report an error. For example, ST 4215+ does not move
             # a path to the recycle bin if the path is on a different file system than the home directory.
             attempts = 0
-            while os.path.exists(path) and attempts < _DELETE_TIMEOUT_MS // _DELETE_POLL_INTERVAL_MS:  # noqa: ASYNC240
+            while os.path.exists(path) and attempts < _DELETE_TIMEOUT_MS // _DELETE_POLL_INTERVAL_MS:  # ruff: ignore[blocking-path-method-in-async-function]
                 await asyncio.sleep(_DELETE_POLL_INTERVAL_MS / 1000)
                 attempts += 1
-            if os.path.exists(path):  # noqa: ASYNC240
+            if os.path.exists(path):  # ruff: ignore[blocking-path-method-in-async-function]
                 return f'Failed to move {path} to the recycle bin'
             return None
 
@@ -1930,14 +1976,14 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             scheme, path = parse_uri(uri)
             if scheme != 'file':
                 return await _continue(f'CreateFile not supported for URI {uri}')
-            if os.path.isfile(path):  # noqa: ASYNC240
+            if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
                 if options.get('overwrite'):
                     failure_reason = await delete_file(path)
                     return await _continue(failure_reason or create_file(path))
                 if options.get('ignoreIfExists'):
                     return await _continue(None)
                 return await _continue(f'CreateFile failed because a file already exists at target {uri}')
-            if os.path.isdir(path):  # noqa: ASYNC240
+            if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
                 # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
                 return await _continue(f'CreateFile failed because a folder already exists at target {uri}')
             return await _continue(create_file(path))
@@ -1948,19 +1994,19 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             old_scheme, old_path = parse_uri(old_uri)
             if old_scheme != 'file':
                 return await _continue(f'RenameFile not supported for URI {old_uri}')
-            if not os.path.exists(old_path):  # noqa: ASYNC240
+            if not os.path.exists(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
                 return await _continue(f'RenameFile failed because {old_uri} does not exist')
             new_scheme, new_path = parse_uri(new_uri)
             if new_scheme != 'file':
                 return await _continue(f'RenameFile not supported for URI {new_uri}')
-            if os.path.isfile(new_path):  # noqa: ASYNC240
-                if options.get('overwrite') and os.path.isfile(old_path):  # noqa: ASYNC240
+            if os.path.isfile(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
+                if options.get('overwrite') and os.path.isfile(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
                     failure_reason = await delete_file(new_path)
                     return await _continue(failure_reason or rename_file(old_path, new_path))
                 if options.get('ignoreIfExists'):
                     return await _continue(None)
                 return await _continue(f'RenameFile failed because target {new_uri} already exists')
-            if os.path.isdir(new_path):  # noqa: ASYNC240
+            if os.path.isdir(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
                 # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
                 return await _continue(f'RenameFile failed because target {new_uri} already exists')
             return await _continue(rename_file(old_path, new_path))
@@ -1970,9 +2016,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             scheme, path = parse_uri(uri)
             if scheme != 'file':
                 return await _continue(f'DeleteFile not supported for URI {uri}')
-            if os.path.isfile(path):  # noqa: ASYNC240
+            if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
                 return await on_deleted(uri, await delete_file(path))
-            if os.path.isdir(path):  # noqa: ASYNC240
+            if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
                 if os.listdir(path) and not options.get('recursive'):
                     return await _continue(f'DeleteFile failed because folder {uri} is not empty')
                 return await on_deleted(uri, await delete_folder(path))
@@ -2384,6 +2430,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     def clear_diagnostics_for_uri(self, uri: DocumentUri) -> None:
         self.diagnostics.clear_diagnostics(uri)
+        # Forget the result IDs as well, otherwise the server could respond with an unchanged report to the next pull
+        # diagnostics request and the diagnostics which were cleared here wouldn't be restored.
+        for key in [key for key in self.diagnostics_result_ids if key[0] == uri]:
+            del self.diagnostics_result_ids[key]
         if mgr := self.manager():
             mgr.on_diagnostics_updated()
 
@@ -2669,15 +2719,26 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
         self._response_handlers[request_id] = (r, on_result, on_error)
         self._invoke_views(r, "on_request_started_async", result, r)
-        if self._plugin and isinstance(self._plugin, AbstractPlugin):
-            self._plugin.on_pre_send_request_async(request_id, r)
-        elif self._plugin:
-            client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
-            self._plugin.on_pre_send_request_async(client_request, r.view)
-            r.params = cast('P_contra', client_request['params'])
-        self._logger.outgoing_request(request_id, r.method, r.params)
-        self.create_task(self.send_payload(r.to_payload(request_id)))
+        self.create_task(self._send_request_payload(request_id, r))
         return result
+
+    async def _send_request_payload(self, request_id: int, r: Request[P_contra, R]) -> None:
+        try:
+            if self._plugin and isinstance(self._plugin, AbstractPlugin):
+                self._plugin.on_pre_send_request_async(request_id, r)
+            elif self._plugin:
+                client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
+                await self._plugin.on_pre_send_request(client_request, r.view)
+                r.params = cast('P_contra', client_request['params'])
+        except Exception as ex:
+            # Don't leave the caller waiting for a response to a request that is never sent.
+            exception_log(f"Error in plugin hook before sending request {r.method}", ex)
+            if handlers := self._response_handlers.pop(request_id, None):
+                self._invoke_views(r, "on_request_finished_async", request_id)
+                handlers[2](Error.from_exception(ex).to_lsp())
+            return
+        self._logger.outgoing_request(request_id, r.method, r.params)
+        await self.send_payload(r.to_payload(request_id))
 
     @deprecated("use Session.request instead")
     def send_request_async(

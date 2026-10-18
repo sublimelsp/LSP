@@ -55,6 +55,7 @@ from .core.sessions import RequestController
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
+from .core.type_converters import range_to_region
 from .core.types import Capabilities
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
@@ -72,7 +73,6 @@ from .core.views import first_selection_region
 from .core.views import formatting_options
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
-from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
@@ -184,7 +184,7 @@ class SessionBuffer(TaskContainer):
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
         self.supported_diagnostic_tags: set[DiagnosticTag] = set()
-        self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # noqa: E501
+        self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # ruff: ignore[line-too-long]
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(self)
@@ -299,7 +299,7 @@ class SessionBuffer(TaskContainer):
 
     async def remove_session_view(self, sv: SessionViewProtocol) -> list[Exception]:
         self._clear_semantic_token_regions(sv.view)
-        self.session_views.remove(sv)
+        self.session_views.discard(sv)
         if len(self.session_views) == 0:
             return await self._on_before_destroy(sv.view)
         return []
@@ -656,7 +656,7 @@ class SessionBuffer(TaskContainer):
             view = self.some_view()
             if not view:
                 return
-            regions = [range_to_region(link["range"], view) for link in self._document_links]
+            regions = [range_to_region(view, link["range"]) for link in self._document_links]
             for sv in self.session_views:
                 sv.view.add_regions(
                     RegionKey.DOCUMENT_LINK, regions, scope="markup.underline.link.lsp", flags=DOCUMENT_LINK_FLAGS)
@@ -666,7 +666,7 @@ class SessionBuffer(TaskContainer):
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> DocumentLink | None:
         for link in self._document_links:
-            if range_to_region(link["range"], view).contains(point):
+            if range_to_region(view, link["range"]).contains(point):
                 return link
         return None
 
@@ -714,7 +714,10 @@ class SessionBuffer(TaskContainer):
                 return
             if not pending.request.cancelled:
                 await pending.request.cancel()
-        params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
+        try:
+            params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
+        except MissingUriError:
+            return
         if identifier:
             params['identifier'] = identifier
         if (result_id := self.session.diagnostics_result_ids.get((self._last_known_uri, identifier))) is not None:
@@ -767,7 +770,7 @@ class SessionBuffer(TaskContainer):
         diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
         data_per_severity: dict[tuple[DiagnosticSeverity, bool], DiagnosticSeverityData] = {}
         for diagnostic in raw_diagnostics:
-            region = range_to_region(diagnostic["range"], view)
+            region = range_to_region(view, diagnostic["range"])
             severity = diagnostic_severity(diagnostic)
             key = (severity, len(view.split_by_newlines(region)) > 1)
             data = data_per_severity.get(key)

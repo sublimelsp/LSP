@@ -1,7 +1,7 @@
-# ruff: noqa: F405
+# ruff: file-ignore[undefined-local-with-import-star-usage]
 from __future__ import annotations
 
-from ...protocol import *  # For backward compatibility with LSP packages.  # noqa: F403
+from ...protocol import *  # For backward compatibility with LSP packages.  # ruff: ignore[undefined-local-with-import-star]
 from dataclasses import dataclass
 from typing import Any
 from typing import Callable

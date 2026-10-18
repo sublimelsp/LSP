@@ -64,7 +64,7 @@ class MockManager(Manager):
         return None
 
     def handle_show_message(self, config_name: str, params: ShowMessageParams) -> None:
-        return None
+        pass
 
     def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
         ...

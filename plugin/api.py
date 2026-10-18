@@ -275,6 +275,7 @@ def command_handler(command_name: str) -> Callable[[CommandHandlerForDecorator],
 
     Intercepts a `workspace/executeCommand` request with the given command name when triggered by the client.
     The decorated method is called with the command's `arguments` list (or `None` if absent).
+    Decorated method is called on the async thread, regardless of which thread the command was executed from.
 
     Usage:
         ```py
@@ -516,14 +517,18 @@ class LspPlugin(APIHandler):
         """
         self.on_initialized_async()
 
+    @deprecated("override on_pre_send_request instead")
     def on_pre_send_request_async(self, request: ClientRequest, view: sublime.View | None) -> None:
+        pass
+
+    async def on_pre_send_request(self, request: ClientRequest, view: sublime.View | None) -> None:
         """
         Notifies about a request that is about to be sent to the language server.
 
         :param    request:     The request object. The request['params'] can be modified by the plugin.
         :param    view:        The corresponding View if applicable.
         """
-        pass
+        self.on_pre_send_request_async(request, view)
 
     @deprecated("override on_pre_send_response instead")
     def on_pre_send_response_async(self, response: ClientResponse) -> None:

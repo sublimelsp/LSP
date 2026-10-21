@@ -35,6 +35,20 @@ jobs:
         with:
           coverage: true
 
+  # A single check that sums up the Unittesting jobs on all platforms, for the "Require CI" ruleset to require.
+  Unittesting-result:
+    name: Unittesting result
+    needs: Unittesting
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Unittesting result
+        env:
+          RESULT: ${{ needs.Unittesting.result }}
+        run: |
+          echo "Unittesting result: $RESULT"
+          test "$RESULT" = success
+
   Lint:
     runs-on: ubuntu-latest
     steps:

@@ -2,7 +2,7 @@
 lint = [
     "pyright==1.1.414",
     "ruff==0.17.0",
-    "orjson==3.10.15; python_version < '3.10'",
+    "orjson==3.13.0; python_version < '3.10'",
     "orjson==3.13.0; python_version >= '3.10'",
 ]
 

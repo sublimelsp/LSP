@@ -7,10 +7,8 @@ on:
     paths-ignore:
       - ".github/workflows/docs.yml"
       - "docs/**"
+  # Runs on all pull requests, including docs-only ones, because the "Require CI" ruleset requires its checks.
   pull_request:
-    paths-ignore:
-      - ".github/workflows/docs.yml"
-      - "docs/**"
 
 concurrency:
   # Cancel superseded runs of the same pull request. Runs on main get a unique group so that they are never cancelled.

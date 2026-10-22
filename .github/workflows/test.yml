@@ -7,10 +7,8 @@ on:
     paths-ignore:
       - ".github/workflows/docs.yml"
       - "docs/**"
+  # Runs on all pull requests, including docs-only ones, because the "Require CI" ruleset requires its checks.
   pull_request:
-    paths-ignore:
-      - ".github/workflows/docs.yml"
-      - "docs/**"
 
 concurrency:
   # Cancel superseded runs of the same pull request. Runs on main get a unique group so that they are never cancelled.
@@ -34,6 +32,20 @@ jobs:
       - uses: SublimeText/UnitTesting/actions/run-tests@v1
         with:
           coverage: true
+
+  # A single check that sums up the Unittesting jobs on all platforms, for the "Require CI" ruleset to require.
+  Unittesting-result:
+    name: Unittesting result
+    needs: Unittesting
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Unittesting result
+        env:
+          RESULT: ${{ needs.Unittesting.result }}
+        run: |
+          echo "Unittesting result: $RESULT"
+          test "$RESULT" = success
 
   Lint:
     runs-on: ubuntu-latest

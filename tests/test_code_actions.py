@@ -117,9 +117,9 @@ class CodeActionsTestCaseBase(TextDocumentTestCase):
         capabilities['capabilities']['codeActionProvider'] = {'codeActionKinds': ['quickfix', 'source.fixAll']}
         return capabilities
 
-    async def asyncDoCleanups(self) -> None:
-        await self.await_clear_view_and_save()
-        await super().asyncDoCleanups()
+    async def setUp(self) -> None:
+        await super().setUp()
+        self.addCleanup(self.await_clear_view_and_save)
 
 
 class CodeActionsOnSaveTaskTestCase(TextDocumentTestCase):

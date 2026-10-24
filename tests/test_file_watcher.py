@@ -88,12 +88,12 @@ class FileWatcherDocumentTestCase(TextDocumentTestCase):
     """
 
     @classmethod
-    async def asyncSetUpClass(cls) -> None:
+    async def setUpClass(cls) -> None:
         # Don't call the superclass.
         register_file_watcher_implementation(TestFileWatcher)
 
     @classmethod
-    async def asyncTearDownClass(cls) -> None:
+    async def tearDownClass(cls) -> None:
         # Don't call the superclass.
         pass
 
@@ -101,11 +101,11 @@ class FileWatcherDocumentTestCase(TextDocumentTestCase):
         self.assertEqual(len(TestFileWatcher.active_watchers), 0)
         # Watchers are only registered when there are workspace folders so add a folder.
         self.folder_root_path = setup_workspace_folder()
-        await super().asyncSetUpClass()
+        await super().setUpClass()
         await super().setUp()
 
     async def tearDown(self) -> None:
-        await super().asyncTearDownClass()
+        await super().tearDownClass()
         self.assertEqual(len(TestFileWatcher.active_watchers), 0)
         # Restore original project data.
         window = sublime.active_window()

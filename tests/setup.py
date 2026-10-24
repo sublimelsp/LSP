@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from .async_test_case import AsyncTestCase
-from .async_test_case import FutureLike
 from .test_mocks import basic_responses
 from functools import partial
 from LSP.plugin.core.aio import run_coroutine
@@ -25,6 +23,7 @@ from typing import Callable
 from typing import Coroutine
 from typing import TYPE_CHECKING
 from typing_extensions import override
+from unittesting import AsyncTestCase
 import asyncio
 import sublime
 
@@ -35,6 +34,7 @@ if TYPE_CHECKING:
     from LSP.plugin.core.windows import WindowManager
     from LSP.protocol import CodeAction
     from LSP.protocol import LSPAny
+    import concurrent.futures
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
@@ -108,8 +108,8 @@ def expand(s: str, w: sublime.Window) -> str:
 class SublimeAioTestCase(AsyncTestCase):
     timeout_ms = TIMEOUT_TIME
 
-    @classmethod
-    def run_coroutine(cls, coro: Coroutine) -> FutureLike:
+    @staticmethod
+    def run_coroutine(coro: Coroutine) -> concurrent.futures.Future:
         return run_coroutine(coro)
 
 
@@ -126,7 +126,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
 
     @override
     @classmethod
-    async def asyncSetUpClass(cls) -> None:
+    async def setUpClass(cls) -> None:
         test_name = cls.get_test_name()
         server_capabilities = cls.get_test_server_capabilities()
         window = sublime.active_window()
@@ -155,6 +155,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
 
     @override
     async def setUp(self) -> None:
+        self.addCleanup(self._close_view)
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", f"{self.get_test_name()}.txt"), window)
         await close_test_view(window.find_open_file(filename))
@@ -318,16 +319,15 @@ class TextDocumentTestCase(SublimeAioTestCase):
 
     @override
     @classmethod
-    async def asyncTearDownClass(cls) -> None:
+    async def tearDownClass(cls) -> None:
         try:
             if cls.session and cls.wm:
                 await cls.session.end()
         finally:
             # restore the user's configs
             remove_config(cls.config)
-        await super().asyncTearDownClass()
+        await super().tearDownClass()
 
-    @override
-    async def asyncDoCleanups(self) -> None:
+    async def _close_view(self) -> None:
         if self.view and self.view.is_valid():
             await close_test_view(self.view)

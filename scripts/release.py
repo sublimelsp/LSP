@@ -1,46 +1,50 @@
 #!/usr/bin/env python3
+"""
+Release tooling, used by the "Prepare Release" and "Release" GitHub workflows.
+
+- `prepare <bump|version>` bumps the version files and drafts `messages/<version>.txt` from the commit log.
+- `tag` prints the git tag name for the current version.
+- `notes` prints the GitHub release notes for the current version.
+"""
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Generator
 import argparse
-import http.client
 import json
-import os
 import re
 import subprocess
 import sys
 
-# Internal
-PACKAGE_PATH = os.path.realpath(os.path.join(os.path.join(os.path.dirname(__file__), '..')))
+PACKAGE_PATH = Path(__file__).resolve().parent.parent
 MESSAGE_DIR = 'messages'
-MESSAGE_PATH = os.path.join(PACKAGE_PATH, MESSAGE_DIR)
-CONFIGURATION = json.loads(Path(PACKAGE_PATH, '.release.json').read_text(encoding='utf-8'))
+MESSAGE_PATH = PACKAGE_PATH / MESSAGE_DIR
+VERSION_PATH = PACKAGE_PATH / 'VERSION'
+CONFIGURATION = json.loads((PACKAGE_PATH / '.release.json').read_text(encoding='utf-8'))
 
-# Project configuration
-# The name of the branch to push to the remote on releasing.
-RELEASE_BRANCH = CONFIGURATION['push_branch']
-# The name of the GitHub repository in <owner>/<repo> format
-GITHUB_REPO = CONFIGURATION['publish_repo']
 # The prefix to use for release version number. For example with prefix "4000" the version will be "4000-x.y.z".
 RELEASE_VERSION_PREFIX = CONFIGURATION['publish_version_prefix'] or ''
-# The name of the settings file to get the release token from ("github_token" setting)
-SETTINGS = f'{__package__}.sublime-settings'
 PYTHON_VERSION_PATH = CONFIGURATION.get('python_version_path', None)
 
-
-def get_message(fname: str) -> str:
-    return Path(fname).read_text(encoding='utf-8')
-
-
-def put_message(fname: str, text: str) -> None:
-    Path(fname).write_text(text, encoding='utf-8')
+# Maps conventional commit types to the sections of the drafted release message, in order of appearance.
+# Commits of other types (chore, ci, build, test, ...) are left out of the draft.
+SECTIONS = {
+    'feat': 'Features',
+    'fix': 'Fixes',
+    'perf': 'Performance',
+    'refactor': 'Refactors',
+    'docs': 'Documentation',
+}
+# Section for commits without a conventional commit type.
+OTHER_SECTION = 'Other'
+COMMIT_PATTERN = re.compile(r'^(?P<type>[a-z]+)(?:\([^)]*\))?!?:\s*(?P<description>.+)$')
+VERSION_PATTERN = re.compile(r'^\d+\.\d+\.\d+$')
+BUMPS = ('major', 'minor', 'patch')
 
 
 def build_messages_json(version_history: list[str]) -> None:
     """Write the version history to the messages.json file."""
-    output = os.path.join(PACKAGE_PATH, 'messages.json')
-    with Path(output).open('w+', encoding='utf-8') as file:
+    with (PACKAGE_PATH / 'messages.json').open('w', encoding='utf-8') as file:
         json.dump(
             obj={v: MESSAGE_DIR + '/' + v + '.txt' for v in version_history},
             fp=file, indent=4, separators=(',', ': '), sort_keys=True)
@@ -50,10 +54,9 @@ def build_messages_json(version_history: list[str]) -> None:
 def version_history() -> list[str]:
     """Return a list of all releases."""
     def generator() -> Generator[str, None, None]:
-        for filename in os.listdir(MESSAGE_PATH):
-            basename, ext = os.path.splitext(filename)
-            if ext.lower() == '.txt':
-                yield basename
+        for path in MESSAGE_PATH.iterdir():
+            if path.suffix.lower() == '.txt':
+                yield path.stem
 
     return sorted(generator(), key=parse_version)
 
@@ -74,105 +77,104 @@ def get_version_with_prefix(version: str) -> str:
     return version
 
 
-def git(*args: str) -> str | None:
+def current_version() -> str:
+    return VERSION_PATH.read_text(encoding='utf-8').strip()
+
+
+def next_version(current: str, target: str) -> str:
+    """Return the version for `target`, which is either a bump type or an exact version."""
+    if VERSION_PATTERN.match(target):
+        return target
+    if target not in BUMPS:
+        fail(f'Invalid version "{target}". Expected one of {", ".join(BUMPS)} or an x.y.z version.')
+    major, minor, patch = parse_version(current)
+    if target == 'major':
+        return f'{major + 1}.0.0'
+    if target == 'minor':
+        return f'{major}.{minor + 1}.0'
+    return f'{major}.{minor}.{patch + 1}'
+
+
+def git(*args: str) -> str:
     """Run git command within current package path."""
-    if os.name == 'nt':
-        startupinfo = subprocess.STARTUPINFO()  # type: ignore
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
-    else:
-        startupinfo = None
-    proc = subprocess.Popen(
-        args=['git', *list(args)], startupinfo=startupinfo,  # ruff: ignore[start-process-with-partial-path]
-        stdout=subprocess.PIPE, stdin=subprocess.PIPE, cwd=PACKAGE_PATH)
-    stdout, _ = proc.communicate()
-    return stdout.decode('utf-8').strip() if stdout else None
+    return subprocess.run(
+        ['git', *args],  # ruff: ignore[start-process-with-partial-path]
+        cwd=PACKAGE_PATH, check=True, capture_output=True, encoding='utf-8').stdout.strip()
 
 
-def commit_release(version: str) -> None:
-    """Create a 'Cut <version>' commit and tag."""
-    commit_message = f'Cut {version}'
-    git('add', '.')
-    git('commit', '-m', commit_message)
-    git('tag', '-a', '-m', commit_message, get_version_with_prefix(version))
+def draft_message(version: str, previous_tag: str) -> str:
+    """Draft the release message from the commits since `previous_tag`, grouped by conventional commit type."""
+    sections: dict[str, list[str]] = {title: [] for title in [*SECTIONS.values(), OTHER_SECTION]}
+    log = git('log', '--format=%s%x1f%an', f'{previous_tag}..HEAD')
+    for line in log.splitlines():
+        subject, author = line.split('\x1f', 1)
+        if subject.startswith('Cut '):
+            continue
+        match = COMMIT_PATTERN.match(subject)
+        if match:
+            title = SECTIONS.get(match.group('type'))
+            if not title:
+                continue
+            description = match.group('description')
+        else:
+            title = OTHER_SECTION
+            description = subject
+        sections[title].append(f'- {description[:1].upper()}{description[1:]} ({author})')
+    parts = [f'=> {version}']
+    for title, entries in sections.items():
+        if entries:
+            parts.extend((f'# {title}', '\n'.join(entries)))
+    return '\n\n'.join(parts) + '\n'
 
 
-def build_release(_: argparse.Namespace) -> None:
-    """Build the new release locally."""
-    history = version_history()
-    version = history[-1]
-    put_message(os.path.join(PACKAGE_PATH, 'VERSION'), version)
+def prepare_release(args: argparse.Namespace) -> None:
+    """Bump the version files and draft the release message for the new version."""
+    current = current_version()
+    version = next_version(current, args.version)
+    if parse_version(version) <= parse_version(current):
+        fail(f'New version {version} must be greater than the current version {current}.')
+    message_path = MESSAGE_PATH / f'{version}.txt'
+    if not message_path.exists():
+        message_path.write_text(draft_message(version, get_version_with_prefix(current)), encoding='utf-8')
+    VERSION_PATH.write_text(version, encoding='utf-8')
     if PYTHON_VERSION_PATH:
-        version_tuple = parse_version(version)
-        put_message(PYTHON_VERSION_PATH, f'from __future__ import annotations\n\n__version__ = {version_tuple}\n')
-    build_messages_json(history)
-    commit_release(version)
-    print(f"Release {version} created!")
+        (PACKAGE_PATH / PYTHON_VERSION_PATH).write_text(
+            f'from __future__ import annotations\n\n__version__ = {parse_version(version)}\n', encoding='utf-8')
+    build_messages_json(version_history())
+    print(version)
 
 
-def publish_release(args: argparse.Namespace) -> None:
-    """Publish the new release."""
-    if not args.token:
-        print('The GitHub token must be provided either through argument or GITHUB_TOKEN environment variable.')
-        sys.exit(1)
+def print_tag(_: argparse.Namespace) -> None:
+    """Print the git tag name of the current version."""
+    print(get_version_with_prefix(current_version()))
 
-    version = get_message(os.path.join(PACKAGE_PATH, 'VERSION'))
-    version_with_prefix = get_version_with_prefix(version)
 
-    repo_url = f'git@github.com:{GITHUB_REPO}'
-    # push release branch to server
-    git('push', repo_url, RELEASE_BRANCH)
-    # push tags to server
-    git('push', repo_url, 'tag', version_with_prefix)
-
-    # publish the release
-    post_url = f'/repos/{GITHUB_REPO}/releases'
-    headers = {
-        'Authorization': f'token {args.token}',
-        'User-Agent': 'Sublime Text',
-        'Content-type': 'application/json',
-    }
-    # get message from /messages/<version>.txt
-    text = get_message(os.path.join(MESSAGE_PATH, version + '.txt'))
+def print_notes(_: argparse.Namespace) -> None:
+    """Print the GitHub release notes of the current version."""
+    version = current_version()
+    message_path = MESSAGE_PATH / f'{version}.txt'
+    if not message_path.exists():
+        fail(f'Release message {message_path.relative_to(PACKAGE_PATH)} does not exist.')
+    text = message_path.read_text(encoding='utf-8')
     # strip message header (version)
-    text = text[text.find('\n') + 1:].strip()
-    # built the JSON request body
-    data = json.dumps({
-        "tag_name": version_with_prefix,
-        "target_commitish": RELEASE_BRANCH,
-        "name": version_with_prefix,
-        "body": text,
-        "draft": False,
-        "prerelease": False
-    })
-    client = http.client.HTTPSConnection('api.github.com')
-    try:
-        client.request('POST', post_url, body=data, headers=headers)
-        response = client.getresponse()
-        print(f"Release {version_with_prefix} published!"
-              if response.status == 201 else
-              f"Release {version_with_prefix} failed!")
-    finally:
-        client.close()
+    print(text[text.find('\n') + 1:].strip())
 
 
-"""
-======================================
-Command Line Interface
-======================================
-"""
+def fail(message: str) -> None:
+    print(message, file=sys.stderr)
+    sys.exit(1)
+
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description=f'Buils and Publishes {__package__} Releases')
+    parser = argparse.ArgumentParser(description='Prepares LSP releases')
     subparsers = parser.add_subparsers(help='Available commands')
-    build_parser = subparsers.add_parser('build', help='Build a release')
-    build_parser.set_defaults(func=build_release)
-    publish_parser = subparsers.add_parser('publish', help='Publish a release')
-    publish_parser.add_argument(
-        '--token',
-        nargs='?',
-        default=os.environ.get('GITHUB_TOKEN', None),
-        help='The GitHub access token used for authentication.')
-    publish_parser.set_defaults(func=publish_release)
+    prepare_parser = subparsers.add_parser('prepare', help='Bump the version and draft the release message')
+    prepare_parser.add_argument('version', help=f'One of {", ".join(BUMPS)} or an exact x.y.z version')
+    prepare_parser.set_defaults(func=prepare_release)
+    tag_parser = subparsers.add_parser('tag', help='Print the git tag of the current version')
+    tag_parser.set_defaults(func=print_tag)
+    notes_parser = subparsers.add_parser('notes', help='Print the release notes of the current version')
+    notes_parser.set_defaults(func=print_notes)
     args = parser.parse_args()
     if 'func' not in args:
         parser.print_help()

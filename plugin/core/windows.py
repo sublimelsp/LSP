@@ -356,21 +356,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return None
 
     def _create_logger(self, config_name: str) -> Logger:
-        logger_map = {
-            "panel": PanelLogger,
-        }
         # The remote logger is always attached since the remote log server can be started on demand at any time. It
         # doesn't do anything while the server is not running.
         router_logger = RouterLogger()
         router_logger.append(RemoteLogger(self, config_name))
-        for logger_type in userprefs().log_server:
-            if logger_type == "remote":
-                # Deprecated. The remote log server is now started on demand from the context menu of the log panel.
-                continue
-            if logger_type not in logger_map:
-                debug(f"Invalid logger type ({logger_type}) specified for log_server settings")
-                continue
-            router_logger.append(logger_map[logger_type](self, config_name))
+        if userprefs().log_server:
+            router_logger.append(PanelLogger(self, config_name))
         return router_logger
 
     @override

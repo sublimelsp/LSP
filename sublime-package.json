@@ -801,33 +801,15 @@
               "markdownDescription": "Show verbose debug messages in the sublime console."
             },
             "log_server": {
-              "oneOf": [
-                {
-                  "type": "array",
-                  "default": [
-                    "panel"
-                  ],
-                  "items": {
-                    "type": "string",
-                    "enum": [
-                      "panel",
-                    ]
-                  },
-                  "uniqueItems": true,
-                  "minItems": 0
-                },
-                {
-                  "type": "boolean",
-                  "deprecationMessage": "Use an array instead."
-                }
-              ],
-              "markdownDescription": "Log communication from and to language servers. Possible flags:\n\n- `\"panel\"`: log to the LSP Log Panel\n\nFor backward-compatibility, when set to `true`, enables the `\"panel\"` logger and when set to `false` disables logging. This output panel can be toggled from the command palette with the command **LSP: Toggle Log Panel**.\n\nTo view the communication in real time in a browser-based log viewer, choose **Open Remote Log Viewer** from the context menu of the LSP Log Panel."
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Log communication from and to language servers to the LSP Log Panel. This output panel can be toggled from the command palette with the command **LSP: Toggle Log Panel**.\n\nTo view the communication in real time in a browser-based log viewer, run **LSP: Open Remote Log Viewer** from the command palette or choose **Open Remote Log Viewer** from the context menu of the LSP Log Panel. This works regardless of this setting."
             },
             "log_max_size": {
               "type": "integer",
               "default": 8192,
               "minimum": 0,
-              "markdownDescription": "When logging to the `\"panel\"` (see `\"log_server\"`), if the params of the request or response or notification exceed this many characters, then print a `<snip>` to the panel instead. If you don't want a limit, set this to zero."
+              "markdownDescription": "When logging to the LSP Log Panel (see `\"log_server\"`), if the params of the request or response or notification exceed this many characters, then print a `<snip>` to the panel instead. If you don't want a limit, set this to zero."
             },
             "clients": {
               "type": "object",

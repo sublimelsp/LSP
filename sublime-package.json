@@ -33,6 +33,14 @@
             },
             "lsp_code_actions_on_save": {
               "type": "object",
+              "properties": {
+                "source.fixAll": {
+                  "type": "boolean"
+                },
+                "source.organizeImports": {
+                  "type": "boolean"
+                }
+              },
               "additionalProperties": {
                 "type": "boolean"
               },

@@ -93,14 +93,11 @@ from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
 from typing import Any
-from typing import TYPE_CHECKING
+import asyncio
 import os
 import sublime
 import sublime_aio
 import sublime_plugin
-
-if TYPE_CHECKING:
-    import asyncio
 
 # Uncomment to see all invocations that are marked @deprecated in the Console.
 # warnings.simplefilter('always', DeprecationWarning)
@@ -246,7 +243,10 @@ def plugin_unloaded() -> None:
 class Listener(sublime_aio.EventListener):
 
     async def on_exit(self) -> None:
-        await kill_all_subprocesses()
+        try:
+            await asyncio.gather(*(wm._end_sessions() for wm in windows._windows.values()), return_exceptions=True)
+        finally:
+            await kill_all_subprocesses()
 
     def on_load_project_async(self, window: sublime.Window) -> None:
         if manager := windows.lookup(window):

@@ -265,17 +265,17 @@
   // Log communication from and to language servers.
   // Set to an array of values:
   // - "panel" - log to the LSP Log Panel
-  // - "remote" - start a websocket server on localhost:9981. Can be connected to with
-  //              a websocket client to receive the log messages in real time.
-  //              A free browser-based viewer can be used here: https://lsp-log-parser.netlify.app
-  //              (Safari blocks the hosted viewer, so use Chrome or Firefox, or run the viewer locally)
   // For backward-compatibility, when set to "true", enables the "panel" logger and when
   // set to "false" disables logging.
   // This output panel can be toggled from the command palette with the
   // command "LSP: Toggle Log Panel".
+  // To view the communication in real time in a browser-based log viewer, choose
+  // "Open Remote Log Viewer" from the context menu of the LSP Log Panel. This starts a local
+  // websocket server that only accepts the viewer opened with a randomly generated token.
+  // The server stops automatically when no viewer is connected to it for one minute.
+  // (Safari blocks the hosted viewer, so use Chrome or Firefox as the default browser)
   "log_server": [
     "panel",
-    // "remote",
   ],
 
   // When logging to the "panel" (see "log_server"), if the params of the request or

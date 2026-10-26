@@ -688,8 +688,7 @@ Follow installation instructions on [LSP-ruff](https://github.com/sublimelsp/LSP
 
 ## R
 
-1. Install the [R-IDE](https://packages.sublimetext.io/packages/R-IDE) package from Package Control for syntax highlighting.
-2. Follow installation instructions on [LSP-R](https://github.com/sublimelsp/LSP-R).
+Follow installation instructions on [R-IDE](https://github.com/REditorSupport/sublime-ide-r#installation).
 
 ## Racket
 

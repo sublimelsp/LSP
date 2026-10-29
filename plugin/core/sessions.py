@@ -2931,10 +2931,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 else:
                     # server request
                     try:
+                        response = await handler(result, req_id)
+                        # A request handler that returns a Promise resolves it with an `Error` when it fails.
+                        if isinstance(response.result, Error):
+                            raise response.result
                         await self.send_response(
-                            await self._handle_plugin_on_pre_send_response_async(
-                                method, result, await handler(result, req_id)
-                            )
+                            await self._handle_plugin_on_pre_send_response_async(method, result, response)
                         )
                     except Error as err:
                         await self.send_error_response(req_id, err)

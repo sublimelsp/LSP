@@ -79,7 +79,7 @@ Instead, a new thread, provided by the `sublime_aio` library, is used heavily in
 
 There are two ways to "get on the asyncio thread":
 
-1. Use `LSP.plugin.run_coroutine`: this utility function can be called from any thread, and schedules a new _coroutine object_:
+1. Use `LSP.plugin.run_coroutine`: this utility function can be called from any thread, and schedules a new _coroutine object_, i.e. a function or method declared with the `async def` keywords:
     ```python
     from LSP.plugin import Error, LspTextCommand, run_coroutine
 

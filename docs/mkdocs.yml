@@ -62,7 +62,7 @@ nav:
   - Keyboard Shortcuts: keyboard_shortcuts.md
   - Client Configuration: client_configuration.md
   - Troubleshooting: troubleshooting.md
-  - Migration:
+  - Plugin Migration Guides:
     - AbstractPlugin -> LspPlugin: migrating_to_lsp_plugin.md
     - LspPlugin -> asyncio: migrating_to_async_lsp_plugin.md
 

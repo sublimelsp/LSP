@@ -1490,7 +1490,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         view: sublime.View | None = None,
         is_refactoring: bool = False,
     ) -> LSPAny | Error:
-        """Run a command from the asyncio thread."""
+        """Run a [command](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workspace_executeCommand) from the asyncio thread."""  # ruff: ignore[line-too-long]
         command_name = command['command']
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):

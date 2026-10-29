@@ -275,7 +275,7 @@ def command_handler(command_name: str) -> Callable[[CommandHandlerForDecorator],
 
     Intercepts a `workspace/executeCommand` request with the given command name when triggered by the client.
     The decorated method is called with the command's `arguments` list (or `None` if absent).
-    Decorated method is called on the async thread, regardless of which thread the command was executed from.
+    The decorated method is called on the asyncio thread, regardless of which thread the command was executed from.
 
     Usage:
         ```py
@@ -863,7 +863,7 @@ class AbstractPlugin(APIHandler, ABC):
     def on_pre_send_request_async(self, request_id: int, request: Request[Any, Any]) -> None:
         """
         Notifies about a request that is about to be sent to the language server.
-        This API is triggered on async thread.
+        This API is triggered on the asyncio thread.
 
         :param    request_id:  The request ID.
         :param    request:     The request object. The request params can be modified by the plugin.
@@ -873,7 +873,7 @@ class AbstractPlugin(APIHandler, ABC):
     def on_pre_send_notification_async(self, notification: Notification[Any]) -> None:
         """
         Notifies about a notification that is about to be sent to the language server.
-        This API is triggered on async thread.
+        This API is triggered on the asyncio thread.
 
         :param    notification:  The notification object. The notification params can be modified by the plugin.
         """
@@ -930,6 +930,6 @@ class AbstractPlugin(APIHandler, ABC):
         after this method returns. In this case exit_code and exception are None.
         If the session has crashed, the exit_code and an optional exception are provided.
 
-        This API is triggered on async thread.
+        This API is triggered on the asyncio thread.
         """
         pass

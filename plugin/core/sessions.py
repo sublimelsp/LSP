@@ -1216,7 +1216,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._maybe_end_task = asyncio.create_task(maybe_end())
 
     def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
-        """It is only safe to iterate over this in the async thread."""
+        """It is only safe to iterate over this in the asyncio thread."""
         yield from self._session_views
 
     def session_view_for_view_async(self, view: sublime.View) -> SessionViewProtocol | None:

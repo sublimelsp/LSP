@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from .setup import TextDocumentTestCase
+from functools import partial
+from LSP.plugin.api import request_handler
+from LSP.plugin.core.promise import Promise
+from LSP.plugin.core.protocol import Error
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
@@ -8,6 +12,7 @@ from LSP.protocol import TextDocumentSyncKind
 from typing import Any
 from typing import Generator
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 import os
 import sublime
 
@@ -34,6 +39,22 @@ class ServerRequests(TextDocumentTestCase):
 
     def test_unknown_method(self) -> Generator:
         yield from verify(self, "foobar/qux", {}, {"code": ErrorCodes.MethodNotFound, "message": "foobar/qux"})
+
+    def test_request_handler_resolves_with_error(self) -> Generator:
+        @request_handler('foobar/qux')
+        def handler(_self: None, _params: Any) -> Promise[Error]:
+            return Promise.resolve(Error(ErrorCodes.InternalError, 'failed'))
+
+        with patch.object(self.session, '_get_handler', return_value=partial(handler, None)):
+            yield from verify(self, "foobar/qux", {}, {"code": ErrorCodes.InternalError, "message": "failed"})
+
+    def test_request_handler_raises_error(self) -> Generator:
+        @request_handler('foobar/qux')
+        def handler(_self: None, _params: Any) -> Promise[None]:
+            raise Error(ErrorCodes.InternalError, 'failed')
+
+        with patch.object(self.session, '_get_handler', return_value=partial(handler, None)):
+            yield from verify(self, "foobar/qux", {}, {"code": ErrorCodes.InternalError, "message": "failed"})
 
     def test_m_workspace_workspaceFolders(self) -> Generator:
         expected_output = [{"name": os.path.basename(f), "uri": filename_to_uri(f)}

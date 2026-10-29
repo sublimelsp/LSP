@@ -2697,9 +2697,14 @@ class Session(APIHandler, TransportCallbacks):
                 exception_log(f"Error handling {typestr}", err)
                 return
             if isinstance(result_promise, Promise):
-                result_promise \
-                    .then(lambda r: self._handle_plugin_on_pre_send_response_async(method, result, r)) \
-                    .then(self.send_response)
+                result_promise.then(lambda r: self._send_request_handler_response(method, result, r))
+
+    def _send_request_handler_response(self, method: str | None, params: Any, response: Response[Any]) -> None:
+        # A request handler that fails asynchronously resolves its promise with an `Error`.
+        if isinstance(response.result, Error):
+            self.send_error_response(response.request_id, response.result)
+            return
+        self.send_response(self._handle_plugin_on_pre_send_response_async(method, params, response))
 
     def _handle_plugin_on_pre_send_response_async(
         self, method: str | None, params: Any, response: Response[Any]

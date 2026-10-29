@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/configure-pages@v6
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
       - run: make -C docs build
       - uses: actions/upload-pages-artifact@v5
         with:

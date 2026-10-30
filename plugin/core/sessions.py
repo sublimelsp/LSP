@@ -1429,7 +1429,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 self._plugin.on_server_response_async('initialize', Response(-1, result))
         await self.notify(Notification.initialized())
         if self._plugin and isinstance(self._plugin, LspPlugin):
-            await self._plugin.on_initialized()
+            await self._plugin._on_initialized_wrapper()
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")
@@ -1795,7 +1795,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if not self._plugin:
             return
         if isinstance(self._plugin, LspPlugin):
-            await self._plugin.on_text_changed(session_buffer)
+            await self._plugin._on_text_changed_wrapper(session_buffer)
         else:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
@@ -2671,7 +2671,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self._response_handlers.clear()
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
-                await self._plugin.on_session_end(exit_code, exception)
+                await self._plugin._on_session_end_wrapper(exit_code, exception)
             else:
                 self._plugin.on_session_end_async(exit_code, exception)
             self._plugin = None
@@ -2728,7 +2728,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 self._plugin.on_pre_send_request_async(request_id, r)
             elif self._plugin:
                 client_request = cast('ClientRequest', cast('object', {'method': r.method, 'params': r.params}))
-                await self._plugin.on_pre_send_request(client_request, r.view)
+                await self._plugin._on_pre_send_request_wrapper(client_request, r.view)
                 r.params = cast('P_contra', client_request['params'])
         except Exception as ex:
             # Don't leave the caller waiting for a response to a request that is never sent.
@@ -2836,7 +2836,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         elif self._plugin:
             client_notification = cast('ClientNotification',
                                        cast('object', {'method': notification.method, 'params': notification.params}))
-            await self._plugin.on_pre_send_notification(client_notification)
+            await self._plugin._on_pre_send_notification_wrapper(client_notification)
             notification.params = cast('P_contra', client_notification['params'])
         self._logger.outgoing_notification(notification.method, notification.params)
         await self.send_payload(notification.to_payload())
@@ -2884,7 +2884,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 self._logger.incoming_request(req_id, method, result)
                 if isinstance(self._plugin, LspPlugin):
                     server_request = cast('ServerRequest', cast('object', {'method': method, 'params': result}))
-                    await self._plugin.on_server_request(server_request)
+                    await self._plugin._on_server_request_wrapper(server_request)
                     result = server_request['params']
                 if handler is None:
                     await self.send_error_response(req_id, Error(ErrorCodes.MethodNotFound, method))
@@ -2898,7 +2898,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 elif self._plugin:
                     server_notification = cast('ServerNotification',
                                                cast('object', {'method': method, 'params': result}))
-                    await self._plugin.on_server_notification(server_notification)
+                    await self._plugin._on_server_notification_wrapper(server_notification)
                 return res
         elif "id" in payload:
             response_id = payload["id"]
@@ -2914,7 +2914,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 else:
                     server_response = cast('ServerResponse',
                                            cast('object', {'method': method, 'result': response.result}))
-                    await self._plugin.on_server_response(server_response)
+                    await self._plugin._on_server_response_wrapper(server_response)
                     response.result = server_response['result']
             return handler, response.result, None, None, None
         else:
@@ -2951,7 +2951,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> Response[Any]:
         if method and isinstance(self._plugin, LspPlugin):
             obj = cast('ClientResponse', {'method': method, 'params': params, 'result': response.result})
-            await self._plugin.on_pre_send_response(obj)
+            await self._plugin._on_pre_send_response_wrapper(obj)
         return response
 
     def response_handler(

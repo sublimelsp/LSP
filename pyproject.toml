@@ -1,6 +1,6 @@
 [dependency-groups]
 lint = [
-    "pyright==1.1.414",
+    "basedpyright==1.40.2; python_version >= '3.10'",
     "ruff==0.17.2",
     "orjson==3.10.15; python_version < '3.10'",
     "orjson==3.13.0; python_version >= '3.10'",
@@ -20,8 +20,12 @@ skipsdist = true
 
 [tool.tox.env_run_base]
 dependency_groups = ["lint"]
+# Lets basedpyright and ruff report problems as GitHub annotations in CI.
+pass_env = ["GITHUB_ACTIONS", "RUFF_OUTPUT_FORMAT"]
+# Run all commands even if one fails, so that every problem is reported. The run still fails.
+ignore_errors = true
 commands = [
-    ["pyright", "plugin", "stubs"],
+    ["basedpyright", "plugin", "stubs"],
     ["ruff", "check"],
 ]
 

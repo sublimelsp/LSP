@@ -115,6 +115,29 @@ class ServerRequests(TextDocumentTestCase):
             None)
         self.assertNotIn("barProvider", self.session.capabilities)
 
+    def test_m_client_unregisterCapability_completion_triggers(self) -> Generator:
+        yield from verify(
+            self,
+            "client/registerCapability",
+            {
+                "registrations":
+                [
+                    {"method": "textDocument/completion", "id": "myCompletionRegistrationId",
+                     "registerOptions": {"triggerCharacters": ["!", "@", "#"], "documentSelector": [
+                       {"language": "plaintext"}
+                     ]}}
+                ]
+            },
+            None)
+        sb = next(self.session.session_buffers_async())
+        self.assertTrue(get_auto_complete_trigger(sb))
+        yield from verify(
+            self,
+            "client/unregisterCapability",
+            {"unregisterations": [{"method": "textDocument/completion", "id": "myCompletionRegistrationId"}]},
+            None)
+        self.assertIsNone(get_auto_complete_trigger(sb))
+
 
 class ServerRequestsWithAutoCompleteSelector(TextDocumentTestCase):
 

@@ -207,7 +207,7 @@ class SessionView:
                 if trigger.get("server", "") == name and trigger.get("registration_id", "") == registration_id:
                     continue
                 new_triggers.append(trigger)
-            settings.set(self.AC_TRIGGERS_KEY, triggers)
+            settings.set(self.AC_TRIGGERS_KEY, new_triggers)
 
     def _apply_auto_complete_triggers(
         self,
@@ -283,10 +283,10 @@ class SessionView:
             if isinstance(trigger_chars, list) or self.session.config.auto_complete_selector:
                 self._register_auto_complete_triggers(registration_id, trigger_chars or [])
 
-    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: dict[str, Any]) -> None:
-        if self.HOVER_PROVIDER_KEY in discarded_capabilities:
+    def on_capability_removed_async(self, registration_id: str, capability_path: str) -> None:
+        if capability_path == self.HOVER_PROVIDER_KEY:
             self._decrement_hover_count()
-        elif self.COMPLETION_PROVIDER_KEY in discarded_capabilities:
+        elif capability_path.startswith(self.COMPLETION_PROVIDER_KEY):
             self._unregister_auto_complete_triggers(registration_id)
 
     def has_capability_async(self, capability_path: str) -> bool:

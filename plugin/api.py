@@ -239,7 +239,8 @@ def request_handler(
 
     The decorated method will be called with the request parameters whenever the specified
     request is received from the language server. The method must return a Promise that resolves
-    to the response value. The framework will automatically send it back to the server.
+    to the response value. The framework will automatically send it back to the server. To send an error response,
+    resolve the Promise with an `Error`.
 
     :param      method:             The LSP request method name (e.g., 'eslint/openDoc').
     :returns:   A decorator that registers the function as a request handler.

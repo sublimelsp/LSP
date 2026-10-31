@@ -2951,7 +2951,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         raise
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)
-        else:
+        elif not self.exiting:
             debug("no handler found for payload:", payload)
 
     async def _handle_plugin_on_pre_send_response_async(

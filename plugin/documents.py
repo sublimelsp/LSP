@@ -311,6 +311,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self._is_documenation_popup_open = opened
 
     def on_session_initialized_async(self, session: Session) -> None:
+        if self._closed or not self.view.is_valid():
+            return
         assert not self.view.is_loading()
         if session.config.name not in self._session_views:
             session_view = SessionView(self, session, self._uri)

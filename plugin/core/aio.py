@@ -16,6 +16,7 @@ import asyncio
 import sublime
 import sublime_aio
 import sys
+import traceback
 
 if TYPE_CHECKING:
     from .promise import ResolveFunc
@@ -189,7 +190,12 @@ class TaskContainer:
 
     def __del__(self) -> None:
         if self._tasks:
-            debug("WARNING: TaskContainer is destroyed but there are still tasks running!")
+            debug(
+                f"WARNING: {type(self).__qualname__} is destroyed but there are still tasks running!",
+                f"(id={id(self):#x})",
+                f"(MRO: {type(self).__mro__})",
+            )
+            traceback.print_stack()
 
     async def cancel_all_tasks(self) -> list[Exception]:
         """Cancel all running tasks."""

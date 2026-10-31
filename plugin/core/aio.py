@@ -16,7 +16,6 @@ import asyncio
 import sublime
 import sublime_aio
 import sys
-import traceback
 
 if TYPE_CHECKING:
     from .promise import ResolveFunc
@@ -195,7 +194,6 @@ class TaskContainer:
                 f"(id={id(self):#x})",
                 f"(MRO: {type(self).__mro__})",
             )
-            traceback.print_stack()
 
     async def cancel_all_tasks(self) -> list[Exception]:
         """Cancel all running tasks."""

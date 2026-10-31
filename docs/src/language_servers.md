@@ -386,24 +386,7 @@ Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LS
 
 ## Kotlin
 
-1. Install the [Kotlin](https://packages.sublimetext.io/packages/Kotlin) package from Package Control for syntax highlighting.
-2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
-3. Open `Preferences > Package Settings > LSP > Server Configurations` and add the `"kotlinls"` configuration:
-
-    ```jsonc
-    {
-        "kotlinls": {
-            "enabled": true,
-            "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"], // Update the PATH
-            "selector": "source.Kotlin",
-            "settings": {
-                "kotlin": {
-                    // put your server settings here
-                }
-            }
-        }
-    }
-    ```
+Follow installation instructions on [LSP-kotlin](https://github.com/sublimelsp/LSP-kotlin).
 
 ## LaTeX
 

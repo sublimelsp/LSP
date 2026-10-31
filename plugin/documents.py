@@ -113,7 +113,10 @@ P = ParamSpec("P")
 def requires_session(
     func: Callable[Concatenate[DocumentSyncListener, P], Any],
 ) -> Callable[Concatenate[DocumentSyncListener, P], Any]:
-
+    """
+    A decorator for the `DocumentSyncListener` event handlers, which immediately returns `None` if there are no
+    `SessionView`s.
+    """
     if inspect.iscoroutinefunction(func):
 
         @wraps(func)

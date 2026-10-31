@@ -517,10 +517,6 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    async def _on_initialized_wrapper(self) -> None:
-        self.on_initialized_async()
-        await self.on_initialized()
-
     @deprecated("override on_pre_send_request instead")
     def on_pre_send_request_async(self, request: ClientRequest, view: sublime.View | None) -> None:
         pass
@@ -533,10 +529,6 @@ class LspPlugin(APIHandler):
         :param    view:        The corresponding View if applicable.
         """
         pass
-
-    async def _on_pre_send_request_wrapper(self, request: ClientRequest, view: sublime.View | None) -> None:
-        self.on_pre_send_request_async(request, view)
-        await self.on_pre_send_request(request, view)
 
     @deprecated("override on_pre_send_response instead")
     def on_pre_send_response_async(self, response: ClientResponse) -> None:
@@ -553,10 +545,6 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    async def _on_pre_send_response_wrapper(self, response: ClientResponse) -> None:
-        self.on_pre_send_response_async(response)
-        await self.on_pre_send_response(response)
-
     @deprecated("override on_pre_send_notification instead")
     def on_pre_send_notification_async(self, notification: ClientNotification) -> None:
         pass
@@ -568,10 +556,6 @@ class LspPlugin(APIHandler):
         :param    notification:  The notification object. The notification['params'] can be modified by the plugin.
         """
         pass
-
-    async def _on_pre_send_notification_wrapper(self, notification: ClientNotification) -> None:
-        self.on_pre_send_notification_async(notification)
-        await self.on_pre_send_notification(notification)
 
     @deprecated("override on_server_request instead")
     def on_server_request_async(self, request: ServerRequest) -> None:
@@ -588,10 +572,6 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    async def _on_server_request_wrapper(self, request: ServerRequest) -> None:
-        self.on_server_request_async(request)
-        await self.on_server_request(request)
-
     @deprecated("override on_server_response instead")
     def on_server_response_async(self, response: ServerResponse) -> None:
         pass
@@ -607,10 +587,6 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    async def _on_server_response_wrapper(self, request: ServerResponse) -> None:
-        self.on_server_response_async(request)
-        await self.on_server_response(request)
-
     @deprecated("override on_server_notification instead")
     def on_server_notification_async(self, notification: ServerNotification) -> None:
         pass
@@ -623,10 +599,6 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    async def _on_server_notification_wrapper(self, notification: ServerNotification) -> None:
-        self.on_server_notification_async(notification)
-        await self.on_server_notification(notification)
-
     @deprecated("override on_text_changed instead")
     def on_text_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
         pass
@@ -634,10 +606,6 @@ class LspPlugin(APIHandler):
     async def on_text_changed(self, session_buffer: SessionBufferProtocol) -> None:
         """Called when the content of the session buffer has changed or a new buffer was opened (debounced)."""
         pass
-
-    async def _on_text_changed_wrapper(self, session_buffer: SessionBufferProtocol) -> None:
-        self.on_text_changed_async(session_buffer)
-        await self.on_text_changed(session_buffer)
 
     def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
         """Called after the selection has been modified in a view (debounced)."""
@@ -660,10 +628,6 @@ class LspPlugin(APIHandler):
         This API is triggered on the asyncio thread.
         """
         pass
-
-    async def _on_session_end_wrapper(self, exit_code: int | None, exception: Exception | None) -> None:
-        self.on_session_end_async(exit_code, exception)
-        await self.on_session_end(exit_code, exception)
 
 
 @deprecated('Use LspPlugin instead')

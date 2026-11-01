@@ -33,7 +33,8 @@ try:
 except ImportError:
     orjson = None
 
-TCP_CONNECT_TIMEOUT = 5  # seconds
+TCP_CONNECT_TIMEOUT = 30  # seconds
+TCP_CONNECT_RETRY_INTERVAL = 0.5  # seconds
 
 
 class StopLoopError(Exception):
@@ -156,29 +157,34 @@ class TcpClientTransportConfig(TransportConfig):
         else:
             process = None
             error_reader = None
-        start_time = time.time()
-        delta = 0
-        while delta < TCP_CONNECT_TIMEOUT:
-            time_left = TCP_CONNECT_TIMEOUT - delta
-            try:
-                reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(host='localhost', port=port, family=socket.AF_INET), timeout=time_left
-                )
-                return TransportWrapper(
-                    callback_object=callbacks,
-                    transport=StreamTransport(encode_json, decode_json, reader, writer),
-                    process=process,
-                    process_args=launch.command if launch else None,
-                    error_reader=error_reader,
-                )
-            except PortableTimeoutError:
-                # We passed the TCP_CONNECT_TIMEOUT and the process didn't respond.
-                break
-            except (ConnectionRefusedError, OSError):
-                # Can happen when the language server is still starting. Just wait a bit and retry.
-                await asyncio.sleep(TCP_CONNECT_TIMEOUT / 10)
-            delta = time.time() - start_time
-        raise RuntimeError(f"Failed to connect to TCP port {port}")
+        try:
+            start_time = time.time()
+            delta = 0
+            while delta < TCP_CONNECT_TIMEOUT:
+                time_left = TCP_CONNECT_TIMEOUT - delta
+                try:
+                    reader, writer = await asyncio.wait_for(
+                        asyncio.open_connection(host='localhost', port=port, family=socket.AF_INET), timeout=time_left
+                    )
+                    return TransportWrapper(
+                        callback_object=callbacks,
+                        transport=StreamTransport(encode_json, decode_json, reader, writer),
+                        process=process,
+                        process_args=launch.command if launch else None,
+                        error_reader=error_reader,
+                    )
+                except PortableTimeoutError:
+                    # We passed the TCP_CONNECT_TIMEOUT and the process didn't respond.
+                    break
+                except (ConnectionRefusedError, OSError):
+                    # Can happen when the language server is still starting. Just wait a bit and retry.
+                    await asyncio.sleep(TCP_CONNECT_RETRY_INTERVAL)
+                delta = time.time() - start_time
+            raise RuntimeError(f"Failed to connect to TCP port {port}")
+        except BaseException:
+            if process:
+                await _kill_process(process)
+            raise
 
 
 class TcpServerTransportConfig(TransportConfig):
@@ -240,8 +246,7 @@ class TcpServerTransportConfig(TransportConfig):
                 try:
                     await asyncio.wait_for(callback.cv.wait(), timeout=TCP_CONNECT_TIMEOUT)
                 except BaseException:
-                    process.kill()
-                    await process.wait()
+                    await _kill_process(process)
                     raise
             finally:
                 # Note: deliberately not awaiting server.wait_closed() here. Since Python 3.12, wait_closed() also
@@ -549,6 +554,13 @@ async def kill_all_subprocesses() -> None:
         except Exception:
             pass
     await asyncio.gather(*[p.wait() for p in subprocesses], return_exceptions=True)
+
+
+async def _kill_process(process: asyncio.subprocess.Process) -> None:
+    with contextlib.suppress(ProcessLookupError):  # The process might have exited already.
+        process.kill()
+    # Wait for the process to die, or zombie processes might be the result.
+    await process.wait()
 
 
 def _fixup_startup_args(args: list[str]) -> Any:

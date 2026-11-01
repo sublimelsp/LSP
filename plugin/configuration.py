@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.aio import show_quick_panel
+from .core.panels import show_quick_panel
 from .core.registry import LspWindowCommand
 from .core.settings import client_configs
 

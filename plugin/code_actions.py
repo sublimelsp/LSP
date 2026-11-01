@@ -6,7 +6,7 @@ from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
 from .core.aio import run_coroutine
-from .core.aio import show_quick_panel
+from .core.panels import show_quick_panel
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand

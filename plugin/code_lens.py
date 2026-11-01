@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .core.aio import show_quick_panel
 from .core.constants import CODE_LENS_ENABLED_KEY
+from .core.panels import show_quick_panel
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens

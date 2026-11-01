@@ -3,10 +3,10 @@ from __future__ import annotations
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextEdit
 from .code_actions import CodeActionsOnFormatTask
-from .core.aio import show_quick_panel
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
 from .core.logging import exception_log
+from .core.panels import show_quick_panel
 from .core.protocol import Error
 from .core.registry import LspTextCommand
 from .core.registry import windows

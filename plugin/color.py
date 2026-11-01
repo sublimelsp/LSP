@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .core.aio import show_quick_panel
 from .core.edit import apply_text_edits
+from .core.panels import show_quick_panel
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand

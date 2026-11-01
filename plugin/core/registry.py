@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .aio import run_coroutine
-from .aio import show_quick_panel
+from .panels import show_quick_panel
 from .settings import userprefs
 from .type_converters import position_to_offset
 from .views import first_selection_region

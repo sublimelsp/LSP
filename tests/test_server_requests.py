@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from .setup import TextDocumentTestCase
+from functools import partial
 from LSP.plugin import Error
+from LSP.plugin.api import request_handler
+from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
 from LSP.protocol import TextDocumentSyncKind
 from typing import Any
 from typing import TYPE_CHECKING
+from unittest.mock import patch
+import asyncio
 import os
 import sublime
 
@@ -50,6 +55,23 @@ class ServerRequests(TextDocumentTestCase):
             {"code": ErrorCodes.MethodNotFound, "message": "foobar/qux"},
             ErrorCodes.MethodNotFound,
         )
+
+    async def test_request_handler_resolves_with_error(self) -> None:
+        @request_handler('foobar/qux')
+        def handler(_self: None, _params: Any) -> Promise[Error]:
+            return Promise.resolve(Error(ErrorCodes.InvalidParams, 'failed'))
+
+        with patch.object(self.session, '_get_handler', return_value=partial(handler, None)):
+            await verify(self, "foobar/qux", {}, None, ErrorCodes.InvalidParams)
+
+    async def test_request_handler_raises_error(self) -> None:
+        @request_handler('foobar/qux')
+        async def handler(_self: None, _params: Any) -> None:
+            await asyncio.sleep(0)
+            raise Error(ErrorCodes.InvalidParams, 'failed')
+
+        with patch.object(self.session, '_get_handler', return_value=partial(handler, None)):
+            await verify(self, "foobar/qux", {}, None, ErrorCodes.InvalidParams)
 
     async def test_m_workspace_workspaceFolders(self) -> None:
         expected_output = [{"name": os.path.basename(f), "uri": filename_to_uri(f)}

@@ -243,7 +243,8 @@ def request_handler(
     The framework will automatically send it back to the server.
 
     An older, but backwards-compatible way to define a request handler is by defining a function that returns a Promise.
-    While that works, the advice is to define a coroutine function.
+    While that works, the advice is to define a coroutine function. To send an error response, resolve the Promise
+    with an `Error`.
 
     :param      method:             The LSP request method name (e.g., 'eslint/openDoc').
     :returns:   A decorator that registers the coroutine function as a request handler.

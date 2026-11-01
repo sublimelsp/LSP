@@ -57,3 +57,5 @@ jobs:
       - run: pip3 install tox --user
       - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       - run: tox
+        env:
+          RUFF_OUTPUT_FORMAT: github

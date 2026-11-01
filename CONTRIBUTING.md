@@ -17,7 +17,7 @@ The issues also allow you to gather some feedback and help from other contributo
 
 ## Coding
 
-LSP uses [Pyright](https://microsoft.github.io/pyright) for type-checking and [Ruff](https://docs.astral.sh/ruff/) for linting and import sorting.
+LSP uses [basedpyright](https://docs.basedpyright.com) for type-checking and [Ruff](https://docs.astral.sh/ruff/) for linting and import sorting.
 Run `tox` to check your work before submitting — this runs the same checks that CI enforces.
 
 > [!NOTE]

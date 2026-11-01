@@ -297,7 +297,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                             raise PluginStartError(cannot_start_reason)
                         if new_cwd := plugin_class.on_pre_start(self._window, listener.view, workspace_folders, config):
                             cwd = new_cwd
-                config.set_view_status(listener.view, "starting...")
+                status = "starting..." if config.tcp_port is None else "waiting for connection..."
+                config.set_view_status(listener.view, status)
                 session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
                 transport = await config.create_transport_config().start(
                     config.command, config.env, cwd, variables, session)

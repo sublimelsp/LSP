@@ -78,6 +78,7 @@ Below is a list of supported commands and the corresponding keyboard shortcut (i
 | Goto Type Definition | unbound | `lsp_symbol_type_definition`
 | Goto Diagnostic | unbound<br>suggested: <kbd>F8</kbd> | `lsp_goto_diagnostic`<br>Supports optional argument `"severity_level"` for the severity level of included diagnostics: 1 (error), 2 (warning), 3 (information), 4 (hint). Uses the `"show_diagnostics_severity_level"` setting if not provided.
 | Next Diagnostic | unbound | `lsp_next_diagnostic`<br>Supports optional argument `"severity_level"`
+| Open Remote Log Viewer | unbound | `lsp_open_remote_log_viewer`
 | Previous Diagnostic | unbound | `lsp_prev_diagnostic`<br>Supports optional argument `"severity_level"`
 | Hover Popup | unbound | `lsp_hover`
 | Insert/Replace Completions | <kbd>Alt</kbd> <kbd>Enter</kbd> | `lsp_commit_completion_with_opposite_insert_mode`

@@ -68,6 +68,7 @@ from .plugin.inlay_hint import LspToggleInlayHintsCommand
 from .plugin.panels import LspClearLogPanelCommand
 from .plugin.panels import LspClearMessagesPanelCommand
 from .plugin.panels import LspClearPanelCommand
+from .plugin.panels import LspOpenRemoteLogViewerCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleLogPanelLinesLimitCommand
 from .plugin.panels import LspToggleMessagesPanelCommand
@@ -149,6 +150,7 @@ __all__ = (
     "LspOnDoubleClickCommand",
     "LspOpenLinkCommand",
     "LspOpenLocationCommand",
+    "LspOpenRemoteLogViewerCommand",
     "LspParseVscodePackageJson",
     "LspPrevDiagnosticCommand",
     "LspRefactorCommand",

@@ -136,6 +136,10 @@
         "command": "lsp_toggle_server_panel",
     },
     {
+        "caption": "LSP: Open Remote Log Viewer",
+        "command": "lsp_open_remote_log_viewer",
+    },
+    {
         "caption": "LSP: Toggle Diagnostics Panel",
         "command": "lsp_show_diagnostics_panel"
     },

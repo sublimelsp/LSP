@@ -1642,7 +1642,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 # TODO: Handle error.
                 return False
             content = response['text'].replace('\r', '')
-            syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
+            syntax = self.config.syntax_map.get(parse_uri(uri)[0])
+            if not syntax:
+                # Try to derive the syntax from path segment of the URI or from first content line
+                syntax_obj = sublime.find_syntax_for_file(title, first_line=content.partition('\n')[0])
+                syntax = syntax_obj.path if syntax_obj else ''
             return self._on_view_for_uri_opened(
                 await self._open_scratch_buffer(title, content, syntax, flags, group), uri, r
             )

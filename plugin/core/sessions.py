@@ -1923,19 +1923,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             # The delete_file command moves the given files into the recycle bin
             self.window.run_command('delete_file', {'files': [path], 'prompt': False})
             # TODO: ideally we'd have a callback for 'delete_file'
-            failure_reason = await wait_for_path_deletion(path)
-            if failure_reason is None:
-                summary['deleted_files'] += 1
-            return failure_reason
+            return await wait_for_path_deletion(path)
 
         async def delete_folder(path: str) -> str | None:
             # The delete_folder command moves the given folders into the recycle bin
             self.window.run_command('delete_folder', {'dirs': [path], 'prompt': False})
             # TODO: ideally we'd have a callback for 'delete_folder'
-            failure_reason = await wait_for_path_deletion(path)
-            if failure_reason is None:
-                summary['deleted_folders'] += 1
-            return failure_reason
+            return await wait_for_path_deletion(path)
 
         for index, document_change in enumerate(document_changes):
             if is_text_document_edit(document_change):
@@ -2022,6 +2016,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         result = failure(failure_reason, index)
                         break
                     deleted_files.append({'uri': uri})
+                    summary['deleted_files'] += 1
                     continue
                 if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
                     if os.listdir(path) and not options.get('recursive'):
@@ -2031,6 +2026,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         result = failure(failure_reason, index)
                         break
                     deleted_files.append({'uri': uri})
+                    summary['deleted_folders'] += 1
                     continue
                 if options.get('ignoreIfNotExists'):
                     continue

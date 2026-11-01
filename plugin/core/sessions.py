@@ -1929,108 +1929,112 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             # TODO: ideally we'd have a callback for 'delete_folder'
             return await wait_for_path_deletion(path)
 
-        for index, document_change in enumerate(document_changes):
-            if is_text_document_edit(document_change):
-                text_document = document_change['textDocument']
-                uri = text_document['uri']
-                version = text_document['version']
-                edits = document_change['edits']
-                view_state_actions = self._get_view_state_actions(uri, auto_save)
-                view = await self.open_uri(uri)
-                if failure_reason := await apply_text_document_edit(view, uri, edits, version, view_state_actions):
-                    result = failure(failure_reason, index)
-                    break
-            elif is_create_file(document_change):
-                uri = document_change['uri']
-                options = document_change.get('options', {})
-                scheme, path = parse_uri(uri)
-                if scheme != 'file':
-                    result = failure(f'CreateFile not supported for URI {uri}', index)
-                    break
-                if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
-                    if options.get('overwrite'):
+        index = 0
+        try:
+            for index, document_change in enumerate(document_changes):
+                if is_text_document_edit(document_change):
+                    text_document = document_change['textDocument']
+                    uri = text_document['uri']
+                    version = text_document['version']
+                    edits = document_change['edits']
+                    view_state_actions = self._get_view_state_actions(uri, auto_save)
+                    view = await self.open_uri(uri)
+                    if failure_reason := await apply_text_document_edit(view, uri, edits, version, view_state_actions):
+                        result = failure(failure_reason, index)
+                        break
+                elif is_create_file(document_change):
+                    uri = document_change['uri']
+                    options = document_change.get('options', {})
+                    scheme, path = parse_uri(uri)
+                    if scheme != 'file':
+                        result = failure(f'CreateFile not supported for URI {uri}', index)
+                        break
+                    if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        if options.get('overwrite'):
+                            if failure_reason := await delete_file(path):
+                                result = failure(failure_reason, index)
+                                break
+                            if failure_reason := create_file(path):
+                                result = failure(failure_reason, index)
+                                break
+                            continue
+                        if options.get('ignoreIfExists'):
+                            continue
+                        result = failure(f'CreateFile failed because a file already exists at target {uri}', index)
+                        break
+                    if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
+                        result = failure(f'CreateFile failed because a folder already exists at target {uri}', index)
+                        break
+                    if failure_reason := create_file(path):
+                        result = failure(failure_reason, index)
+                        break
+                elif is_rename_file(document_change):
+                    old_uri = document_change['oldUri']
+                    new_uri = document_change['newUri']
+                    options = document_change.get('options', {})
+                    old_scheme, old_path = parse_uri(old_uri)
+                    if old_scheme != 'file':
+                        result = failure(f'RenameFile not supported for URI {old_uri}', index)
+                        break
+                    if not os.path.exists(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        result = failure(f'RenameFile failed because {old_uri} does not exist', index)
+                        break
+                    new_scheme, new_path = parse_uri(new_uri)
+                    if new_scheme != 'file':
+                        result = failure(f'RenameFile not supported for URI {new_uri}', index)
+                        break
+                    if os.path.isfile(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        if options.get('overwrite') and os.path.isfile(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
+                            if failure_reason := await delete_file(new_path):
+                                result = failure(failure_reason, index)
+                                break
+                            if failure_reason := rename_file(old_path, new_path):
+                                result = failure(failure_reason, index)
+                                break
+                            continue
+                        if options.get('ignoreIfExists'):
+                            continue
+                        result = failure(f'RenameFile failed because target {new_uri} already exists', index)
+                        break
+                    if os.path.isdir(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
+                        result = failure(f'RenameFile failed because target {new_uri} already exists', index)
+                        break
+                    if failure_reason := rename_file(old_path, new_path):
+                        result = failure(failure_reason, index)
+                        break
+                elif is_delete_file(document_change):
+                    uri = document_change['uri']
+                    options = document_change.get('options', {})
+                    scheme, path = parse_uri(uri)
+                    if scheme != 'file':
+                        result = failure(f'DeleteFile not supported for URI {uri}', index)
+                        break
+                    if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
                         if failure_reason := await delete_file(path):
                             result = failure(failure_reason, index)
                             break
-                        if failure_reason := create_file(path):
+                        deleted_files.append({'uri': uri})
+                        continue
+                    if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        if os.listdir(path) and not options.get('recursive'):
+                            result = failure(f'DeleteFile failed because folder {uri} is not empty', index)
+                            break
+                        if failure_reason := await delete_folder(path):
                             result = failure(failure_reason, index)
                             break
+                        deleted_folders.append({'uri': uri})
                         continue
-                    if options.get('ignoreIfExists'):
+                    if options.get('ignoreIfNotExists'):
                         continue
-                    result = failure(f'CreateFile failed because a file already exists at target {uri}', index)
+                    result = failure(f'DeleteFile failed because {uri} does not exist', index)
                     break
-                if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
-                    # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
-                    result = failure(f'CreateFile failed because a folder already exists at target {uri}', index)
+                else:
+                    result = failure('Unknown document change type', index)
                     break
-                if failure_reason := create_file(path):
-                    result = failure(failure_reason, index)
-                    break
-            elif is_rename_file(document_change):
-                old_uri = document_change['oldUri']
-                new_uri = document_change['newUri']
-                options = document_change.get('options', {})
-                old_scheme, old_path = parse_uri(old_uri)
-                if old_scheme != 'file':
-                    result = failure(f'RenameFile not supported for URI {old_uri}', index)
-                    break
-                if not os.path.exists(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
-                    result = failure(f'RenameFile failed because {old_uri} does not exist', index)
-                    break
-                new_scheme, new_path = parse_uri(new_uri)
-                if new_scheme != 'file':
-                    result = failure(f'RenameFile not supported for URI {new_uri}', index)
-                    break
-                if os.path.isfile(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
-                    if options.get('overwrite') and os.path.isfile(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
-                        if failure_reason := await delete_file(new_path):
-                            result = failure(failure_reason, index)
-                            break
-                        if failure_reason := rename_file(old_path, new_path):
-                            result = failure(failure_reason, index)
-                            break
-                        continue
-                    if options.get('ignoreIfExists'):
-                        continue
-                    result = failure(f'RenameFile failed because target {new_uri} already exists', index)
-                    break
-                if os.path.isdir(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
-                    # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
-                    result = failure(f'RenameFile failed because target {new_uri} already exists', index)
-                    break
-                if failure_reason := rename_file(old_path, new_path):
-                    result = failure(failure_reason, index)
-                    break
-            elif is_delete_file(document_change):
-                uri = document_change['uri']
-                options = document_change.get('options', {})
-                scheme, path = parse_uri(uri)
-                if scheme != 'file':
-                    result = failure(f'DeleteFile not supported for URI {uri}', index)
-                    break
-                if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
-                    if failure_reason := await delete_file(path):
-                        result = failure(failure_reason, index)
-                        break
-                    deleted_files.append({'uri': uri})
-                    continue
-                if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
-                    if os.listdir(path) and not options.get('recursive'):
-                        result = failure(f'DeleteFile failed because folder {uri} is not empty', index)
-                        break
-                    if failure_reason := await delete_folder(path):
-                        result = failure(failure_reason, index)
-                        break
-                    deleted_folders.append({'uri': uri})
-                    continue
-                if options.get('ignoreIfNotExists'):
-                    continue
-                result = failure(f'DeleteFile failed because {uri} does not exist', index)
-                break
-            else:
-                result = failure('Unknown document change type', index)
-                break
+        except Exception as ex:
+            result = failure(str(ex), index)
         self._set_selected_sheets(selected_sheets)
         self._set_focused_sheet(active_sheet)
         self._notify_after_resource_operations(created_files, renamed_files, deleted_files + deleted_folders)

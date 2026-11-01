@@ -642,7 +642,9 @@ def minihtml(
         ]
     if isinstance(language_id_map, dict):
         frontmatter["language_map"] = language_id_map
-    return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
+    converted = mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
+    converted = re.sub(r'<!--.*?-->', '', converted)
+    return converted
 
 
 REPLACEMENT_MAP = {

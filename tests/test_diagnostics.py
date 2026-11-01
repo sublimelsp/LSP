@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from .setup import TextDocumentTestCase
 from .test_single_document import TEST_FILE_PATH
+from LSP.plugin import Request
+from LSP.plugin.core.protocol import Error
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.url import filename_to_uri
+from LSP.protocol import LSPErrorCodes
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -42,6 +45,17 @@ def range_from_points(start: Point, end: Point) -> Range:
 
 
 class DiagnosticsTestCase(TextDocumentTestCase):
+
+    async def test_ignore_result_of_cancelled_request(self) -> None:
+        method = 'textDocument/diagnostic'
+        await self.mock_response(method, {'kind': 'full', 'items': []})
+        request = self.session.request(Request(method, {'textDocument': {'uri': TEST_FILE_URI}}))
+        await request.cancel()
+        response = await request
+        self.assertIsInstance(response, Error)
+        self.assertEqual(response.code, LSPErrorCodes.RequestCancelled)
+        # The late reply of the server must be swallowed without any side effects.
+        await self.await_message(method)
 
     async def test_clear_diagnostics_immediately_after_change(self) -> None:
         # Trigger specific sequence of events:

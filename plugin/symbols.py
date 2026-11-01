@@ -12,7 +12,6 @@ from .core.aio import run_coroutine
 from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler
-from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Point
 from .core.protocol import Request
@@ -23,13 +22,13 @@ from .core.sessions import print_to_status_bar
 from .core.type_converters import range_to_region
 from .core.views import offset_to_point
 from .core.views import text_document_identifier
-from functools import partial
 from typing import Any
 from typing import cast
 from typing import overload
 from typing import TypedDict
 from typing_extensions import NotRequired
 from typing_extensions import TypeGuard
+import asyncio
 import os
 import sublime
 import sublime_plugin
@@ -392,28 +391,19 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
             return
         change_count = self.input_view.change_count()
         self.command = cast('LspWindowCommand', self.command)
-        promises: list[Promise[list[sublime.ListInputItem[WorkspaceSymbolValue]]]] = [
-            session.send_request_task(Request.workspaceSymbol({"query": text}))
-            .then(partial(self._handle_response_async, session.config.name))
-            for session in self.command.sessions()
-        ]
-        Promise.all(promises).then(partial(self._on_all_responses, change_count))
 
-    def _handle_response_async(
-        self, session_name: str, response: list[SymbolInformation] | list[WorkspaceSymbol] | Error | None
-    ) -> list[sublime.ListInputItem[WorkspaceSymbolValue]]:
-        if response and not isinstance(response, Error):
-            return [
-                symbol_to_list_input_item(item, session_name=session_name)
-                for item in response
-            ]
-        return []
-
-    def _on_all_responses(
-        self, change_count: int, item_lists: list[list[sublime.ListInputItem[WorkspaceSymbolValue]]]
-    ) -> None:
-        if self.input_view and self.input_view.change_count() == change_count:
+        async def update_list_dynamically() -> None:
+            sessions = list(self.command.sessions())
             items: list[sublime.ListInputItem[WorkspaceSymbolValue]] = []
-            for item_list in item_lists:
-                items.extend(item_list)
-            self.update(items)
+            for session, response in zip(
+                sessions,
+                await asyncio.gather(
+                    *(session.request(Request.workspaceSymbol({"query": text})) for session in sessions)
+                ),
+            ):
+                if response and not isinstance(response, Error):
+                    items.extend(symbol_to_list_input_item(item, session_name=session.config.name) for item in response)
+            if self.input_view and self.input_view.change_count() == change_count:
+                self.update(items)
+
+        run_coroutine(update_list_dynamically())

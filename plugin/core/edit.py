@@ -34,6 +34,7 @@ class WorkspaceEditSummary(TypedDict):
     created_files: NotRequired[int]
     renamed_files: NotRequired[int]
     deleted_files: NotRequired[int]
+    deleted_folders: NotRequired[int]
 
 
 def is_text_document_edit(

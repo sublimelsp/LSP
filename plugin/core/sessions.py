@@ -1846,18 +1846,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         created_files: list[FileCreate] = []
         renamed_files: list[FileRename] = []
         deleted_files: list[FileDelete] = []
+        deleted_folders: list[FileDelete] = []
+        edited_files: set[DocumentUri] = set()
+        total_changes_in_edited_files = 0
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
         result: ApplyWorkspaceEditResult = {'applied': True}
-        summary: WorkspaceEditSummary = {
-            'total_changes': 0,
-            'edited_files': 0,
-            'created_files': 0,
-            'renamed_files': 0,
-            'deleted_files': 0,
-            'deleted_folders': 0
-        }
 
         def failure(failure_reason: str, index: int) -> ApplyWorkspaceEditResult:
             printf(f'Error while applying WorkspaceEdit: {failure_reason}')
@@ -1882,8 +1877,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             else:
                 edit_label = label
             view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': edit_label})
-            summary['total_changes'] += len(edits)
-            summary['edited_files'] += 1
+            nonlocal total_changes_in_edited_files
+            total_changes_in_edited_files += len(edits)
+            edited_files.add(uri)
             if view and view_state_actions:
                 await self._set_view_state(view_state_actions, view)
             return None
@@ -1894,7 +1890,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             except (FileExistsError, OSError) as ex:
                 return str(ex)
             created_files.append({'uri': filename_to_uri(path)})
-            summary['created_files'] += 1
             return None
 
         def rename_file(old_path: str, new_path: str) -> str | None:
@@ -1909,7 +1904,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 view.retarget(new_path)
                 view.settings().set('lsp_uri', new_uri)
             renamed_files.append({'oldUri': old_uri, 'newUri': new_uri})
-            summary['renamed_files'] += 1
             return None
 
         async def wait_for_path_deletion(path: str) -> str | None:
@@ -2020,7 +2014,6 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         result = failure(failure_reason, index)
                         break
                     deleted_files.append({'uri': uri})
-                    summary['deleted_files'] += 1
                     continue
                 if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
                     if os.listdir(path) and not options.get('recursive'):
@@ -2029,8 +2022,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     if failure_reason := await delete_folder(path):
                         result = failure(failure_reason, index)
                         break
-                    deleted_files.append({'uri': uri})
-                    summary['deleted_folders'] += 1
+                    deleted_folders.append({'uri': uri})
                     continue
                 if options.get('ignoreIfNotExists'):
                     continue
@@ -2041,7 +2033,15 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 break
         self._set_selected_sheets(selected_sheets)
         self._set_focused_sheet(active_sheet)
-        self._notify_after_resource_operations(created_files, renamed_files, deleted_files)
+        self._notify_after_resource_operations(created_files, renamed_files, deleted_files + deleted_folders)
+        summary: WorkspaceEditSummary = {
+            'total_changes': total_changes_in_edited_files,
+            'edited_files': len(edited_files),
+            'created_files': len(created_files),
+            'renamed_files': len(renamed_files),
+            'deleted_files': len(deleted_files),
+            'deleted_folders': len(deleted_folders)
+        }
         return result, summary
 
     async def apply_workspace_edit(

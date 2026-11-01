@@ -714,7 +714,7 @@ class SessionViewProtocol(Protocol):
     def on_capability_added_async(self, registration_id: str, capability_path: str, options: dict[str, Any]) -> None:
         ...
 
-    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: dict[str, Any]) -> None:
+    def on_capability_removed_async(self, registration_id: str, capability_path: str) -> None:
         ...
 
     def has_capability_async(self, capability_path: str) -> bool:
@@ -2507,7 +2507,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 # or a completionProvider for trigger characters.
                 if isinstance(discarded, dict):
                     for sv in self.session_views_async():
-                        sv.on_capability_removed_async(registration_id, discarded)
+                        sv.on_capability_removed_async(registration_id, capability_path)
 
     def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
         if not self._watcher_impl:

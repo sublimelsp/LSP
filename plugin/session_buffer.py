@@ -362,7 +362,7 @@ class SessionBuffer(TaskContainer):
         if discarded is None:
             return
         for sv in self.session_views:
-            sv.on_capability_removed_async(registration_id, discarded)
+            sv.on_capability_removed_async(registration_id, capability_path)
         if capability_path == "executeCommandProvider":
             self._dynamically_registered_commands.pop(registration_id)
             self._update_supported_commands()

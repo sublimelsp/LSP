@@ -403,13 +403,13 @@ class SingleDocumentTestCase2(TextDocumentTestCase):
         self.assertEqual(entire_content(self.view), "AB\n🙂\nD")
 
 
+@skip('Flaky on Windows and Mac')
 class SingleDocumentTestCase3(TextDocumentTestCase):
 
     @classmethod
     def get_test_name(cls) -> str:
         return "testfile2"
 
-    @skip('Flaky on Windows and Mac')
     async def test_did_change_before_did_close(self) -> None:
         assert self.view
         self.view.window().run_command("chain", {

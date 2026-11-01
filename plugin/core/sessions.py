@@ -714,7 +714,7 @@ class SessionViewProtocol(Protocol):
     def on_capability_added_async(self, registration_id: str, capability_path: str, options: dict[str, Any]) -> None:
         ...
 
-    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: dict[str, Any]) -> None:
+    def on_capability_removed_async(self, registration_id: str, capability_path: str) -> None:
         ...
 
     def has_capability_async(self, capability_path: str) -> bool:
@@ -1642,7 +1642,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 # TODO: Handle error.
                 return False
             content = response['text'].replace('\r', '')
-            syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
+            syntax = self.config.syntax_map.get(parse_uri(uri)[0])
+            if not syntax:
+                # Try to derive the syntax from path segment of the URI or from first content line
+                syntax_obj = sublime.find_syntax_for_file(title, first_line=content.partition('\n')[0])
+                syntax = syntax_obj.path if syntax_obj else ''
             return self._on_view_for_uri_opened(
                 await self._open_scratch_buffer(title, content, syntax, flags, group), uri, r
             )
@@ -2507,7 +2511,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 # or a completionProvider for trigger characters.
                 if isinstance(discarded, dict):
                     for sv in self.session_views_async():
-                        sv.on_capability_removed_async(registration_id, discarded)
+                        sv.on_capability_removed_async(registration_id, capability_path)
 
     def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
         if not self._watcher_impl:
@@ -2939,10 +2943,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 else:
                     # server request
                     try:
+                        response = await handler(result, req_id)
+                        # A request handler that returns a Promise resolves it with an `Error` when it fails.
+                        if isinstance(response.result, Error):
+                            raise response.result
                         await self.send_response(
-                            await self._handle_plugin_on_pre_send_response_async(
-                                method, result, await handler(result, req_id)
-                            )
+                            await self._handle_plugin_on_pre_send_response_async(method, result, response)
                         )
                     except Error as err:
                         await self.send_error_response(req_id, err)

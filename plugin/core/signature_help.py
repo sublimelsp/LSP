@@ -3,7 +3,6 @@ from __future__ import annotations
 from ...protocol import SignatureHelp
 from ...protocol import SignatureHelpTriggerKind
 from ...protocol import SignatureInformation
-from .aio import run_coroutine
 from .logging import debug
 from .registry import LspTextCommand
 from .views import FORMAT_MARKUP_CONTENT
@@ -44,9 +43,9 @@ class LspSignatureHelpShowCommand(LspTextCommand):
     def want_event(self) -> bool:
         return False
 
-    def run(self, _: sublime.Edit) -> None:
+    async def run(self) -> None:
         if listener := self.get_listener():
-            run_coroutine(listener.do_signature_help(SignatureHelpTriggerKind.Invoked))
+            await listener.do_signature_help(SignatureHelpTriggerKind.Invoked)
 
 
 class SigHelp:

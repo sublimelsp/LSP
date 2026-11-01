@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine
 from .core.logging import debug
 from .core.protocol import Error
 from .core.registry import LspTextCommand
@@ -17,14 +16,12 @@ import sublime
 
 if TYPE_CHECKING:
     from ..protocol import ExecuteCommandParams
-    from .core.sessions import Session
 
 
 class LspExecuteCommand(LspTextCommand):
     """Helper command for triggering workspace/executeCommand requests."""
 
-    def run(self,
-            edit: sublime.Edit,
+    async def run(self,
             command_name: str | None = None,
             command_args: list[Any] | None = None,
             session_name: str | None = None,
@@ -34,14 +31,11 @@ class LspExecuteCommand(LspTextCommand):
             params: ExecuteCommandParams = {"command": command_name}
             if command_args:
                 params["arguments"] = self._expand_variables(command_args)
-            run_coroutine(self._run(session, command_name, params))
-
-    async def _run(self, session: Session, command_name: str, params: ExecuteCommandParams) -> None:
-        result = await session.run_command(params, progress=True, view=self.view)
-        if isinstance(result, Error):
-            self.handle_error_async(result, command_name)
-        else:
-            self.handle_success_async(result, command_name)
+            result = await session.run_command(params, progress=True, view=self.view)
+            if isinstance(result, Error):
+                self.handle_error_async(result, command_name)
+            else:
+                self.handle_success_async(result, command_name)
 
     def handle_success_async(self, result: Any, command_name: str) -> None:
         """

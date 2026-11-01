@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine
 from .core.constants import RequestFlags
 from .core.constants import ST_VERSION
 from .core.css import css
@@ -42,10 +41,7 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
             return sublime.load_settings('LSP.sublime-settings').get('show_inlay_hints')
         return False
 
-    def run(self, enable: bool | None = None) -> None:
-        run_coroutine(self._run(enable))
-
-    async def _run(self, enable: bool | None) -> None:
+    async def run(self, enable: bool | None = None) -> None:
         window_settings = self.window.settings()
         if not isinstance(enable, bool):
             enable = not bool(window_settings.get('lsp_show_inlay_hints'))
@@ -68,12 +64,14 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
 class LspInlayHintClickCommand(LspTextCommand):
     capability = 'inlayHintProvider'
 
-    def run(self, _edit: sublime.Edit, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
-            event: dict | None = None, label_part: InlayHintLabelPart | None = None) -> None:
-        run_coroutine(self._run(session_name, inlay_hint, phantom_uuid, label_part))
-
-    async def _run(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
-            label_part: InlayHintLabelPart | None = None) -> None:
+    async def run(
+        self,
+        session_name: str,
+        inlay_hint: InlayHint,
+        phantom_uuid: str,
+        event: dict | None = None,
+        label_part: InlayHintLabelPart | None = None,
+    ) -> None:
         # Insert textEdits for the given inlay hint.
         # If a InlayHintLabelPart was clicked, label_part will be passed as an argument to the LspInlayHintClickCommand
         # and InlayHintLabelPart.command will be executed.

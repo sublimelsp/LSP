@@ -2826,10 +2826,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         return (promise, request_id)
 
     async def cancel_request(self, request_id: int) -> None:
-        if request_id in self._response_handlers:
+        if tup := self._response_handlers.get(request_id):
+            request, _, error_handler = tup
+            # The server may still reply with a regular result, which must not reach the caller anymore.
+            self._response_handlers[request_id] = (request, lambda _: None, lambda _: None)
+            error_handler({"code": LSPErrorCodes.RequestCancelled, "message": "Request canceled by client"})
+            self._invoke_views(request, "on_request_canceled_async", request_id)
             await self.notify(Notification("$/cancelRequest", {"id": request_id}))
-            if tup := self._response_handlers.get(request_id):
-                self._invoke_views(tup[0], "on_request_canceled_async", request_id)
 
     async def notify(self, notification: Notification[P_contra]) -> None:
         """Send a notification to the server."""

@@ -238,9 +238,9 @@ def plugin_loaded() -> None:
 def plugin_unloaded() -> None:
     _unregister_all_plugins()
     run_coroutine(windows.disable())
-    for listeners in sublime_plugin.view_event_listeners.values():
-        for listener in listeners:
-            if isinstance(listener, DocumentSyncListener):
+    for window in sublime.windows():
+        for view in window.views(include_transient=True):
+            if listener := sublime_plugin.find_view_event_listener(view, DocumentSyncListener):
                 listener.before_destroy()
     unload_settings()
 
@@ -268,14 +268,9 @@ class Listener(sublime_aio.EventListener):
         if ST_VERSION < 4184:  # https://github.com/sublimehq/sublime_text/issues/4630#issuecomment-2502781628
             # Workaround for ViewEventListener.on_post_move_async not being triggered when air-dropping a tab:
             # https://github.com/sublimehq/sublime_text/issues/4630
-            listeners = sublime_plugin.view_event_listeners.get(view.id())
-            if not isinstance(listeners, list):
-                return
-            for listener in listeners:
-                if isinstance(listener, DocumentSyncListener):
-                    # we need a small delay here, so that the DocumentSyncListener will recognize a possible new window
-                    sublime.set_timeout_async(listener.on_post_move_window_async, 1)
-                    return
+            if listener := sublime_plugin.find_view_event_listener(view, DocumentSyncListener):
+                # we need a small delay here, so that the DocumentSyncListener will recognize a possible new window
+                sublime.set_timeout_async(listener.on_post_move_window_async, 1)
 
     async def on_load(self, view: sublime.View) -> None:
         file_name = view.file_name()

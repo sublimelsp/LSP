@@ -22,6 +22,7 @@ from .lsp_task import LspTask
 from .lsp_task import LspTextCommandWithTasks
 from functools import partial
 from typing import Any
+from typing import cast
 from typing import List
 from typing import TYPE_CHECKING
 from typing import Union
@@ -207,7 +208,7 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
             window = window_manager.window
             project_data = window.project_data()
             if isinstance(project_data, dict):
-                project_settings = project_data.setdefault('settings', {})
+                project_settings = cast('dict[str, Any]', project_data.setdefault('settings', {}))
                 project_lsp_settings = project_settings.setdefault('LSP', {})
                 project_formatter_settings = project_lsp_settings.setdefault('formatters', {})
                 project_formatter_settings[base_scope] = session_name

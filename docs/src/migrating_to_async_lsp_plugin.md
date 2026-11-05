@@ -21,6 +21,7 @@ Most methods of the `LspPlugin` class now have an asynchronous counterpart. You 
 | `on_server_notification_async(notification)` | `async on_server_notification(notification)` |
 | `on_text_changed_async(session_buffer)` | `async on_text_changed(session_buffer)` |
 | `on_session_end_async(exit_code, exception)` | `async on_session_end(exit_code, exception)` |
+| *(not present)* | `async on_transport_ready(reader, writer)` |
 
 Beyond these methods, there are also migration paths for existing `@command_handler`, `@request_handler`, and `@uri_handler` methods, described below.
 

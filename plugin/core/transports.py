@@ -348,6 +348,14 @@ class Transport(TaskContainer):
         self._task = asyncio.get_running_loop().create_task(self._read_loop())
         return self._task
 
+    @property
+    def reader(self) -> asyncio.StreamReader:
+        return self._reader
+
+    @property
+    def writer(self) -> asyncio.StreamWriter:
+        return self._writer
+
     async def read(self) -> JSONRPCMessage:
         """Read one JSON-RPC message."""
         content_length = await parse_content_length(self._reader)

@@ -18,6 +18,12 @@
   // to format parts of the document during typing.
   "format_on_type": false,
 
+  // --- Linked Editing -----------------------------------------------------------------
+
+  // Mirror edits to ranges that are linked by the language server, for example
+  // renaming the closing tag when the opening tag of an HTML element is changed.
+  "linked_editing": false,
+
   // --- Code Actions -------------------------------------------------------------------
 
   // Show code actions:

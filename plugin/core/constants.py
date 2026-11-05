@@ -81,6 +81,7 @@ class RegionKey(StrEnum):
     CODE_ACTION = 'lsp_code_action'
     DOCUMENT_LINK = 'lsp_document_link'
     HOVER_HIGHLIGHT = 'lsp_hover_highlight'
+    LINKED_EDITING = 'lsp_linked_editing'
     REFERENCE_HIGHLIGHT = 'lsp_reference_highlight'
 
 
@@ -102,6 +103,7 @@ SHOW_DEFINITIONS_KEY = 'show_definitions'
 # Region flags
 DIAGNOSTIC_ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
 DOCUMENT_LINK_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
+LINKED_EDITING_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE | sublime.RegionFlags.DRAW_EMPTY | sublime.RegionFlags.NO_UNDO  # ruff: ignore[line-too-long]
 REGIONS_INITIALIZE_FLAGS = sublime.RegionFlags.HIDDEN | sublime.RegionFlags.NO_UNDO
 SEMANTIC_TOKEN_FLAGS = sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO
 
@@ -267,6 +269,7 @@ SIGNATURE_HELP_FUNCTION_SCOPE = 'meta.signature-help.lsp'
 SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp variable.parameter.sighelp.active.lsp'
 SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp'
 LIGHTBULB_SCOPE = 'region.yellowish lightbulb.lsp'
+LINKED_EDITING_SCOPE = 'region.cyanish markup.highlight.linked_editing.lsp'
 
 COMMAND_TO_CHANGE_EVENT_ACTION: dict[str, ChangeEventAction] = {
     'cut': ChangeEventAction.CUT,

@@ -535,6 +535,9 @@ def get_initialize_params(
             "codeDescriptionSupport": True,
             "dataSupport": True
         },
+        "linkedEditingRange": {
+            "dynamicRegistration": True
+        },
         "foldingRange": {
             "dynamicRegistration": True,
             "foldingRangeKind": {

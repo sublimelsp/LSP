@@ -9,8 +9,8 @@ from .core.aio import run_on_threadpool
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
+from .core.transports import Transport
 from .core.transports import TransportCallbacks
-from .core.transports import TransportWrapper
 from .core.types import ClientConfig
 from .core.version import __version__
 from .core.views import extract_variables
@@ -506,7 +506,7 @@ class ServerTestRunner(TransportCallbacks):
         self._window = window
         self._initiating_view = initiating_view
         self._on_close = on_close
-        self._transport: TransportWrapper | None = None
+        self._transport: Transport | None = None
         self._resolved_command: list[str] | None = None
         self._cwd: str | None = None
         self._stderr_lines: list[str] = []

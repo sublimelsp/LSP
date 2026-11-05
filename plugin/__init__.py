@@ -44,7 +44,7 @@ from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import SessionViewProtocol
-from .core.transports import TransportWrapper
+from .core.transports import Transport
 from .core.type_converters import point_to_offset
 from .core.type_converters import position_to_offset
 from .core.type_converters import range_to_region
@@ -102,7 +102,7 @@ __all__ = [
     'SessionBufferProtocol',
     'SessionViewProtocol',
     'TextPosition',
-    'TransportWrapper',
+    'Transport',
     'WorkspaceFolder',
     '__version__',
     'apply_text_edits',

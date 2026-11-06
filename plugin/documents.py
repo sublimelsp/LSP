@@ -453,7 +453,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             request_flags |= RequestFlags.SEMANTIC_TOKENS
         if session == self.session_async('documentOnTypeFormattingProvider', 0):
             request_flags |= RequestFlags.ON_TYPE_FORMATTING
-        if session == self.session_async('linkedEditingRangeProvider', 0):
+        if (
+            len(selection := self.view.sel()) == 1
+            and session == self.session_async('linkedEditingRangeProvider', selection[0].b)
+        ):
             request_flags |= RequestFlags.LINKED_EDITING_RANGE
         return request_flags
 

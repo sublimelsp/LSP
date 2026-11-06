@@ -642,7 +642,9 @@ def minihtml(
         ]
     if isinstance(language_id_map, dict):
         frontmatter["language_map"] = language_id_map
-    return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
+    html = mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
+    # workaround for https://github.com/sublimehq/sublime_text/issues/7020
+    return re.sub(r'<!--.*?-->', '', html, flags=re.DOTALL)
 
 
 REPLACEMENT_MAP = {

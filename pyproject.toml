@@ -25,7 +25,7 @@ pass_env = ["GITHUB_ACTIONS", "RUFF_OUTPUT_FORMAT"]
 # Run all commands even if one fails, so that every problem is reported. The run still fails.
 ignore_errors = true
 commands = [
-    ["basedpyright", "plugin", "stubs"],
+    ["basedpyright", "--pythonpath", "{env_python}", "plugin", "stubs"],
     ["ruff", "check"],
 ]
 

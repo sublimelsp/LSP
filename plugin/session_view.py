@@ -54,6 +54,7 @@ class SessionView:
     AC_TRIGGERS_KEY = "auto_complete_triggers"
     COMPLETION_PROVIDER_KEY = "completionProvider"
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
+    LINKED_EDITING_RANGE_PROVIDER_KEY = "linkedEditingRangeProvider"
 
     _session_buffers: WeakValueDictionary[tuple[int, int], SessionBuffer] = WeakValueDictionary()
 
@@ -288,7 +289,7 @@ class SessionView:
             trigger_chars = options.get("triggerCharacters")
             if isinstance(trigger_chars, list) or self.session.config.auto_complete_selector:
                 self._register_auto_complete_triggers(registration_id, trigger_chars or [])
-        elif capability_path == "linkedEditingRangeProvider" and \
+        elif capability_path == self.LINKED_EDITING_RANGE_PROVIDER_KEY and \
                 self.get_request_flags() & RequestFlags.LINKED_EDITING_RANGE and (listener := self.listener()):
             # The caret may already be inside of linked editing ranges.
             listener.do_linked_editing_ranges_async()

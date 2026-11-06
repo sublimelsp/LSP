@@ -290,7 +290,8 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         self.assertEqual(list(self.view.sel()), [sublime.Region(4, 4)])
 
 
-class LinkedEditingDynamicRegistrationTestCase(TextDocumentTestCase):
+class LinkedEditingDynamicRegistrationTestCaseBase(TextDocumentTestCase):
+    """Each subclass gets its own session, so the capability registered by one test doesn't leak into another."""
 
     @override
     async def setUp(self) -> None:
@@ -298,7 +299,7 @@ class LinkedEditingDynamicRegistrationTestCase(TextDocumentTestCase):
         userprefs().linked_editing = True
         self.addCleanup(setattr, userprefs(), 'linked_editing', False)
 
-    async def test_request_when_capability_is_registered(self) -> None:
+    async def register_and_activate(self) -> LinkedEditing:
         self.insert_characters(TAGS)
         await self.await_message("textDocument/didChange")
         self.view.run_command("lsp_selection_set", {"regions": [(4, 4)]})
@@ -310,5 +311,23 @@ class LinkedEditingDynamicRegistrationTestCase(TextDocumentTestCase):
         listener = self.ensure_document_listener_created()
         assert listener
         await self.wait_until(listener.linked_editing.is_active)
+        return listener.linked_editing
+
+
+class LinkedEditingDynamicRegistrationTestCase(LinkedEditingDynamicRegistrationTestCaseBase):
+
+    async def test_request_when_capability_is_registered(self) -> None:
+        await self.register_and_activate()
         self.insert_characters("x")
         await self.wait_until(lambda: self.view.substr(sublime.Region(0, self.view.size())) == "<divx></divx>")
+
+
+class LinkedEditingDynamicUnregistrationTestCase(LinkedEditingDynamicRegistrationTestCaseBase):
+
+    async def test_unregistering_capability_stops_linked_editing(self) -> None:
+        linked_editing = await self.register_and_activate()
+        await self.make_server_do_fake_request("client/unregisterCapability", {
+            "unregisterations": [{"id": "linked-editing", "method": "textDocument/linkedEditingRange"}]
+        })
+        await self.wait_until(lambda: not linked_editing.is_active())
+        self.assertEqual(self.view.get_regions(RegionKey.LINKED_EDITING), [])

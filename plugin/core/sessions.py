@@ -926,6 +926,11 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def clear_linked_editing_async(self) -> None:
+        """Stop linked editing, for example because the language server doesn't provide the ranges anymore."""
+        raise NotImplementedError
+
+    @abstractmethod
     async def on_session_shutdown(self, session: Session) -> list[Exception]:
         raise NotImplementedError
 

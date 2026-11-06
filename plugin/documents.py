@@ -349,8 +349,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 self.do_linked_editing_ranges_async()
 
     async def on_session_shutdown(self, session: Session) -> list[Exception]:
-        if session.has_capability("linkedEditingRangeProvider"):
-            sublime.set_timeout(self.linked_editing.clear)
+        if session.has_capability(SessionView.LINKED_EDITING_RANGE_PROVIDER_KEY):
+            self.clear_linked_editing_async()
         if removed_session := self._session_views.pop(session.config.name, None):
             result = await removed_session.on_before_remove()
             if not self._session_views:
@@ -1001,6 +1001,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         version = self.view.change_count()
         await self.purge_changes()
         await self.linked_editing.request(session, point, version)
+
+    @override
+    def clear_linked_editing_async(self) -> None:
+        sublime.set_timeout(self.linked_editing.clear)
 
     # --- textDocument/foldingRange ------------------------------------------------------------------------------------
 

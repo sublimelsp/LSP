@@ -299,6 +299,8 @@ class SessionView:
             self._decrement_hover_count()
         elif capability_path.startswith(self.COMPLETION_PROVIDER_KEY):
             self._unregister_auto_complete_triggers(registration_id)
+        elif capability_path == self.LINKED_EDITING_RANGE_PROVIDER_KEY and (listener := self.listener()):
+            listener.clear_linked_editing_async()
 
     def has_capability_async(self, capability_path: str) -> bool:
         return self.session_buffer.has_capability(capability_path)

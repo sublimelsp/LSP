@@ -478,9 +478,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             return
         self.on_post_move_window_async()
 
-    async def on_activated(self) -> None:
-        await self._activated_impl()
-
     def on_pre_save(self) -> None:
         # Don't glue edits made before saving with edits made after it, so that undo can restore the saved state.
         self.linked_editing.glue()
@@ -490,6 +487,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         # groups in the wrong view. Only the view with focus does linked editing; it requests the ranges again when it
         # gets activated.
         self.linked_editing.clear()
+
+    async def on_activated(self) -> None:
+        await self._activated_impl()
 
     async def _activated_impl(self) -> None:
         if self.view.is_loading() or not is_regular_view(self.view):

@@ -502,6 +502,17 @@
               "default": false,
               "markdownDescription": "Mirror edits to ranges that are linked by the language server, for example renaming the closing tag when the opening tag of an HTML element is changed."
             },
+            "linked_editing_highlight_style": {
+              "enum": [
+                "background",
+                "underline",
+                "stippled",
+                "outline",
+                ""
+              ],
+              "default": "underline",
+              "markdownDescription": "Highlight style of the linked ranges while linked editing is active. When set to the empty string (`\"\"`), no highlighting is applied.\n\nSee https://lsp.sublimetext.io/features/#linked-editing for how to customize the color."
+            },
             "on_save_task_timeout_ms": {
               "type": "integer",
               "default": 2000,

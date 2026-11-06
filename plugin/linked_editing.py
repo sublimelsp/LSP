@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from .core.aio import run_on_main_thread
 from .core.constants import ChangeEventAction
-from .core.constants import LINKED_EDITING_FLAGS
 from .core.constants import LINKED_EDITING_SCOPE
 from .core.constants import RegionKey
 from .core.logging import debug
 from .core.protocol import Error
 from .core.protocol import Request
+from .core.settings import userprefs
 from .core.type_converters import range_to_region
 from .core.views import text_document_position_params
 from typing import TYPE_CHECKING
@@ -208,8 +208,14 @@ class LinkedEditing:
             sublime.set_timeout(self._sync)
 
     def _draw(self) -> None:
-        self._view.add_regions(
-            RegionKey.LINKED_EDITING, list(self._ranges), scope=LINKED_EDITING_SCOPE, flags=LINKED_EDITING_FLAGS)
+        prefs = userprefs()
+        if not prefs.linked_editing_highlight_style:
+            self._view.erase_regions(RegionKey.LINKED_EDITING)
+            return
+        _, flags = prefs.highlight_style_region_flags(prefs.linked_editing_highlight_style)
+        # Ranges become empty when their whole content is deleted, and should stay visible then.
+        flags |= sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_EMPTY
+        self._view.add_regions(RegionKey.LINKED_EDITING, list(self._ranges), scope=LINKED_EDITING_SCOPE, flags=flags)
 
     def _sync(self) -> None:
         touched = self._touched

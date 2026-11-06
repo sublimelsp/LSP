@@ -24,6 +24,13 @@
   // renaming the closing tag when the opening tag of an HTML element is changed.
   "linked_editing": false,
 
+  // Highlight style of the linked ranges while linked editing is active.
+  // Valid values are "background", "underline", "stippled", "outline", or "".
+  // When set to the empty string (""), no highlighting is applied.
+  // See https://lsp.sublimetext.io/features/#linked-editing for how to
+  // customize the color.
+  "linked_editing_highlight_style": "underline",
+
   // --- Code Actions -------------------------------------------------------------------
 
   // Show code actions:

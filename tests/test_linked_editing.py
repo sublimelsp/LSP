@@ -104,6 +104,15 @@ class LinkedEditingTestCase(LinkedEditingTestCaseBase):
         await self.wait_for_text("<></>")
         self.assertEqual(self.view.get_regions(RegionKey.LINKED_EDITING), [sublime.Region(1, 1), sublime.Region(4, 4)])
 
+    async def test_ranges_are_not_drawn_without_highlight_style(self) -> None:
+        userprefs().linked_editing_highlight_style = ""
+        self.addCleanup(setattr, userprefs(), 'linked_editing_highlight_style', "underline")
+        await self.activate(4)
+        self.assertEqual(self.view.get_regions(RegionKey.LINKED_EDITING), [])
+        self.insert_characters("x")
+        await self.wait_for_text("<divx></divx>")
+        self.assertEqual(self.view.get_regions(RegionKey.LINKED_EDITING), [])
+
     async def test_insert_at_start_of_opening_tag(self) -> None:
         await self.activate(1)
         self.insert_characters("x")

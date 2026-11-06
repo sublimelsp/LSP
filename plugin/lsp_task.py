@@ -7,7 +7,6 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 from typing import final
-from typing_extensions import override
 import asyncio
 import functools
 import sublime
@@ -66,7 +65,6 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
     async def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
         """Override this to execute code when all tasks are completed."""
 
-    @override
     async def run(self, **kwargs: dict[str, Any]) -> None:
         if self._tasks_runner:
             # Request to cancel the task.

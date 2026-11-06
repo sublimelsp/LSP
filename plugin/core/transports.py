@@ -7,6 +7,7 @@ from .logging import debug
 from .logging import exception_log
 from abc import ABC
 from abc import abstractmethod
+from enum import IntEnum
 from pathlib import Path
 from typing import Any
 from typing import Callable
@@ -217,13 +218,13 @@ class TcpServerTransportConfig(TransportConfig):
         class ClientConnectedCallback:
             def __init__(self) -> None:
                 self.cv = asyncio.Condition()
-                self.wrapper: Transport | None = None
+                self.transport: Transport | None = None
                 self.process: asyncio.subprocess.Process | None = None
                 self.error_reader: ErrorReader | None = None
 
             async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
                 async with self.cv:
-                    self.wrapper = Transport(
+                    self.transport = Transport(
                         encode_json,
                         decode_json,
                         reader,
@@ -265,8 +266,8 @@ class TcpServerTransportConfig(TransportConfig):
                 #
                 # More background information: https://github.com/python/cpython/issues/104344
                 server.close()
-        assert callback.wrapper
-        return callback.wrapper
+        assert callback.transport
+        return callback.transport
 
 
 # --- Transports -------------------------------------------------------------------------------------------------------
@@ -311,6 +312,12 @@ async def parse_content_length(reader: asyncio.StreamReader) -> int | None:
     return int(content_length)
 
 
+class _State(IntEnum):
+    NEW = 0
+    RUNNING = 1
+    STOPPED = 2
+
+
 @final
 class Transport(TaskContainer):
     """
@@ -340,15 +347,87 @@ class Transport(TaskContainer):
         self._process = process
         self._process_args = process_args
         self._error_reader: ErrorReader | None = error_reader
-        self._closed = True
-
-    def start(self) -> asyncio.Task[None]:
-        """Start the message processing loop."""
         self._closed = False
-        self._task = asyncio.get_running_loop().create_task(self._read_loop())
-        return self._task
+        self._task: asyncio.Task[None] | None = None
+        self._close_lock: asyncio.Lock | None = None
+        self._read_loop_done = False
 
-    async def read(self) -> JSONRPCMessage:
+    def start(self) -> None:
+        """Start the message processing loop."""
+        if self._state() != _State.NEW:
+            raise AssertionError("transport started while it's not in the NEW state")
+        self._task = asyncio.get_running_loop().create_task(self._read_loop())
+
+    @property
+    def process_args(self) -> list[str] | None:
+        """
+        The arguments for the process launched by this transport, or None if there is no process launched (such as with
+        a remote TCP/websocket connection).
+        """
+        return self._process_args
+
+    async def send(self, payload: JSONRPCMessage) -> None:
+        """Write a JSON-RPC message."""
+        state = self._state()
+        if state == _State.RUNNING:
+            await self._write(payload)
+        elif state == _State.NEW:
+            raise AssertionError("missing call to .start()")
+
+    async def send_bytes(self, payload: bytes) -> None:
+        """Write raw bytes."""
+        state = self._state()
+        if state == _State.RUNNING:
+            await self._write_bytes(payload)
+        elif state == _State.NEW:
+            raise AssertionError("missing call to .start()")
+
+    async def close(self) -> None:
+        """Stop the message loop and stop the process (if any)."""
+        if self._close_lock is None:
+            self._close_lock = asyncio.Lock()
+        async with self._close_lock:
+            if self._state() == _State.STOPPED:
+                return
+            await self._release_resources()
+
+    async def _release_resources(self) -> None:
+        try:
+            state = self._state()
+            self._closed = True
+            if state == _State.NEW:
+                if self._process:
+                    await self._kill_process(self._process)
+            else:
+                await self.cancel_all_tasks()
+                if self._task:
+                    if asyncio.current_task() is not self._task:  # prevents deadlock
+                        if not self._read_loop_done:
+                            self._task.cancel()
+                        # Note: we could use contextlib.suppress(asyncio.CancelledError), but that would also swallow
+                        # cancellation targeted at the close() method. So use asyncio.wait. The suspension point can
+                        # then still raise asyncio.CancelledError itself.
+                        _done, _pending = await asyncio.wait([self._task])
+                    self._task = None
+        finally:
+            if self._error_reader:
+                self._error_reader.on_transport_close()
+                self._error_reader = None
+            self._writer.close()
+            with contextlib.suppress(ConnectionError):
+                await self._writer.wait_closed()
+            if self._process and self._process.returncode is None:
+                await self._kill_process(self._process)
+                self._process = None
+
+    def _state(self) -> _State:
+        if self._closed:
+            return _State.STOPPED
+        if self._task:
+            return _State.RUNNING
+        return _State.NEW
+
+    async def _read(self) -> JSONRPCMessage:
         """Read one JSON-RPC message."""
         content_length = await parse_content_length(self._reader)
         if content_length is None:
@@ -359,7 +438,7 @@ class Transport(TaskContainer):
         except Exception as ex:
             raise Exception(f"JSON decode error: {ex}") from ex
 
-    async def write(self, payload: JSONRPCMessage) -> None:
+    async def _write(self, payload: JSONRPCMessage) -> None:
         """Write a JSON-RPC message."""
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
@@ -368,55 +447,28 @@ class Transport(TaskContainer):
         with contextlib.suppress(ConnectionError):
             await self._writer.drain()
 
-    async def write_bytes(self, payload: bytes) -> None:
+    async def _write_bytes(self, payload: bytes) -> None:
         """Write raw bytes."""
         self._writer.write(payload)
         with contextlib.suppress(ConnectionError):
             await self._writer.drain()
 
-    async def close(self) -> None:
-        """Stop the message loop."""
-        if self._closed:
-            return
-        self._closed = True
-        await self.cancel_all_tasks()
-        if self._error_reader:
-            self._error_reader.on_transport_close()
-            self._error_reader = None
-        self._writer.close()
-        with contextlib.suppress(ConnectionError):
-            await self._writer.wait_closed()
-
-    @property
-    def process_args(self) -> list[str] | None:
-        """
-        The arguments for the process launched by this wrapper, or None if there is no process launched (such as with
-        a remote TCP/websocket connection).
-        """
-        return self._process_args
-
-    async def send(self, payload: JSONRPCMessage) -> None:
-        """Write a JSON-RPC message."""
-        await self.write(payload)
-
-    async def send_bytes(self, payload: bytes) -> None:
-        """Write raw bytes."""
-        await self.write_bytes(payload)
-
     async def _read_loop(self) -> None:
         exception: Exception | None = None
         try:
-            while not self._closed:
-                payload = await self.read()
+            while True:
+                payload = await self._read()
                 if callback_object := self._callback_object():
                     # Don't block the read loop on handler execution. Otherwise, a request handler that sends its own
                     # request to the server and awaits the response would deadlock: the read loop is stuck waiting for
                     # the handler, but the handler is waiting for a response that can only be read by the read loop.
                     self.create_task(callback_object.on_payload(payload))
-        except (AttributeError, BrokenPipeError, StopLoopError):
+        except (AttributeError, BrokenPipeError, StopLoopError, asyncio.CancelledError):
+            # asyncio.Cancelled is swallowed on purpose. It's needed so the tail of this method runs to completion.
             pass
         except Exception as ex:
             exception = ex
+        self._read_loop_done = True
         exit_code: int | None = None
         if self._process:
             if not exception:
@@ -426,19 +478,23 @@ class Transport(TaskContainer):
                 except (AttributeError, ProcessLookupError, asyncio.TimeoutError):
                     pass
             if exit_code is None:
-                try:
-                    # The process didn't stop itself. Terminate!
-                    self._process.kill()
-                    # still wait for the process to die, or zombie processes might be the result
-                    # Ignore the exit code in this case, it's going to be something non-zero because we sent SIGKILL.
-                    await self._process.wait()
-                except (AttributeError, ProcessLookupError):
-                    pass
-                except Exception as ex:
-                    exception = ex  # TODO: Old captured exception is overwritten
+                if ex := await self._kill_process(self._process):
+                    # TODO: old exception is overwritten
+                    exception = ex
         if callback_object := self._callback_object():
             await callback_object.on_transport_close(exit_code or 0, exception)
-        await self.close()
+        await self._release_resources()
+
+    @staticmethod
+    async def _kill_process(process: asyncio.subprocess.Process) -> Exception | None:
+        try:
+            process.kill()
+            await process.wait()
+        except (AttributeError, ProcessLookupError):
+            pass
+        except Exception as ex:
+            return ex
+        return None
 
 
 class LaunchConfig:

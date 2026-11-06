@@ -33,7 +33,7 @@ try:
 except ImportError:
     orjson = None
 
-TCP_CONNECT_TIMEOUT = 30  # seconds
+TCP_CONNECT_TIMEOUT = 10  # seconds
 TCP_CONNECT_RETRY_INTERVAL = 0.5  # seconds
 
 

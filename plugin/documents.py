@@ -345,6 +345,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                         if request := sb.semantic_tokens.pending_response:
                             self.create_task(request.cancel())
                             sb.semantic_tokens.pending_response = None
+            # The caret may already be inside of linked editing ranges, for example when the view had focus while the
+            # session was starting.
+            self.do_linked_editing_ranges_async()
 
     async def on_session_shutdown(self, session: Session) -> list[Exception]:
         if session.has_capability("linkedEditingRangeProvider"):
@@ -426,10 +429,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             for sv in self.session_views_async():
                 sv.on_text_changed(change_count, changes, action)
         self._on_view_updated_async()
-        if action in {ChangeEventAction.UNDO, ChangeEventAction.REDO} and userprefs().linked_editing:
+        if action in {ChangeEventAction.UNDO, ChangeEventAction.REDO}:
             # Undo and redo stop linked editing and move the caret without triggering `on_selection_modified`, so
             # request the ranges at the new caret position.
-            self._do_linked_editing_ranges_async()
+            self.do_linked_editing_ranges_async()
 
     def get_uri(self) -> DocumentUri:
         return self._uri
@@ -515,9 +518,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 sb.create_task(sb.do_inlay_hints(self.view))
         if userprefs().show_code_actions:
             self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
-        if userprefs().linked_editing:
-            self._update_stored_selection()
-            self._do_linked_editing_ranges_async()
+        self.do_linked_editing_ranges_async()
 
     @requires_session
     async def on_selection_modified(self) -> None:
@@ -529,9 +530,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             return
         if not self._is_in_higlighted_region(first_region.b):
             self._clear_highlight_regions()
-        if userprefs().linked_editing:
-            # Not debounced, so that the ranges are likely to be known before the user starts typing.
-            self._do_linked_editing_ranges_async()
+        # Not debounced, so that the ranges are likely to be known before the user starts typing.
+        self.do_linked_editing_ranges_async()
         if userprefs().show_code_actions:
             self._code_actions_for_selection.clear()
             self._clear_code_actions_annotation()
@@ -978,7 +978,14 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     # --- textDocument/linkedEditingRange ------------------------------------------------------------------------------
 
-    def _do_linked_editing_ranges_async(self) -> None:
+    @override
+    def do_linked_editing_ranges_async(self) -> None:
+        if not userprefs().linked_editing:
+            return
+        # Clones of a view share the buffer, so only the view with focus does linked editing.
+        if (window := self.view.window()) and window.active_view() != self.view:
+            return
+        self._update_stored_selection()
         if len(self._stored_selection) != 1:
             return
         point = self._stored_selection[0].b

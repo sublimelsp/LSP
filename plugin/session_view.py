@@ -288,6 +288,9 @@ class SessionView:
             trigger_chars = options.get("triggerCharacters")
             if isinstance(trigger_chars, list) or self.session.config.auto_complete_selector:
                 self._register_auto_complete_triggers(registration_id, trigger_chars or [])
+        elif capability_path == "linkedEditingRangeProvider" and (listener := self.listener()):
+            # The caret may already be inside of linked editing ranges.
+            listener.do_linked_editing_ranges_async()
 
     def on_capability_removed_async(self, registration_id: str, capability_path: str) -> None:
         if capability_path == self.HOVER_PROVIDER_KEY:

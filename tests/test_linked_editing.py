@@ -288,3 +288,27 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         await self.await_message("textDocument/linkedEditingRange")
         await self.wait_until(linked_editing.is_active)
         self.assertEqual(list(self.view.sel()), [sublime.Region(4, 4)])
+
+
+class LinkedEditingDynamicRegistrationTestCase(TextDocumentTestCase):
+
+    @override
+    async def setUp(self) -> None:
+        await super().setUp()
+        userprefs().linked_editing = True
+        self.addCleanup(setattr, userprefs(), 'linked_editing', False)
+
+    async def test_request_when_capability_is_registered(self) -> None:
+        self.insert_characters(TAGS)
+        await self.await_message("textDocument/didChange")
+        self.view.run_command("lsp_selection_set", {"regions": [(4, 4)]})
+        await self.mock_response("textDocument/linkedEditingRange", TAG_RANGES)
+        await self.make_server_do_fake_request("client/registerCapability", {
+            "registrations": [{"id": "linked-editing", "method": "textDocument/linkedEditingRange"}]
+        })
+        await self.await_message("textDocument/linkedEditingRange")
+        listener = self.ensure_document_listener_created()
+        assert listener
+        await self.wait_until(listener.linked_editing.is_active)
+        self.insert_characters("x")
+        await self.wait_until(lambda: self.view.substr(sublime.Region(0, self.view.size())) == "<divx></divx>")

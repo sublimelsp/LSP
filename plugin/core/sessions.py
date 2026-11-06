@@ -921,6 +921,11 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def do_linked_editing_ranges_async(self) -> None:
+        """Request the linked editing ranges at the caret, if linked editing is enabled and the view has focus."""
+        raise NotImplementedError
+
+    @abstractmethod
     async def on_session_shutdown(self, session: Session) -> list[Exception]:
         raise NotImplementedError
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .setup import close_test_view
 from .setup import TextDocumentTestCase
 from copy import deepcopy
 from LSP.plugin.core.aio import tick
@@ -244,7 +245,7 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         self.insert_characters("z")
         await self.wait_for_text("<divz></divz>")
 
-    async def test_losing_focus_stops_linked_editing(self) -> None:
+    async def test_only_the_focused_clone_does_linked_editing(self) -> None:
         await self.insert_tags()
         await self.mock_response("textDocument/linkedEditingRange", TAG_RANGES)
         self.set_cursor(4)
@@ -253,14 +254,24 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         linked_editing = listener.linked_editing
         await self.wait_until(linked_editing.is_active)
         await self.await_message("textDocument/linkedEditingRange")
-        await self.mock_response("textDocument/linkedEditingRange", TAG_RANGES)
-        # Focus events don't fire reliably on CI when the window isn't focused, so call the handlers directly.
+        # The clone may request ranges too, depending on when the session attaches to it. The others are for the
+        # original view when it gets focus again, which may be requested twice (see below).
+        await self.mock_responses([("textDocument/linkedEditingRange", TAG_RANGES)] * 3)
+        window = self.view.window()
+        assert window
+        window.run_command("clone_file")
+        clone = window.active_view()
+        assert clone
+        self.assertNotEqual(clone.id(), self.view.id())
+        # Mark the clone as scratch before closing it, so that closing it doesn't ask to save the changes.
+        self.addCleanup(close_test_view, clone)
+        # Focus events don't fire reliably on CI when the window isn't focused, so also call the handlers directly.
         sublime.set_timeout(listener.on_deactivated)
         await self.wait_until(lambda: not linked_editing.is_active())
         self.assertEqual(self.view.get_regions(RegionKey.LINKED_EDITING), [])
+        window.focus_view(self.view)
         await listener._activated_impl()
         await self.wait_until(linked_editing.is_active)
-        await self.await_message("textDocument/linkedEditingRange")
         self.insert_characters("x")
         await self.wait_for_text("<divx></divx>")
 

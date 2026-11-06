@@ -428,10 +428,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             for sv in self.session_views_async():
                 sv.on_text_changed(change_count, changes, action)
         self._on_view_updated_async()
-        if action in {ChangeEventAction.UNDO, ChangeEventAction.REDO}:
-            # Undo and redo stop linked editing and move the caret without triggering `on_selection_modified`, so
-            # request the ranges at the new caret position.
-            self.do_linked_editing_ranges_async()
 
     def get_uri(self) -> DocumentUri:
         return self._uri
@@ -529,13 +525,14 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         # Handled before `_update_stored_selection`, because a text change may have stored the new selection already.
         if self.linked_editing.is_active():
             sublime.set_timeout(self.linked_editing.on_selection_modified)
+        # Not debounced, so that the ranges are likely to be known before the user starts typing. Requested before
+        # `_update_stored_selection`, which returns early after an edit, because the text change stored the selection.
+        self.do_linked_editing_ranges_async()
         first_region, _ = self._update_stored_selection()
         if first_region is None:
             return
         if not self._is_in_higlighted_region(first_region.b):
             self._clear_highlight_regions()
-        # Not debounced, so that the ranges are likely to be known before the user starts typing.
-        self.do_linked_editing_ranges_async()
         if userprefs().show_code_actions:
             self._code_actions_for_selection.clear()
             self._clear_code_actions_annotation()

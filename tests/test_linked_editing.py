@@ -217,6 +217,8 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
     async def insert_tags(self) -> None:
         self.insert_characters(TAGS)
         await self.await_message("textDocument/didChange")
+        # The edit moves the caret, which requests the ranges at the end of the tags.
+        await self.await_message("textDocument/linkedEditingRange")
 
     async def test_request_on_selection_change(self) -> None:
         await self.insert_tags()
@@ -288,6 +290,24 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         await self.await_message("textDocument/linkedEditingRange")
         await self.wait_until(linked_editing.is_active)
         self.assertEqual(list(self.view.sel()), [sublime.Region(4, 4)])
+
+    async def test_request_after_deleting_space_typed_after_tag_name(self) -> None:
+        await self.insert_tags()
+        await self.mock_response("textDocument/linkedEditingRange", TAG_RANGES)
+        self.set_cursor(4)
+        linked_editing = self.get_linked_editing()
+        await self.wait_until(linked_editing.is_active)
+        await self.await_message("textDocument/linkedEditingRange")
+        self.insert_characters(" ")
+        await self.wait_for_text("<div ></div>")
+        await self.wait_until(lambda: not linked_editing.is_active())
+        # The ranges may be requested after the space too, depending on whether linked editing stopped by then.
+        await self.mock_responses([("textDocument/linkedEditingRange", TAG_RANGES)] * 2)
+        self.view.run_command("left_delete")
+        await self.wait_for_text(TAGS)
+        await self.wait_until(linked_editing.is_active)
+        self.view.run_command("left_delete")
+        await self.wait_for_text("<di></di>")
 
 
 class LinkedEditingDynamicRegistrationTestCaseBase(TextDocumentTestCase):

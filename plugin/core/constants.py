@@ -271,7 +271,7 @@ SIGNATURE_HELP_FUNCTION_SCOPE = 'meta.signature-help.lsp'
 SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp variable.parameter.sighelp.active.lsp'
 SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp'
 LIGHTBULB_SCOPE = 'region.yellowish lightbulb.lsp'
-LINKED_EDITING_SCOPE = 'region.cyanish markup.highlight.linked_editing.lsp'
+LINKED_EDITING_SCOPE = 'region.cyanish markup.highlight.linked-editing.lsp'
 
 COMMAND_TO_CHANGE_EVENT_ACTION: dict[str, ChangeEventAction] = {
     'cut': ChangeEventAction.CUT,

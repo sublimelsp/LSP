@@ -97,7 +97,7 @@ When linked editing is enabled, editing the text in one of these ranges applies 
 Undo reverts the change in all ranges at once.
 
 While linked editing is active, the linked ranges are underlined.
-The underline color can be adjusted with a color scheme rule for the `markup.highlight.linked_editing` scope (cyan by default).
+The underline color can be adjusted with a color scheme rule for the `markup.highlight.linked-editing` scope (cyan by default).
 
 !!! note
     Linked editing is disabled by default.

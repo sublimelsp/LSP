@@ -96,8 +96,6 @@ Some language servers can report ranges in the file that always have the same co
 When linked editing is enabled, editing the text in one of these ranges applies the same change to the other ranges.
 Undo reverts the change in all ranges at once.
 
-Linked editing stops when the caret leaves the ranges, or when the new content isn't a valid name according to the language server (for example after typing a space after an HTML tag name).
-
 While linked editing is active, the linked ranges are underlined.
 The underline color can be adjusted with a color scheme rule for the `markup.highlight.linked_editing` scope (cyan by default).
 

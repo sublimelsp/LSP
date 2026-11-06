@@ -346,8 +346,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                             self.create_task(request.cancel())
                             sb.semantic_tokens.pending_response = None
             if request_flags & RequestFlags.LINKED_EDITING_RANGE:
-                # The caret may already be inside of linked editing ranges, for example when the view had focus while
-                # the session was starting.
                 self.do_linked_editing_ranges_async()
 
     async def on_session_shutdown(self, session: Session) -> list[Exception]:

@@ -254,9 +254,9 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         linked_editing = listener.linked_editing
         await self.wait_until(linked_editing.is_active)
         await self.await_message("textDocument/linkedEditingRange")
-        # The clone may request ranges too, depending on when the session attaches to it. The others are for the
-        # original view when it gets focus again, which may be requested twice (see below).
-        await self.mock_responses([("textDocument/linkedEditingRange", TAG_RANGES)] * 3)
+        # The clone may request ranges too, depending on when the session attaches to it. The other response is for the
+        # original view when it gets focus again.
+        await self.mock_responses([("textDocument/linkedEditingRange", TAG_RANGES)] * 2)
         window = self.view.window()
         assert window
         window.run_command("clone_file")
@@ -265,12 +265,9 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         self.assertNotEqual(clone.id(), self.view.id())
         # Mark the clone as scratch before closing it, so that closing it doesn't ask to save the changes.
         self.addCleanup(close_test_view, clone)
-        # Focus events don't fire reliably on CI when the window isn't focused, so also call the handlers directly.
-        sublime.set_timeout(listener.on_deactivated)
         await self.wait_until(lambda: not linked_editing.is_active())
         self.assertEqual(self.view.get_regions(RegionKey.LINKED_EDITING), [])
         window.focus_view(self.view)
-        await listener._activated_impl()
         await self.wait_until(linked_editing.is_active)
         self.insert_characters("x")
         await self.wait_for_text("<divx></divx>")

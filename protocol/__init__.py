@@ -276,7 +276,6 @@ class MessageType(IntEnum):
     A debug message.
 
     @since 3.18.0
-    @proposed
     """
 
 
@@ -461,7 +460,6 @@ class CodeActionKind(StrEnum):
     - ...
 
     @since 3.18.0
-    @proposed
     """
     RefactorRewrite = 'refactor.rewrite'
     """
@@ -506,7 +504,7 @@ class CodeActionTag(IntEnum):
     """
     Code action tags are extra annotations that tweak the behavior of a code action.
 
-    @since 3.18.0 - proposed
+    @since 3.18.0
     """
 
     LLMGenerated = 1
@@ -553,15 +551,9 @@ class LanguageKind(StrEnum):
     CSharp = 'csharp'
     CSS = 'css'
     D = 'd'
-    """
-    @since 3.18.0
-    @proposed
-    """
+    """@since 3.18.0"""
     Delphi = 'pascal'
-    """
-    @since 3.18.0
-    @proposed
-    """
+    """@since 3.18.0"""
     Diff = 'diff'
     Dart = 'dart'
     Dockerfile = 'dockerfile'
@@ -569,7 +561,7 @@ class LanguageKind(StrEnum):
     Erlang = 'erlang'
     FSharp = 'fsharp'
     GitCommit = 'git-commit'
-    GitRebase = 'rebase'
+    GitRebase = 'git-rebase'
     Go = 'go'
     Groovy = 'groovy'
     Handlebars = 'handlebars'
@@ -588,13 +580,11 @@ class LanguageKind(StrEnum):
     ObjectiveC = 'objective-c'
     ObjectiveCPP = 'objective-cpp'
     Pascal = 'pascal'
-    """
-    @since 3.18.0
-    @proposed
-    """
+    """@since 3.18.0"""
     Perl = 'perl'
     Perl6 = 'perl6'
     PHP = 'php'
+    Plaintext = 'plaintext'
     Powershell = 'powershell'
     Pug = 'jade'
     Python = 'python'
@@ -623,7 +613,6 @@ class InlineCompletionTriggerKind(IntEnum):
     Describes how an {@link InlineCompletionItemProvider inline completion provider} was triggered.
 
     @since 3.18.0
-    @proposed
     """
 
     Invoked = 1
@@ -927,16 +916,26 @@ pull request.
 @since 3.17.0
 """
 
+DocumentDiagnosticReportProgress: TypeAlias = Union[DocumentDiagnosticReport, 'DocumentDiagnosticReportPartialResult']
+"""
+The document diagnostic report used when reporting partial result.
+
+When using partial results, the first literal sent needs to be a
+DocumentDiagnosticReport providing the diagnostics on the document
+followed by n DocumentDiagnosticReportPartialResult literals providing
+the diagnostics for related documents.
+
+```
+DocumentDiagnosticReport
+DocumentDiagnosticReportPartialResult
+DocumentDiagnosticReportPartialResult
+...
+```
+
+@since 3.18.1
+"""
+
 PrepareRenameResult: TypeAlias = Union['Range', 'PrepareRenamePlaceholder', 'PrepareRenameDefaultBehavior']
-
-DocumentSelector: TypeAlias = List['DocumentFilter']
-"""
-A document selector is the combination of one or many document filters.
-
-@sample `let sel:DocumentSelector = [{ language: 'typescript' }, { language: 'json', pattern: '**/tsconfig.json' }]`;
-
-The use of a string as a document filter is deprecated @since 3.16.0.
-"""
 
 ProgressToken: TypeAlias = Union[int, str]
 
@@ -948,6 +947,15 @@ WorkspaceDocumentDiagnosticReport: TypeAlias = Union['WorkspaceFullDocumentDiagn
 A workspace diagnostic document report.
 
 @since 3.17.0
+"""
+
+DocumentSelector: TypeAlias = List['DocumentFilter']
+"""
+A document selector is the combination of one or many document filters.
+
+@sample `let sel:DocumentSelector = [{ language: 'typescript' }, { language: 'json', pattern: '**/tsconfig.json' }]`;
+
+The use of a string as a document filter is deprecated @since 3.16.0.
 """
 
 TextDocumentContentChangeEvent: TypeAlias = Union['TextDocumentContentChangePartial', 'TextDocumentContentChangeWholeDocument']
@@ -972,6 +980,12 @@ Note that markdown strings will be sanitized - that means html will be escaped.
 @deprecated use MarkupContent instead.
 """
 
+LSPObject: TypeAlias = Mapping[str, Any]
+"""
+LSP object definition.
+@since 3.17.0
+"""
+
 DocumentFilter: TypeAlias = Union['TextDocumentFilter', 'NotebookCellTextDocumentFilter']
 """
 A document filter describes a top level text document or
@@ -980,35 +994,9 @@ a notebook cell document.
 @since 3.17.0 - support for NotebookCellTextDocumentFilter.
 """
 
-LSPObject: TypeAlias = Mapping[str, Any]
-"""
-LSP object definition.
-@since 3.17.0
-"""
-
 GlobPattern: TypeAlias = Union['Pattern', 'RelativePattern']
 """
 The glob pattern. Either a string pattern or a relative pattern.
-
-@since 3.17.0
-"""
-
-TextDocumentFilter: TypeAlias = Union['TextDocumentFilterLanguage', 'TextDocumentFilterScheme', 'TextDocumentFilterPattern']
-"""
-A document filter denotes a document by different properties like
-the {@link TextDocument.languageId language}, the {@link Uri.scheme scheme} of
-its resource, or a glob-pattern that is applied to the {@link TextDocument.fileName path}.
-
-Glob patterns can have the following syntax:
-- `*` to match one or more characters in a path segment
-- `?` to match on one character in a path segment
-- `**` to match any number of path segments, including none
-- `{}` to group sub patterns into an OR expression. (e.g. `**/*.{ts,js}` matches all TypeScript and JavaScript files)
-- `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
-- `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)
-
-@sample A language filter that applies to typescript files on disk: `{ language: 'typescript', scheme: 'file' }`
-@sample A language filter that applies to all package.json paths: `{ language: 'json', pattern: '**package.json' }`
 
 @since 3.17.0
 """
@@ -1022,10 +1010,30 @@ against the notebook's URI (same as with documents)
 @since 3.17.0
 """
 
+TextDocumentFilter: TypeAlias = Union['TextDocumentFilterLanguage', 'TextDocumentFilterScheme', 'TextDocumentFilterPattern']
+"""
+A document filter denotes a document by different properties like
+the {@link TextDocument.languageId language}, the {@link Uri.scheme scheme} of
+its resource, or a glob-pattern that is applied to the {@link TextDocument.fileName path}.
+
+Glob patterns can have the following syntax:
+- `*` to match zero or more characters in a path segment
+- `?` to match on one character in a path segment
+- `**` to match any number of path segments, including none
+- `{}` to group sub patterns into an OR expression. (e.g. `**/*.{ts,js}` matches all TypeScript and JavaScript files)
+- `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
+- `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)
+
+@sample A language filter that applies to typescript files on disk: `{ language: 'typescript', scheme: 'file' }`
+@sample A language filter that applies to all package.json paths: `{ language: 'json', pattern: '**package.json' }`
+
+@since 3.17.0
+"""
+
 Pattern: TypeAlias = str
 """
 The glob pattern to watch relative to the base path. Glob patterns can have the following syntax:
-- `*` to match one or more characters in a path segment
+- `*` to match zero or more characters in a path segment
 - `?` to match on one character in a path segment
 - `**` to match any number of path segments, including none
 - `{}` to group conditions (e.g. `**/*.{ts,js}` matches all TypeScript and JavaScript files)
@@ -1198,20 +1206,6 @@ class ColorPresentation(TypedDict):
     """
     An optional array of additional {@link TextEdit text edits} that are applied when
     selecting this color presentation. Edits must not overlap with the main {@link ColorPresentation.textEdit edit} nor with themselves.
-    """
-
-
-class WorkDoneProgressOptions(TypedDict):
-    workDoneProgress: NotRequired[bool]
-
-
-class TextDocumentRegistrationOptions(TypedDict):
-    """General text document registration options."""
-
-    documentSelector: Union['DocumentSelector', None]
-    """
-    A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used.
     """
 
 
@@ -1923,14 +1917,19 @@ class InlineValueParams(TypedDict):
     textDocument: 'TextDocumentIdentifier'
     """The text document."""
     range: 'Range'
-    """The document range for which inline values should be computed."""
+    """The document range for which inline values information will be returned."""
     context: 'InlineValueContext'
     """
-    Additional information about the context in which inline values were
+    Additional information about the context in which inline values information was
     requested.
     """
     workDoneToken: NotRequired['ProgressToken']
     """An optional token that a server can use to report work done progress."""
+    partialResultToken: NotRequired['ProgressToken']
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class InlineValueRegistrationOptions(TypedDict):
@@ -1965,6 +1964,11 @@ class InlayHintParams(TypedDict):
     """The document range for which inlay hints should be computed."""
     workDoneToken: NotRequired['ProgressToken']
     """An optional token that a server can use to report work done progress."""
+    partialResultToken: NotRequired['ProgressToken']
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class InlayHint(TypedDict):
@@ -2070,16 +2074,6 @@ class DocumentDiagnosticParams(TypedDict):
     An optional token that a server can use to report partial results (e.g. streaming) to
     the client.
     """
-
-
-class DocumentDiagnosticReportPartialResult(TypedDict):
-    """
-    A partial result for a document diagnostic report.
-
-    @since 3.17.0
-    """
-
-    relatedDocuments: Dict[DocumentUri, Union['FullDocumentDiagnosticReport', 'UnchangedDocumentDiagnosticReport']]
 
 
 class DiagnosticServerCancellationData(TypedDict):
@@ -2269,7 +2263,6 @@ class InlineCompletionParams(TypedDict):
     A parameter literal used in inline completion requests.
 
     @since 3.18.0
-    @proposed
     """
 
     context: 'InlineCompletionContext'
@@ -2283,6 +2276,11 @@ class InlineCompletionParams(TypedDict):
     """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
     """An optional token that a server can use to report work done progress."""
+    partialResultToken: NotRequired['ProgressToken']
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class InlineCompletionList(TypedDict):
@@ -2290,7 +2288,6 @@ class InlineCompletionList(TypedDict):
     Represents a collection of {@link InlineCompletionItem inline completion items} to be presented in the editor.
 
     @since 3.18.0
-    @proposed
     """
 
     items: List['InlineCompletionItem']
@@ -2302,7 +2299,6 @@ class InlineCompletionItem(TypedDict):
     An inline completion item represents a text snippet that is proposed inline to complete text that is being typed.
 
     @since 3.18.0
-    @proposed
     """
 
     insertText: Union[str, 'StringValue']
@@ -2320,7 +2316,6 @@ class InlineCompletionRegistrationOptions(TypedDict):
     Inline completion options used during static or dynamic registration.
 
     @since 3.18.0
-    @proposed
     """
 
     documentSelector: Union['DocumentSelector', None]
@@ -2340,7 +2335,6 @@ class TextDocumentContentParams(TypedDict):
     Parameters for the `workspace/textDocumentContent` request.
 
     @since 3.18.0
-    @proposed
     """
 
     uri: DocumentUri
@@ -2352,7 +2346,6 @@ class TextDocumentContentResult(TypedDict):
     Result of the `workspace/textDocumentContent` request.
 
     @since 3.18.0
-    @proposed
     """
 
     text: str
@@ -2369,7 +2362,6 @@ class TextDocumentContentRegistrationOptions(TypedDict):
     Text document content provider registration options.
 
     @since 3.18.0
-    @proposed
     """
 
     schemes: List[str]
@@ -2386,7 +2378,6 @@ class TextDocumentContentRefreshParams(TypedDict):
     Parameters for the `workspace/textDocumentContent/refresh` request.
 
     @since 3.18.0
-    @proposed
     """
 
     uri: DocumentUri
@@ -2540,6 +2531,16 @@ class DidOpenTextDocumentParams(TypedDict):
 
     textDocument: 'TextDocumentItem'
     """The document that was opened."""
+
+
+class TextDocumentRegistrationOptions(TypedDict):
+    """General text document registration options."""
+
+    documentSelector: Union['DocumentSelector', None]
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
 
 
 class DidChangeTextDocumentParams(TypedDict):
@@ -3034,6 +3035,9 @@ class SignatureHelp(TypedDict):
     In future version of the protocol this property might become
     mandatory (but still nullable) to better express the active parameter if
     the active signature does have any.
+
+    Since version 3.16.0 the `SignatureInformation` itself provides a
+    `activeParameter` property and it should be used instead of this one.
     """
 
 
@@ -3301,7 +3305,6 @@ class Command(TypedDict):
     An optional tooltip.
 
     @since 3.18.0
-    @proposed
     """
     command: str
     """The identifier of the actual command handler."""
@@ -3377,7 +3380,7 @@ class CodeAction(TypedDict):
     """
     Tags for this code action.
 
-    @since 3.18.0 - proposed
+    @since 3.18.0
     """
 
 
@@ -3412,7 +3415,6 @@ class CodeActionRegistrationOptions(TypedDict):
     At most one documentation entry should be shown per provider.
 
     @since 3.18.0
-    @proposed
     """
     resolveProvider: NotRequired[bool]
     """
@@ -3645,7 +3647,6 @@ class DocumentRangeFormattingRegistrationOptions(TypedDict):
     Whether the server supports formatting multiple ranges at once.
 
     @since 3.18.0
-    @proposed
     """
 
 
@@ -3654,7 +3655,6 @@ class DocumentRangesFormattingParams(TypedDict):
     The parameters of a {@link DocumentRangesFormattingRequest}.
 
     @since 3.18.0
-    @proposed
     """
 
     textDocument: 'TextDocumentIdentifier'
@@ -3779,7 +3779,6 @@ class ApplyWorkspaceEditParams(TypedDict):
     Additional data about the edit.
 
     @since 3.18.0
-    @proposed
     """
 
 
@@ -4134,8 +4133,8 @@ class FileCreate(TypedDict):
     @since 3.16.0
     """
 
-    uri: str
-    """A file:// URI for the location of the file/folder being created."""
+    uri: DocumentUri
+    """A URI for the location of the file/folder being created."""
 
 
 class TextDocumentEdit(TypedDict):
@@ -4258,10 +4257,10 @@ class FileRename(TypedDict):
     @since 3.16.0
     """
 
-    oldUri: str
-    """A file:// URI for the original location of the file/folder being renamed."""
-    newUri: str
-    """A file:// URI for the new location of the file/folder being renamed."""
+    oldUri: DocumentUri
+    """A URI for the original location of the file/folder being renamed."""
+    newUri: DocumentUri
+    """A URI for the new location of the file/folder being renamed."""
 
 
 class FileDelete(TypedDict):
@@ -4271,8 +4270,8 @@ class FileDelete(TypedDict):
     @since 3.16.0
     """
 
-    uri: str
-    """A file:// URI for the location of the file/folder being deleted."""
+    uri: DocumentUri
+    """A URI for the location of the file/folder being deleted."""
 
 
 class MonikerOptions(TypedDict):
@@ -4303,7 +4302,7 @@ class InlineValueContext(TypedDict):
 
 class InlineValueText(TypedDict):
     """
-    Provide inline value as text.
+    Returns inline value information as the complete text to be shown.
 
     @since 3.17.0
     """
@@ -4316,9 +4315,13 @@ class InlineValueText(TypedDict):
 
 class InlineValueVariableLookup(TypedDict):
     """
-    Provide inline value through a variable lookup.
-    If only a range is specified, the variable name will be extracted from the underlying document.
-    An optional variable name can be used to override the extracted name.
+    To compute inline value through a variable lookup.
+
+    If only a range is specified, the variable name should
+    be extracted from the underlying document.
+
+    An optional variable name could be used to lookup instead
+    of the extracted name.
 
     @since 3.17.0
     """
@@ -4326,7 +4329,9 @@ class InlineValueVariableLookup(TypedDict):
     range: 'Range'
     """
     The document range for which the inline value applies.
-    The range is used to extract the variable name from the underlying document.
+
+    The range could be used to extract the variable name
+    from the underlying document.
     """
     variableName: NotRequired[str]
     """If specified the name of the variable to look up."""
@@ -4336,9 +4341,13 @@ class InlineValueVariableLookup(TypedDict):
 
 class InlineValueEvaluatableExpression(TypedDict):
     """
-    Provide an inline value through an expression evaluation.
-    If only a range is specified, the expression will be extracted from the underlying document.
-    An optional expression can be used to override the extracted expression.
+    To compute an inline value through an expression evaluation.
+
+    If only a range is specified, the expression should be
+    extracted from the underlying document.
+
+    An optional expression could be evaluated instead of
+    the extracted expression.
 
     @since 3.17.0
     """
@@ -4346,10 +4355,12 @@ class InlineValueEvaluatableExpression(TypedDict):
     range: 'Range'
     """
     The document range for which the inline value applies.
-    The range is used to extract the evaluatable expression from the underlying document.
+
+    The range could be used to extract the evaluatable expression
+    from the underlying document.
     """
     expression: NotRequired[str]
-    """If specified the expression overrides the extracted expression."""
+    """If specified the expression could be evaluated instead."""
 
 
 class InlineValueOptions(TypedDict):
@@ -4508,45 +4519,14 @@ class RelatedUnchangedDocumentDiagnosticReport(TypedDict):
     """
 
 
-class FullDocumentDiagnosticReport(TypedDict):
+class DocumentDiagnosticReportPartialResult(TypedDict):
     """
-    A diagnostic report with a full set of problems.
+    A partial result for a document diagnostic report.
 
     @since 3.17.0
     """
 
-    kind: Literal['full']
-    """A full document diagnostic report."""
-    resultId: NotRequired[str]
-    """
-    An optional result id. If provided it will
-    be sent on the next diagnostic request for the
-    same document.
-    """
-    items: List['Diagnostic']
-    """The actual items."""
-
-
-class UnchangedDocumentDiagnosticReport(TypedDict):
-    """
-    A diagnostic report indicating that the last returned
-    report is still accurate.
-
-    @since 3.17.0
-    """
-
-    kind: Literal['unchanged']
-    """
-    A document diagnostic report indicating
-    no changes to the last result. A server can
-    only return `unchanged` if result ids are
-    provided.
-    """
-    resultId: str
-    """
-    A result id which will be sent on the next
-    diagnostic request for the same document.
-    """
+    relatedDocuments: Dict[DocumentUri, Union['FullDocumentDiagnosticReport', 'UnchangedDocumentDiagnosticReport']]
 
 
 class DiagnosticOptions(TypedDict):
@@ -4707,7 +4687,6 @@ class InlineCompletionContext(TypedDict):
     Provides information about the context in which an inline completion was requested.
 
     @since 3.18.0
-    @proposed
     """
 
     triggerKind: 'InlineCompletionTriggerKind'
@@ -4727,7 +4706,6 @@ class StringValue(TypedDict):
     `${name:default value}`.
 
     @since 3.18.0
-    @proposed
     """
 
     kind: Literal['snippet']
@@ -4741,7 +4719,6 @@ class InlineCompletionOptions(TypedDict):
     Inline completion options used during static registration.
 
     @since 3.18.0
-    @proposed
     """
 
     workDoneProgress: NotRequired[bool]
@@ -4752,7 +4729,6 @@ class TextDocumentContentOptions(TypedDict):
     Text document content provider options.
 
     @since 3.18.0
-    @proposed
     """
 
     schemes: List[str]
@@ -4933,7 +4909,6 @@ class ServerCapabilities(TypedDict):
     Inline completion options used during static registration.
 
     @since 3.18.0
-    @proposed
     """
     workspace: NotRequired['WorkspaceOptions']
     """Workspace specific server capabilities."""
@@ -5028,7 +5003,8 @@ class Diagnostic(TypedDict):
     """
     The diagnostic's message. It usually appears in the user interface.
 
-    @since 3.18.0 - support for `MarkupContent`. This is guarded by the client capability `textDocument.diagnostic.markupMessageSupport`.
+    @since 3.18.0 - support for MarkupContent. This is guarded by the client
+    capability `textDocument.diagnostic.markupMessageSupport`.
     """
     tags: NotRequired[List['DiagnosticTag']]
     """
@@ -5475,7 +5451,6 @@ class CodeActionOptions(TypedDict):
     At most one documentation entry should be shown per provider.
 
     @since 3.18.0
-    @proposed
     """
     resolveProvider: NotRequired[bool]
     """
@@ -5567,7 +5542,6 @@ class DocumentRangeFormattingOptions(TypedDict):
     Whether the server supports formatting multiple ranges at once.
 
     @since 3.18.0
-    @proposed
     """
     workDoneProgress: NotRequired[bool]
 
@@ -5619,11 +5593,14 @@ class WorkspaceEditMetadata(TypedDict):
     Additional data about a workspace edit.
 
     @since 3.18.0
-    @proposed
     """
 
     isRefactoring: NotRequired[bool]
     """Signal to the editor that this edit is a refactoring."""
+
+
+class WorkDoneProgressOptions(TypedDict):
+    workDoneProgress: NotRequired[bool]
 
 
 class SemanticTokensLegend(TypedDict):
@@ -5687,7 +5664,6 @@ class SnippetTextEdit(TypedDict):
     An interactive text edit.
 
     @since 3.18.0
-    @proposed
     """
 
     range: 'Range'
@@ -5749,7 +5725,7 @@ class FileOperationPattern(TypedDict):
     glob: str
     """
     The glob pattern to match. Glob patterns can have the following syntax:
-    - `*` to match one or more characters in a path segment
+    - `*` to match zero or more characters in a path segment
     - `?` to match on one character in a path segment
     - `**` to match any number of path segments, including none
     - `{}` to group sub patterns into an OR expression. (e.g. `**/*.{ts,js}` matches all TypeScript and JavaScript files)
@@ -5764,6 +5740,47 @@ class FileOperationPattern(TypedDict):
     """
     options: NotRequired['FileOperationPatternOptions']
     """Additional options used during matching."""
+
+
+class FullDocumentDiagnosticReport(TypedDict):
+    """
+    A diagnostic report with a full set of problems.
+
+    @since 3.17.0
+    """
+
+    kind: Literal['full']
+    """A full document diagnostic report."""
+    resultId: NotRequired[str]
+    """
+    An optional result id. If provided it will
+    be sent on the next diagnostic request for the
+    same document.
+    """
+    items: List['Diagnostic']
+    """The actual items."""
+
+
+class UnchangedDocumentDiagnosticReport(TypedDict):
+    """
+    A diagnostic report indicating that the last returned
+    report is still accurate.
+
+    @since 3.17.0
+    """
+
+    kind: Literal['unchanged']
+    """
+    A document diagnostic report indicating
+    no changes to the last result. A server can
+    only return `unchanged` if result ids are
+    provided.
+    """
+    resultId: str
+    """
+    A result id which will be sent on the next
+    diagnostic request for the same document.
+    """
 
 
 class WorkspaceFullDocumentDiagnosticReport(TypedDict):
@@ -5903,7 +5920,6 @@ class SelectedCompletionInfo(TypedDict):
     Describes the currently selected completion item.
 
     @since 3.18.0
-    @proposed
     """
 
     range: 'Range'
@@ -6003,7 +6019,6 @@ class WorkspaceOptions(TypedDict):
     The server supports the `workspace/textDocumentContent` request.
 
     @since 3.18.0
-    @proposed
     """
 
 
@@ -6120,7 +6135,6 @@ class CodeActionKindDocumentation(TypedDict):
     Documentation for a class of code actions.
 
     @since 3.18.0
-    @proposed
     """
 
     kind: Union[str, CodeActionKind]
@@ -6136,30 +6150,6 @@ class CodeActionKindDocumentation(TypedDict):
     Command that is ued to display the documentation to the user.
 
     The title of this documentation code action is taken from {@linkcode Command.title}
-    """
-
-
-class NotebookCellTextDocumentFilter(TypedDict):
-    """
-    A notebook cell text document filter denotes a cell text
-    document by different properties.
-
-    @since 3.17.0
-    """
-
-    notebook: Union[str, 'NotebookDocumentFilter']
-    """
-    A filter that matches against the notebook
-    containing the notebook cell. If a string
-    value is provided it matches against the
-    notebook type. '*' matches every notebook.
-    """
-    language: NotRequired[str]
-    """
-    A language id like `python`.
-
-    Will be matched against the language id of the
-    notebook cell document. '*' matches every language.
     """
 
 
@@ -6297,14 +6287,12 @@ class WorkspaceClientCapabilities(TypedDict):
     Capabilities specific to the folding range requests scoped to the workspace.
 
     @since 3.18.0
-    @proposed
     """
     textDocumentContent: NotRequired['TextDocumentContentClientCapabilities']
     """
     Capabilities specific to the `workspace/textDocumentContent` request.
 
     @since 3.18.0
-    @proposed
     """
 
 
@@ -6439,7 +6427,6 @@ class TextDocumentClientCapabilities(TypedDict):
     Client capabilities specific to inline completions.
 
     @since 3.18.0
-    @proposed
     """
 
 
@@ -6572,6 +6559,30 @@ class FileOperationOptions(TypedDict):
     """The server is interested in receiving willDeleteFiles file requests."""
 
 
+class NotebookCellTextDocumentFilter(TypedDict):
+    """
+    A notebook cell text document filter denotes a cell text
+    document by different properties.
+
+    @since 3.17.0
+    """
+
+    notebook: Union[str, 'NotebookDocumentFilter']
+    """
+    A filter that matches against the notebook
+    containing the notebook cell. If a string
+    value is provided it matches against the
+    notebook type. '*' matches every notebook.
+    """
+    language: NotRequired[str]
+    """
+    A language id like `python`.
+
+    Will be matched against the language id of the
+    notebook cell document. '*' matches every language.
+    """
+
+
 class RelativePattern(TypedDict):
     """
     A relative pattern is a helper to construct glob patterns that are matched
@@ -6588,69 +6599,6 @@ class RelativePattern(TypedDict):
     """
     pattern: 'Pattern'
     """The actual glob pattern;"""
-
-
-class TextDocumentFilterLanguage(TypedDict):
-    """
-    A document filter where `language` is required field.
-
-    @since 3.18.0
-    """
-
-    language: str
-    """A language id, like `typescript`."""
-    scheme: NotRequired[str]
-    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
-    pattern: NotRequired['GlobPattern']
-    """
-    A glob pattern, like **/*.{ts,js}. See TextDocumentFilter for examples.
-
-    @since 3.18.0 - support for relative patterns. Whether clients support
-    relative patterns depends on the client capability
-    `textDocuments.filters.relativePatternSupport`.
-    """
-
-
-class TextDocumentFilterScheme(TypedDict):
-    """
-    A document filter where `scheme` is required field.
-
-    @since 3.18.0
-    """
-
-    language: NotRequired[str]
-    """A language id, like `typescript`."""
-    scheme: str
-    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
-    pattern: NotRequired['GlobPattern']
-    """
-    A glob pattern, like **/*.{ts,js}. See TextDocumentFilter for examples.
-
-    @since 3.18.0 - support for relative patterns. Whether clients support
-    relative patterns depends on the client capability
-    `textDocuments.filters.relativePatternSupport`.
-    """
-
-
-class TextDocumentFilterPattern(TypedDict):
-    """
-    A document filter where `pattern` is required field.
-
-    @since 3.18.0
-    """
-
-    language: NotRequired[str]
-    """A language id, like `typescript`."""
-    scheme: NotRequired[str]
-    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
-    pattern: 'GlobPattern'
-    """
-    A glob pattern, like **/*.{ts,js}. See TextDocumentFilter for examples.
-
-    @since 3.18.0 - support for relative patterns. Whether clients support
-    relative patterns depends on the client capability
-    `textDocuments.filters.relativePatternSupport`.
-    """
 
 
 class NotebookDocumentFilterNotebookType(TypedDict):
@@ -6753,14 +6701,12 @@ class WorkspaceEditClientCapabilities(TypedDict):
     Whether the client supports `WorkspaceEditMetadata` in `WorkspaceEdit`s.
 
     @since 3.18.0
-    @proposed
     """
     snippetEditSupport: NotRequired[bool]
     """
     Whether the client supports snippets as text edits.
 
     @since 3.18.0
-    @proposed
     """
 
 
@@ -6934,7 +6880,6 @@ class FoldingRangeWorkspaceClientCapabilities(TypedDict):
     Client workspace capabilities specific to folding ranges
 
     @since 3.18.0
-    @proposed
     """
 
     refreshSupport: NotRequired[bool]
@@ -6948,7 +6893,6 @@ class FoldingRangeWorkspaceClientCapabilities(TypedDict):
     change that requires such a calculation.
 
     @since 3.18.0
-    @proposed
     """
 
 
@@ -6957,7 +6901,6 @@ class TextDocumentContentClientCapabilities(TypedDict):
     Client capabilities for a text document content provider.
 
     @since 3.18.0
-    @proposed
     """
 
     dynamicRegistration: NotRequired[bool]
@@ -6999,6 +6942,7 @@ class CompletionClientCapabilities(TypedDict):
     capabilities.
     """
     completionItemKind: NotRequired['ClientCompletionItemOptionsKind']
+    """The client supports the following completion item kinds."""
     insertTextMode: NotRequired['InsertTextMode']
     """
     Defines how the client handles whitespace and indentation
@@ -7211,14 +7155,13 @@ class CodeActionClientCapabilities(TypedDict):
     code actions.
 
     @since 3.18.0
-    @proposed
     """
     tagSupport: NotRequired['CodeActionTagOptions']
     """
     Client supports the tag property on a code action. Clients
     supporting tags have to handle unknown tags gracefully.
 
-    @since 3.18.0 - proposed
+    @since 3.18.0
     """
 
 
@@ -7275,7 +7218,6 @@ class DocumentRangeFormattingClientCapabilities(TypedDict):
     Whether the client supports formatting multiple ranges at once.
 
     @since 3.18.0
-    @proposed
     """
 
 
@@ -7543,6 +7485,12 @@ class DiagnosticClientCapabilities(TypedDict):
     """
     relatedDocumentSupport: NotRequired[bool]
     """Whether the clients supports related documents for document diagnostic pulls."""
+    markupMessageSupport: NotRequired[bool]
+    """
+    Whether the client supports `MarkupContent` in diagnostic messages.
+
+    @since 3.18.0
+    """
     relatedInformation: NotRequired[bool]
     """Whether the clients accepts diagnostics with related information."""
     tagSupport: NotRequired['ClientDiagnosticsTagOptions']
@@ -7557,13 +7505,6 @@ class DiagnosticClientCapabilities(TypedDict):
     Client supports a codeDescription property
 
     @since 3.16.0
-    """
-    markupMessageSupport: NotRequired[bool]
-    """
-    Whether the client supports `MarkupContent` in diagnostic messages.
-
-    @since 3.18.0
-    @proposed
     """
     dataSupport: NotRequired[bool]
     """
@@ -7580,7 +7521,6 @@ class InlineCompletionClientCapabilities(TypedDict):
     Client capabilities specific to inline completions.
 
     @since 3.18.0
-    @proposed
     """
 
     dynamicRegistration: NotRequired[bool]
@@ -7669,6 +7609,69 @@ class MarkdownClientCapabilities(TypedDict):
     Markdown.
 
     @since 3.17.0
+    """
+
+
+class TextDocumentFilterLanguage(TypedDict):
+    """
+    A document filter where `language` is required field.
+
+    @since 3.18.0
+    """
+
+    language: str
+    """A language id, like `typescript`."""
+    scheme: NotRequired[str]
+    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
+    pattern: NotRequired['GlobPattern']
+    """
+    A glob pattern, like **/*.{ts,js}. See TextDocumentFilter for examples.
+
+    @since 3.18.0 - support for relative patterns. Whether clients support
+    relative patterns depends on the client capability
+    `textDocuments.filters.relativePatternSupport`.
+    """
+
+
+class TextDocumentFilterScheme(TypedDict):
+    """
+    A document filter where `scheme` is required field.
+
+    @since 3.18.0
+    """
+
+    language: NotRequired[str]
+    """A language id, like `typescript`."""
+    scheme: str
+    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
+    pattern: NotRequired['GlobPattern']
+    """
+    A glob pattern, like **/*.{ts,js}. See TextDocumentFilter for examples.
+
+    @since 3.18.0 - support for relative patterns. Whether clients support
+    relative patterns depends on the client capability
+    `textDocuments.filters.relativePatternSupport`.
+    """
+
+
+class TextDocumentFilterPattern(TypedDict):
+    """
+    A document filter where `pattern` is required field.
+
+    @since 3.18.0
+    """
+
+    language: NotRequired[str]
+    """A language id, like `typescript`."""
+    scheme: NotRequired[str]
+    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
+    pattern: 'GlobPattern'
+    """
+    A glob pattern, like **/*.{ts,js}. See TextDocumentFilter for examples.
+
+    @since 3.18.0 - support for relative patterns. Whether clients support
+    relative patterns depends on the client capability
+    `textDocuments.filters.relativePatternSupport`.
     """
 
 
@@ -7855,7 +7858,6 @@ class ClientSignatureInformationOptions(TypedDict):
     indicate that no parameter should be active.
 
     @since 3.18.0
-    @proposed
     """
 
 
@@ -7877,7 +7879,7 @@ class ClientCodeActionResolveOptions(TypedDict):
 
 
 class CodeActionTagOptions(TypedDict):
-    """@since 3.18.0 - proposed"""
+    """@since 3.18.0"""
 
     valueSet: List['CodeActionTag']
     """The tags supported by the client."""

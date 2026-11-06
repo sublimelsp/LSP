@@ -1,9 +1,13 @@
 # Stubs for sublime_plugin.py
 from sublime import Buffer, CompletionItem, CompletionList, Edit, Html, ListInputItem, Settings, TextChange, View, Window
-from typing import Any
+from typing import Any, TypeVar
 
 
-view_event_listeners: dict[int, list[ViewEventListener]]  # undocumented
+_T_ViewEventListener = TypeVar("_T_ViewEventListener", bound=ViewEventListener)
+
+
+def find_view_event_listener(view: View, cls: type[_T_ViewEventListener]) -> _T_ViewEventListener | None:  # undocumented
+    ...
 
 
 class CommandInputHandler:

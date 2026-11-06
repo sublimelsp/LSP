@@ -58,19 +58,26 @@ from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
 from .workspace import WorkspaceFolder
 from datetime import datetime
+from http import HTTPStatus
 from subprocess import CalledProcessError
 from time import perf_counter
 from typing import Any
 from typing import Generator
 from typing import TYPE_CHECKING
 from typing_extensions import override
+from urllib.parse import parse_qs
+from urllib.parse import urlencode
+from urllib.parse import urlparse
 from weakref import ref
 from weakref import WeakSet
 import asyncio
 import functools
+import hmac
 import json
+import secrets
 import sublime
 import websockets.asyncio.server  # pyright: ignore[reportMissingImports]
+import websockets.http11  # pyright: ignore[reportMissingImports]
 
 if TYPE_CHECKING:
     from .tree_view import TreeViewSheet
@@ -349,23 +356,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return None
 
     def _create_logger(self, config_name: str) -> Logger:
-        logger_map = {
-            "panel": PanelLogger,
-            "remote": RemoteLogger,
-        }
-        loggers = []
-        for logger_type in userprefs().log_server:
-            if logger_type not in logger_map:
-                debug(f"Invalid logger type ({logger_type}) specified for log_server settings")
-                continue
-            loggers.append(logger_map[logger_type])
-        if len(loggers) == 0:
-            return RouterLogger()  # logs nothing
-        if len(loggers) == 1:
-            return loggers[0](self, config_name)
+        # The remote logger is always attached since the remote log server can be started on demand at any time. It
+        # doesn't do anything while the server is not running.
         router_logger = RouterLogger()
-        for logger in loggers:
-            router_logger.append(logger(self, config_name))
+        router_logger.append(RemoteLogger(self, config_name))
+        if userprefs().log_server:
+            router_logger.append(PanelLogger(self, config_name))
         return router_logger
 
     @override
@@ -643,6 +639,7 @@ class WindowRegistry(LspSettingsChangeListener):
 
     async def disable(self) -> None:
         self._enabled = False
+        await RemoteLogServer.stop()
         await asyncio.gather(*(wm.destroy() for wm in self._windows.values()), return_exceptions=True)
         self._windows = {}
 
@@ -786,47 +783,114 @@ class PanelLogger(Logger):
         return f"[{RequestTimeTracker.formatted_now()}] {direction} {self._server_name} {method}"
 
 
-class RemoteLogger(Logger):
-    PORT = 9981
-    DIRECTION_OUTGOING = 1
-    DIRECTION_INCOMING = 2
-    _ws_server: websockets.asyncio.server.Server | None = None
-    _ws_server_task: asyncio.Task[None] | None = None
-    _last_id = 0
+class RemoteLogServer:
+    """
+    A websocket server, started on demand, that streams the communication with language servers to a log viewer.
 
-    def __init__(self, manager: WindowManager, server_name: str) -> None:
-        RemoteLogger._last_id += 1
-        self._server_name = f'{server_name} ({RemoteLogger._last_id})'
-        if not RemoteLogger._ws_server_task:
-            RemoteLogger._ws_server_task = asyncio.create_task(RemoteLogger._serve_forever())
+    The server only listens on the loopback interface, on a random free port, and only accepts clients that pass the
+    randomly generated token in the `token` query parameter of the connection URL. It stops automatically when there
+    are no connected clients for `IDLE_TIMEOUT` seconds.
+    """
+
+    IDLE_TIMEOUT = 60
+
+    VIEWER_URL = "https://lsp-log-parser.netlify.app/"
+    _server: websockets.asyncio.server.Server | None = None
+    _token = ""
+    _port = 0
+    _clients = 0
+    _idle_task: asyncio.Task[None] | None = None
+
+    @classmethod
+    def viewer_url(cls) -> str:
+        return f"{cls.VIEWER_URL}#{urlencode({'port': cls._port, 'token': cls._token})}"
+
+    @classmethod
+    async def start(cls) -> None:
+        if cls._server:
+            return
+        token = secrets.token_urlsafe(32)
+        server = await websockets.asyncio.server.serve(
+            cls._on_new_client, "127.0.0.1", 0, process_request=functools.partial(cls._authenticate, token)
+        )
+        cls._server = server
+        cls._token = token
+        cls._port = server.sockets[0].getsockname()[1]
+        cls._clients = 0
+        cls._schedule_idle_stop()
+        debug(f"Remote log server listening on port {cls._port}")
+
+    @classmethod
+    async def stop(cls) -> None:
+        cls._cancel_idle_stop()
+        if server := cls._server:
+            cls._server = None
+            cls._token = ""
+            cls._port = 0
+            server.close()
+            await server.wait_closed()
+            debug("Remote log server stopped")
+
+    @classmethod
+    def broadcast(cls, data: dict[str, Any]) -> None:
+        if cls._server and (connections := cls._server.connections):
+            json_data = json.dumps(data, sort_keys=True, check_circular=False, separators=(',', ':'))
+            websockets.asyncio.server.broadcast(connections, json_data)
+
+    @classmethod
+    def _schedule_idle_stop(cls) -> None:
+        cls._cancel_idle_stop()
+        cls._idle_task = asyncio.create_task(cls._stop_when_idle())
+
+    @classmethod
+    def _cancel_idle_stop(cls) -> None:
+        if (task := cls._idle_task) and task is not asyncio.current_task():
+            task.cancel()
+        cls._idle_task = None
+
+    @classmethod
+    async def _stop_when_idle(cls) -> None:
+        await asyncio.sleep(cls.IDLE_TIMEOUT)
+        debug(f"Remote log server had no clients for {cls.IDLE_TIMEOUT} seconds")
+        await cls.stop()
 
     @staticmethod
-    async def _serve_forever() -> None:
-        try:
-            async with websockets.asyncio.server.serve(
-                RemoteLogger._on_new_client, "127.0.0.1", RemoteLogger.PORT
-            ) as server:
-                RemoteLogger._ws_server = server
-                await server.serve_forever()
-        except OSError as ex:
-            debug(f'WebsocketServer not started: {ex}')
-        finally:
-            RemoteLogger._ws_server = None
-            RemoteLogger._ws_server_task = None
+    def _authenticate(
+        token: str, connection: websockets.asyncio.server.ServerConnection, request: websockets.http11.Request
+    ) -> websockets.http11.Response | None:
+        tokens = parse_qs(urlparse(request.path).query).get("token")
+        if tokens and hmac.compare_digest(tokens[0], token):
+            return None
+        debug(f"Remote log server rejected client {connection.id} with invalid token")
+        return connection.respond(HTTPStatus.UNAUTHORIZED, "Invalid token\n")
 
-    def _stop_server(self) -> None:
-        if RemoteLogger._ws_server_task:
-            RemoteLogger._ws_server_task.cancel()
-
-    @staticmethod
-    async def _on_new_client(websocket: websockets.asyncio.server.ServerConnection) -> None:
+    @classmethod
+    async def _on_new_client(cls, websocket: websockets.asyncio.server.ServerConnection) -> None:
         """Called for every client connecting (after handshake)."""
+        server = cls._server
+        cls._clients += 1
+        cls._cancel_idle_stop()
         try:
             debug(f"New client connected and was given id {websocket.id}")
             async for message in websocket:
                 debug(f"Client({websocket.id}) said: {message}")
         finally:
             debug(f"Client({websocket.id}) disconnected")
+            # Ignore clients of a server that was stopped in the meantime.
+            if server and server is cls._server:
+                cls._clients -= 1
+                if cls._clients == 0:
+                    cls._schedule_idle_stop()
+
+
+class RemoteLogger(Logger):
+    DIRECTION_OUTGOING = 1
+    DIRECTION_INCOMING = 2
+    _last_id = 0
+
+    def __init__(self, manager: WindowManager, server_name: str) -> None:
+        RemoteLogger._last_id += 1
+        self._server_name = f'{server_name} ({RemoteLogger._last_id})'
 
     def stderr_message(self, message: str) -> None:
         self._broadcast_json({
@@ -907,9 +971,7 @@ class RemoteLogger(Logger):
         })
 
     def _broadcast_json(self, data: dict[str, Any]) -> None:
-        if RemoteLogger._ws_server and (connections := RemoteLogger._ws_server.connections):
-            json_data = json.dumps(data, sort_keys=True, check_circular=False, separators=(',', ':'))
-            websockets.asyncio.server.broadcast(connections, json_data)
+        RemoteLogServer.broadcast(data)
 
 
 class RouterLogger(Logger):

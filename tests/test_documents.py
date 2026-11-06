@@ -14,7 +14,7 @@ from LSP.plugin.core.registry import windows
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.documents import DocumentSyncListener
 from os.path import join
-from sublime_plugin import view_event_listeners
+from sublime_plugin import find_view_event_listener
 from typing_extensions import override
 import asyncio
 import sublime
@@ -28,10 +28,7 @@ class WindowDocumentHandlerTests(SublimeAioTestCase):
         # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
         # opening file (manager missing in DocumentSyncListener)
         # Revisit this once we're on ST4.
-        for listener in view_event_listeners[self.view.id()]:
-            if isinstance(listener, DocumentSyncListener):
-                return listener
-        return None
+        return find_view_event_listener(self.view, DocumentSyncListener)
 
     @override
     async def setUp(self) -> None:

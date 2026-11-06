@@ -986,10 +986,12 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         # Clones of a view share the buffer, so only the view with focus does linked editing.
         if (window := self.view.window()) and window.active_view() != self.view:
             return
-        self._update_stored_selection()
-        if len(self._stored_selection) != 1:
+        # Read the selection directly. Updating `_stored_selection` here would hide the caret movement from
+        # `on_selection_modified`, so that other features wouldn't update for the new caret position.
+        selection = self.view.sel()
+        if len(selection) != 1:
             return
-        point = self._stored_selection[0].b
+        point = selection[0].b
         if self.linked_editing.contains(point):
             return
         if session := self.session_async("linkedEditingRangeProvider", point):

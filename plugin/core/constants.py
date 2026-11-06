@@ -73,6 +73,8 @@ class RequestFlags(IntFlag):
     """ textDocument/codeLens """
     DIAGNOSTIC = 32
     """ textDocument/diagnostic """
+    LINKED_EDITING_RANGE = 64
+    """ textDocument/linkedEditingRange """
 
 
 class RegionKey(StrEnum):

@@ -548,6 +548,7 @@ class ServerTestRunner(TransportCallbacks):
             self._cwd = cwd
             transport_config = config.create_transport_config()
             self._transport = await transport_config.start(config.command, config.env, cwd, variables, self)
+            self._transport.start()
             self._resolved_command = self._transport.process_args
             await asyncio.sleep(self.CLOSE_TIMEOUT_SEC)
             await self._transport.close()

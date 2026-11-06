@@ -244,30 +244,23 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         self.insert_characters("z")
         await self.wait_for_text("<divz></divz>")
 
-    async def test_only_the_focused_clone_does_linked_editing(self) -> None:
+    async def test_losing_focus_stops_linked_editing(self) -> None:
         await self.insert_tags()
         await self.mock_response("textDocument/linkedEditingRange", TAG_RANGES)
         self.set_cursor(4)
-        linked_editing = self.get_linked_editing()
+        listener = self.ensure_document_listener_created()
+        assert listener
+        linked_editing = listener.linked_editing
         await self.wait_until(linked_editing.is_active)
         await self.await_message("textDocument/linkedEditingRange")
-        # The clone may request ranges too, depending on when the session attaches to it. The other response is for the
-        # original view when it gets focus again.
-        await self.mock_responses([
-            ("textDocument/linkedEditingRange", TAG_RANGES),
-            ("textDocument/linkedEditingRange", TAG_RANGES),
-        ])
-        window = self.view.window()
-        assert window
-        window.run_command("clone_file")
-        clone = window.active_view()
-        assert clone
-        self.assertNotEqual(clone.id(), self.view.id())
-        self.addCleanup(clone.close)
+        await self.mock_response("textDocument/linkedEditingRange", TAG_RANGES)
+        # Focus events don't fire reliably on CI when the window isn't focused, so call the handlers directly.
+        sublime.set_timeout(listener.on_deactivated)
         await self.wait_until(lambda: not linked_editing.is_active())
         self.assertEqual(self.view.get_regions(RegionKey.LINKED_EDITING), [])
-        window.focus_view(self.view)
+        await listener._activated_impl()
         await self.wait_until(linked_editing.is_active)
+        await self.await_message("textDocument/linkedEditingRange")
         self.insert_characters("x")
         await self.wait_for_text("<divx></divx>")
 

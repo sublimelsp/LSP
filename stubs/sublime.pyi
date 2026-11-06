@@ -2,7 +2,7 @@
 from enum import IntEnum, IntFlag
 from typing import Any, Callable, Generic, Iterable, Iterator, Literal, Mapping, Optional, Reversible, Sequence, TypeVar
 from typing_extensions import deprecated
-from sublime_types import Kind, Value, ValueLike
+from sublime_types import Kind
 
 
 class HoverZone(IntEnum):
@@ -889,7 +889,7 @@ def find_resources(pattern: str) -> list[str]:
     ...
 
 
-def encode_value(value: ValueLike, pretty: bool = ..., update_text: str | None = ...) -> str:
+def encode_value(val: Any, pretty: bool = ..., update_text: str = ...) -> str:
     """
     Encode a JSON compatible `Value` into a string representation.
 
@@ -901,7 +901,7 @@ def encode_value(value: ValueLike, pretty: bool = ..., update_text: str | None =
     ...
 
 
-def decode_value(data: str) -> Value:
+def decode_value(data: str) -> Any:
     """
     Decode a JSON string into an object. Note that comments and trailing commas are allowed.
 
@@ -1444,14 +1444,14 @@ class Window:
         """
         ...
 
-    def project_data(self) -> dict[str, Value] | None:
+    def project_data(self) -> bool | str | int | float | list[Any] | dict[str, Any] | None:
         """
         The project data associated with the current window. The data is in the same format as the contents of a
         `.sublime-project` file.
         """
         ...
 
-    def set_project_data(self, data: Mapping[str, ValueLike]) -> None:
+    def set_project_data(self, v: bool | str | int | float | list[Any] | dict[str, Any] | None) -> None:
         """
         Updates the project data associated with the current window. If the window is associated with a
         `.sublime-project` file, the project file will be updated on disk, otherwise the window will store the data
@@ -2230,7 +2230,7 @@ class View:
         """
         ...
 
-    def meta_info(self, key: str, pt: int) -> Value:
+    def meta_info(self, key: str, pt: int) -> bool | str | int | float | list[Any] | dict[str, Any] | None:
         """
         Look up the preference `key` for the scope at the provided point `pt` from all matching `.tmPreferences` files.
 
@@ -2937,10 +2937,10 @@ class Settings:
     def __init__(self, id: int) -> None:
         ...
 
-    def __getitem__(self, key: str) -> Value:
+    def __getitem__(self, key: str) -> Any:
         ...
 
-    def __setitem__(self, key: str, value: ValueLike) -> None:
+    def __setitem__(self, key: str, value: Any) -> None:
         ...
 
     def __delitem__(self, key: str) -> None:
@@ -2952,25 +2952,20 @@ class Settings:
     def __repr__(self) -> str:
         ...
 
-    def to_dict(self) -> dict[str, Value]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Return the settings as a dict. This is not very fast.
         """
         ...
 
-    def setdefault(self, key: str, value: ValueLike) -> Value:
+    def setdefault(self, key: str, value: Any) -> Any:
         """
         Returns the value associated with the provided `key`. If it's not present the provided `value` is assigned to
         the `key` and then returned.
         """
         ...
 
-    def update(
-        self,
-        other: Mapping[str, ValueLike] | Iterable[tuple[str, ValueLike]] = ...,
-        /,
-        **kwargs: ValueLike,
-    ) -> None:
+    def update(self, other: Any = ..., /, **kwargs: dict[str, Any]) -> None:
         """
         Update the settings from the provided argument(s).
 
@@ -2986,8 +2981,8 @@ class Settings:
     def get(
         self,
         key: str,
-        default: ValueLike | None = ...
-    ) -> Value:
+        default: bool | str | int | float | list[Any] | dict[str, Any] | None = ...
+    ) -> Any:
         """
         Returns the named setting.
         """
@@ -2999,7 +2994,7 @@ class Settings:
         """
         ...
 
-    def set(self, key: str, value: ValueLike) -> None:
+    def set(self, key: str, value: bool | str | int | float | list[Any] | dict[str, Any] | None) -> None:
         """
         Set the named `key` to the provided `value`.
         """

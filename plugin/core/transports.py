@@ -1,4 +1,5 @@
 from __future__ import annotations
+import itertools
 
 from .aio import PortableTimeoutError
 from .aio import TaskContainer
@@ -315,7 +316,8 @@ async def parse_content_length(reader: asyncio.StreamReader) -> int | None:
 class _State(IntEnum):
     NEW = 0
     RUNNING = 1
-    STOPPED = 2
+    CLOSING = 2
+    CLOSED = 3
 
 
 @final
@@ -347,16 +349,18 @@ class Transport(TaskContainer):
         self._process = process
         self._process_args = process_args
         self._error_reader: ErrorReader | None = error_reader
-        self._closed = False
         self._task: asyncio.Task[None] | None = None
-        self._close_lock: asyncio.Lock | None = None
-        self._read_loop_done = False
+        self._state = _State.NEW
+        self._closed_event = asyncio.Event()
+        self._final_exit_code: int | None = None
+        self._final_exception: Exception | None = None
 
     def start(self) -> None:
         """Start the message processing loop."""
-        if self._state() != _State.NEW:
-            raise AssertionError("transport started while it's not in the NEW state")
+        if self._state != _State.NEW:
+            raise RuntimeError("transport started while it's not in the NEW state")
         self._task = asyncio.get_running_loop().create_task(self._read_loop())
+        self._state = _State.RUNNING
 
     @property
     def process_args(self) -> list[str] | None:
@@ -368,64 +372,71 @@ class Transport(TaskContainer):
 
     async def send(self, payload: JSONRPCMessage) -> None:
         """Write a JSON-RPC message."""
-        state = self._state()
-        if state == _State.RUNNING:
+        if self._state == _State.RUNNING:
             await self._write(payload)
-        elif state == _State.NEW:
-            raise AssertionError("missing call to .start()")
+        elif self._state == _State.NEW:
+            raise RuntimeError("missing call to .start()")
 
     async def send_bytes(self, payload: bytes) -> None:
         """Write raw bytes."""
-        state = self._state()
-        if state == _State.RUNNING:
+        if self._state == _State.RUNNING:
             await self._write_bytes(payload)
-        elif state == _State.NEW:
-            raise AssertionError("missing call to .start()")
+        elif self._state == _State.NEW:
+            raise RuntimeError("missing call to .start()")
 
-    async def close(self) -> None:
-        """Stop the message loop and stop the process (if any)."""
-        if self._close_lock is None:
-            self._close_lock = asyncio.Lock()
-        async with self._close_lock:
-            if self._state() == _State.STOPPED:
-                return
-            await self._release_resources()
+    async def close(self) -> tuple[int | None, Exception | None]:
+        """
+        Stop the message loop and stop the process (if any).
 
-    async def _release_resources(self) -> None:
+        After returning from this coroutine function, the resources (tasks and process) are guaranteed cleaned up.
+        It is safe to call this coroutine function concurrently from multiple coroutines.
+
+        :returns: tuple of (exit code, exception)
+        """
+        await self._release_resources(wait_for_reader_task=True)
+        return self._final_exit_code, self._final_exception
+
+    async def _release_resources(self, wait_for_reader_task: bool) -> None:
+        """Release all resources."""
         try:
-            state = self._state()
-            self._closed = True
-            if state == _State.NEW:
+            if self._state == _State.NEW:
+                self._state = _State.CLOSING
+                await self._kill_process()
+            elif self._state == _State.RUNNING:
+                self._state = _State.CLOSING
+                with contextlib.suppress(BaseException):
+                    await self.cancel_all_tasks()
+                # Close the writer stream. This will cause the reader stream to close as well. In turn, that will cause
+                # an EOF to appear on the reader stream. That will cause the _read_loop to stop naturally.
+                self._writer.close()
                 if self._process:
-                    await self._kill_process(self._process)
-            else:
-                await self.cancel_all_tasks()
-                if self._task:
-                    if asyncio.current_task() is not self._task:  # prevents deadlock
-                        if not self._read_loop_done:
-                            self._task.cancel()
-                        # Note: we could use contextlib.suppress(asyncio.CancelledError), but that would also swallow
-                        # cancellation targeted at the close() method. So use asyncio.wait. The suspension point can
-                        # then still raise asyncio.CancelledError itself.
-                        _done, _pending = await asyncio.wait([self._task])
-                    self._task = None
+                    done, pending = await asyncio.wait([asyncio.create_task(self._process.wait())], timeout=5)
+                    if self._process.returncode is None:
+                        for t in itertools.chain(done, pending):
+                            t.cancel()
+                        # The process didn't stop. Just kill it now.
+                        await self._kill_process()
+                    else:
+                        self._process, process = None, self._process
+                        self._final_exit_code = process.returncode
+            elif self._state == _State.CLOSING:
+                await self._closed_event.wait()
+            # else it's the CLOSED state
         finally:
+            old_state, self._state = self._state, _State.CLOSED
             if self._error_reader:
                 self._error_reader.on_transport_close()
                 self._error_reader = None
             self._writer.close()
             with contextlib.suppress(ConnectionError):
                 await self._writer.wait_closed()
-            if self._process and self._process.returncode is None:
-                await self._kill_process(self._process)
-                self._process = None
-
-    def _state(self) -> _State:
-        if self._closed:
-            return _State.STOPPED
-        if self._task:
-            return _State.RUNNING
-        return _State.NEW
+            if old_state == _State.CLOSING:
+                self._closed_event.set()
+            if wait_for_reader_task and self._task:
+                _done, pending = await asyncio.wait([self._task], timeout=5)
+                if len(pending) > 0:
+                    # We waited 5 seconds; inject an asyncio.CancelledError into the _read_loop task now.
+                    self._task.cancel()
 
     async def _read(self) -> JSONRPCMessage:
         """Read one JSON-RPC message."""
@@ -454,7 +465,7 @@ class Transport(TaskContainer):
             await self._writer.drain()
 
     async def _read_loop(self) -> None:
-        exception: Exception | None = None
+        """Read JSON-RPC messages in a loop forever, and dispatch them to the TransportCallbacks object."""
         try:
             while True:
                 payload = await self._read()
@@ -467,34 +478,35 @@ class Transport(TaskContainer):
             # asyncio.Cancelled is swallowed on purpose. It's needed so the tail of this method runs to completion.
             pass
         except Exception as ex:
-            exception = ex
-        self._read_loop_done = True
-        exit_code: int | None = None
-        if self._process:
-            if not exception:
-                try:
-                    # Allow the process to stop itself.
-                    exit_code = await asyncio.wait_for(self._process.wait(), timeout=1)
-                except (AttributeError, ProcessLookupError, asyncio.TimeoutError):
-                    pass
-            if exit_code is None:
-                if ex := await self._kill_process(self._process):
-                    # TODO: old exception is overwritten
-                    exception = ex
+            self._final_exception = ex
+        # Release all resources (streams, maybe process).
+        #
+        # If the process crashed or a stream stopped due to a broken socket, then calling _release_resources will
+        # ensure the resources are torn down.
+        #
+        # If a coroutine called the close() method, then the writer stream was closed and we exited the loop
+        # "naturally". But then close() is also calling _release_resources. Then this call will enter the CLOSING case
+        # and wait for the asyncio.Event to signal.
+        #
+        await self._release_resources(wait_for_reader_task=False)
         if callback_object := self._callback_object():
-            await callback_object.on_transport_close(exit_code or 0, exception)
-        await self._release_resources()
+            await callback_object.on_transport_close(self._final_exit_code or 0, self._final_exception)
 
-    @staticmethod
-    async def _kill_process(process: asyncio.subprocess.Process) -> Exception | None:
+    async def _kill_process(self) -> None:
+        """Kill the process (if any). We don't care about the return code when killing it."""
+        if not self._process:
+            # There is no process to kill.
+            return
+        self._process, process = None, self._process
+        if process.returncode is not None:
+            # The process has already stopped.
+            self._final_exit_code = process.returncode
+            return
         try:
             process.kill()
             await process.wait()
-        except (AttributeError, ProcessLookupError):
-            pass
         except Exception as ex:
-            return ex
-        return None
+            exception_log("strange exception during process kill", ex)
 
 
 class LaunchConfig:

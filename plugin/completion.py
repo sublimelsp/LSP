@@ -5,7 +5,6 @@ from ..protocol import CompletionItemDefaults
 from ..protocol import CompletionItemKind
 from ..protocol import CompletionItemTag
 from ..protocol import CompletionList
-from ..protocol import CompletionParams
 from ..protocol import EditRangeWithInsertReplace
 from ..protocol import InsertReplaceEdit
 from ..protocol import InsertTextFormat
@@ -46,7 +45,6 @@ import sublime
 import webbrowser
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
     from collections.abc import Iterator
 
 SessionName: TypeAlias = str
@@ -183,7 +181,7 @@ async def query_completions(
     view: sublime.View,
     location: int,
     triggered_manually: bool,
-    sessions: Iterable[Session]
+    sessions: list[Session]
 ) -> tuple[list[sublime.CompletionItem], sublime.AutoCompleteFlags]:
     position = text_document_position_params(view, location)
     return _resolve_completions_async(
@@ -192,7 +190,7 @@ async def query_completions(
         zip(
             await asyncio.gather(
                 *(
-                    session.request(Request.complete(cast('CompletionParams', position), view))
+                    session.request(Request.complete({**position}, view))
                     for session in sessions
                 ),
                 return_exceptions=True,
@@ -206,23 +204,20 @@ async def query_completions(
 def _resolve_completions_async(
     view: sublime.View,
     triggered_manually: bool,
-    responses: Iterator[ResolvedCompletions | BaseException],
+    responses: Iterator[ResolvedCompletions],
     flags: sublime.AutoCompleteFlags
 ) -> tuple[list[sublime.CompletionItem], sublime.AutoCompleteFlags]:
     LspSelectCompletionCommand.completions = {}
     items: list[sublime.CompletionItem] = []
-    item_defaults: CompletionItemDefaults = {}
     errors: list[BaseException] = []
     view_settings = view.settings()
     include_snippets = view_settings.get("auto_complete_include_snippets") and \
         (triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
-    for tup in responses:
-        if isinstance(tup, BaseException):
-            if not isinstance(tup, asyncio.CancelledError):
-                errors.append(tup)
-            continue
-        response, session = tup
+    for response, session in responses:
+        item_defaults: CompletionItemDefaults = {}
         response_items: list[CompletionItem] = []
+        if isinstance(response, BaseException):
+            continue
         if isinstance(response, dict):
             response_items = response["items"] or []
             item_defaults = response.get('itemDefaults') or {}

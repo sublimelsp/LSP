@@ -23,7 +23,6 @@ from .core.views import make_command_link
 from .core.views import text_document_position_params
 from abc import ABC
 from abc import abstractmethod
-from functools import partial
 from typing import Any
 from typing import Callable
 from typing import TYPE_CHECKING
@@ -157,22 +156,13 @@ class LspHierarchyCommand(LspTextCommand, ABC):
             return self.is_enabled(event, point)
         return True
 
-    def run(self, edit: sublime.Edit, event: dict | None = None, point: int | None = None) -> None:
-        self._window = self.view.window()
+    async def run(self, event: dict | None = None, point: int | None = None) -> None:
+        window = self.view.window()
         session = self.best_session(self.capability)
-        if not session:
+        if not window or not session:
             return
         position = get_position(self.view, event, point)
         if position is None:
-            return
-        params = text_document_position_params(self.view, position)
-        session.send_request(
-            self.request(params, self.view), partial(self._handle_response_async, weakref.ref(session)))
-
-    def _handle_response_async(
-        self, weaksession: weakref.ref[Session], response: list[HierarchyItem] | None
-    ) -> None:
-        if not self._window or not self._window.is_valid():
             return
         if self.capability == 'callHierarchyProvider':
             sheet_name = "Call Hierarchy"
@@ -180,17 +170,18 @@ class LspHierarchyCommand(LspTextCommand, ABC):
             sheet_name = "Type Hierarchy"
         else:
             raise NotImplementedError(f'{self.capability} not implemented')
-        if not response:
-            self._window.status_message(f"{sheet_name} not available")
+        params = text_document_position_params(self.view, position)
+        response = await session.request(self.request(params, self.view))
+        if not window.is_valid():
             return
-        session = weaksession()
-        if not session:
+        if not response or isinstance(response, Error):
+            window.status_message(f"{sheet_name} not available")
             return
         elements = [to_hierarchy_data(item) for item in response]
         header = make_header(session.config.name, sheet_name, 1, elements)
-        data_provider = make_data_provider(weaksession, sheet_name, 1, elements)
-        new_tree_view_sheet(self._window, sheet_name, data_provider, header)
-        open_first(self._window, session.config.name, elements)
+        data_provider = make_data_provider(weakref.ref(session), sheet_name, 1, elements)
+        new_tree_view_sheet(window, sheet_name, data_provider, header)
+        open_first(window, session.config.name, elements)
 
 
 class LspHierarchyToggleCommand(LspWindowCommand):

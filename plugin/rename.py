@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine
 from .core.edit import show_summary_message
 from .core.protocol import Error
 from .core.protocol import Request
@@ -46,7 +45,7 @@ def is_range_response(result: PrepareRenameResult) -> TypeGuard[Range]:
 #  - based on the "prepare" response, the "placeholder" value is computed
 #  - "lsp_symbol_rename" command is re-triggered with computed "placeholder" argument
 #  - run() gets called with "placeholder" argument set
-#  - run() manually throws a TypeError
+#  - run() manually shows the input overlay of the Command Palette
 #  - input() gets called with "placeholder" argument set - returns an instance of "RenameSymbolInputHandler"
 #  - input overlay triggered
 #  - user enters new name and confirms
@@ -90,9 +89,8 @@ class LspSymbolRenameCommand(LspTextCommand):
             placeholder = self.view.substr(self.view.word(point))
         return RenameSymbolInputHandler(self.view, placeholder)
 
-    def run(
+    async def run(
         self,
-        edit: sublime.Edit,
         new_name: str = "",
         placeholder: str = "",
         session_name: str | None = None,
@@ -103,13 +101,23 @@ class LspSymbolRenameCommand(LspTextCommand):
         session = self._get_prepare_rename_session(point, session_name)
         if new_name or placeholder or not session:
             if location is not None and new_name:
-                run_coroutine(self._do_rename(location, placeholder, new_name, session))
+                await self._do_rename(location, placeholder, new_name, session)
                 return
             # Trigger InputHandler manually.
-            raise TypeError("required positional argument")
+            args = {
+                'new_name': new_name or None,
+                'placeholder': placeholder or None,
+                'session_name': session_name,
+                'event': event,
+                'point': point,
+            }
+            args = {key: value for key, value in args.items() if value is not None}
+            if self.input(args) is not None and (window := self.view.window()):
+                window.run_command('show_overlay', {'overlay': 'command_palette', 'command': self.name(), 'args': args})
+            return
         if location is None:
             return
-        run_coroutine(self._do_rename_with_prepare_provider(location, session))
+        await self._do_rename_with_prepare_provider(location, session)
 
     def _get_prepare_rename_session(self, point: int | None, session_name: str | None) -> Session | None:
         return self.session_by_name(session_name, PREPARE_RENAME_CAPABILITY) if session_name \

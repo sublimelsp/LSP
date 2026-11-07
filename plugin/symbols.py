@@ -12,7 +12,7 @@ from .core.aio import run_coroutine
 from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler
-from .core.promise import Promise
+from .core.logging import exception_log
 from .core.protocol import Error
 from .core.protocol import Point
 from .core.protocol import Request
@@ -23,16 +23,20 @@ from .core.sessions import print_to_status_bar
 from .core.type_converters import range_to_region
 from .core.views import offset_to_point
 from .core.views import text_document_identifier
-from functools import partial
 from typing import Any
 from typing import cast
 from typing import overload
+from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing_extensions import NotRequired
 from typing_extensions import TypeGuard
+import asyncio
 import os
 import sublime
 import sublime_plugin
+
+if TYPE_CHECKING:
+    import concurrent.futures
 
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
 
@@ -376,6 +380,10 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
 
 class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
 
+    def __init__(self, command: sublime_plugin.WindowCommand, args: dict[str, Any]) -> None:
+        super().__init__(command, args)
+        self._task: concurrent.futures.Future[None] | None = None
+
     def name(self) -> str:
         return 'symbol'
 
@@ -390,30 +398,26 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
     def on_modified(self, text: str) -> None:
         if not self.input_view:
             return
-        change_count = self.input_view.change_count()
         self.command = cast('LspWindowCommand', self.command)
-        promises: list[Promise[list[sublime.ListInputItem[WorkspaceSymbolValue]]]] = [
-            session.send_request_task(Request.workspaceSymbol({"query": text}))
-            .then(partial(self._handle_response_async, session.config.name))
-            for session in self.command.sessions()
-        ]
-        Promise.all(promises).then(partial(self._on_all_responses, change_count))
+        if self._task:
+            self._task.cancel()
+        self._task = run_coroutine(self._update_list_dynamically(text, self.input_view.change_count()))
 
-    def _handle_response_async(
-        self, session_name: str, response: list[SymbolInformation] | list[WorkspaceSymbol] | Error | None
-    ) -> list[sublime.ListInputItem[WorkspaceSymbolValue]]:
-        if response and not isinstance(response, Error):
-            return [
-                symbol_to_list_input_item(item, session_name=session_name)
-                for item in response
-            ]
-        return []
-
-    def _on_all_responses(
-        self, change_count: int, item_lists: list[list[sublime.ListInputItem[WorkspaceSymbolValue]]]
-    ) -> None:
+    async def _update_list_dynamically(self, text: str, change_count: int) -> None:
+        sessions = list(self.command.sessions())
+        responses = await asyncio.gather(
+            *(session.request(Request.workspaceSymbol({"query": text})) for session in sessions),
+            return_exceptions=True,
+        )
+        items: list[sublime.ListInputItem[WorkspaceSymbolValue]] = []
+        for session, response in zip(sessions, responses):
+            if isinstance(response, Error):
+                continue
+            if isinstance(response, Exception):
+                exception_log("Error loading workspace symbols", response)
+            elif isinstance(response, BaseException):
+                continue
+            elif response:
+                items.extend(symbol_to_list_input_item(item, session_name=session.config.name) for item in response)
         if self.input_view and self.input_view.change_count() == change_count:
-            items: list[sublime.ListInputItem[WorkspaceSymbolValue]] = []
-            for item_list in item_lists:
-                items.extend(item_list)
             self.update(items)

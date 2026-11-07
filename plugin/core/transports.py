@@ -1,5 +1,4 @@
 from __future__ import annotations
-import itertools
 
 from .aio import PortableTimeoutError
 from .aio import TaskContainer
@@ -18,6 +17,7 @@ from typing_extensions import override
 import asyncio
 import asyncio.subprocess
 import contextlib
+import itertools
 import json
 import os
 import shutil

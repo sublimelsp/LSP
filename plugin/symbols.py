@@ -379,11 +379,9 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
 
 class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
 
-    _task: concurrent.futures.Future | None
-
     def __init__(self, command: sublime_plugin.WindowCommand, args: dict[str, Any]) -> None:
         super().__init__(command, args)
-        self._task = None
+        self._task: concurrent.futures.Future[None] | None = None
 
     def name(self) -> str:
         return 'symbol'

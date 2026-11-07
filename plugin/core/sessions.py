@@ -535,6 +535,9 @@ def get_initialize_params(
             "codeDescriptionSupport": True,
             "dataSupport": True
         },
+        "linkedEditingRange": {
+            "dynamicRegistration": True
+        },
         "foldingRange": {
             "dynamicRegistration": True,
             "foldingRangeKind": {
@@ -915,6 +918,16 @@ class AbstractViewListener(ABC):
 
     @abstractmethod
     def on_session_initialized_async(self, session: Session) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def do_linked_editing_ranges_async(self) -> None:
+        """Request the linked editing ranges at the caret, if linked editing is enabled and the view has focus."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear_linked_editing_async(self) -> None:
+        """Stop linked editing, for example because the language server doesn't provide the ranges anymore."""
         raise NotImplementedError
 
     @abstractmethod

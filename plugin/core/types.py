@@ -281,7 +281,7 @@ class Settings:
     link_highlight_style = cast("str", None)
     log_debug = cast("bool", None)
     log_max_size = cast("int", None)
-    log_server = cast("list[str]", None)
+    log_server = cast("bool", None)
     lsp_code_actions_on_format = cast("dict[str, bool]", None)
     lsp_code_actions_on_save = cast("dict[str, bool]", None)
     lsp_format_on_paste = cast("bool", None)
@@ -360,14 +360,14 @@ class Settings:
         r("show_symbol_action_links", False)
         r("show_view_status", True)
 
-        # Backwards-compatible with the bool setting
         log_server = s.get("log_server")
         if isinstance(log_server, bool):
-            self.log_server = ["panel"] if log_server else []
-        elif isinstance(log_server, list):
             self.log_server = log_server
+        elif isinstance(log_server, list):
+            # Backwards-compatible with the deprecated array of loggers.
+            self.log_server = "panel" in log_server
         else:
-            self.log_server = []
+            self.log_server = True
 
         # Backwards-compatible with the bool setting
         auto_show_diagnostics_panel = s.get("auto_show_diagnostics_panel")

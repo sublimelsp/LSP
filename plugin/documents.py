@@ -1047,14 +1047,11 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             return
         self_id = self.view.id()
         for view in views:
-            view_id = view.id()
-            if view_id == self_id:
+            if view.id() == self_id:
                 continue
-            listeners = list(sublime_plugin.view_event_listeners.get(view_id, []))
-            for listener in listeners:
-                if isinstance(listener, DocumentSyncListener):
-                    debug("also registering", listener)
-                    self.create_task(listener._on_load_impl())
+            if listener := sublime_plugin.find_view_event_listener(view, DocumentSyncListener):
+                debug("also registering", listener)
+                self.create_task(listener._on_load_impl())
 
     def _on_view_updated_async(self) -> None:
         if self._should_format_on_paste:

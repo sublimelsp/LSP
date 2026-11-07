@@ -388,7 +388,7 @@ class Settings:
             r("inhibit_word_completions", True)
 
         # correctness checking will happen inside diagnostics_highlight_style_flags method
-        self.diagnostics_highlight_style = s.get("diagnostics_highlight_style")  # type: ignore
+        self.diagnostics_highlight_style = cast('str | dict[str, str]', s.get("diagnostics_highlight_style"))
 
         # Backwards-compatible with "show_diagnostics_highlights"
         if s.get("show_diagnostics_highlights") is False:
@@ -973,7 +973,7 @@ class ClientConfig:
         """
         s = settings_store.settings
         file = settings_store.settings_path
-        base = sublime.decode_value(sublime.load_resource(file))
+        base = cast("dict[str, Any]", sublime.decode_value(sublime.load_resource(file)))
         settings = DottedDict(deepcopy(base.get("settings", {})))  # defined by the plugin author
         settings.update(deepcopy(read_dict_setting(s, "settings", {})))  # overrides from the user
         # "initialization_options" with backwards compatibility for "initializationOptions"
@@ -995,22 +995,22 @@ class ClientConfig:
             name=name,
             selector=_read_selector(s),
             priority_selector=_read_priority_selector(s),
-            schemes=deepcopy(s.get("schemes")),
+            schemes=cast("list[str]", deepcopy(s.get("schemes"))),
             command=deepcopy(read_list_setting(s, "command", [])),
-            tcp_port=deepcopy(s.get("tcp_port")),
-            auto_complete_selector=deepcopy(s.get("auto_complete_selector")),
+            tcp_port=cast("int | None", deepcopy(s.get("tcp_port"))),
+            auto_complete_selector=cast("str | None", deepcopy(s.get("auto_complete_selector"))),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             initialization_options=initialization_options,
             settings=settings,
             env=deepcopy(read_dict_setting(s, "env", {})),
-            experimental_capabilities=deepcopy(s.get("experimental_capabilities")),
+            experimental_capabilities=cast("dict[str, Any] | None", deepcopy(s.get("experimental_capabilities"))),
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "all_files")),
-            markdown_language_map=deepcopy(s.get("markdown_language_map")),
-            syntax_map=deepcopy(s.get("syntax_map")),
+            markdown_language_map=cast("MarkdownLangMapJson | None", deepcopy(s.get("markdown_language_map"))),
+            syntax_map=cast("dict[str, str] | None", deepcopy(s.get("syntax_map"))),
             path_maps=PathMap.parse(s.get("path_maps")),
             settings_store=settings_store,
             custom_config_keys=deepcopy(s.to_dict())

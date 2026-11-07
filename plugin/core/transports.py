@@ -7,6 +7,7 @@ from .logging import debug
 from .logging import exception_log
 from abc import ABC
 from abc import abstractmethod
+from enum import IntEnum
 from pathlib import Path
 from typing import Any
 from typing import Callable
@@ -75,7 +76,7 @@ class TransportConfig(ABC):
         cwd: str | None,
         variables: dict[str, str],
         callbacks: TransportCallbacks,
-    ) -> TransportWrapper:
+    ) -> Transport:
         """Start a communication channel with the language server."""
         raise NotImplementedError
 
@@ -95,7 +96,7 @@ class StdioTransportConfig(TransportConfig):
         cwd: str | None,
         variables: dict[str, str],
         callbacks: TransportCallbacks,
-    ) -> TransportWrapper:
+    ) -> Transport:
         if not command:
             raise RuntimeError('missing "command" to start a child process for running the language server')
         launch = TransportConfig.resolve_launch_config(command, env, variables)
@@ -107,12 +108,15 @@ class StdioTransportConfig(TransportConfig):
         )
         if not process.stdout or not process.stdin or not process.stderr:
             raise Exception('Failed to create transport config due to not being able to pipe stdio')
-        return TransportWrapper(
-            callback_object=callbacks,
-            transport=StreamTransport(encode_json, decode_json, process.stdout, process.stdin),
-            process=process,
-            process_args=launch.command,
-            error_reader=ErrorReader(callbacks, process.stderr),
+        return Transport(
+            encode_json,
+            decode_json,
+            process.stdout,
+            process.stdin,
+            callbacks,
+            process,
+            launch.command,
+            ErrorReader(callbacks, process.stderr),
         )
 
 
@@ -139,7 +143,7 @@ class TcpClientTransportConfig(TransportConfig):
         cwd: str | None,
         variables: dict[str, str],
         callbacks: TransportCallbacks,
-    ) -> TransportWrapper:
+    ) -> Transport:
         port = _add_and_resolve_port_variable(variables, self._port)
         launch: LaunchConfig | None = None
         if command:
@@ -164,12 +168,15 @@ class TcpClientTransportConfig(TransportConfig):
                 reader, writer = await asyncio.wait_for(
                     asyncio.open_connection(host='localhost', port=port, family=socket.AF_INET), timeout=time_left
                 )
-                return TransportWrapper(
-                    callback_object=callbacks,
-                    transport=StreamTransport(encode_json, decode_json, reader, writer),
-                    process=process,
-                    process_args=launch.command if launch else None,
-                    error_reader=error_reader,
+                return Transport(
+                    encode_json,
+                    decode_json,
+                    reader,
+                    writer,
+                    callbacks,
+                    process,
+                    launch.command if launch else None,
+                    error_reader,
                 )
             except PortableTimeoutError:
                 # We passed the TCP_CONNECT_TIMEOUT and the process didn't respond.
@@ -202,7 +209,7 @@ class TcpServerTransportConfig(TransportConfig):
         cwd: str | None,
         variables: dict[str, str],
         callbacks: TransportCallbacks,
-    ) -> TransportWrapper:
+    ) -> Transport:
         if not command:
             raise RuntimeError('missing "command" to start a child process for running the language server')
         port = _add_and_resolve_port_variable(variables, self._port)
@@ -211,15 +218,21 @@ class TcpServerTransportConfig(TransportConfig):
         class ClientConnectedCallback:
             def __init__(self) -> None:
                 self.cv = asyncio.Condition()
-                self.wrapper: TransportWrapper | None = None
+                self.transport: Transport | None = None
                 self.process: asyncio.subprocess.Process | None = None
                 self.error_reader: ErrorReader | None = None
 
             async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
                 async with self.cv:
-                    transport = StreamTransport(encode_json, decode_json, reader, writer)
-                    self.wrapper = TransportWrapper(
-                        callbacks, transport, self.process, launch.command, self.error_reader
+                    self.transport = Transport(
+                        encode_json,
+                        decode_json,
+                        reader,
+                        writer,
+                        callbacks,
+                        self.process,
+                        launch.command,
+                        self.error_reader,
                     )
                     self.cv.notify()
 
@@ -253,8 +266,8 @@ class TcpServerTransportConfig(TransportConfig):
                 #
                 # More background information: https://github.com/python/cpython/issues/104344
                 server.close()
-        assert callback.wrapper
-        return callback.wrapper
+        assert callback.transport
+        return callback.transport
 
 
 # --- Transports -------------------------------------------------------------------------------------------------------
@@ -266,28 +279,6 @@ class TransportCallbacks:
     async def on_payload(self, payload: JSONRPCMessage) -> None: ...
 
     def on_stderr_message(self, message: str) -> None: ...
-
-
-class Transport(ABC):
-    def __init__(self, encoder: Callable[[JSONRPCMessage], bytes], decoder: Callable[[bytes], JSONRPCMessage]) -> None:
-        self._encoder = encoder
-        self._decoder = decoder
-
-    @abstractmethod
-    async def read(self) -> JSONRPCMessage:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def write(self, payload: JSONRPCMessage) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def write_bytes(self, payload: bytes) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def close(self) -> None:
-        raise NotImplementedError
 
 
 async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str]:
@@ -321,20 +312,123 @@ async def parse_content_length(reader: asyncio.StreamReader) -> int | None:
     return int(content_length)
 
 
-class StreamTransport(Transport):
+class _State(IntEnum):
+    NEW = 0
+    RUNNING = 1
+    STOPPED = 2
+
+
+@final
+class Transport(TaskContainer):
+    """
+    Provides to a (subclass of) TransportCallbacks appropriately decoded messages. The Transport is also
+    responsible for keeping the spawned child process around (if any), and also keeps track of the ErrorReader. It can
+    be the case that there is no ErrorReader, for instance when talking to a remote TCP language server. So it can be
+    None.
+    """
+
     def __init__(
         self,
         encoder: Callable[[JSONRPCMessage], bytes],
         decoder: Callable[[bytes], JSONRPCMessage],
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
+        callback_object: TransportCallbacks,
+        process: asyncio.subprocess.Process | None,
+        process_args: list[str] | None,
+        error_reader: ErrorReader | None,
     ) -> None:
-        super().__init__(encoder, decoder)
+        super().__init__()
+        self._encoder = encoder
+        self._decoder = decoder
         self._reader = reader
         self._writer = writer
+        self._callback_object = weakref.ref(callback_object)
+        self._process = process
+        self._process_args = process_args
+        self._error_reader: ErrorReader | None = error_reader
+        self._closed = False
+        self._task: asyncio.Task[None] | None = None
+        self._close_lock: asyncio.Lock | None = None
+        self._read_loop_done = False
 
-    @override
-    async def read(self) -> JSONRPCMessage:
+    def start(self) -> None:
+        """Start the message processing loop."""
+        if self._state() != _State.NEW:
+            raise AssertionError("transport started while it's not in the NEW state")
+        self._task = asyncio.get_running_loop().create_task(self._read_loop())
+
+    @property
+    def process_args(self) -> list[str] | None:
+        """
+        The arguments for the process launched by this transport, or None if there is no process launched (such as with
+        a remote TCP/websocket connection).
+        """
+        return self._process_args
+
+    async def send(self, payload: JSONRPCMessage) -> None:
+        """Write a JSON-RPC message."""
+        state = self._state()
+        if state == _State.RUNNING:
+            await self._write(payload)
+        elif state == _State.NEW:
+            raise AssertionError("missing call to .start()")
+
+    async def send_bytes(self, payload: bytes) -> None:
+        """Write raw bytes."""
+        state = self._state()
+        if state == _State.RUNNING:
+            await self._write_bytes(payload)
+        elif state == _State.NEW:
+            raise AssertionError("missing call to .start()")
+
+    async def close(self) -> None:
+        """Stop the message loop and stop the process (if any)."""
+        if self._close_lock is None:
+            self._close_lock = asyncio.Lock()
+        async with self._close_lock:
+            if self._state() == _State.STOPPED:
+                return
+            await self._release_resources()
+
+    async def _release_resources(self) -> None:
+        try:
+            state = self._state()
+            self._closed = True
+            if state == _State.NEW:
+                if self._process:
+                    await self._kill_process(self._process)
+            else:
+                await self.cancel_all_tasks()
+                if self._task:
+                    if asyncio.current_task() is not self._task:  # prevents deadlock
+                        if not self._read_loop_done:
+                            self._task.cancel()
+                        # Note: we could use contextlib.suppress(asyncio.CancelledError), but that would also swallow
+                        # cancellation targeted at the close() method. So use asyncio.wait. The suspension point can
+                        # then still raise asyncio.CancelledError itself.
+                        _done, _pending = await asyncio.wait([self._task])
+                    self._task = None
+        finally:
+            if self._error_reader:
+                self._error_reader.on_transport_close()
+                self._error_reader = None
+            self._writer.close()
+            with contextlib.suppress(ConnectionError):
+                await self._writer.wait_closed()
+            if self._process and self._process.returncode is None:
+                await self._kill_process(self._process)
+                self._process = None
+
+    def _state(self) -> _State:
+        if self._closed:
+            return _State.STOPPED
+        if self._task:
+            return _State.RUNNING
+        return _State.NEW
+
+    async def _read(self) -> JSONRPCMessage:
+        """Read one JSON-RPC message."""
         content_length = await parse_content_length(self._reader)
         if content_length is None:
             raise StopLoopError
@@ -344,8 +438,8 @@ class StreamTransport(Transport):
         except Exception as ex:
             raise Exception(f"JSON decode error: {ex}") from ex
 
-    @override
-    async def write(self, payload: JSONRPCMessage) -> None:
+    async def _write(self, payload: JSONRPCMessage) -> None:
+        """Write a JSON-RPC message."""
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
         # ConnectionError can happen when the lang server is shut down or the connection is severed in some way. Just
@@ -353,86 +447,28 @@ class StreamTransport(Transport):
         with contextlib.suppress(ConnectionError):
             await self._writer.drain()
 
-    @override
-    async def write_bytes(self, payload: bytes) -> None:
+    async def _write_bytes(self, payload: bytes) -> None:
+        """Write raw bytes."""
         self._writer.write(payload)
         with contextlib.suppress(ConnectionError):
             await self._writer.drain()
 
-    @override
-    async def close(self) -> None:
-        self._writer.close()
-        with contextlib.suppress(ConnectionError):
-            await self._writer.wait_closed()
-
-
-# --- TransportWrapper -------------------------------------------------------------------------------------------------
-
-
-@final
-class TransportWrapper(TaskContainer):
-    """
-    Double dispatch-like class that takes a (subclass of) Transport, and provides to a (subclass of) TransportCallbacks
-    appropriately decoded messages. The TransportWrapper is also responsible for keeping the spawned child
-    process around (if any), and also keeps track of the ErrorReader. It can be the case that there is no ErrorReader,
-    for instance when talking to a remote TCP language server. So it can be None.
-    """
-
-    def __init__(
-        self,
-        callback_object: TransportCallbacks,
-        transport: Transport,
-        process: asyncio.subprocess.Process | None,
-        process_args: list[str] | None,
-        error_reader: ErrorReader | None,
-    ) -> None:
-        super().__init__()
-        self._callback_object = weakref.ref(callback_object)
-        self._transport: Transport | None = transport
-        self._process = process
-        self._process_args = process_args
-        self._error_reader: ErrorReader | None = error_reader
-        self._task = asyncio.get_running_loop().create_task(self._read_loop())
-
-    @property
-    def process_args(self) -> list[str] | None:
-        """
-        The arguments for the process launched by this wrapper, or None if there is no process launched (such as with
-        a remote TCP/websocket connection).
-        """
-        return self._process_args
-
-    async def send(self, payload: JSONRPCMessage) -> None:
-        if self._transport:
-            await self._transport.write(payload)
-
-    async def send_bytes(self, payload: bytes) -> None:
-        if self._transport:
-            await self._transport.write_bytes(payload)
-
-    async def close(self) -> None:
-        await self.cancel_all_tasks()
-        if self._error_reader:
-            self._error_reader.on_transport_close()
-            self._error_reader = None
-        if self._transport:
-            await self._transport.close()
-            self._transport = None
-
     async def _read_loop(self) -> None:
         exception: Exception | None = None
         try:
-            while self._transport:
-                payload = await self._transport.read()
+            while True:
+                payload = await self._read()
                 if callback_object := self._callback_object():
                     # Don't block the read loop on handler execution. Otherwise, a request handler that sends its own
                     # request to the server and awaits the response would deadlock: the read loop is stuck waiting for
                     # the handler, but the handler is waiting for a response that can only be read by the read loop.
                     self.create_task(callback_object.on_payload(payload))
-        except (AttributeError, BrokenPipeError, StopLoopError):
+        except (AttributeError, BrokenPipeError, StopLoopError, asyncio.CancelledError):
+            # asyncio.Cancelled is swallowed on purpose. It's needed so the tail of this method runs to completion.
             pass
         except Exception as ex:
             exception = ex
+        self._read_loop_done = True
         exit_code: int | None = None
         if self._process:
             if not exception:
@@ -442,19 +478,23 @@ class TransportWrapper(TaskContainer):
                 except (AttributeError, ProcessLookupError, asyncio.TimeoutError):
                     pass
             if exit_code is None:
-                try:
-                    # The process didn't stop itself. Terminate!
-                    self._process.kill()
-                    # still wait for the process to die, or zombie processes might be the result
-                    # Ignore the exit code in this case, it's going to be something non-zero because we sent SIGKILL.
-                    await self._process.wait()
-                except (AttributeError, ProcessLookupError):
-                    pass
-                except Exception as ex:
-                    exception = ex  # TODO: Old captured exception is overwritten
+                if ex := await self._kill_process(self._process):
+                    # TODO: old exception is overwritten
+                    exception = ex
         if callback_object := self._callback_object():
             await callback_object.on_transport_close(exit_code or 0, exception)
-        await self.close()
+        await self._release_resources()
+
+    @staticmethod
+    async def _kill_process(process: asyncio.subprocess.Process) -> Exception | None:
+        try:
+            process.kill()
+            await process.wait()
+        except (AttributeError, ProcessLookupError):
+            pass
+        except Exception as ex:
+            return ex
+        return None
 
 
 class LaunchConfig:

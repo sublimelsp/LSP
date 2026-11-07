@@ -12,6 +12,7 @@ from .core.aio import run_coroutine
 from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler
+from .core.logging import exception_log
 from .core.protocol import Error
 from .core.protocol import Point
 from .core.protocol import Request
@@ -404,13 +405,17 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
 
     async def _update_list_dynamically(self, text: str, change_count: int) -> None:
         sessions = list(self.command.sessions())
-        items: list[sublime.ListInputItem[WorkspaceSymbolValue]] = []
         responses = await asyncio.gather(
             *(session.request(Request.workspaceSymbol({"query": text})) for session in sessions),
             return_exceptions=True,
         )
+        items: list[sublime.ListInputItem[WorkspaceSymbolValue]] = []
         for session, response in zip(sessions, responses):
-            if response and not isinstance(response, BaseException):
+            if isinstance(response, Exception):
+                exception_log("Error loading workspace symbols", response)
+            elif isinstance(response, BaseException):
+                continue
+            elif response:
                 items.extend(symbol_to_list_input_item(item, session_name=session.config.name) for item in response)
         if self.input_view and self.input_view.change_count() == change_count:
             self.update(items)

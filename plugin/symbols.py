@@ -411,6 +411,8 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
         )
         items: list[sublime.ListInputItem[WorkspaceSymbolValue]] = []
         for session, response in zip(sessions, responses):
+            if isinstance(response, Error):
+                continue
             if isinstance(response, Exception):
                 exception_log("Error loading workspace symbols", response)
             elif isinstance(response, BaseException):

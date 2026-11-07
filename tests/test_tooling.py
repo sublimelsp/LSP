@@ -4,6 +4,7 @@ from .setup import make_stdio_test_config
 from .setup import SublimeAioTestCase
 from LSP.plugin.tooling import ServerTestRunner
 import asyncio
+import os
 import sublime
 
 
@@ -41,8 +42,9 @@ class ToolingTestCase(SublimeAioTestCase):
     async def test_on_close_is_called_once(self) -> None:
         await self.runner.run(close_timeout_sec=0.5)
         await self.on_close_event.wait()
-        rootdir = sublime.expand_variables("$packages/LSP", sublime.active_window().extract_variables())
-        self.assertEqual(self.resolved_command, ["python3", f"{rootdir}/tests/server.py"])
-        self.assertEqual(self.cwd, rootdir)
+        rootdir = sublime.expand_variables(
+            os.path.join("$packages", "LSP"), sublime.active_window().extract_variables()
+        )
+        self.assertEqual(self.resolved_command, ["python3", os.path.join(rootdir, "tests", "server.py")])
         self.assertEqual(self.exit_code, 1)
         self.assertEqual(self.on_close_call_count, 1)

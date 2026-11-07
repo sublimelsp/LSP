@@ -35,6 +35,7 @@ import enum
 import json
 import os
 import sys
+import threading
 import uuid
 
 __package__ = "server"
@@ -464,34 +465,55 @@ async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamRe
 
 def _win32_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
 
-    # no support for asyncio stdio yet on Windows, see https://bugs.python.org/issue26832
-    # use an executor to read from stdin and write to stdout
-    # note: if nothing ever drains the writer explicitly, no flushing ever takes place!
+    # No support for asyncio stdio yet on Windows, see https://bugs.python.org/issue26832.
+    # And it probably never will get support: https://github.com/python/cpython/pull/153660/changes.
+    # Reading from stdin happens on a daemon thread that feeds an asyncio.StreamReader. The thread must be a daemon
+    # thread so that a blocking read on stdin cannot keep the interpreter alive after the server decides to exit.
+    # Feeding a StreamReader also means that set_exception (used to stop the read loop when the exit notification is
+    # received) interrupts a pending read, exactly like it does on the other platforms.
+    # Writing to stdout still happens through an executor.
+    # Note: if nothing ever drains the writer explicitly, no flushing ever takes place!
     class Reader:
 
         def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
             self.loop = loop
-            self.stdin = sys.stdin.buffer
-            self.__exception: Exception | None = None
+            self._fileno = sys.stdin.fileno()
+            self._stream = asyncio.StreamReader(loop=loop)
+            self._thread = threading.Thread(target=self._feed_stream, daemon=True)
+            self._thread.start()
+
+        def _feed_stream(self) -> None:
+            while True:
+                try:
+                    # Read from the file descriptor directly instead of through sys.stdin.buffer. Closing a buffered
+                    # reader while another thread is blocked reading it makes the interpreter abort at shutdown.
+                    data = os.read(self._fileno, 8192)
+                except Exception as ex:
+                    self._call_soon_threadsafe(self._stream.set_exception, ex)
+                    return
+                if not data:
+                    self._call_soon_threadsafe(self._stream.feed_eof)
+                    return
+                self._call_soon_threadsafe(self._stream.feed_data, data)
+
+        def _call_soon_threadsafe(self, callback: Callable[..., None], *args: Any) -> None:
+            try:
+                self.loop.call_soon_threadsafe(callback, *args)
+            except RuntimeError:
+                # The event loop has already been closed.
+                pass
 
         def at_eof(self) -> bool:
-            return self.__exception is not None
+            return self._stream.at_eof()
 
         def set_exception(self, exception: Exception) -> None:
-            self.__exception = exception
-
-        def __check(self) -> None:
-            if self.__exception is not None:
-                raise self.__exception
+            self._stream.set_exception(exception)
 
         async def readline(self) -> bytes:
-            self.__check()
-            # a single call to sys.stdin.readline() is thread-safe
-            return await self.loop.run_in_executor(None, self.stdin.readline)
+            return await self._stream.readline()
 
         async def readexactly(self, n: int) -> bytes:
-            self.__check()
-            return await self.loop.run_in_executor(None, self.stdin.read, n)
+            return await self._stream.readexactly(n)
 
     class Writer:
 

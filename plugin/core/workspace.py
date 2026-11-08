@@ -5,6 +5,8 @@ from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
 from pathlib import Path
+from typing import Any
+from typing import cast
 from typing import TYPE_CHECKING
 import os
 import sublime
@@ -73,7 +75,7 @@ class ProjectFolders:
         project_data = self._window.project_data()
         if not isinstance(project_data, dict):
             return
-        for i, folder in enumerate(project_data.get('folders', [])):
+        for i, folder in enumerate(cast('list[dict[str, Any]]', project_data.get('folders', []))):
             exclude_patterns = []
             # Use canoncial path from `window.folders` rather than potentially relative path from project data.
             path = folders[i]
@@ -152,7 +154,7 @@ def sorted_workspace_folders(folders: list[str], file_path: str) -> list[Workspa
 def enable_in_project(window: sublime.Window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', {})
+        project_settings = cast('dict[str, Any]', project_data.setdefault('settings', {}))
         project_lsp_settings = project_settings.setdefault('LSP', {})
         project_client_settings = project_lsp_settings.setdefault(config_name, {})
         project_client_settings['enabled'] = True
@@ -165,7 +167,7 @@ def enable_in_project(window: sublime.Window, config_name: str) -> None:
 def disable_in_project(window: sublime.Window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', {})
+        project_settings = cast('dict[str, Any]', project_data.setdefault('settings', {}))
         project_lsp_settings = project_settings.setdefault('LSP', {})
         project_client_settings = project_lsp_settings.setdefault(config_name, {})
         project_client_settings['enabled'] = False

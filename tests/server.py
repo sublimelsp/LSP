@@ -546,11 +546,18 @@ class Mode(enum.StrEnum):
     client = "client"
 
 
-async def main(tcp_port: int | None = None, mode: Mode = Mode.server) -> bool:
+async def serve(session: Session, sleep_ms_after_exit: int = 0) -> bool:
+    shutdown_received = await session.run_forever()
+    if sleep_ms_after_exit > 0:
+        await asyncio.sleep(sleep_ms_after_exit / 1000)
+    return shutdown_received
+
+
+async def main(tcp_port: int | None = None, mode: Mode = Mode.server, sleep_ms_after_exit: int = 0) -> bool:
     if tcp_port is None:
         reader, writer = await stdio()
         session = Session(reader, writer)
-        return await session.run_forever()
+        return await serve(session, sleep_ms_after_exit)
 
     if mode == Mode.server:
         print("running in TCP server mode", file=sys.stderr)
@@ -569,12 +576,14 @@ async def main(tcp_port: int | None = None, mode: Mode = Mode.server) -> bool:
         # NOTE: This is deliberately wrong -- we should stop serving once the exit notification is received. But,
         # it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
         await server.serve_forever()
+        if sleep_ms_after_exit > 0:
+            await asyncio.sleep(sleep_ms_after_exit / 1000)
         return callback.received_shutdown
 
     print("running in TCP client mode", file=sys.stderr)
     reader, writer = await asyncio.open_connection(host=None, port=tcp_port)
     session = Session(reader, writer)
-    return await session.run_forever()
+    return await serve(session, sleep_ms_after_exit)
 
 
 if __name__ == '__main__':
@@ -583,11 +592,18 @@ if __name__ == '__main__':
         version: bool = False
         tcp_port: int | None = None
         mode: Mode = Mode.server
+        sleep_ms_after_exit: int
 
     parser = ArgumentParser(prog=__package__, description=__doc__)
     parser.add_argument("-v", "--version", action="store_true", help="print version and exit")
     parser.add_argument("-p", "--tcp-port", type=int)
     parser.add_argument("--mode", type=Mode, default=Mode.server)
+    parser.add_argument(
+        "--sleep-ms-after-exit",
+        type=int,
+        default=0,
+        help="sleep this many milliseconds after receiving the exit notification",
+    )
     args = parser.parse_args(namespace=CmdLineArgs())
     if args.version:
         print(__package__, __version__)
@@ -596,7 +612,7 @@ if __name__ == '__main__':
     asyncio.set_event_loop(loop)
     shutdown_received = False
     try:
-        shutdown_received = loop.run_until_complete(main(args.tcp_port, args.mode))
+        shutdown_received = loop.run_until_complete(main(args.tcp_port, args.mode, args.sleep_ms_after_exit))
     except KeyboardInterrupt:
         pass
     loop.run_until_complete(loop.shutdown_asyncgens())

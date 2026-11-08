@@ -17,7 +17,6 @@ from typing_extensions import override
 import asyncio
 import asyncio.subprocess
 import contextlib
-import itertools
 import json
 import os
 import shutil
@@ -35,8 +34,11 @@ try:
 except ImportError:
     orjson = None
 
-TCP_CONNECT_TIMEOUT = 10  # seconds
-TCP_CONNECT_RETRY_INTERVAL = 0.5  # seconds
+# all in seconds
+TCP_CONNECT_TIMEOUT = 10
+TCP_CONNECT_RETRY_INTERVAL = 0.5
+PROCESS_SHUTDOWN_TIMEOUT = 5
+TRANSPORT_READER_TASK_TIMEOUT = 5
 
 
 class StopLoopError(Exception):
@@ -393,37 +395,40 @@ class Transport(TaskContainer):
         """
         Stop the message loop and stop the process (if any).
 
-        After returning from this coroutine function, the resources (tasks and process) are guaranteed cleaned up.
-        It is safe to call this coroutine function concurrently from multiple coroutines.
+        After returning from this coroutine function, the resources (tasks and process) are guaranteed cleaned up,
+        *even when cancelled*. It is safe to call this coroutine function concurrently from multiple coroutines.
+        It is also idempotent: calling close() many times has the same effect as calling it once.
 
         :returns: tuple of (exit code, exception)
         """
-        await self._release_resources(wait_for_reader_task=True)
+        if ex := await self._release_resources(wait_for_reader_task=True):
+            # If the close coroutine was cancelled, reraise it now.
+            raise ex
         return self._final_exit_code, self._final_exception
 
-    async def _release_resources(self, wait_for_reader_task: bool) -> None:
+    async def _release_resources(self, wait_for_reader_task: bool) -> asyncio.CancelledError | None:
         """Release all resources."""
+        cancellation_exception: asyncio.CancelledError | None = None
         try:
+            try:
+                await self.cancel_all_tasks()
+            except asyncio.CancelledError as ex:
+                cancellation_exception = ex
             if self._state == _State.NEW:
                 self._state = _State.CLOSING
                 await self._kill_process()
             elif self._state == _State.RUNNING:
                 self._state = _State.CLOSING
-                with contextlib.suppress(BaseException):
-                    await self.cancel_all_tasks()
                 # Close the writer stream. This will cause the reader stream to close as well. In turn, that will cause
                 # an EOF to appear on the reader stream. That will cause the _read_loop to stop naturally.
                 self._writer.close()
                 if self._process:
-                    done, pending = await asyncio.wait([asyncio.create_task(self._process.wait())], timeout=5)
-                    if self._process.returncode is None:
-                        for t in itertools.chain(done, pending):
-                            t.cancel()
-                        # The process didn't stop. Just kill it now.
-                        await self._kill_process()
-                    else:
-                        self._process, process = None, self._process
-                        self._final_exit_code = process.returncode
+                    try:
+                        await asyncio.wait_for(self._process.wait(), timeout=PROCESS_SHUTDOWN_TIMEOUT)
+                    except asyncio.TimeoutError:
+                        pass
+                    except asyncio.CancelledError as ex:
+                        cancellation_exception = ex
             elif self._state == _State.CLOSING:
                 await self._closed_event.wait()
             # else it's the CLOSED state
@@ -433,15 +438,48 @@ class Transport(TaskContainer):
                 self._error_reader.on_transport_close()
                 self._error_reader = None
             self._writer.close()
-            with contextlib.suppress(ConnectionError):
-                await self._writer.wait_closed()
+            try:
+                with contextlib.suppress(ConnectionError):
+                    await self._writer.wait_closed()
+            except asyncio.CancelledError as ex:
+                cancellation_exception = ex
+            if self._process:
+                if self._process.returncode is None:
+                    # The process didn't stop. Just kill it now.
+                    await self._kill_process()
+                else:
+                    self._process, process = None, self._process
+                    self._final_exit_code = process.returncode
             if old_state == _State.CLOSING:
+                # Wake up other concurrent coroutines that also called close().
                 self._closed_event.set()
-            if wait_for_reader_task and self._task:
-                _done, pending = await asyncio.wait([self._task], timeout=5)
+            if (
+                wait_for_reader_task
+                and self._task
+                and self._task is not asyncio.current_task()
+                # If the current task is inside the `TaskContainer` then that is a contract violation. That caused a
+                # `RuntimeError` from inside `TaskContainer.cancel_all_tasks()` to be raised. That `RuntimeError` is
+                # still active and this `finally` block is running while the `RuntimeError` is unwinding the stack.
+                # Allow the `RuntimeError` to propagate. If this check is not here, then the `RuntimeError` is replaced3
+                # by an `asyncio.CancelledError` as per Python `finally` semantics. How can it possibly be replaced by
+                # an `asyncio.CancelledError`? It's because the `_read_loop` sees EOF, and then calls
+                # `_release_resources`, which cancels all tasks. From the POV of the `_read_loop`, that is not a
+                # contract violation because it's not part of the `TaskContainer`. That causes the contract-violating
+                # caller to be cancelled while it's waiting on the `_read_loop` to stop.
+                # The contract violation causes the process to be killed right away, without a graceful wait, and it
+                # causes no wait for the `_read_loop`.
+                and not self.is_current_task_in_task_container()
+            ):
+                _done, pending = await asyncio.wait([self._task], timeout=TRANSPORT_READER_TASK_TIMEOUT)
                 if len(pending) > 0:
-                    # We waited 5 seconds; inject an asyncio.CancelledError into the _read_loop task now.
+                    # We waited TRANSPORT_READER_TASK_TIMEOUT seconds; inject an asyncio.CancelledError into the
+                    # _read_loop task now.
                     self._task.cancel()
+                    # And strictly speaking we should then await that cancellation.
+                    # But do swallow this one as it's an implementation detail.
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await self._task
+        return cancellation_exception
 
     async def _read(self) -> JSONRPCMessage:
         """Read one JSON-RPC message."""
@@ -498,7 +536,7 @@ class Transport(TaskContainer):
             await callback_object.on_transport_close(self._final_exit_code or 0, self._final_exception)
 
     async def _kill_process(self) -> None:
-        """Kill the process (if any). We don't care about the return code when killing it."""
+        """Kill the process (if any)."""
         if not self._process:
             # There is no process to kill.
             return
@@ -507,11 +545,7 @@ class Transport(TaskContainer):
             # The process has already stopped.
             self._final_exit_code = process.returncode
             return
-        try:
-            process.kill()
-            await process.wait()
-        except Exception as ex:
-            exception_log("strange exception during process kill", ex)
+        self._final_exit_code = await _kill_process(process)
 
 
 class LaunchConfig:
@@ -608,11 +642,19 @@ async def kill_all_subprocesses() -> None:
     await asyncio.gather(*[p.wait() for p in subprocesses], return_exceptions=True)
 
 
-async def _kill_process(process: asyncio.subprocess.Process) -> None:
-    with contextlib.suppress(ProcessLookupError):  # The process might have exited already.
-        process.kill()
-    # Wait for the process to die, or zombie processes might be the result.
-    await process.wait()
+async def _kill_process(process: asyncio.subprocess.Process) -> int | None:
+    try:
+        # Wait for the process to die, or zombie processes might be the result.
+        wait_task = asyncio.create_task(process.wait())
+        with contextlib.suppress(ProcessLookupError):  # The process might have exited already.
+            process.kill()
+            return await asyncio.shield(wait_task)  # ignore cancellations of the wait
+    except asyncio.CancelledError:
+        # asyncio.shield shields the task, but not this coroutine itself
+        pass
+    except Exception as ex:
+        exception_log("strange exception during process kill", ex)
+    return None
 
 
 def _fixup_startup_args(args: list[str]) -> Any:

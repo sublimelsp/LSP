@@ -16,7 +16,10 @@ from typing_extensions import override
 from unittest.mock import patch
 import asyncio
 import asyncio.subprocess
+import copy
 import sublime
+import time
+import types
 
 if TYPE_CHECKING:
     from LSP.plugin.core.protocol import JSONRPCMessage
@@ -109,14 +112,23 @@ class Callbacks(TransportCallbacks):
 
     async def on_payload(self, payload: JSONRPCMessage) -> None:
         self.responses.put_nowait(payload)
+        # Deliberate long sleep to assert that payload handlers are stopped when the transport closes.
+        await asyncio.sleep(5)
 
     def on_stderr_message(self, message: str) -> None:
         self.stderr_messages.append(message)
 
 
-class TransportTestCase(SublimeAioTestCase):
+class TransportTestCaseBase(SublimeAioTestCase):
+    def extra_server_command_args(self) -> list[str] | None:
+        return None
+
     async def setUp(self) -> None:
         config = make_stdio_test_config("foo")
+        if extra_args := self.extra_server_command_args():
+            new_command = copy.deepcopy(config.command)
+            new_command.extend(extra_args)
+            config.command = new_command
         transport_config = config.create_transport_config()
         launch = transport_config.resolve_launch_config(
             config.command, config.env, sublime.active_window().extract_variables()
@@ -128,9 +140,13 @@ class TransportTestCase(SublimeAioTestCase):
         if (t := getattr(self, "transport", None)) and isinstance(t, Transport):
             await t.close()
 
+
+class TransportTestCase(TransportTestCaseBase):
+
     async def test_closing_a_never_started_transport(self) -> None:
         exit_code, exception = await self.transport.close()
-        self.assertIsNone(exit_code)
+        self.assertIsNotNone(exit_code)
+        self.assertNotEqual(exit_code, 0)
         self.assertIsNone(self.transport._process)
         self.assertIsNone(exception)
 
@@ -174,7 +190,7 @@ class TransportTestCase(SublimeAioTestCase):
 
         closers = [closer() for _ in range(10)]
         closers_future = asyncio.gather(*closers)
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         event.set()
         await closers_future
         self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)
@@ -201,4 +217,107 @@ class TransportTestCase(SublimeAioTestCase):
         await self.callbacks.close_event.wait()
         self.assertEqual(self.callbacks.exit_code, 1)
         self.assertIsNone(self.callbacks.exception)
+        self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)
+
+    async def test_all_tasks_in_container_are_stopped(self) -> None:
+        self.transport.start()
+        # sending shutdown causes a JSON-RPC reply, which Transport._read_loop dispatches as a task.
+        # That task takes 5 seconds (see Callbacks.on_payload).
+        await self.transport.send({"jsonrpc": "2.0", "id": 1, "method": "shutdown"})
+        while len(self.transport._tasks) != 1:  # ruff: ignore[async-busy-wait]
+            await asyncio.sleep(0.05)
+        # Now send the exit notification. That causes Transport._read_loop to exit its loop and clean up resources.
+        await self.transport.send({"jsonrpc": "2.0", "method": "exit"})
+        await self.callbacks.close_event.wait()
+        # The transport is closed, so there should be no more tasks running.
+        self.assertTrue(self.transport._task and self.transport._task.done())
+        self.assertEqual(len(self.transport._tasks), 0)
+
+    async def test_calling_close_from_inside_on_transport_closed_callback(self) -> None:
+        transport = self.transport
+
+        async def bad_on_transport_close_handler(self: Callbacks, exit_code: int, exception: Exception | None) -> None:
+            self.exit_code = exit_code
+            self.exception = exception
+            self.number_of_transport_close_callbacks += 1
+            await transport.close()
+            self.close_event.set()
+
+        bad_method = types.MethodType(bad_on_transport_close_handler, self.callbacks)
+        with patch.object(self.callbacks, "on_transport_close", bad_method):
+            self.transport.start()
+            await self.transport.send({"jsonrpc": "2.0", "id": 1, "method": "shutdown"})
+            await self.transport.send({"jsonrpc": "2.0", "method": "exit"})
+            await self.callbacks.close_event.wait()
+        self.assertEqual(self.callbacks.exit_code, 0)
+        self.assertIsNone(self.callbacks.exception)
+        self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)
+
+    async def test_closing_inside_payload_handler_raises_runtime_error(self) -> None:
+        transport = self.transport
+        runtime_error_was_raised = False
+        received_payload: JSONRPCMessage | None = None
+
+        async def bad_on_paylod_handler(payload: JSONRPCMessage) -> None:
+            nonlocal received_payload
+            received_payload = payload
+            try:
+                # Closing the transport inside of an on_payload handler is a contract violation.
+                await transport.close()
+            except RuntimeError:
+                # The contract violation surfaces as a RuntimeError.
+                nonlocal runtime_error_was_raised
+                runtime_error_was_raised = True
+
+        with patch.object(self.callbacks, "on_payload", bad_on_paylod_handler):
+            self.transport.start()
+            await self.transport.send({"jsonrpc": "2.0", "id": 1, "method": "shutdown"})
+            await self.callbacks.close_event.wait()
+        self.assertTrue(runtime_error_was_raised)
+        self.assertEqual(received_payload, {"jsonrpc": "2.0", "id": 1, "result": None})
+        self.assertEqual(self.callbacks.exit_code, 0)
+        self.assertIsNone(self.callbacks.exception)
+        self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)
+
+
+class TransportWithSlowProcessShutdownTestCase(TransportTestCaseBase):
+    @override
+    def extra_server_command_args(self) -> list[str] | None:
+        return ["--sleep-ms-after-exit", "3000"]
+
+    async def test_closing_is_atomic(self) -> None:
+        self.transport.start()
+        await self.transport.send({"jsonrpc": "2.0", "method": "exit"})
+        close_task = asyncio.create_task(self.transport.close())
+        # Sleep for 500ms, to let the fake server enter the asyncio.sleep, and to let the close() coroutine wait
+        # for the process to finish.
+        await asyncio.sleep(0.5)
+        # We should be awaiting the graceful process shutdown at this point. The fake server is sleeping for 500ms
+        # (and would still keep sleeping for another 2500ms).
+        # Now pretend something cancels the close() coroutine.
+        self.assertFalse(close_task.done())
+        close_task.cancel()
+        # Wait for the close() coroutine to finish. It should communicate that cancellation back up the call chain.
+        with self.assertRaises(asyncio.CancelledError):
+            await close_task
+        # Regardless of cancellation of the close() coroutine, resources should still have been cleaned up.
+        self.assertIsNone(self.transport._process)
+        self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)
+        self.assertEqual(len(self.transport._tasks), 0)
+        self.assertTrue(self.transport._task is not None and self.transport._task.done())
+
+    async def test_process_is_killed_after_graceful_wait(self) -> None:
+        self.transport.start()
+        # send shutdown, so that the fake server would exit with status 0.
+        await self.transport.send({"jsonrpc": "2.0", "id": 1, "method": "shutdown"})
+        await self.transport.send({"jsonrpc": "2.0", "method": "exit"})
+        start = time.monotonic()
+        with patch('LSP.plugin.core.transports.PROCESS_SHUTDOWN_TIMEOUT', 0.1):
+            exit_code, exception = await self.transport.close()
+        elapsed = time.monotonic() - start
+        self.assertLess(elapsed, 1.0)
+        self.assertIsNotNone(exit_code)
+        self.assertNotEqual(exit_code, 0)  # should have been killed, so status should not be 0
+        self.assertIsNone(exception)
+        self.assertIsNone(self.transport._process)
         self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)

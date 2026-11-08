@@ -70,6 +70,17 @@ class LinkedEditingTestCaseBase(TextDocumentTestCase):
 
         sublime.set_timeout(run)
 
+    def left_delete(self) -> None:
+        """Delete like a key binding does, which makes the listener see the command after it ran."""
+        listener = self.ensure_document_listener_created()
+        assert listener
+
+        def run() -> None:
+            self.view.run_command("left_delete")
+            listener.on_post_text_command("left_delete", None)
+
+        sublime.set_timeout(run)
+
 
 class LinkedEditingTestCase(LinkedEditingTestCaseBase):
 
@@ -226,8 +237,6 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
     async def insert_tags(self) -> None:
         self.insert_characters(TAGS)
         await self.await_message("textDocument/didChange")
-        # The edit moves the caret, which requests the ranges at the end of the tags.
-        await self.await_message("textDocument/linkedEditingRange")
 
     async def test_request_on_selection_change(self) -> None:
         await self.insert_tags()
@@ -310,12 +319,13 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         self.insert_characters(" ")
         await self.wait_for_text("<div ></div>")
         await self.wait_until(lambda: not linked_editing.is_active())
-        # The ranges may be requested after the space too, depending on whether linked editing stopped by then.
-        await self.mock_responses([("textDocument/linkedEditingRange", TAG_RANGES)] * 2)
-        self.view.run_command("left_delete")
+        await self.mock_response("textDocument/linkedEditingRange", TAG_RANGES)
+        self.left_delete()
         await self.wait_for_text(TAGS)
+        params = await self.await_message("textDocument/linkedEditingRange")
+        self.assertEqual(params["position"], {"line": 0, "character": 4})
         await self.wait_until(linked_editing.is_active)
-        self.view.run_command("left_delete")
+        self.left_delete()
         await self.wait_for_text("<di></di>")
 
 

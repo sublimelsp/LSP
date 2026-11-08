@@ -781,8 +781,8 @@ class ClientConfig:
     file types it applies to, transport options, and LSP-level options such as initialization options and capability
     overrides.
 
-    All root configuration keys from corresponding server configuration (for example the backing LSP-*.sublime-settings
-    file) are accessible through attribute access (`.foo`).
+    Root configuration keys from the corresponding server configuration (for example the backing LSP-*.sublime-settings
+    file) that don't have a dedicated property are accessible through `root_settings`.
     """
 
     CONFIG_KEYS: Final[set[str]] = {
@@ -906,12 +906,6 @@ class ClientConfig:
         else:
             self._custom_config_keys = {}
         self._view_status_handler = default_status_view_handler
-
-    def __getattr__(self, name: str, /) -> Any:
-        """Get property through attribute access (`.foo`) for properties that don't exist natively."""
-        if name in self._custom_config_keys:
-            return self._custom_config_keys[name]
-        raise AttributeError(name)
 
     @property
     def root_settings(self) -> dict[str, Any]:

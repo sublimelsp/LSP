@@ -180,13 +180,15 @@ def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItem
 async def query_completions(
     view: sublime.View, location: int, triggered_manually: bool, sessions: list[Session]
 ) -> tuple[list[sublime.CompletionItem], sublime.AutoCompleteFlags]:
-    position = text_document_position_params(view, location)
-    return _resolve_completions_async(
+    return _resolve_completions(
         view,
         triggered_manually,
         zip(
             await asyncio.gather(
-                *(session.request(Request.complete({**position}, view)) for session in sessions),
+                *(
+                    session.request(Request.complete({**text_document_position_params(view, location)}, view))
+                    for session in sessions
+                ),
                 return_exceptions=True,
             ),
             sessions,
@@ -194,10 +196,8 @@ async def query_completions(
     )
 
 
-def _resolve_completions_async(
-    view: sublime.View,
-    triggered_manually: bool,
-    responses: Iterator[ResolvedCompletions]
+def _resolve_completions(
+    view: sublime.View, triggered_manually: bool, responses: Iterator[ResolvedCompletions]
 ) -> tuple[list[sublime.CompletionItem], sublime.AutoCompleteFlags]:
     LspSelectCompletionCommand.completions = {}
     items: list[sublime.CompletionItem] = []
@@ -210,6 +210,8 @@ def _resolve_completions_async(
         item_defaults: CompletionItemDefaults = {}
         response_items: list[CompletionItem] = []
         if isinstance(response, BaseException):
+            if not isinstance(response, asyncio.CancelledError):
+                errors.append(response)
             continue
         if isinstance(response, dict):
             response_items = response["items"] or []

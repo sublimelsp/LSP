@@ -13,6 +13,13 @@
       "minimumReleaseAge": "3 days"
     },
     {
+      "description": "Lock file maintenance has no release timestamp, so skip the release age check",
+      "matchUpdateTypes": [
+        "lockFileMaintenance"
+      ],
+      "minimumReleaseAge": null
+    },
+    {
       "description": "Automerge zensical",
       "matchCategories": [
         "python"

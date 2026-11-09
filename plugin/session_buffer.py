@@ -709,11 +709,12 @@ class SessionBuffer(TaskContainer):
     ) -> None:
         if version == self._diagnostics_versions.get(identifier, -1) and not forced_update:
             return
-        if pending := self._document_diagnostic_pending_requests.get(identifier):
+        # Canceling yields to the event loop, so a concurrent task may have started a new request in the meanwhile.
+        while pending := self._document_diagnostic_pending_requests.get(identifier):
             if pending.version == version and not forced_update:
                 return
-            if not pending.request.cancelled:
-                await pending.request.cancel()
+            self._document_diagnostic_pending_requests[identifier] = None
+            await pending.request.cancel()
         try:
             params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
         except MissingUriError:

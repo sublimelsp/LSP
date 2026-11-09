@@ -20,13 +20,15 @@ import sys
 if TYPE_CHECKING:
     from .promise import ResolveFunc
     from contextvars import Context
-    from sublime_aio import T
-    from sublime_aio import Ts
+    from typing import TypeVar
     from typing_extensions import ParamSpec
+    from typing_extensions import TypeVarTuple
     from typing_extensions import Unpack
     import concurrent.futures
 
     P = ParamSpec("P")
+    T = TypeVar("T")
+    Ts = TypeVarTuple("Ts")
 
 
 if sys.version_info >= (3, 11, 0):
@@ -195,12 +197,27 @@ class TaskContainer:
                 f"(MRO: {type(self).__mro__})",
             )
 
-    async def cancel_all_tasks(self) -> list[Exception]:
-        """Cancel all running tasks."""
-        tasks = list(self._tasks)
-        for task in tasks:
-            task.cancel()
+    def is_current_task_in_task_container(self) -> bool:
+        """Whether the current task is inside this task container. Only safe to call from the asyncio thread."""
+        return asyncio.current_task() in self._tasks
 
+    async def cancel_all_tasks(self) -> list[Exception]:
+        """
+        Cancel all running tasks.
+
+        :raises RuntimeError: when this method is called from one of the container's own tasks. Doing so is a contract
+        violation.
+        """
+        if asyncio.current_task() in self._tasks:
+            raise RuntimeError(
+                "TaskContainer.cancel_all_tasks() must not be called from one of the container's own tasks"
+            )
+        for task in self._tasks:
+            task.cancel()
+        if not self._tasks:
+            # A micro optimization: asyncio.gather starts lazily (as do all newly scheduled tasks) so this eager return
+            # helps a coroutine that awaits this method to skip suspension.
+            return []
         return [x for x in await asyncio.gather(*self._tasks, return_exceptions=True) if isinstance(x, Exception)]
 
     def create_task(self, coro: Coroutine[object, object, object], name: str | None = None) -> asyncio.Task:

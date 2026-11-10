@@ -1,55 +1,83 @@
 from __future__ import annotations
 
-from .core.panels import show_quick_panel
-from .core.registry import LspWindowCommand
+from .core.aio import run_on_asyncio_thread
+from .core.registry import windows
 from .core.settings import client_configs
+from functools import partial
+from typing import TYPE_CHECKING
+import sublime_plugin
+
+if TYPE_CHECKING:
+    from .core.windows import WindowManager
 
 
-class LspEnableLanguageServerGloballyCommand(LspWindowCommand):
+class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
-    async def run(self) -> None:
-        items = [config.name for config in client_configs.all.values() if not config.enabled]
-        if not items:
+    def run(self) -> None:
+        self._items = [config.name for config in client_configs.all.values() if not config.enabled]
+        if len(self._items) > 0:
+            self.window.show_quick_panel(self._items, self._on_done)
+        else:
             self.window.status_message("No config available to enable")
-            return
-        if (index := await show_quick_panel(self.window, items)) != -1:
-            client_configs.enable(items[index])
+
+    def _on_done(self, index: int) -> None:
+        if index != -1:
+            config_name = self._items[index]
+            client_configs.enable(config_name)
 
 
-class LspEnableLanguageServerInProjectCommand(LspWindowCommand):
+class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
 
-    async def run(self) -> None:
-        wm = self.manager()
+    def run(self) -> None:
+        wm = windows.lookup(self.window)
         if not wm:
             return
-        items = [config.name for config in wm.get_config_manager().all.values() if not config.enabled]
-        if not items:
+        self._items = [config.name for config in wm.get_config_manager().all.values() if not config.enabled]
+        if len(self._items) > 0:
+            self.window.show_quick_panel(self._items, partial(self._on_done, wm))
+        else:
             self.window.status_message("No config available to enable")
+
+    def _on_done(self, wm: WindowManager, index: int) -> None:
+        if index == -1:
             return
-        if (index := await show_quick_panel(self.window, items)) != -1:
-            wm.enable_config_async(items[index])
+        config_name = self._items[index]
+        run_on_asyncio_thread(wm.enable_config_async, config_name)
 
 
-class LspDisableLanguageServerGloballyCommand(LspWindowCommand):
+class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
-    async def run(self) -> None:
-        items = [config.name for config in client_configs.all.values() if config.enabled]
-        if not items:
-            self.window.status_message("No config available to disable")
-            return
-        if (index := await show_quick_panel(self.window, items)) != -1:
-            client_configs.disable(items[index])
-
-
-class LspDisableLanguageServerInProjectCommand(LspWindowCommand):
-
-    async def run(self) -> None:
-        wm = self.manager()
+    def run(self) -> None:
+        wm = windows.lookup(self.window)
         if not wm:
             return
-        items = [config.name for config in wm.get_config_manager().all.values() if config.enabled]
-        if not items:
+        self._items = [config.name for config in client_configs.all.values() if config.enabled]
+        if len(self._items) > 0:
+            self.window.show_quick_panel(self._items, self._on_done)
+        else:
             self.window.status_message("No config available to disable")
+
+    def _on_done(self, index: int) -> None:
+        if index == -1:
             return
-        if (index := await show_quick_panel(self.window, items)) != -1:
-            wm.disable_config_async(items[index])
+        config_name = self._items[index]
+        client_configs.disable(config_name)
+
+
+class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
+
+    def run(self) -> None:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return
+        self._items = [config.name for config in wm.get_config_manager().all.values() if config.enabled]
+        if len(self._items) > 0:
+            self.window.show_quick_panel(self._items, partial(self._on_done, wm))
+        else:
+            self.window.status_message("No config available to disable")
+
+    def _on_done(self, wm: WindowManager, index: int) -> None:
+        if index == -1:
+            return
+        config_name = self._items[index]
+        run_on_asyncio_thread(wm.disable_config_async, config_name)

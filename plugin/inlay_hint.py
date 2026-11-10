@@ -38,7 +38,7 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
         if settings is not None:
             return settings.show_inlay_hints
         if ST_VERSION >= 4171:  # All API functions are available at import time
-            return sublime.load_settings('LSP.sublime-settings').get('show_inlay_hints')
+            return bool(sublime.load_settings('LSP.sublime-settings').get('show_inlay_hints'))
         return False
 
     async def run(self, enable: bool | None = None) -> None:

@@ -167,7 +167,7 @@ class LspGotoDiagnosticCommand(LspWindowCommand):
         sessions = list(self.sessions())
         if (uri := args.get('uri')) and uri != "$view_uri":  # for backwards compatibility with previous command args
             return DiagnosticUriInputHandler(self.window, view, sessions, max_severity, uri)
-        if (uri := view.settings().get('lsp_uri')) and self._has_diagnostics(uri, max_severity):
+        if isinstance(uri := view.settings().get('lsp_uri'), str) and uri and self._has_diagnostics(uri, max_severity):
             return DiagnosticUriInputHandler(self.window, view, sessions, max_severity, uri)
         return DiagnosticUriInputHandler(self.window, view, sessions, max_severity)
 

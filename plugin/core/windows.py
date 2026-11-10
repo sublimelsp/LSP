@@ -62,6 +62,7 @@ from http import HTTPStatus
 from subprocess import CalledProcessError
 from time import perf_counter
 from typing import Any
+from typing import cast
 from typing import Generator
 from typing import TYPE_CHECKING
 from typing_extensions import override
@@ -297,7 +298,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                             raise PluginStartError(cannot_start_reason)
                         if new_cwd := plugin_class.on_pre_start(self._window, listener.view, workspace_folders, config):
                             cwd = new_cwd
-                config.set_view_status(listener.view, "starting...")
+                status = "starting..." if config.tcp_port is None else "waiting for connection..."
+                config.set_view_status(listener.view, status)
                 session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
                 transport = await config.create_transport_config().start(
                     config.command, config.env, cwd, variables, session)
@@ -417,7 +419,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return "matches a pattern in file_exclude_patterns"
         patterns = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=True)
-            for pattern in settings.get("folder_exclude_patterns")
+            for pattern in cast("list[str]", settings.get("folder_exclude_patterns"))
         ]
         if matches_pattern(path, patterns):
             return "matches a pattern in folder_exclude_patterns"

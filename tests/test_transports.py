@@ -149,6 +149,9 @@ class TransportTestCase(TransportTestCaseBase):
         self.assertNotEqual(exit_code, 0)
         self.assertIsNone(self.transport._process)
         self.assertIsNone(exception)
+        # The transport never ran, so there is nothing to report.
+        await asyncio.sleep(0.1)
+        self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 0)
 
     async def test_closing_prematurely(self) -> None:
         self.transport.start()
@@ -162,6 +165,7 @@ class TransportTestCase(TransportTestCaseBase):
         await self.transport.send({"jsonrpc": "2.0", "id": 1, "method": "shutdown"})
         await self.callbacks.responses.get()
         exit_code1, exception1 = await self.transport.close()
+        await self.callbacks.close_event.wait()
         self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)
         self.assertEqual(exit_code1, 0)
         self.assertIsNone(exception1)
@@ -193,9 +197,11 @@ class TransportTestCase(TransportTestCaseBase):
         await asyncio.sleep(0.1)
         event.set()
         await closers_future
+        await self.callbacks.close_event.wait()
         self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)
         self.assertIsNone(self.callbacks.exception)
-        self.assertIsNotNone(self.callbacks.exit_code)
+        # the fake server returns 1 when the shutdown request wasn't sent.
+        self.assertEqual(self.callbacks.exit_code, 1)
 
     async def test_process_dies_unexpectedly(self) -> None:
         self.transport.start()
@@ -253,27 +259,27 @@ class TransportTestCase(TransportTestCaseBase):
         self.assertIsNone(self.callbacks.exception)
         self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)
 
-    async def test_closing_inside_payload_handler_raises_runtime_error(self) -> None:
+    async def test_closing_inside_payload_handler_cancels_the_handler(self) -> None:
         transport = self.transport
-        runtime_error_was_raised = False
+        handler_was_cancelled = False
         received_payload: JSONRPCMessage | None = None
 
-        async def bad_on_paylod_handler(payload: JSONRPCMessage) -> None:
+        async def closing_on_payload_handler(payload: JSONRPCMessage) -> None:
             nonlocal received_payload
             received_payload = payload
             try:
-                # Closing the transport inside of an on_payload handler is a contract violation.
                 await transport.close()
-            except RuntimeError:
-                # The contract violation surfaces as a RuntimeError.
-                nonlocal runtime_error_was_raised
-                runtime_error_was_raised = True
+            except asyncio.CancelledError:
+                # The teardown cancels all payload handlers, including this one.
+                nonlocal handler_was_cancelled
+                handler_was_cancelled = True
+                raise
 
-        with patch.object(self.callbacks, "on_payload", bad_on_paylod_handler):
+        with patch.object(self.callbacks, "on_payload", closing_on_payload_handler):
             self.transport.start()
             await self.transport.send({"jsonrpc": "2.0", "id": 1, "method": "shutdown"})
             await self.callbacks.close_event.wait()
-        self.assertTrue(runtime_error_was_raised)
+        self.assertTrue(handler_was_cancelled)
         self.assertEqual(received_payload, {"jsonrpc": "2.0", "id": 1, "result": None})
         self.assertEqual(self.callbacks.exit_code, 0)
         self.assertIsNone(self.callbacks.exception)
@@ -285,22 +291,26 @@ class TransportWithSlowProcessShutdownTestCase(TransportTestCaseBase):
     def extra_server_command_args(self) -> list[str] | None:
         return ["--sleep-ms-after-exit", "3000"]
 
-    async def test_closing_is_atomic(self) -> None:
+    async def test_cancelled_close_still_releases_resources(self) -> None:
         self.transport.start()
         await self.transport.send({"jsonrpc": "2.0", "method": "exit"})
-        close_task = asyncio.create_task(self.transport.close())
-        # Sleep for 500ms, to let the fake server enter the asyncio.sleep, and to let the close() coroutine wait
-        # for the process to finish.
-        await asyncio.sleep(0.5)
+        # The fake server would take 3 seconds to exit. Kill it after 1 second instead, to stay within the test timeout.
+        with patch('LSP.plugin.core.transports.PROCESS_SHUTDOWN_TIMEOUT', 1.0):
+            close_task = asyncio.create_task(self.transport.close())
+            # Sleep for 500ms, to let the fake server enter the asyncio.sleep, and to let the close() coroutine wait
+            # for the process to finish.
+            await asyncio.sleep(0.5)
         # We should be awaiting the graceful process shutdown at this point. The fake server is sleeping for 500ms
         # (and would still keep sleeping for another 2500ms).
         # Now pretend something cancels the close() coroutine.
         self.assertFalse(close_task.done())
         close_task.cancel()
-        # Wait for the close() coroutine to finish. It should communicate that cancellation back up the call chain.
+        # The cancellation reaches the caller right away.
         with self.assertRaises(asyncio.CancelledError):
             await close_task
-        # Regardless of cancellation of the close() coroutine, resources should still have been cleaned up.
+        # Regardless of cancellation of the close() coroutine, the teardown still runs to completion.
+        await self.callbacks.close_event.wait()
+        self.assertNotEqual(self.callbacks.exit_code, 0)  # killed by the shutdown timeout
         self.assertIsNone(self.transport._process)
         self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)
         self.assertEqual(len(self.transport._tasks), 0)
@@ -320,4 +330,5 @@ class TransportWithSlowProcessShutdownTestCase(TransportTestCaseBase):
         self.assertNotEqual(exit_code, 0)  # should have been killed, so status should not be 0
         self.assertIsNone(exception)
         self.assertIsNone(self.transport._process)
+        await self.callbacks.close_event.wait()
         self.assertEqual(self.callbacks.number_of_transport_close_callbacks, 1)

@@ -1149,6 +1149,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
         self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, RequestController | None] = {}
         self.exiting = False
+        # Whether `end()` was called, so the server stopping afterwards is not a crash.
+        self.end_requested = False
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0
         self._variables: dict[str, str] = {}
@@ -2631,6 +2633,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if self.exiting:
             return
         self.exiting = True
+        self.end_requested = True
         if self._plugin:
             self._plugin.on_session_end_async(None, None)
             self._plugin = None

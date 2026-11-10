@@ -453,7 +453,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
             if session := self.session_by_name(config_name):
                 response = await session.run_code_action(action, progress=True, view=self.view)
                 if isinstance(response, Error):
-                    sublime.error_message(f"{config_name}: {response}")
+                    await sublime_aio.error_message(f"{config_name}: {response}")
 
     def _is_cache_valid(self, event: dict | None) -> bool:
         view = self.view

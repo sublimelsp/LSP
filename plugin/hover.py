@@ -22,6 +22,7 @@ from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
+from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.settings import userprefs
 from .core.type_converters import range_to_region
@@ -349,7 +350,7 @@ class LspHoverCommand(LspTextCommand):
                 return
 
 
-class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
+class LspToggleHoverPopupsCommand(LspWindowCommand):
 
     def is_enabled(self) -> bool:
         if view := self.window.active_view():
@@ -359,7 +360,7 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
     def is_checked(self) -> bool:
         return bool(self.window.settings().get(HOVER_ENABLED_KEY, True))
 
-    def run(self) -> None:
+    async def run(self) -> None:
         enable = not self.is_checked()
         self.window.settings().set(HOVER_ENABLED_KEY, enable)
         if window_manager := windows.lookup(self.window):

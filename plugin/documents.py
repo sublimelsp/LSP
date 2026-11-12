@@ -16,7 +16,7 @@ from ..protocol import SignatureHelpParams
 from ..protocol import SignatureHelpTriggerKind
 from .code_actions import filter_quickfix_actions
 from .code_lens import LspToggleCodeLensesCommand
-from .completion import QueryCompletionsTask
+from .completion import query_completions
 from .core.aio import gather_and_flatten_exceptions
 from .core.aio import get_clipboard
 from .core.aio import run_coroutine
@@ -264,7 +264,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             self._language_id = ""
         self._manager: WindowManager | None = None
         self._session_views: dict[str, SessionView] = {}
-        self._current_color_scheme: str = self.view.settings().get('color_scheme')
+        self._current_color_scheme = cast('str', self.view.settings().get('color_scheme'))
         self._update_styles()
         self._stored_selection = []
         self._sighelp: SigHelp | None = None
@@ -276,7 +276,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if self._closed:
             return
         settings = self.view.settings()
-        triggers: list[dict[str, str]] = settings.get("auto_complete_triggers") or []
+        triggers = cast('list[dict[str, str]]', settings.get("auto_complete_triggers") or [])
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
         settings.set("auto_complete_triggers", triggers)
         self._stored_selection = []
@@ -753,9 +753,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if not sessions or not self.view.is_valid():
             return clist
         await self.purge_changes()
-        clist.set_completions(
-            *await QueryCompletionsTask(self.view, locations[0], triggered_manually).query_completions(sessions)
-        )
+        clist.set_completions(*await query_completions(self.view, locations[0], triggered_manually, sessions))
         return clist
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
@@ -1257,7 +1255,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if something_changed:
             self._reset()
             return
-        if (color_scheme := settings.get('color_scheme')) != self._current_color_scheme:
+        if (color_scheme := cast('str', settings.get('color_scheme'))) != self._current_color_scheme:
             self._current_color_scheme = color_scheme
             self._update_styles()
             for session_buffer in self.session_buffers_async():

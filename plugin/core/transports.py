@@ -374,6 +374,14 @@ class Transport(TaskContainer):
         """
         return self._process_args
 
+    @property
+    def reader(self) -> asyncio.StreamReader:
+        return self._reader
+
+    @property
+    def writer(self) -> asyncio.StreamWriter:
+        return self._writer
+
     async def send(self, payload: JSONRPCMessage) -> None:
         """Write a JSON-RPC message. Messages sent after `close()` are dropped."""
         if self._task is None:
@@ -588,11 +596,19 @@ async def kill_all_subprocesses() -> None:
     await asyncio.gather(*[p.wait() for p in subprocesses], return_exceptions=True)
 
 
-async def _kill_process(process: asyncio.subprocess.Process) -> None:
-    with contextlib.suppress(ProcessLookupError):  # The process might have exited already.
-        process.kill()
-    # Wait for the process to die, or zombie processes might be the result.
-    await process.wait()
+async def _kill_process(process: asyncio.subprocess.Process) -> int | None:
+    try:
+        # Wait for the process to die, or zombie processes might be the result.
+        wait_task = asyncio.create_task(process.wait())
+        with contextlib.suppress(ProcessLookupError):  # The process might have exited already.
+            process.kill()
+            return await asyncio.shield(wait_task)  # ignore cancellations of the wait
+    except asyncio.CancelledError:
+        # asyncio.shield shields the task, but not this coroutine itself
+        pass
+    except Exception as ex:
+        exception_log("strange exception during process kill", ex)
+    return None
 
 
 def _fixup_startup_args(args: list[str]) -> Any:

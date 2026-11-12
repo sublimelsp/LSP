@@ -1398,6 +1398,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         try:
             return await self._initialize_impl(variables, working_directory, transport)
         except:
+            self.end_requested = True
             await transport.close()
             raise
 

@@ -191,7 +191,7 @@ def get_file_lines(window: sublime.Window, file_name: str, rows: Iterable[int], 
 
 
 def extract_variables(window: sublime.Window) -> dict[str, str]:
-    variables = window.extract_variables()
+    variables = cast('dict[str, str]', window.extract_variables())
     variables["storage_path"] = ST_STORAGE_PATH
     variables["cache_path"] = ST_CACHE_PATH
     variables["temp_dir"] = tempfile.gettempdir()
@@ -432,15 +432,15 @@ def formatting_options(settings: sublime.Settings) -> FormattingOptions:
     trim_trailing_white_space = settings.get("trim_trailing_white_space_on_save") not in {False, None, "none"}
     return {
         # Size of a tab in spaces.
-        "tabSize": settings.get("tab_size", 4),
+        "tabSize": cast("int", settings.get("tab_size", 4)),
         # Prefer spaces over tabs.
-        "insertSpaces": settings.get("translate_tabs_to_spaces", False),
+        "insertSpaces": bool(settings.get("translate_tabs_to_spaces", False)),
         # Trim trailing whitespace on a line. (since 3.15)
         "trimTrailingWhitespace": trim_trailing_white_space,
         # Insert a newline character at the end of the file if one does not exist. (since 3.15)
-        "insertFinalNewline": settings.get("ensure_newline_at_eof_on_save", False),
+        "insertFinalNewline": bool(settings.get("ensure_newline_at_eof_on_save", False)),
         # Trim all newlines after the final newline at the end of the file. (sine 3.15)
-        "trimFinalNewlines": settings.get("ensure_newline_at_eof_on_save", False)
+        "trimFinalNewlines": bool(settings.get("ensure_newline_at_eof_on_save", False))
     }
 
 

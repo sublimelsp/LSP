@@ -62,6 +62,7 @@ from http import HTTPStatus
 from subprocess import CalledProcessError
 from time import perf_counter
 from typing import Any
+from typing import cast
 from typing import Generator
 from typing import TYPE_CHECKING
 from typing_extensions import override
@@ -418,7 +419,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return "matches a pattern in file_exclude_patterns"
         patterns = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=True)
-            for pattern in settings.get("folder_exclude_patterns")
+            for pattern in cast("list[str]", settings.get("folder_exclude_patterns"))
         ]
         if matches_pattern(path, patterns):
             return "matches a pattern in folder_exclude_patterns"
@@ -436,7 +437,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 *(listener.on_session_shutdown(session) for listener in self._listeners)
             ),
         )
-        if exit_code != 0 or exception:
+        # After `Session.end()` the server was asked to stop, so a kill or an error exit code is not a crash.
+        if not session.end_requested and (exit_code != 0 or exception):
             config = session.config
             restart = self._config_manager.record_crash(config.name, exit_code, exception)
             if not restart:

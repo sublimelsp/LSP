@@ -61,31 +61,40 @@ def get_position(view: sublime.View, event: dict | None = None, point: int | Non
         return None
 
 
-def _bind_coroutine_command(
-    command: sublime_plugin.Command,
-    args: dict[str, Any] | None,
-    window: sublime.Window | None,
-    can_accept_input: Callable[[], bool],
-) -> Coroutine[Any, Any, None] | None:
-    """
-    Bind the given arguments to the `async def run` method of a command, without running it yet.
+class AsyncCommandMixin:
+    # Only applies when `run` is a coroutine function. When this is True in a derived class, invoking the command while
+    # a previous invocation is still running cancels the previous invocation.
+    cancel_previous_run: ClassVar[bool] = False
 
-    If required arguments are missing and the command can accept input, the input overlay of the command palette is
-    shown instead and None is returned.
-    """
-    run = cast('Callable[..., Coroutine[Any, Any, None]]', command.run)
-    try:
-        # Calling a coroutine function only binds the arguments and does not execute its body yet. So a TypeError raised
-        # here can only originate from missing or unexpected arguments.
-        return run(**args) if args else run()
-    except TypeError as e:
-        if 'required positional argument' in str(e) and window and can_accept_input():
-            window.run_command('show_overlay', {'overlay': 'command_palette', 'command': command.name(), 'args': args})
-            return None
-        raise
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self._run_future: concurrent.futures.Future[None] | None = None
+
+    def _async_run(
+        self,
+        args: dict[str, Any] | None,
+        command: sublime_plugin.Command,
+        window: sublime.Window,
+        can_accept_input: Callable[[], bool],
+    ) -> None:
+        run = cast('Callable[..., Coroutine[Any, Any, None]]', command.run)
+        try:
+            # Calling a coroutine function only binds the arguments and does not execute its body yet. So a TypeError
+            # raised here can only originate from missing or unexpected arguments.
+            coro = run(**args) if args else run()
+        except TypeError as e:
+            if 'required positional argument' in str(e) and window and can_accept_input():
+                window.run_command(
+                    'show_overlay', {'overlay': 'command_palette', 'command': command.name(), 'args': args}
+                )
+                return
+            raise
+        if self.cancel_previous_run and self._run_future:
+            # Cancelling the concurrent future also cancels the underlying asyncio task.
+            self._run_future.cancel()
+        self._run_future = run_coroutine(coro)
 
 
-class LspWindowCommand(sublime_plugin.WindowCommand):
+class LspWindowCommand(sublime_plugin.WindowCommand, AsyncCommandMixin):
     """
     Inherit from this class to define requests which are not bound to a particular view. This allows to run requests
     for example from links in HtmlSheets or when an unrelated file has focus.
@@ -106,13 +115,8 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
     # name attached to a view in the window.
     session_name: str = ''
 
-    # Only applies when `run` is a coroutine function. When this is True in a derived class, invoking the command while
-    # a previous invocation is still running cancels the previous invocation.
-    cancel_previous_run: ClassVar[bool] = False
-
     def __init__(self, window: sublime.Window) -> None:
         super().__init__(window)
-        self._run_future: concurrent.futures.Future[None] | None = None
         if not self.session_name:
             # Auto-detect session_name based on package name. In case of the LSP package use empty string.
             package_name = self.__module__.split('.')[0]
@@ -124,15 +128,9 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             super().run_(edit_token, args)  # pyright: ignore[reportAttributeAccessIssue]
             return
         args = self.filter_args(args)  # pyright: ignore[reportAttributeAccessIssue]
-        coro = _bind_coroutine_command(
-            self, args, self.window,
-            lambda: sublime_api.window_can_accept_input(self.window.id(), self.name(), args))
-        if coro is None:
-            return
-        if self.cancel_previous_run and self._run_future and not self._run_future.done():
-            # Cancelling the concurrent future also cancels the underlying asyncio task.
-            self._run_future.cancel()
-        self._run_future = run_coroutine(coro)
+        self._async_run(
+            args, self, self.window, lambda: sublime_api.window_can_accept_input(self.window.id(), self.name(), args)
+        )
 
     def is_enabled(self) -> bool:
         return self.session() is not None
@@ -175,7 +173,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         return windows.lookup(self.window)
 
 
-class LspTextCommand(sublime_plugin.TextCommand):
+class LspTextCommand(sublime_plugin.TextCommand, AsyncCommandMixin):
     """
     Inherit from this class to define your requests that should be triggered via the command palette and/or a
     keybinding.
@@ -196,10 +194,6 @@ class LspTextCommand(sublime_plugin.TextCommand):
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
     # name attached to the active view. By default it will default to the name of the pacakge it's defined in.
     session_name: str = ''
-
-    # Only applies when `run` is a coroutine function. When this is True in a derived class, invoking the command while
-    # a previous invocation is still running cancels the previous invocation.
-    cancel_previous_run: ClassVar[bool] = False
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -223,15 +217,10 @@ class LspTextCommand(sublime_plugin.TextCommand):
             super().run_(edit_token, args)  # pyright: ignore[reportAttributeAccessIssue]
             return
         args = self.filter_args(args)  # pyright: ignore[reportAttributeAccessIssue]
-        coro = _bind_coroutine_command(
-            self, args, self.view.window(),
-            lambda: sublime_api.view_can_accept_input(self.view.id(), self.name(), args))
-        if coro is None:
-            return
-        if self.cancel_previous_run and self._run_future and not self._run_future.done():
-            # Cancelling the concurrent future also cancels the underlying asyncio task.
-            self._run_future.cancel()
-        self._run_future = run_coroutine(coro)
+        if window := self.view.window():
+            self._async_run(
+                args, self, window, lambda: sublime_api.view_can_accept_input(self.view.id(), self.name(), args)
+            )
 
     def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if self.capability:

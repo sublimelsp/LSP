@@ -10,7 +10,6 @@ from ..protocol import TypeHierarchyItem
 from ..protocol import TypeHierarchyPrepareParams
 from .core.constants import SYMBOL_KINDS
 from .core.paths import simple_path
-from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import get_position
@@ -28,10 +27,12 @@ from typing import Callable
 from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import Union
+from typing_extensions import override
 import sublime
 import weakref
 
 if TYPE_CHECKING:
+    from .core.promise import Promise
     from .core.sessions import Session
 
 HierarchyItem = Union[CallHierarchyItem, TypeHierarchyItem]
@@ -58,12 +59,19 @@ class HierarchyDataProvider(TreeDataProvider):
         session = self.weaksession()
         self.session_name = session.config.name if session else None
 
+    @override
     def get_children(self, element: HierarchyItemWrapper | None) -> Promise[list[HierarchyItemWrapper]]:
-        if element is None:
-            return Promise.resolve(self.root_elements)
+        raise NotImplementedError
+
+    @override
+    async def roots(self) -> list[HierarchyItemWrapper]:
+        return self.root_elements
+
+    @override
+    async def children(self, element: HierarchyItemWrapper) -> list[HierarchyItemWrapper]:
         if session := self.weaksession():
-            return session.send_request_task(self.request({'item': element['item']})).then(self.request_handler)
-        return Promise.resolve([])
+            return self.request_handler(session.request(self.request({'item': element['item']})))
+        return []
 
     def get_tree_item(self, element: HierarchyItemWrapper) -> TreeItem:
         item = element['item']
@@ -180,13 +188,13 @@ class LspHierarchyCommand(LspTextCommand, ABC):
         elements = [to_hierarchy_data(item) for item in response]
         header = make_header(session.config.name, sheet_name, 1, elements)
         data_provider = make_data_provider(weakref.ref(session), sheet_name, 1, elements)
-        new_tree_view_sheet(window, sheet_name, data_provider, header)
+        await new_tree_view_sheet(window, sheet_name, data_provider, header)
         open_first(window, session.config.name, elements)
 
 
 class LspHierarchyToggleCommand(LspWindowCommand):
 
-    def run(
+    async def run(
         self, session_name: str, sheet_name: str, direction: int, root_elements: list[HierarchyItemWrapper]
     ) -> None:
         session = self.session_by_name(session_name)
@@ -194,7 +202,7 @@ class LspHierarchyToggleCommand(LspWindowCommand):
             return
         header = make_header(session_name, sheet_name, direction, root_elements)
         data_provider = make_data_provider(weakref.ref(session), sheet_name, direction, root_elements)
-        new_tree_view_sheet(self.window, sheet_name, data_provider, header)
+        await new_tree_view_sheet(self.window, sheet_name, data_provider, header)
         open_first(self.window, session.config.name, root_elements)
 
 

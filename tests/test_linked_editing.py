@@ -7,6 +7,7 @@ from LSP.plugin.core.aio import tick
 from LSP.plugin.core.constants import RegionKey
 from LSP.plugin.core.settings import userprefs
 from typing import Any
+from typing import Callable
 from typing import TYPE_CHECKING
 from typing_extensions import override
 import sublime
@@ -55,6 +56,18 @@ class LinkedEditingTestCaseBase(TextDocumentTestCase):
         await self.await_message("textDocument/linkedEditingRange")
         if expect_active:
             await self.wait_until(self.linked_editing.is_active)
+
+    async def activate_after_edit(self, point: int, edit: Callable[[], None]) -> None:
+        """Request the ranges at the point, and make edits before the response is handled."""
+        self.insert_characters(TAGS)
+        await self.await_message("textDocument/didChange")
+        self.set_cursor(point)
+        await self.mock_response("textDocument/linkedEditingRange", TAG_RANGES)
+        self.linked_editing = self.get_linked_editing()
+        version = self.view.change_count()
+        edit()
+        await self.linked_editing.request(self.session, point, version)
+        await self.await_message("textDocument/linkedEditingRange")
 
     async def wait_for_text(self, expected: str) -> None:
         await self.wait_until(lambda: self.text() == expected)
@@ -105,6 +118,51 @@ class LinkedEditingTestCase(LinkedEditingTestCaseBase):
         self.assertEqual(self.linked_editing.ranges, (sublime.Region(1, 6), sublime.Region(9, 14)))
         self.assertEqual(self.view.get_regions(RegionKey.LINKED_EDITING), [sublime.Region(1, 6), sublime.Region(9, 14)])
         self.assertEqual(list(self.view.sel()), [sublime.Region(6, 6)])
+
+    async def test_typing_before_response(self) -> None:
+        await self.activate_after_edit(4, lambda: self.insert_characters("x"))
+        await self.wait_for_text("<divx></divx>")
+        self.assertEqual(self.linked_editing.ranges, (sublime.Region(1, 5), sublime.Region(8, 12)))
+        self.insert_characters("y")
+        await self.wait_for_text("<divxy></divxy>")
+
+    async def test_typing_before_response_after_inserting_line(self) -> None:
+        def edit() -> None:
+            self.set_cursor(0)
+            self.insert_characters("\n")
+            self.set_cursor(5)
+            self.insert_characters("x")
+
+        await self.activate_after_edit(4, edit)
+        await self.wait_for_text("\n<divx></divx>")
+        self.assertEqual(self.linked_editing.ranges, (sublime.Region(2, 6), sublime.Region(9, 13)))
+
+    async def test_typing_space_before_response(self) -> None:
+        await self.activate_after_edit(4, lambda: self.insert_characters(" "))
+        self.assertEqual(self.text(), "<div ></div>")
+        self.assertFalse(self.linked_editing.is_active())
+
+    async def test_edit_overlapping_range_before_response(self) -> None:
+        def edit() -> None:
+            self.view.run_command("lsp_selection_set", {"regions": [(3, 6)]})
+            self.insert_characters("x")
+
+        await self.activate_after_edit(4, edit)
+        self.assertEqual(self.text(), "<dix/div>")
+        self.assertFalse(self.linked_editing.is_active())
+
+    async def test_undo_before_response(self) -> None:
+        listener = self.ensure_document_listener_created()
+        assert listener
+
+        def edit() -> None:
+            self.insert_characters("x")
+            listener.on_text_command("undo", None)
+            self.view.run_command("undo")
+
+        await self.activate_after_edit(4, edit)
+        self.assertEqual(self.text(), TAGS)
+        self.assertFalse(self.linked_editing.is_active())
 
     async def test_ranges_are_drawn(self) -> None:
         await self.activate(4)

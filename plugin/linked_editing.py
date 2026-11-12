@@ -8,9 +8,11 @@ from .core.logging import debug
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.settings import userprefs
-from .core.type_converters import range_to_region
 from .core.views import text_document_position_params
+from typing import Callable
 from typing import TYPE_CHECKING
+from typing import TypeVar
+import itertools
 import re
 import sublime
 import sublime_plugin
@@ -26,6 +28,53 @@ if TYPE_CHECKING:
 # for example typing a space after an HTML tag name ends linked editing instead of mirroring the space.
 DEFAULT_WORD_PATTERN = re.compile(r"[^\s<>/\\'\"`=(){}\[\],;]*")
 
+# The maximum number of recorded text changes, which are replayed when a response arrives after the view changed.
+MAX_RECORDED_CHANGES = 100
+
+# A position in the view, either an offset or a row and a UTF-16 column.
+P = TypeVar('P', int, 'tuple[int, int]')
+
+
+def track_change(ranges: list[tuple[P, P]], start: P, end: P, shift: Callable[[P], P], touched: set[int]) -> bool:
+    """
+    Update the ranges for a change that replaces the text from `start` to `end`.
+
+    :param      shift:    Maps a position at or after `end` to its position after the change.
+    :param      touched:  The indices of the ranges that the change is inside of are added to this set.
+
+    :returns:   `False` if the change partially overlaps a range.
+    """
+    for i, (a, b) in enumerate(ranges):
+        if end < a or (end == a and start < end):
+            # The change is before this range.
+            ranges[i] = (shift(a), shift(b))
+        elif start > b or (start == b and start < end):
+            # The change is after this range.
+            continue
+        elif a <= start and end <= b:
+            # The change is inside of this range. An insertion at a boundary of the range is considered to be inside,
+            # so that the range grows.
+            ranges[i] = (a, shift(b))
+            touched.add(i)
+        else:
+            return False
+    return True
+
+
+def rowcol_shift(change: sublime.TextChange) -> Callable[[tuple[int, int]], tuple[int, int]]:
+    """Return a function that maps a row and UTF-16 column at or after the end of the change to after the change."""
+    lines = change.str.split('\n')
+    end_row = change.a.row + len(lines) - 1
+    end_col = (change.a.col_utf16 if len(lines) == 1 else 0) + len(lines[-1].encode('utf-16-le')) // 2
+
+    def shift(position: tuple[int, int]) -> tuple[int, int]:
+        row, col = position
+        if row == change.b.row:
+            return (end_row, end_col + col - change.b.col_utf16)
+        return (row + end_row - change.b.row, col)
+
+    return shift
+
 
 class LinkedEditing:
     """
@@ -39,6 +88,11 @@ class LinkedEditing:
     groups are marked when linked editing starts, and glued when it stops, before an undo or redo, and before saving.
     This uses the undocumented built-in commands `mark_undo_groups_for_gluing`, `glue_marked_undo_groups` and
     `unmark_undo_groups_for_gluing`, which are also used by the Vintage package that ships with Sublime Text.
+
+    The text changes are recorded, so that a response that arrives after the user started typing can still be used.
+    The ranges of such a response are for the view before those changes, so the changes are replayed to find the
+    current ranges and the range that was edited, whose content is then mirrored into the other ranges. The edits made
+    before the response arrived are not glued into the undo group.
 
     Unless noted otherwise, the methods of this class must be called on the main thread.
     """
@@ -56,6 +110,10 @@ class LinkedEditing:
         self._selection: list[sublime.Region] = []
         # The request that is in flight, if any. Only used on the asyncio thread.
         self._pending_request: CancellableRequest[LinkedEditingRanges | None] | None = None
+        # The recent text changes with the change count of the view after them, and the change count of the view
+        # before the oldest recorded change.
+        self._recorded_changes: list[tuple[int, list[sublime.TextChange], ChangeEventAction]] = []
+        self._recorded_since = view.change_count()
 
     def is_active(self) -> bool:
         """Whether there are linked editing ranges. Safe to call from any thread."""
@@ -113,7 +171,7 @@ class LinkedEditing:
         Request the linked editing ranges at the given point. Must be called on the asyncio thread.
 
         :param      version:  The change count of the view before the pending changes were sent to the server. The
-                              response is ignored if the view changed since then.
+                              text changes made since then are replayed when the response arrives.
         """
         params: LinkedEditingRangeParams = {**text_document_position_params(self._view, point)}
         request = session.request(Request.linkedEditingRange(params, self._view))
@@ -129,30 +187,44 @@ class LinkedEditing:
         if isinstance(response, Error):
             debug("linkedEditingRange request failed:", response)
             response = None
-        await run_on_main_thread(self._on_response, version, point, response)
+        await run_on_main_thread(self._on_response, version, response)
 
-    def _on_response(self, version: int, point: int, response: LinkedEditingRanges | None) -> None:
+    def _on_response(self, version: int, response: LinkedEditingRanges | None) -> None:
         view = self._view
-        if not view.is_valid() or view.change_count() != version:
+        changes = self._changes_since(version)
+        if not view.is_valid() or not response or changes is None:
             return
         selection = view.sel()
-        if len(selection) != 1 or selection[0].b != point:
+        if len(selection) != 1:
             return
-        self.clear()
-        if not response:
+        ranges = sorted(
+            ((r['start']['line'], r['start']['character']), (r['end']['line'], r['end']['character']))
+            for r in response['ranges']
+        )
+        if len(ranges) < 2:
             return
-        regions = sorted((range_to_region(view, r) for r in response['ranges']), key=lambda r: r.begin())
-        if len(regions) < 2:
-            return
-        if any(prev.end() >= curr.begin() for prev, curr in zip(regions, regions[1:])):
+        if any(prev[1] >= curr[0] for prev, curr in zip(ranges, ranges[1:])):
             # Touching ranges are rejected too, because an insertion at their shared boundary would grow both ranges.
             debug("ignoring overlapping or touching linked editing ranges")
             return
-        if len({view.substr(r) for r in regions}) != 1:
+        # The ranges are for the view before the recorded changes. Replay the changes to find the current ranges.
+        touched: set[int] = set()
+        for change in changes:
+            start = (change.a.row, change.a.col_utf16)
+            end = (change.b.row, change.b.col_utf16)
+            if not track_change(ranges, start, end, rowcol_shift(change), touched):
+                return
+        if len(touched) > 1:
+            return
+        regions = [sublime.Region(view.text_point_utf16(*a, clamp_column=True),
+                                  view.text_point_utf16(*b, clamp_column=True)) for a, b in ranges]
+        # The content of an edited range is mirrored into the other ranges, which must have the same content.
+        if len({view.substr(r) for i, r in enumerate(regions) if i not in touched}) != 1:
             debug("ignoring linked editing ranges with different content")
             return
-        if not any(r.contains(point) for r in regions):
+        if not any(r.contains(selection[0].b) for r in regions):
             return
+        self.clear()
         self._word_pattern = DEFAULT_WORD_PATTERN
         if word_pattern := response.get('wordPattern'):
             try:
@@ -160,40 +232,51 @@ class LinkedEditing:
             except re.error as ex:
                 debug("cannot use word pattern", word_pattern, "for linked editing:", ex)
         self._ranges = tuple(regions)
-        self._touched.clear()
+        self._touched = touched
         self._draw()
         view.run_command("mark_undo_groups_for_gluing")
         self._selection = list(view.sel())
+        if touched and not self._sync_pending:
+            self._sync_pending = True
+            self._sync()
+
+    def _record(self, changes: list[sublime.TextChange], action: ChangeEventAction) -> None:
+        self._recorded_changes.append((self._view.change_count(), changes, action))
+        if len(self._recorded_changes) > MAX_RECORDED_CHANGES:
+            self._recorded_since = self._recorded_changes.pop(0)[0]
+
+    def _changes_since(self, version: int) -> list[sublime.TextChange] | None:
+        """
+        Return the text changes made since the view had the given change count, or `None` if they are not all
+        recorded or include an undo or redo.
+        """
+        if version < self._recorded_since:
+            return None
+        # Responses arrive in the order of their versions, so older changes are not needed anymore.
+        self._recorded_changes = [entry for entry in self._recorded_changes if entry[0] > version]
+        self._recorded_since = version
+        changes: list[sublime.TextChange] = []
+        for _, batch, action in self._recorded_changes:
+            if action in {ChangeEventAction.UNDO, ChangeEventAction.REDO}:
+                return None
+            changes.extend(batch)
+        return changes
 
     def on_text_changed(self, changes: list[sublime.TextChange], action: ChangeEventAction) -> None:
         """Update the linked editing ranges for the given changes and schedule mirroring of the edits."""
+        self._record(changes, action)
         if not self._ranges:
             return
         if action in {ChangeEventAction.UNDO, ChangeEventAction.REDO}:
             self.clear(glue=False)
             return
-        ranges = list(self._ranges)
+        ranges = [(r.a, r.b) for r in self._ranges]
         for change in changes:
-            start = change.a.pt
-            end = change.b.pt
-            delta = len(change.str) - (end - start)
-            for i, r in enumerate(ranges):
-                if end < r.a or (end == r.a and start < end):
-                    # The change is before this range.
-                    ranges[i] = sublime.Region(r.a + delta, r.b + delta)
-                elif start > r.b or (start == r.b and start < end):
-                    # The change is after this range.
-                    continue
-                elif r.a <= start and end <= r.b:
-                    # The change is inside of this range. An insertion at a boundary of the range is considered to be
-                    # inside, so that the range grows.
-                    ranges[i] = sublime.Region(r.a, r.b + delta)
-                    self._touched.add(i)
-                else:
-                    # The change partially overlaps this range.
-                    self.clear()
-                    return
-        self._ranges = tuple(ranges)
+            delta = len(change.str) - (change.b.pt - change.a.pt)
+            if not track_change(ranges, change.a.pt, change.b.pt, lambda p, d=delta: p + d, self._touched):
+                self.clear()
+                return
+        self._ranges = tuple(itertools.starmap(sublime.Region, ranges))
         self._selection = list(self._view.sel())
         self._draw()
         if not self._sync_pending:

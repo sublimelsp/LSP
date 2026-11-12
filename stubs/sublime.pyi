@@ -1347,7 +1347,7 @@ class Window:
         on_select: Callable[..., None],
         flags: QuickPanelFlags = ...,
         selected_index: int = ...,
-        on_highlight: Callable[..., None] = ...,
+        on_highlight: Callable[..., None] | None = ...,
         placeholder: str | None = ...
     ) -> None:
         """

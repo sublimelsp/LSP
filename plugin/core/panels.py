@@ -2,12 +2,18 @@ from __future__ import annotations
 
 from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
+from functools import partial
 from typing import Iterable
 from typing import Literal
 from typing import Optional
 from typing import Tuple
+from typing import TYPE_CHECKING
+import asyncio
 import html
 import sublime
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 LOG_LINES_LIMIT_SETTING_NAME = 'lsp_limit_lines'
 MAX_LOG_LINES_LIMIT_ON = 500
@@ -81,6 +87,47 @@ def buttons_html(buttons: Iterable[PanelButton]) -> str:
         "<a href='{}'{}>{}</a>".format(href, f" class='{style}'" if style else "", html.escape(label))
         for href, label, style in buttons
     ))
+
+
+def show_quick_panel(
+    window: sublime.Window,
+    items: list[str] | list[list[str]] | list[sublime.QuickPanelItem],
+    flags: sublime.QuickPanelFlags = sublime.QuickPanelFlags.NONE,
+    selected_index: int = -1,
+    on_highlight: Callable[[int], None] | None = None,
+    placeholder: str | None = None,
+) -> asyncio.Future[int]:
+    """
+    Show a quick panel to select an item in a list.
+
+    :param window: The window to use for the quick panel.
+    :param items: May be either a list of strings, or a list of lists of strings where the first item is the trigger and
+    all subsequent strings are details shown below.
+    :param flags: `QuickPanelFlags` controlling behavior. The ``WANT_EVENT`` bit is set to 0.
+    :param selected_index: The initially selected item. ``-1`` for no selection.
+    :param on_highlight: Called every time the highlighted item in the quick panel is changed.
+    :param placeholder: Text displayed in the filter input field before any query is typed.
+    :raises RuntimeError: when this function is not called from the asyncio thread.
+    """
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
+    # Clear the WANT_EVENT bit.
+    flags &= ~sublime.QuickPanelFlags.WANT_EVENT
+
+    def on_select(index: int) -> None:
+        if not future.cancelled():
+            future.set_result(index)
+
+    window.show_quick_panel(
+        items=items,
+        # See: https://github.com/sublimehq/sublime_text/issues/6920
+        on_select=partial(loop.call_soon_threadsafe, on_select),  # type: ignore
+        flags=flags,
+        selected_index=selected_index,
+        on_highlight=on_highlight,
+        placeholder=placeholder,
+    )
+    return future
 
 
 class PanelName:

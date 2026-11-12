@@ -872,7 +872,7 @@ class ItemDefaultTests(TestCase):
                 },
                 'replace': {
                     'start': {'character': 0, 'line': 0},
-                    'end': {'character': 0, 'line': 0},
+                    'end': {'character': 5, 'line': 0},
                 },
             },
         }
@@ -887,7 +887,7 @@ class ItemDefaultTests(TestCase):
                 },
                 'replace': {
                     'start': {'character': 0, 'line': 0},
-                    'end': {'character': 0, 'line': 0},
+                    'end': {'character': 5, 'line': 0},
                 },
             }
         }

@@ -305,6 +305,26 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         self.insert_characters("x")
         await self.wait_for_text("<divx></divx>")
 
+    async def test_caret_movement_during_request_is_handled_when_it_completes(self) -> None:
+        await self.insert_tags()
+        listener = self.ensure_document_listener_created()
+        assert listener
+        await self.mock_responses([
+            ("textDocument/linkedEditingRange", None),
+            ("textDocument/linkedEditingRange", TAG_RANGES),
+        ])
+        # Only the first request is sent right away. The others are replaced by one request at the latest position.
+        for point in (0, 2, 4):
+            self.set_cursor(point)
+            listener.do_linked_editing_ranges_async()
+        params = await self.await_message("textDocument/linkedEditingRange")
+        self.assertEqual(params["position"], {"line": 0, "character": 0})
+        params = await self.await_message("textDocument/linkedEditingRange")
+        self.assertEqual(params["position"], {"line": 0, "character": 4})
+        await self.wait_until(listener.linked_editing.is_active)
+        self.insert_characters("x")
+        await self.wait_for_text("<divx></divx>")
+
     async def test_request_after_undo(self) -> None:
         await self.insert_tags()
         await self.mock_response("textDocument/linkedEditingRange", TAG_RANGES)

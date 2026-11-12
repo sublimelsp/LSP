@@ -270,6 +270,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self._sighelp: SigHelp | None = None
         self._code_actions_for_selection: dict[str, list[Command | CodeAction]] = {}
         self.linked_editing = LinkedEditing(self.view)
+        # Only one linked editing request is in flight at a time. Caret movement in the meantime is handled by another
+        # request when it completes, so that moving the caret quickly doesn't send a request for every position.
+        self._linked_editing_request_in_flight = False
+        self._linked_editing_request_needed = False
         self._registered = False
 
     def _cleanup(self) -> None:
@@ -989,6 +993,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     def do_linked_editing_ranges_async(self) -> None:
         if not userprefs().linked_editing:
             return
+        if self._linked_editing_request_in_flight:
+            self._linked_editing_request_needed = True
+            return
         # Clones of a view share the buffer, so only the view with focus does linked editing.
         if (window := self.view.window()) and window.active_view() != self.view:
             return
@@ -1001,12 +1008,21 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if self.linked_editing.contains(point):
             return
         if session := self.session_async("linkedEditingRangeProvider", point):
+            self._linked_editing_request_in_flight = True
             self.create_task(self._request_linked_editing_ranges(session, point))
 
     async def _request_linked_editing_ranges(self, session: Session, point: int) -> None:
-        version = self.view.change_count()
-        await self.purge_changes()
-        await self.linked_editing.request(session, point, version)
+        try:
+            version = self.view.change_count()
+            await self.purge_changes()
+            await self.linked_editing.request(session, point, version)
+        finally:
+            self._linked_editing_request_in_flight = False
+        if self._linked_editing_request_needed:
+            self._linked_editing_request_needed = False
+            # Request the ranges at the current caret position. Nothing is requested if the caret is in the ranges of
+            # the completed request.
+            self.do_linked_editing_ranges_async()
 
     @override
     def clear_linked_editing_async(self) -> None:

@@ -20,7 +20,6 @@ import sublime_plugin
 if TYPE_CHECKING:
     from ..protocol import LinkedEditingRangeParams
     from ..protocol import LinkedEditingRanges
-    from .core.sessions import CancellableRequest
     from .core.sessions import Session
 
 
@@ -108,8 +107,6 @@ class LinkedEditing:
         # The selection after the last edit, or when the undo groups were last marked. A different selection means that
         # the caret was moved without an edit.
         self._selection: list[sublime.Region] = []
-        # The request that is in flight, if any. Only used on the asyncio thread.
-        self._pending_request: CancellableRequest[LinkedEditingRanges | None] | None = None
         # The recent text changes with the change count of the view after them, and the change count of the view
         # before the oldest recorded change.
         self._recorded_changes: list[tuple[int, list[sublime.TextChange], ChangeEventAction]] = []
@@ -175,13 +172,7 @@ class LinkedEditing:
         """
         params: LinkedEditingRangeParams = {**text_document_position_params(self._view, point)}
         request = session.request(Request.linkedEditingRange(params, self._view))
-        # The response of a previous request is obsolete, because it was for a different caret position.
-        previous_request, self._pending_request = self._pending_request, request
-        if previous_request:
-            await previous_request.cancel()
         response = await request
-        if self._pending_request is request:
-            self._pending_request = None
         if request.cancelled:
             return
         if isinstance(response, Error):

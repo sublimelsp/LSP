@@ -9,8 +9,8 @@ from .core.aio import run_on_threadpool
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
+from .core.transports import Transport
 from .core.transports import TransportCallbacks
-from .core.transports import TransportWrapper
 from .core.types import ClientConfig
 from .core.version import __version__
 from .core.views import extract_variables
@@ -493,29 +493,29 @@ class ServerTestRunner(TransportCallbacks):
     Server is automatically closed after defined timeout.
     """
 
-    CLOSE_TIMEOUT_SEC = 2
-
     def __init__(
         self,
         config: ClientConfig,
         window: sublime.Window,
         initiating_view: sublime.View,
-        on_close: Callable[[list[str] | None, str | None, str, int], None]
+        on_close: Callable[[list[str] | None, str | None, str, int], None],
     ) -> None:
         self._config = config
         self._window = window
         self._initiating_view = initiating_view
         self._on_close = on_close
-        self._transport: TransportWrapper | None = None
-        self._resolved_command: list[str] | None = None
-        self._cwd: str | None = None
         self._stderr_lines: list[str] = []
 
-    async def run(self) -> None:
+    async def run(self, close_timeout_sec: float = 2.0) -> None:
         view = self._initiating_view
         file_path = view.file_name() or ''
         config = ClientConfig.from_config(self._config, {})
-
+        transport: Transport | None = None
+        exit_code: int | None = None
+        exception: BaseException | None = None
+        cwd: str | None = None
+        resolved_command: list[str] | None = None
+        output: str = ""
         try:
             workspace = ProjectFolders(self._window)
             workspace_folders = sorted_workspace_folders(workspace.folders, file_path)
@@ -545,14 +545,21 @@ class ServerTestRunner(TransportCallbacks):
                     if new_cwd := plugin_class.on_pre_start(self._window, view, workspace_folders, config):
                         cwd = new_cwd
 
-            self._cwd = cwd
             transport_config = config.create_transport_config()
-            self._transport = await transport_config.start(config.command, config.env, cwd, variables, self)
-            self._resolved_command = self._transport.process_args
-            await asyncio.sleep(self.CLOSE_TIMEOUT_SEC)
-            await self._transport.close()
+            transport = await transport_config.start(config.command, config.env, cwd, variables, self)
+            resolved_command = transport.process_args
+            transport.start()
+            await asyncio.sleep(close_timeout_sec)
         except Exception as ex:
-            await self.on_transport_close(-1, ex)
+            output = ''.join(traceback.format_exception(type(ex), ex, ex.__traceback__))
+        finally:
+            if transport:
+                exit_code, exception = await transport.close()
+            if exception:
+                output += ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
+            else:
+                output += '\n'.join(self._stderr_lines).rstrip()
+            sublime.set_timeout(lambda: self._on_close(resolved_command, cwd, output, exit_code or 0))
 
     async def on_payload(self, payload: dict[str, Any]) -> None:
         pass
@@ -561,11 +568,7 @@ class ServerTestRunner(TransportCallbacks):
         self._stderr_lines.append(message)
 
     async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
-        if exception:
-            output = ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
-        else:
-            output = '\n'.join(self._stderr_lines).rstrip()
-        sublime.set_timeout(lambda: self._on_close(self._resolved_command, self._cwd, output, exit_code))
+        pass
 
 
 class LspOnDoubleClickCommand(sublime_plugin.TextCommand):

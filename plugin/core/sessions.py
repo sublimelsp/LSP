@@ -151,8 +151,8 @@ from .protocol import ServerResponse
 from .protocol import TextPosition
 from .settings import globalprefs
 from .settings import userprefs
+from .transports import Transport
 from .transports import TransportCallbacks
-from .transports import TransportWrapper
 from .types import Capabilities
 from .types import ClientConfig
 from .types import diff
@@ -1135,7 +1135,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
     ) -> None:
-        self.transport: TransportWrapper | None = None
+        self.transport: Transport | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
@@ -1149,6 +1149,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
         self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, RequestController | None] = {}
         self.exiting = False
+        # Whether `end()` was called, so the server stopping afterwards is not a crash.
+        self.end_requested = False
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0
         self._variables: dict[str, str] = {}
@@ -1391,11 +1393,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self,
         variables: dict[str, str],
         working_directory: str | None,
-        transport: TransportWrapper
+        transport: Transport
     ) -> InitializeResult | Error:
         try:
             return await self._initialize_impl(variables, working_directory, transport)
         except:
+            self.end_requested = True
             await transport.close()
             raise
 
@@ -1403,11 +1406,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self,
         variables: dict[str, str],
         working_directory: str | None,
-        transport: TransportWrapper
+        transport: Transport
     ) -> InitializeResult | Error:
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
         self.transport = transport
+        self.transport.start()
         self.working_directory = working_directory
         self._variables = variables
         params = get_initialize_params(variables, self._workspace_folders, self.config)
@@ -2630,6 +2634,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if self.exiting:
             return
         self.exiting = True
+        self.end_requested = True
         if self._plugin:
             self._plugin.on_session_end_async(None, None)
             self._plugin = None

@@ -7,7 +7,6 @@ from .logging import debug
 from .logging import exception_log
 from abc import ABC
 from abc import abstractmethod
-from enum import IntEnum
 from pathlib import Path
 from typing import Any
 from typing import Callable

@@ -186,6 +186,9 @@ class SessionBuffer(TaskContainer):
         self.supported_diagnostic_tags: set[DiagnosticTag] = set()
         self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # ruff: ignore[line-too-long]
         self._last_synced_version = 0
+        # The version whose follow-up requests were deferred by `purge_changes`, until the changes would have been
+        # purged otherwise.
+        self._deferred_requests_version: int | None = None
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(self)
         self._color_phantoms = sublime.PhantomSet(view, "lsp_color")
@@ -441,6 +444,9 @@ class SessionBuffer(TaskContainer):
                 await asyncio.sleep(FEATURES_TIMEOUT / 1000)
                 if view.is_valid() and change_count == view.change_count():
                     await self.purge_changes(view)
+                    if (version := self._deferred_requests_version) is not None:
+                        self._deferred_requests_version = None
+                        await self._on_after_change(view, version)
 
             self.create_task(maybe_purge_later())
 
@@ -461,7 +467,16 @@ class SessionBuffer(TaskContainer):
 
     on_reload = on_revert
 
-    async def purge_changes(self, view: sublime.View, suppress_requests: bool = False) -> None:
+    async def purge_changes(
+        self, view: sublime.View, *, suppress_requests: bool = False, defer_requests: bool = False
+    ) -> None:
+        """
+        Send the pending changes to the server.
+
+        :param      suppress_requests:  Whether to skip the requests that follow a change, like for diagnostics.
+        :param      defer_requests:     Whether to make the requests that follow a change only when the changes would
+                                        have been sent otherwise, after the user stopped typing.
+        """
         if self._pending_changes is None:
             return
         sync_kind = self.text_sync_kind()
@@ -482,6 +497,10 @@ class SessionBuffer(TaskContainer):
         except MissingUriError:
             return  # we're closing
         await self.session.notify_plugin_on_session_buffer_change(self)
+        if defer_requests:
+            self._deferred_requests_version = version
+            return
+        self._deferred_requests_version = None
         await self._on_after_change(view, version, suppress_requests)
 
     async def _on_after_change(self, view: sublime.View, version: int, suppress_requests: bool = False) -> None:

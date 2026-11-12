@@ -391,8 +391,8 @@ class SessionView:
     async def on_reload(self) -> None:
         await self.session_buffer.on_reload(self.view)
 
-    async def purge_changes(self) -> None:
-        await self.session_buffer.purge_changes(self.view)
+    async def purge_changes(self, *, defer_requests: bool = False) -> None:
+        await self.session_buffer.purge_changes(self.view, defer_requests=defer_requests)
 
     async def on_pre_save(self) -> None:
         await self.session_buffer.on_pre_save(self.view)

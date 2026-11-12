@@ -1014,7 +1014,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     async def _request_linked_editing_ranges(self, session: Session, point: int) -> None:
         try:
             version = self.view.change_count()
-            await self.purge_changes()
+            # Only the server that provides the ranges needs the changes now. The other requests that follow a change
+            # are still made after the user stopped typing.
+            if session_view := self._session_views.get(session.config.name):
+                await session_view.purge_changes(defer_requests=True)
             await self.linked_editing.request(session, point, version)
         finally:
             self._linked_editing_request_in_flight = False

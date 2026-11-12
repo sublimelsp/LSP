@@ -406,6 +406,31 @@ class LinkedEditingOnSelectionChangeTestCase(LinkedEditingTestCaseBase):
         self.left_delete()
         await self.wait_for_text("<di></di>")
 
+    async def test_requests_after_change_are_deferred(self) -> None:
+        await self.insert_tags()
+        listener = self.ensure_document_listener_created()
+        assert listener
+        session_buffer = listener.session_views_async()[0].session_buffer
+        versions: list[int] = []
+        on_after_change = session_buffer._on_after_change
+
+        async def record(view: sublime.View, version: int, suppress_requests: bool = False) -> None:
+            versions.append(version)
+            await on_after_change(view, version, suppress_requests)
+
+        session_buffer._on_after_change = record  # type: ignore[method-assign]
+        self.addCleanup(delattr, session_buffer, '_on_after_change')
+        self.insert_characters(" ")
+        await self.mock_response("textDocument/linkedEditingRange", None)
+        self.left_delete()
+        await self.wait_for_text(TAGS)
+        # The deletion is sent to the server right away for the linked editing request.
+        await self.await_message("textDocument/didChange")
+        await self.await_message("textDocument/linkedEditingRange")
+        self.assertEqual(versions, [])
+        # The requests that follow the change are made after the usual delay.
+        await self.wait_until(lambda: versions == [self.view.change_count()])
+
 
 class LinkedEditingDynamicRegistrationTestCaseBase(TextDocumentTestCase):
     """Each subclass gets its own session, so the capability registered by one test doesn't leak into another."""

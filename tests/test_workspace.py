@@ -60,6 +60,15 @@ class WorkspaceFolderTest(unittest.TestCase):
         lsp_dict = workspace.to_lsp()
         self.assertEqual(lsp_dict, {"name": "LSP", "uri": "file:///foo/bar/baz"})
 
+    def test_includes_uri(self) -> None:
+        workspace = WorkspaceFolder.from_path(str(Path(tempfile.gettempdir(), "project")))
+        folder_uri = workspace.uri()
+        self.assertTrue(workspace.includes_uri(folder_uri))
+        self.assertTrue(workspace.includes_uri(folder_uri + "/file.py"))
+        self.assertTrue(workspace.includes_uri(folder_uri + "/sub/file.py"))
+        self.assertFalse(workspace.includes_uri(folder_uri + "-other/file.py"))
+        self.assertFalse(workspace.includes_uri(folder_uri + "2"))
+
 
 class IsSubpathOfTest(unittest.TestCase):
 

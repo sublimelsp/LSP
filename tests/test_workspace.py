@@ -5,6 +5,7 @@ from LSP.plugin.core.workspace import sorted_workspace_folders
 from LSP.plugin.core.workspace import WorkspaceFolder
 from pathlib import Path
 import os
+import sys
 import tempfile
 import unittest
 
@@ -63,6 +64,7 @@ class WorkspaceFolderTest(unittest.TestCase):
 
 class IsSubpathOfTest(unittest.TestCase):
 
-    def is_subpath_case_differs(self) -> None:
+    @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
+    def test_is_subpath_case_differs(self) -> None:
         self.assertTrue(is_subpath_of(r"e:\WWW\nthu-ee-iframe\public\include\list_faculty_functions.php",
                                       r"E:\WWW\nthu-ee-iframe"))

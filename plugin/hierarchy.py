@@ -27,8 +27,8 @@ from functools import partial
 from typing import Any
 from typing import Callable
 from typing import TYPE_CHECKING
-from typing import TypedDict
 from typing import Union
+from typing_extensions import TypedDict
 import sublime
 import weakref
 
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 HierarchyItem = Union[CallHierarchyItem, TypeHierarchyItem]
 
 
-class HierarchyItemWrapper(TypedDict):
+class HierarchyItemWrapper(TypedDict, closed=True):
     item: HierarchyItem
     selectionRange: Range
 

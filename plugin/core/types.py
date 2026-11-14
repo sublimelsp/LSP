@@ -36,11 +36,11 @@ from typing import Generator
 from typing import Iterable
 from typing import List
 from typing import TYPE_CHECKING
-from typing import TypedDict
 from typing import TypeVar
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import override
+from typing_extensions import TypedDict
 from typing_extensions import TypeGuard
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
@@ -69,7 +69,7 @@ PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 MarkdownLangMapJson = Dict[str, List[List[str]]]
 
 
-class FileWatcherConfig(TypedDict):
+class FileWatcherConfig(TypedDict, closed=True):
     patterns: list[str]
     events: NotRequired[list[FileWatcherEventType]]
     ignores: NotRequired[list[str]]

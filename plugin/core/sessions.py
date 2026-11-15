@@ -1129,6 +1129,9 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 _DELETE_TIMEOUT_MS = 1000
 _DELETE_POLL_INTERVAL_MS = 10
 
+# How long LspPlugin.on_transport_ready may take, in seconds.
+TRANSPORT_READY_TIMEOUT = 5
+
 
 class Session(APIHandler, TransportCallbacks, TaskContainer):
 
@@ -1408,18 +1411,23 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         working_directory: str | None,
         transport: Transport
     ) -> InitializeResult | Error:
-        if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
-            self._plugin = self._plugin_class(weakref.ref(self))
-            await asyncio.wait_for(self._plugin.on_transport_ready(transport.reader, transport.writer), timeout=5)
-        if self.exiting:
-            # this may happen when the server process crashes, or the TCP connection is severed for whatever reason,
-            # while awaiting the result of self._plugin.on_transport_ready. In that case, on_transport_close was
-            # invoked, which sets the self.exiting boolean to true.
-            return Error(ErrorCodes.InternalError, "server stopped prematurely")
-        self.transport = transport
-        self.transport.start()
         self.working_directory = working_directory
         self._variables = variables
+        if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
+            self._plugin = self._plugin_class(weakref.ref(self))
+            # The read loop of the transport is not started yet, so the plugin has exclusive access to the streams.
+            try:
+                await asyncio.wait_for(
+                    self._plugin.on_transport_ready(transport.reader, transport.writer),
+                    timeout=TRANSPORT_READY_TIMEOUT,
+                )
+            except asyncio.TimeoutError:
+                raise Error(
+                    ErrorCodes.InternalError,
+                    f"on_transport_ready did not finish within {TRANSPORT_READY_TIMEOUT} seconds",
+                ) from None
+        self.transport = transport
+        self.transport.start()
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         result = await self.request(Request.initialize(params))
         if isinstance(result, Error):

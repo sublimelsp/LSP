@@ -266,6 +266,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         self._stored_selection = []
         self._sighelp: SigHelp | None = None
         self._code_actions_for_selection: dict[str, list[Command | CodeAction]] = {}
+        self._code_actions_request_keys: dict[str, tuple[int, sublime.Region, list[Diagnostic]]] = {}
         self._registered = False
 
     def _cleanup(self) -> None:
@@ -493,7 +494,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             ):
                 sb.create_task(sb.do_inlay_hints(self.view))
         if userprefs().show_code_actions:
-            self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
+            self._do_code_actions_for_selection_async(
+                self.session_buffers_async('codeActionProvider'), only_if_changed=True)
 
     @requires_session
     async def on_selection_modified(self) -> None:
@@ -504,6 +506,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             self._clear_highlight_regions()
         if userprefs().show_code_actions:
             self._code_actions_for_selection.clear()
+            self._code_actions_request_keys.clear()
             self._clear_code_actions_annotation()
         self._when_selection_remains_stable(
             self._on_selection_modified_debounced, first_region, after_ms=self.debounce_time)
@@ -831,7 +834,18 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
-    def _do_code_actions_for_selection_async(self, session_buffers: Sequence[SessionBufferProtocol]) -> None:
+    def _do_code_actions_for_selection_async(
+        self, session_buffers: Sequence[SessionBufferProtocol], *, only_if_changed: bool = False
+    ) -> None:
+        """
+        Request quickfix code actions for the current selection to show them as a lightbulb or annotation.
+
+        :param session_buffers: The session buffers to request the code actions from.
+        :param only_if_changed: Skip the request for session buffers for which the document version, the selection and
+            the diagnostics are the same as for the previous request. This avoids sending redundant requests when the
+            view is re-activated, for example after closing a quick panel. Sending such requests can break code action
+            resolving for servers that only keep the code actions from the most recent request.
+        """
         if not self._stored_selection:
             return
         version = self.view.change_count()
@@ -840,13 +854,19 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         kinds: list[str | CodeActionKind] = [CodeActionKind.QuickFix]
         code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
         for sb in session_buffers:
-            if diagnostics := diagnostics_by_config.get(sb):
+            diagnostics = diagnostics_by_config.get(sb)
+            config_name = sb.session.config.name
+            request_key = (version, region, diagnostics or [])
+            if only_if_changed and self._code_actions_request_keys.get(config_name) == request_key:
+                continue
+            self._code_actions_request_keys[config_name] = request_key
+            if diagnostics:
                 promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
                             .then(lambda response: filter_quickfix_actions(False, response)) \
-                            .then(lambda result, config_name=sb.session.config.name: (config_name, result))
+                            .then(lambda result, config_name=config_name: (config_name, result))
                 code_action_promises.append(promise)
             else:
-                self._code_actions_for_selection.pop(sb.session.config.name, None)
+                self._code_actions_for_selection.pop(config_name, None)
         Promise.all(code_action_promises).then(partial(self._on_code_actions, version))
 
     def _on_code_actions(self, version: int, code_actions: list[tuple[str, list[Command | CodeAction]]]) -> None:
@@ -1159,6 +1179,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         else:
             self._clear_highlight_regions()
         self._code_actions_for_selection.clear()
+        self._code_actions_request_keys.clear()
         if userprefs().show_code_actions:
             self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
         else:

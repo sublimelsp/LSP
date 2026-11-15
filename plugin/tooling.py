@@ -7,6 +7,8 @@ from .api import PluginStartError
 from .core.aio import run_on_threadpool
 from .core.css import css
 from .core.logging import debug
+from .core.panels import show_quick_panel
+from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.transports import Transport
 from .core.transports import TransportCallbacks
@@ -306,7 +308,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         view.set_read_only(True)
 
 
-class LspTroubleshootServerCommand(sublime_aio.WindowCommand):
+class LspTroubleshootServerCommand(LspWindowCommand):
 
     async def run(self) -> None:
         wm = windows.lookup(self.window)
@@ -320,7 +322,7 @@ class LspTroubleshootServerCommand(sublime_aio.WindowCommand):
         config_names = [config.name for config in configs]
         if not config_names:
             return
-        selected_index = await self.window.show_quick_panel(config_names, placeholder='Select server to troubleshoot')
+        selected_index = await show_quick_panel(self.window, config_names, placeholder='Select server to troubleshoot')
         if selected_index == -1:
             return
         config = configs[selected_index]
@@ -331,6 +333,9 @@ class LspTroubleshootServerCommand(sublime_aio.WindowCommand):
             config, wm.window, active_view,
             lambda resolved_command, cwd, output, exit_code: self.update_sheet(
                 config, active_view, output_sheet, resolved_command, cwd, output, exit_code)).run()
+
+    def is_enabled(self) -> bool:
+        return True
 
     def update_sheet(self, config: ClientConfig, active_view: sublime.View | None, output_sheet: sublime.HtmlSheet,
                      resolved_command: list[str] | None, cwd: str | None, server_output: str, exit_code: int) -> None:

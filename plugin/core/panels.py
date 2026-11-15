@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
-from functools import partial
 from typing import Iterable
 from typing import Literal
 from typing import Optional
@@ -103,9 +102,10 @@ def show_quick_panel(
     :param window: The window to use for the quick panel.
     :param items: May be either a list of strings, or a list of lists of strings where the first item is the trigger and
     all subsequent strings are details shown below.
-    :param flags: `QuickPanelFlags` controlling behavior. The ``WANT_EVENT`` bit is set to 0.
-    :param selected_index: The initially selected item. ``-1`` for no selection.
-    :param on_highlight: Called every time the highlighted item in the quick panel is changed.
+    :param flags: `QuickPanelFlags` controlling behavior. The `WANT_EVENT` bit is set to 0.
+    :param selected_index: The initially selected item. `-1` for no selection.
+    :param on_highlight: Called every time the highlighted item in the quick panel is changed. Note that this callback
+    runs on the main thread, not on the asyncio thread.
     :param placeholder: Text displayed in the filter input field before any query is typed.
     :raises RuntimeError: when this function is not called from the asyncio thread.
     """
@@ -115,19 +115,23 @@ def show_quick_panel(
     flags &= ~sublime.QuickPanelFlags.WANT_EVENT
 
     def on_select(index: int) -> None:
-        if not future.cancelled():
-            future.set_result(index)
+        # Called by ST on the main thread; resolve the future on the loop's thread.
+        loop.call_soon_threadsafe(_set_result_unless_done, future, index)
 
     window.show_quick_panel(
         items=items,
-        # See: https://github.com/sublimehq/sublime_text/issues/6920
-        on_select=partial(loop.call_soon_threadsafe, on_select),  # type: ignore
+        on_select=on_select,
         flags=flags,
         selected_index=selected_index,
         on_highlight=on_highlight,
         placeholder=placeholder,
     )
     return future
+
+
+def _set_result_unless_done(future: asyncio.Future[int], value: int) -> None:
+    if not future.done():
+        future.set_result(value)
 
 
 class PanelName:

@@ -13,7 +13,6 @@ from .windows import WindowRegistry
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import ClassVar
 from typing import Coroutine
 from typing import Generator
 from typing import Iterable
@@ -21,7 +20,6 @@ from typing import TYPE_CHECKING
 import inspect
 import operator
 import sublime
-import sublime_aio
 import sublime_api  # pyright: ignore[reportMissingImports]
 import sublime_plugin
 
@@ -31,7 +29,6 @@ if TYPE_CHECKING:
     from ...protocol import LocationLink
     from .sessions import AbstractViewListener
     from .sessions import Session
-    import concurrent.futures
 
 windows = WindowRegistry()
 
@@ -61,13 +58,19 @@ def get_position(view: sublime.View, event: dict | None = None, point: int | Non
         return None
 
 
-class AsyncCommandMixin:
-    # Only applies when `run` is a coroutine function. When this is True in a derived class, invoking the command while
-    # a previous invocation is still running cancels the previous invocation.
-    cancel_previous_run: ClassVar[bool] = False
+def _is_edit_parameter(param: inspect.Parameter) -> bool:
+    """Check whether the given parameter of a `TextCommand.run` method looks like it receives the edit token."""
+    if param.kind not in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}:
+        return False
+    if param.name in {'edit', '_edit', '_'}:
+        return True
+    annotation = param.annotation
+    if isinstance(annotation, str):
+        return annotation in {'sublime.Edit', 'Edit'}
+    return annotation is sublime.Edit
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self._run_future: concurrent.futures.Future[None] | None = None
+
+class AsyncCommandMixin:
 
     def _async_run(
         self,
@@ -82,16 +85,15 @@ class AsyncCommandMixin:
             # raised here can only originate from missing or unexpected arguments.
             coro = run(**args) if args else run()
         except TypeError as e:
-            if 'required positional argument' in str(e) and window and can_accept_input():
+            # Matches both "missing N required positional argument(s)" and "missing N required keyword-only
+            # argument(s)".
+            if 'required' in str(e) and window and can_accept_input():
                 window.run_command(
                     'show_overlay', {'overlay': 'command_palette', 'command': command.name(), 'args': args}
                 )
                 return
             raise
-        if self.cancel_previous_run and self._run_future:
-            # Cancelling the concurrent future also cancels the underlying asyncio task.
-            self._run_future.cancel()
-        self._run_future = run_coroutine(coro)
+        run_coroutine(coro)
 
 
 class LspWindowCommand(sublime_plugin.WindowCommand, AsyncCommandMixin):
@@ -199,13 +201,12 @@ class LspTextCommand(sublime_plugin.TextCommand, AsyncCommandMixin):
         super().__init_subclass__(**kwargs)
         run = cls.__dict__.get('run')
         if run is not None and inspect.iscoroutinefunction(run):
-            params = list(inspect.signature(run).parameters)
-            if len(params) > 1 and params[1] in {'edit', '_edit'}:
+            params = list(inspect.signature(run).parameters.values())
+            if len(params) > 1 and _is_edit_parameter(params[1]):
                 raise TypeError(f"{cls.__name__}.run is a coroutine function and must not take an edit token")
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._run_future: concurrent.futures.Future[None] | None = None
         if not self.session_name:
             # Auto-detect session_name based on package name. In case of the LSP package use empty string.
             package_name = self.__module__.split('.')[0]
@@ -319,11 +320,17 @@ class LspRestartServerCommand(LspTextCommand):
         return False
 
 
-class LspCheckApplicableCommand(sublime_aio.ViewCommand):
+class LspCheckApplicableCommand(LspTextCommand):
 
     async def run(self, session_name: str) -> None:
         if wm := windows.lookup(self.view.window()):
             await wm.recheck_is_applicable(self.view, session_name)
+
+    def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
+        return True
+
+    def want_event(self) -> bool:
+        return False
 
 
 def navigate_diagnostics(

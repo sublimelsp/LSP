@@ -417,7 +417,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed(change_count, changes, action)
-        self.create_task(self._on_view_updated())
+        self._on_view_updated()
 
     def get_uri(self) -> DocumentUri:
         return self._uri
@@ -910,33 +910,46 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if region is None:
             return
         point = region.b
-        if session := self.session_async("documentHighlightProvider", point):
-            params: DocumentHighlightParams = {**text_document_position_params(self.view, point)}
-            response = await session.request(Request.documentHighlight(params, self.view))
-            if not isinstance(response, list):
-                response = []
-            kind2regions: dict[tuple[DocumentHighlightKind, bool], list[sublime.Region]] = {}
-            for highlight in response:
-                r = range_to_region(self.view, highlight["range"])
-                multiline = len(self.view.split_by_newlines(r)) > 1
-                if multiline and not userprefs().show_multiline_document_highlights:
+        session = self.session_async("documentHighlightProvider", point)
+        if not session:
+            return
+        version = self.view.change_count()
+        params: DocumentHighlightParams = {**text_document_position_params(self.view, point)}
+        response = await session.request(Request.documentHighlight(params, self.view))
+        if not self._is_highlight_request_current(point, version):
+            return
+        if not isinstance(response, list):
+            response = []
+        kind2regions: dict[tuple[DocumentHighlightKind, bool], list[sublime.Region]] = {}
+        for highlight in response:
+            r = range_to_region(self.view, highlight["range"])
+            multiline = len(self.view.split_by_newlines(r)) > 1
+            if multiline and not userprefs().show_multiline_document_highlights:
+                continue
+            kind = highlight.get("kind", DocumentHighlightKind.Text)
+            kind2regions.setdefault((kind, multiline), []).append(r)
+
+        def render_highlights_on_main_thread() -> None:
+            if not self._is_highlight_request_current(point, version):
+                return
+            self._clear_highlight_regions()
+            prefs = userprefs()
+            flags_multi, flags_single = prefs.highlight_style_region_flags(prefs.document_highlight_style)
+            for tup, regions in kind2regions.items():
+                if not regions:
                     continue
-                kind = highlight.get("kind", DocumentHighlightKind.Text)
-                kind2regions.setdefault((kind, multiline), []).append(r)
+                kind, multiline = tup
+                key = document_highlight_key(kind, multiline=multiline)
+                flags = flags_multi if multiline else flags_single
+                self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
 
-            def render_highlights_on_main_thread() -> None:
-                self._clear_highlight_regions()
-                prefs = userprefs()
-                flags_multi, flags_single = prefs.highlight_style_region_flags(prefs.document_highlight_style)
-                for tup, regions in kind2regions.items():
-                    if not regions:
-                        continue
-                    kind, multiline = tup
-                    key = document_highlight_key(kind, multiline=multiline)
-                    flags = flags_multi if multiline else flags_single
-                    self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
+        await run_on_main_thread(render_highlights_on_main_thread)
 
-            await run_on_main_thread(render_highlights_on_main_thread)
+    def _is_highlight_request_current(self, point: int, version: int) -> bool:
+        if self.view.change_count() != version:
+            return False
+        region = first_selection_region(self.view)
+        return region is not None and region.b == point
 
     # --- textDocument/foldingRange ------------------------------------------------------------------------------------
 
@@ -1000,7 +1013,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             exceptions = await asyncio.gather(
                 *(sv.on_revert() for sv in self.session_views_async()), return_exceptions=True
             )
-        await self._on_view_updated()
+        self._on_view_updated()
         return exceptions
 
     async def reload(self) -> list[BaseException | None]:
@@ -1009,23 +1022,23 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             exceptions = await asyncio.gather(
                 *(sv.on_reload() for sv in self.session_views_async()), return_exceptions=True
             )
-        await self._on_view_updated()
+        self._on_view_updated()
         return exceptions
 
     # --- Private utility methods --------------------------------------------------------------------------------------
 
     def _when_selection_remains_stable(
         self, coroutine_function: Callable[[], Coroutine[object, object, None]], r: sublime.Region, after_ms: int
-    ) -> asyncio.Task[None]:
+    ) -> None:
 
         async def run() -> None:
             await asyncio.sleep(after_ms / 1000)
-            if self._is_selection_stable_async(r):
+            if self._is_selection_stable(r):
                 await coroutine_function()
 
-        return self.create_task(run())
+        self.create_task(run())
 
-    def _is_selection_stable_async(self, region: sublime.Region) -> bool:
+    def _is_selection_stable(self, region: sublime.Region) -> bool:
         return bool(self._stored_selection and self._stored_selection[0] == region)
 
     def _register(self) -> None:
@@ -1058,10 +1071,14 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 debug("also registering", listener)
                 self.create_task(listener._on_load_impl())
 
-    async def _on_view_updated(self) -> None:
+    def _on_view_updated(self) -> None:
         if self._should_format_on_paste:
             self._should_format_on_paste = False
-            await self._format_on_paste(await get_clipboard())
+
+            async def format_on_paste() -> None:
+                await self._format_on_paste(await get_clipboard())
+
+            self.create_task(format_on_paste())
         first_region, _ = self._update_stored_selection()
         if first_region is None:
             return
@@ -1070,7 +1087,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             self._when_selection_remains_stable(self._do_highlights, first_region, after_ms=self.debounce_time)
         if userprefs().show_signature_help and (selection := self._stored_selection):
             if self._sighelp:
-                await self.do_signature_help(SignatureHelpTriggerKind.ContentChange)
+                self.create_task(self.do_signature_help(SignatureHelpTriggerKind.ContentChange))
             else:
                 session = self._get_signature_help_session()
                 triggers: list[str] = []
@@ -1081,7 +1098,9 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 if triggers:
                     previous_char = self.view.substr(selection[0].a - 1)
                     if previous_char in triggers:
-                        await self.do_signature_help(SignatureHelpTriggerKind.TriggerCharacter, previous_char)
+                        self.create_task(
+                            self.do_signature_help(SignatureHelpTriggerKind.TriggerCharacter, previous_char)
+                        )
 
     def _update_stored_selection(self) -> tuple[sublime.Region | None, bool]:
         """

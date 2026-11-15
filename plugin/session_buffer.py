@@ -82,13 +82,9 @@ from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
 from .inlay_hint import inlay_hint_to_phantom
 from dataclasses import dataclass
 from typing import Any
-from typing import Callable
 from typing import cast
-from typing import Coroutine
 from typing import TYPE_CHECKING
-from typing_extensions import Concatenate
 from typing_extensions import deprecated
-from typing_extensions import ParamSpec
 from typing_extensions import TypeGuard
 from weakref import WeakSet
 import asyncio
@@ -98,8 +94,6 @@ import time
 
 if TYPE_CHECKING:
     from .core.promise import Promise
-
-P = ParamSpec('P')
 
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
@@ -568,19 +562,6 @@ class SessionBuffer(TaskContainer):
         """Reset the refresh marker for the request type(s) given by `flags`."""
         self.pending_refreshes &= ~flags
 
-    def _if_view_unchanged(
-        self, f: Callable[Concatenate[sublime.View, P], Coroutine[None, None, None] | None], version: int
-    ) -> Callable[P, None]:
-        """Ensures that the view is at the same version when we were called, before calling the `f` function."""
-        def handler(*args: P.args, **kwargs: P.kwargs) -> None:
-            if (view := self.some_view()) and view.change_count() == version:
-                if asyncio.iscoroutinefunction(f):
-                    self.create_task(f(view, *args, **kwargs))
-                else:
-                    f(view, *args, **kwargs)
-
-        return handler
-
     def _update_color_scheme_rules(self, view: sublime.View) -> None:
         # Color scheme rules for diagnostic tags
         self.supported_diagnostic_tags = set(
@@ -626,11 +607,10 @@ class SessionBuffer(TaskContainer):
 
     async def _do_color_boxes(self, view: sublime.View, version: int) -> None:
         if self.has_capability("colorProvider"):
-            version = view.change_count()
             response = await self.session.request(Request.documentColor(document_color_params(view), view))
             if isinstance(response, Error):
-                self.clear_color_boxes_async()
-            elif view.change_count() == version:
+                return
+            if view.change_count() == version:
                 phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response] if response else []
                 sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
 
@@ -641,7 +621,6 @@ class SessionBuffer(TaskContainer):
 
     async def _do_document_link(self, view: sublime.View, version: int) -> None:
         if self.has_capability("documentLinkProvider"):
-            version = view.change_count()
             params: DocumentLinkParams = {'textDocument': text_document_identifier(view)}
             response = await self.session.request(Request.documentLink(params, view))
             if isinstance(response, Error):

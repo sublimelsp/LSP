@@ -1,23 +1,25 @@
 from __future__ import annotations
 
 from .css import css
-from .promise import Promise
+from .registry import LspWindowCommand
 from .registry import windows
 from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
-from functools import partial
 from typing import Any
 from typing import Literal
 from typing import TYPE_CHECKING
 from typing import TypeVar
+from typing_extensions import deprecated
+import asyncio
 import html
 import sublime
 import sublime_api  # pyright: ignore[reportMissingImports]
-import sublime_plugin
 import uuid
 
 if TYPE_CHECKING:
+    from .promise import Promise
+    from collections.abc import Coroutine
     from sublime_types import Kind
 
 # pyright: reportInvalidTypeVarUse=false
@@ -116,10 +118,19 @@ class Node:
 
 class TreeDataProvider(ABC):
 
+    @deprecated("implement `children` + `roots` instead")
     @abstractmethod
     def get_children(self, element: T | None) -> Promise[list[T]]:
         """Implement this to return the children for the given element or root (if no element is passed)."""
         raise NotImplementedError
+
+    async def roots(self) -> list[T]:
+        """Implement this to return the list of root elements of the tree."""
+        return await self.get_children(None)
+
+    async def children(self, element: T) -> list[T]:
+        """Implement this to return the children for the given element."""
+        return await self.get_children(element)
 
     @abstractmethod
     def get_tree_item(self, element: T) -> TreeItem:
@@ -142,12 +153,14 @@ class TreeViewSheet(sublime.HtmlSheet):
         self.name = name
         self.data_provider = data_provider
         self.header = header
-        self.data_provider.get_children(None).then(self._set_root_nodes)
 
     def __repr__(self) -> str:
         return f'TreeViewSheet({self.sheet_id!r})'
 
-    def set_provider(self, data_provider: TreeDataProvider, header: str = "") -> None:
+    async def start(self) -> None:
+        await self._set_root_nodes(await self.data_provider.roots())
+
+    async def set_provider(self, data_provider: TreeDataProvider, header: str = "") -> None:
         """
         Use this method if you want to render an entire new tree. This allows to reuse a single HtmlSheet, e.g. when
         using a feature consecutively on different symbols.
@@ -156,19 +169,24 @@ class TreeViewSheet(sublime.HtmlSheet):
         self.root_nodes.clear()
         self.data_provider = data_provider
         self.header = header
-        self.data_provider.get_children(None).then(self._set_root_nodes)
+        await self._set_root_nodes(await self.data_provider.roots())
 
-    def _set_root_nodes(self, elements: list[T]) -> None:
-        promises: list[Promise[None]] = []
+    async def _set_root_nodes(self, elements: list[T]) -> None:
+        tasks: list[Coroutine[object, object, None]] = []
         for element in elements:
             tree_item = self.data_provider.get_tree_item(element)
             tree_item.collapsible_state = TreeItemCollapsibleState.EXPANDED
             self.nodes[tree_item.id] = Node(element, tree_item, parent_node_id=None)
             self.root_nodes.append(tree_item.id)
-            promises.append(self.data_provider.get_children(element).then(partial(self._add_children, tree_item.id)))
+
+            async def add_children(n_id: str, el: T) -> None:
+                self._add_children(n_id, await self.data_provider.children(el))
+
+            tasks.append(add_children(tree_item.id, element))
         if self.root_nodes:
             self.selected_node_id = self.root_nodes[0]
-        Promise.all(promises).then(lambda _: self._update_contents())
+        await asyncio.gather(*tasks)
+        self._update_contents()
 
     def _add_children(self, node_id: str, elements: list[T]) -> None:
         assert node_id in self.nodes
@@ -181,14 +199,13 @@ class TreeViewSheet(sublime.HtmlSheet):
             node.tree_item.collapsible_state = TreeItemCollapsibleState.NONE
         node.is_resolved = True
 
-    def _resolve_children(self, node_id: str) -> None:
+    async def _resolve_children(self, node_id: str) -> None:
         assert node_id in self.nodes
         node = self.nodes[node_id]
-        self.data_provider.get_children(node.element) \
-            .then(partial(self._add_children, node_id)) \
-            .then(lambda _: self._update_contents())
+        self._add_children(node_id, await self.data_provider.children(node.element))
+        self._update_contents()
 
-    def handle_action(self, action: TreeViewAction) -> None:
+    async def handle_action(self, action: TreeViewAction) -> None:
         if action == 'close':
             self.close()
             return
@@ -200,14 +217,14 @@ class TreeViewSheet(sublime.HtmlSheet):
             if current_index == next_index:
                 return
             next_node_id = self.ordered_node_ids[next_index]
-            self.select_item(next_node_id)
+            await self.select_item(next_node_id)
         elif action == 'move_up':
             current_index = self.ordered_node_ids.index(self.selected_node_id)
             previous_index = max(0, current_index - 1)
             if current_index == previous_index:
                 return
             previous_node_id = self.ordered_node_ids[previous_index]
-            self.select_item(previous_node_id)
+            await self.select_item(previous_node_id)
         elif action == 'move_left':
             if selected_node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
                 self.collapse_item(self.selected_node_id)
@@ -215,38 +232,38 @@ class TreeViewSheet(sublime.HtmlSheet):
                 TreeItemCollapsibleState.COLLAPSED,
                 TreeItemCollapsibleState.NONE
             }:
-                self.select_item(selected_node.parent_node_id)
+                await self.select_item(selected_node.parent_node_id)
         elif action == 'move_right':
             if selected_node.tree_item.collapsible_state == TreeItemCollapsibleState.COLLAPSED:
-                self.expand_item(self.selected_node_id)
+                await self.expand_item(self.selected_node_id)
         elif action == 'activate':
-            self.activate_item(self.selected_node_id)
+            await self.activate_item(self.selected_node_id)
 
-    def expand_item(self, node_id: str) -> None:
+    async def expand_item(self, node_id: str) -> None:
         assert node_id in self.nodes
         node = self.nodes[node_id]
         node.tree_item.collapsible_state = TreeItemCollapsibleState.EXPANDED
         if node.is_resolved:
             self._update_contents()
             return
-        self._resolve_children(node_id)
+        await self._resolve_children(node_id)
 
     def collapse_item(self, node_id: str) -> None:
         assert node_id in self.nodes
         self.nodes[node_id].tree_item.collapsible_state = TreeItemCollapsibleState.COLLAPSED
         self._update_contents()
 
-    def select_item(self, node_id: str) -> None:
+    async def select_item(self, node_id: str) -> None:
         assert node_id in self.nodes
         self.selected_node_id = node_id
         node = self.nodes[node_id]
         if node.is_resolved:
             self._update_contents()
         else:
-            self._resolve_children(node_id)
+            await self._resolve_children(node_id)
 
-    def activate_item(self, node_id: str) -> None:
-        self.select_item(node_id)
+    async def activate_item(self, node_id: str) -> None:
+        await self.select_item(node_id)
         assert node_id in self.nodes
         self.selected_node_id = node_id
         node = self.nodes[node_id]
@@ -363,7 +380,7 @@ class TreeViewSheet(sublime.HtmlSheet):
         return html
 
 
-def new_tree_view_sheet(
+async def new_tree_view_sheet(
     window: sublime.Window,
     name: str,
     data_provider: TreeDataProvider,
@@ -383,7 +400,7 @@ def new_tree_view_sheet(
         tree_view_sheet = wm.tree_view_sheets[name]
         sheet_id = tree_view_sheet.id()
         if tree_view_sheet.window():
-            tree_view_sheet.set_provider(data_provider, header)
+            await tree_view_sheet.set_provider(data_provider, header)
             if flags & sublime.NewFileFlags.ADD_TO_SELECTION:
                 # add to selected sheets if not already selected
                 selected_sheets = window.selected_sheets()
@@ -402,42 +419,43 @@ def new_tree_view_sheet(
         data_provider,
         header
     )
+    await tree_view_sheet.start()
     wm.tree_view_sheets[name] = tree_view_sheet
     return tree_view_sheet
 
 
-def toggle_tree_item(window: sublime.Window, name: str, node_id: str, expand: bool) -> None:
+async def toggle_tree_item(window: sublime.Window, name: str, node_id: str, expand: bool) -> None:
     if (wm := windows.lookup(window)) and (sheet := wm.tree_view_sheets.get(name)):
         if expand:
-            sheet.expand_item(node_id)
+            await sheet.expand_item(node_id)
         else:
             sheet.collapse_item(node_id)
 
 
-class LspExpandTreeItemCommand(sublime_plugin.WindowCommand):
+class LspExpandTreeItemCommand(LspWindowCommand):
 
-    def run(self, name: str, node_id: str) -> None:
-        toggle_tree_item(self.window, name, node_id, True)
-
-
-class LspCollapseTreeItemCommand(sublime_plugin.WindowCommand):
-
-    def run(self, name: str, node_id: str) -> None:
-        toggle_tree_item(self.window, name, node_id, False)
+    async def run(self, name: str, node_id: str) -> None:
+        await toggle_tree_item(self.window, name, node_id, True)
 
 
-class LspActivateTreeItemCommand(sublime_plugin.WindowCommand):
+class LspCollapseTreeItemCommand(LspWindowCommand):
 
-    def run(self, name: str, node_id: str) -> None:
+    async def run(self, name: str, node_id: str) -> None:
+        await toggle_tree_item(self.window, name, node_id, False)
+
+
+class LspActivateTreeItemCommand(LspWindowCommand):
+
+    async def run(self, name: str, node_id: str) -> None:
         if (wm := windows.lookup(self.window)) and (sheet := wm.tree_view_sheets.get(name)):
-            sheet.activate_item(node_id)
+            await sheet.activate_item(node_id)
 
 
-class LspHandleTreeViewActionCommand(sublime_plugin.WindowCommand):
+class LspHandleTreeViewActionCommand(LspWindowCommand):
 
-    def run(self, action: TreeViewAction) -> None:
+    async def run(self, action: TreeViewAction) -> None:
         if (
             (active_sheet := self.window.active_sheet()) and (wm := windows.lookup(self.window))
             and (sheet := next((sheet for sheet in wm.tree_view_sheets.values() if sheet == active_sheet), None))
         ):
-            sheet.handle_action(action)
+            await sheet.handle_action(action)

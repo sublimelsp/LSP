@@ -1416,16 +1416,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
             # The read loop of the transport is not started yet, so the plugin has exclusive access to the streams.
-            try:
-                await asyncio.wait_for(
-                    self._plugin.on_transport_ready(transport.reader, transport.writer),
-                    timeout=TRANSPORT_READY_TIMEOUT,
-                )
-            except asyncio.TimeoutError:
-                raise Error(
-                    ErrorCodes.InternalError,
-                    f"on_transport_ready did not finish within {TRANSPORT_READY_TIMEOUT} seconds",
-                ) from None
+            await asyncio.wait_for(
+                self._plugin.on_transport_ready(transport.reader, transport.writer), timeout=TRANSPORT_READY_TIMEOUT
+            )
         self.transport = transport
         self.transport.start()
         params = get_initialize_params(variables, self._workspace_folders, self.config)

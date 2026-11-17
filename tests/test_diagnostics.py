@@ -6,11 +6,14 @@ from LSP.plugin import Request
 from LSP.plugin.core.protocol import Error
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.url import filename_to_uri
+from LSP.plugin.diagnostics import DiagnosticsStorage
 from LSP.protocol import LSPErrorCodes
 from typing import TYPE_CHECKING
+from unittest import TestCase
 
 if TYPE_CHECKING:
     from LSP.protocol import Diagnostic
+    from LSP.protocol import DiagnosticRegistrationOptions
     from LSP.protocol import PublishDiagnosticsParams
     from LSP.protocol import Range
 
@@ -35,6 +38,15 @@ def create_test_diagnostics(
     if version is not None:
         params["version"] = version
     return params
+
+
+def pull_provider_options(identifier: str) -> DiagnosticRegistrationOptions:
+    return {
+        'identifier': identifier,
+        'interFileDependencies': False,
+        'workspaceDiagnostics': False,
+        'documentSelector': None,
+    }
 
 
 def range_from_points(start: Point, end: Point) -> Range:
@@ -133,3 +145,58 @@ class DiagnosticsTestCase(TextDocumentTestCase):
         )
         session_buffer = self.session.get_session_buffer_for_uri_async(TEST_FILE_URI)
         self.assertEqual(len(session_buffer.diagnostics), 1)
+
+    async def test_unregister_pull_provider_removes_its_diagnostics(self) -> None:
+        self.insert_characters('const x = 1')
+        await self.await_message("textDocument/didChange")
+        await self.mock_response('textDocument/diagnostic', {
+            'kind': 'full',
+            'resultId': 'result-1',
+            'items': [{'range': range_from_points(Point(0, 0), Point(0, 5)), 'message': 'pulled'}],
+        })
+        await self.make_server_do_fake_request('client/registerCapability', {
+            'registrations': [
+                {'id': 'pull', 'method': 'textDocument/diagnostic', 'registerOptions': pull_provider_options('foo')}
+            ]
+        })
+        session_buffer = self.session.get_session_buffer_for_uri_async(TEST_FILE_URI)
+        await self.wait_until(lambda: len(session_buffer.diagnostics) == 1)
+        await self.mock_client_notification(
+            "textDocument/publishDiagnostics", create_test_diagnostics([('pushed', Point(0, 6), Point(0, 7))])
+        )
+        self.assertEqual(len(session_buffer.diagnostics), 2)
+        self.assertIn((TEST_FILE_URI, 'foo'), self.session.diagnostics_result_ids)
+
+        await self.make_server_do_fake_request('client/unregisterCapability', {
+            'unregisterations': [{'id': 'pull', 'method': 'textDocument/diagnostic'}]
+        })
+        self.assertEqual([d['message'] for d, _ in session_buffer.diagnostics], ['pushed'])
+        self.assertNotIn((TEST_FILE_URI, 'foo'), self.session.diagnostics_result_ids)
+
+
+class DiagnosticsStorageTestCase(TestCase):
+
+    def test_unregister_provider(self) -> None:
+        storage = DiagnosticsStorage()
+        storage.register_provider('a', pull_provider_options('a'))
+        storage.register_provider('b', pull_provider_options('b'))
+        storage.register_provider('b2', pull_provider_options('b'))
+        storage.set_diagnostics(
+            TEST_FILE_URI, 'a', create_test_diagnostics([('a', Point(0, 0), Point(0, 1))])['diagnostics'])
+        storage.set_diagnostics(
+            TEST_FILE_URI, 'b', create_test_diagnostics([('b', Point(0, 1), Point(0, 2))])['diagnostics'])
+        storage.set_diagnostics(
+            TEST_FILE_URI, None, create_test_diagnostics([('push', Point(0, 2), Point(0, 3))])['diagnostics'])
+
+        def messages() -> list[str]:
+            return [diagnostic['message'] for diagnostic in storage.get_diagnostics_for_uri(TEST_FILE_URI)]
+
+        self.assertEqual(storage.unregister_provider('a'), {'a'})
+        self.assertEqual(messages(), ['b', 'push'])
+        # The identifier "b" is still provided by the provider with registration ID "b2".
+        self.assertEqual(storage.unregister_provider('b'), set())
+        self.assertEqual(messages(), ['b', 'push'])
+        self.assertEqual(storage.unregister_provider('b2'), {'b'})
+        self.assertEqual(messages(), ['push'])
+        # Unknown registration IDs are ignored.
+        self.assertEqual(storage.unregister_provider('unknown'), set())

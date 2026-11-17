@@ -70,9 +70,28 @@ class DiagnosticsStorage:
         self._providers[registration_id] = options
         self._update_identifiers()
 
-    def unregister_provider(self, registration_id: str) -> None:
-        self._providers.pop(registration_id)
+    def unregister_provider(self, registration_id: str) -> set[str]:
+        """
+        Unregister a diagnostics provider and remove the stored diagnostics of its stream.
+
+        Returns the identifiers of the diagnostic streams which are no longer provided by any registered provider.
+        """
+        if self._providers.pop(registration_id, None) is None:
+            return set()
+        old_identifiers = self._identifiers
         self._update_identifiers()
+        # Diagnostics without identifier are shared with the publishDiagnostics notifications, so they are kept.
+        removed_identifiers = {
+            identifier for identifier in old_identifiers - self._identifiers if identifier is not None
+        }
+        if removed_identifiers:
+            for uri in list(self._diagnostics):
+                diagnostics_by_identifier = self._diagnostics[uri]
+                for identifier in removed_identifiers:
+                    diagnostics_by_identifier.pop(identifier, None)
+                if not diagnostics_by_identifier:
+                    del self._diagnostics[uri]
+        return removed_identifiers
 
     def has_provider(self) -> bool:
         return bool(self._providers)

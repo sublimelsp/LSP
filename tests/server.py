@@ -31,6 +31,7 @@ from typing import List
 from typing import Union
 import argparse
 import asyncio
+import contextlib
 import enum
 import json
 import os
@@ -566,16 +567,25 @@ async def main(tcp_port: int | None = None, mode: Mode = Mode.server, sleep_ms_a
 
             def __init__(self) -> None:
                 self.received_shutdown = False
+                self.session_ended = asyncio.Event()
 
             async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
                 session = Session(reader, writer)
-                self.received_shutdown = await session.run_forever()
+                try:
+                    self.received_shutdown = await session.run_forever()
+                finally:
+                    writer.close()
+                    with contextlib.suppress(ConnectionError):
+                        await writer.wait_closed()
+                    self.session_ended.set()
 
         callback = ClientConnectedCallback()
         server = await asyncio.start_server(callback, port=tcp_port)
-        # NOTE: This is deliberately wrong -- we should stop serving once the exit notification is received. But,
-        # it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
-        await server.serve_forever()
+        # Serve a single client and stop once its session ends, like a stdio server exits after the exit notification.
+        # Killing servers that don't exit by themselves is covered by the transport tests.
+        await callback.session_ended.wait()
+        server.close()
+        await server.wait_closed()
         if sleep_ms_after_exit > 0:
             await asyncio.sleep(sleep_ms_after_exit / 1000)
         return callback.received_shutdown

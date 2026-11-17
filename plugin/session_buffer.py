@@ -86,6 +86,7 @@ from typing import Callable
 from typing import cast
 from typing import Coroutine
 from typing import TYPE_CHECKING
+from typing import TypeVar
 from typing_extensions import Concatenate
 from typing_extensions import deprecated
 from typing_extensions import ParamSpec
@@ -100,6 +101,7 @@ if TYPE_CHECKING:
     from .core.promise import Promise
 
 P = ParamSpec('P')
+_SemanticTokensParamsT = TypeVar('_SemanticTokensParamsT', SemanticTokensParams, SemanticTokensRangeParams)
 
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
@@ -924,8 +926,7 @@ class SessionBuffer(TaskContainer):
     async def _do_semantic_tokens(
         self,
         view: sublime.View,
-        request: Request[SemanticTokensParams, SemanticTokens | None]
-        | Request[SemanticTokensRangeParams, SemanticTokens | None],
+        request: Request[_SemanticTokensParamsT, SemanticTokens | None],
         only_viewport: bool = False,
     ) -> None:
         pending_response = self.session.request(request)

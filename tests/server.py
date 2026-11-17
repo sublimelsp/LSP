@@ -35,6 +35,7 @@ import enum
 import json
 import os
 import sys
+import threading
 import uuid
 
 __package__ = "server"
@@ -464,34 +465,55 @@ async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamRe
 
 def _win32_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
 
-    # no support for asyncio stdio yet on Windows, see https://bugs.python.org/issue26832
-    # use an executor to read from stdin and write to stdout
-    # note: if nothing ever drains the writer explicitly, no flushing ever takes place!
+    # No support for asyncio stdio yet on Windows, see https://bugs.python.org/issue26832.
+    # And it probably never will get support: https://github.com/python/cpython/pull/153660/changes.
+    # Reading from stdin happens on a daemon thread that feeds an asyncio.StreamReader. The thread must be a daemon
+    # thread so that a blocking read on stdin cannot keep the interpreter alive after the server decides to exit.
+    # Feeding a StreamReader also means that set_exception (used to stop the read loop when the exit notification is
+    # received) interrupts a pending read, exactly like it does on the other platforms.
+    # Writing to stdout still happens through an executor.
+    # Note: if nothing ever drains the writer explicitly, no flushing ever takes place!
     class Reader:
 
         def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
             self.loop = loop
-            self.stdin = sys.stdin.buffer
-            self.__exception: Exception | None = None
+            self._fileno = sys.stdin.fileno()
+            self._stream = asyncio.StreamReader(loop=loop)
+            self._thread = threading.Thread(target=self._feed_stream, daemon=True)
+            self._thread.start()
+
+        def _feed_stream(self) -> None:
+            while True:
+                try:
+                    # Read from the file descriptor directly instead of through sys.stdin.buffer. Closing a buffered
+                    # reader while another thread is blocked reading it makes the interpreter abort at shutdown.
+                    data = os.read(self._fileno, 8192)
+                except Exception as ex:
+                    self._call_soon_threadsafe(self._stream.set_exception, ex)
+                    return
+                if not data:
+                    self._call_soon_threadsafe(self._stream.feed_eof)
+                    return
+                self._call_soon_threadsafe(self._stream.feed_data, data)
+
+        def _call_soon_threadsafe(self, callback: Callable[..., None], *args: Any) -> None:
+            try:
+                self.loop.call_soon_threadsafe(callback, *args)
+            except RuntimeError:
+                # The event loop has already been closed.
+                pass
 
         def at_eof(self) -> bool:
-            return self.__exception is not None
+            return self._stream.at_eof()
 
         def set_exception(self, exception: Exception) -> None:
-            self.__exception = exception
-
-        def __check(self) -> None:
-            if self.__exception is not None:
-                raise self.__exception
+            self._stream.set_exception(exception)
 
         async def readline(self) -> bytes:
-            self.__check()
-            # a single call to sys.stdin.readline() is thread-safe
-            return await self.loop.run_in_executor(None, self.stdin.readline)
+            return await self._stream.readline()
 
         async def readexactly(self, n: int) -> bytes:
-            self.__check()
-            return await self.loop.run_in_executor(None, self.stdin.read, n)
+            return await self._stream.readexactly(n)
 
     class Writer:
 
@@ -524,11 +546,18 @@ class Mode(enum.StrEnum):
     client = "client"
 
 
-async def main(tcp_port: int | None = None, mode: Mode = Mode.server) -> bool:
+async def serve(session: Session, sleep_ms_after_exit: int = 0) -> bool:
+    shutdown_received = await session.run_forever()
+    if sleep_ms_after_exit > 0:
+        await asyncio.sleep(sleep_ms_after_exit / 1000)
+    return shutdown_received
+
+
+async def main(tcp_port: int | None = None, mode: Mode = Mode.server, sleep_ms_after_exit: int = 0) -> bool:
     if tcp_port is None:
         reader, writer = await stdio()
         session = Session(reader, writer)
-        return await session.run_forever()
+        return await serve(session, sleep_ms_after_exit)
 
     if mode == Mode.server:
         print("running in TCP server mode", file=sys.stderr)
@@ -547,12 +576,14 @@ async def main(tcp_port: int | None = None, mode: Mode = Mode.server) -> bool:
         # NOTE: This is deliberately wrong -- we should stop serving once the exit notification is received. But,
         # it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
         await server.serve_forever()
+        if sleep_ms_after_exit > 0:
+            await asyncio.sleep(sleep_ms_after_exit / 1000)
         return callback.received_shutdown
 
     print("running in TCP client mode", file=sys.stderr)
     reader, writer = await asyncio.open_connection(host=None, port=tcp_port)
     session = Session(reader, writer)
-    return await session.run_forever()
+    return await serve(session, sleep_ms_after_exit)
 
 
 if __name__ == '__main__':
@@ -561,11 +592,18 @@ if __name__ == '__main__':
         version: bool = False
         tcp_port: int | None = None
         mode: Mode = Mode.server
+        sleep_ms_after_exit: int
 
     parser = ArgumentParser(prog=__package__, description=__doc__)
     parser.add_argument("-v", "--version", action="store_true", help="print version and exit")
     parser.add_argument("-p", "--tcp-port", type=int)
     parser.add_argument("--mode", type=Mode, default=Mode.server)
+    parser.add_argument(
+        "--sleep-ms-after-exit",
+        type=int,
+        default=0,
+        help="sleep this many milliseconds after receiving the exit notification",
+    )
     args = parser.parse_args(namespace=CmdLineArgs())
     if args.version:
         print(__package__, __version__)
@@ -574,7 +612,7 @@ if __name__ == '__main__':
     asyncio.set_event_loop(loop)
     shutdown_received = False
     try:
-        shutdown_received = loop.run_until_complete(main(args.tcp_port, args.mode))
+        shutdown_received = loop.run_until_complete(main(args.tcp_port, args.mode, args.sleep_ms_after_exit))
     except KeyboardInterrupt:
         pass
     loop.run_until_complete(loop.shutdown_asyncgens())

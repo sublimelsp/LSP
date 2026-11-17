@@ -437,7 +437,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 *(listener.on_session_shutdown(session) for listener in self._listeners)
             ),
         )
-        if exit_code != 0 or exception:
+        # After `Session.end()` the server was asked to stop, so a kill or an error exit code is not a crash.
+        if not session.end_requested and (exit_code != 0 or exception):
             config = session.config
             restart = self._config_manager.record_crash(config.name, exit_code, exception)
             if not restart:

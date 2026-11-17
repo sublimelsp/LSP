@@ -514,7 +514,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     async def _on_selection_modified_debounced(self) -> None:
         if userprefs().document_highlight_style:
-            await self._do_highlights()
+            self.create_task(self._do_highlights())
         if userprefs().show_code_actions:
             self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
         code_lenses_enabled = LspToggleCodeLensesCommand.are_enabled(self.view.window())
@@ -936,7 +936,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         version = self.view.change_count()
         params: DocumentHighlightParams = {**text_document_position_params(self.view, point)}
         response = await session.request(Request.documentHighlight(params, self.view))
-        if not self._is_highlight_request_current(point, version):
+        if not self._is_highlight_request_current(point, version) or isinstance(response, Error):
             return
         if not isinstance(response, list):
             response = []

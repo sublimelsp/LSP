@@ -70,28 +70,27 @@ class DiagnosticsStorage:
         self._providers[registration_id] = options
         self._update_identifiers()
 
-    def unregister_provider(self, registration_id: str) -> set[str]:
+    def unregister_provider(self, registration_id: str) -> str | None:
         """
-        Unregister a diagnostics provider and remove the stored diagnostics of its stream.
+        Unregister a diagnostics provider and remove the stored diagnostics of its stream, unless another registered
+        provider uses the same identifier.
 
-        Returns the identifiers of the diagnostic streams which are no longer provided by any registered provider.
+        Returns the identifier of the removed diagnostics stream, or `None` if no stream was removed.
         """
-        if self._providers.pop(registration_id, None) is None:
-            return set()
-        old_identifiers = self._identifiers
+        options = self._providers.pop(registration_id, None)
+        if options is None:
+            return None
         self._update_identifiers()
+        identifier = options.get('identifier')
         # Diagnostics without identifier are shared with the publishDiagnostics notifications, so they are kept.
-        removed_identifiers = {
-            identifier for identifier in old_identifiers - self._identifiers if identifier is not None
-        }
-        if removed_identifiers:
-            for uri in list(self._diagnostics):
-                diagnostics_by_identifier = self._diagnostics[uri]
-                for identifier in removed_identifiers:
-                    diagnostics_by_identifier.pop(identifier, None)
-                if not diagnostics_by_identifier:
-                    del self._diagnostics[uri]
-        return removed_identifiers
+        if identifier is None or identifier in self._identifiers:
+            return None
+        for uri in list(self._diagnostics):
+            diagnostics_by_identifier = self._diagnostics[uri]
+            diagnostics_by_identifier.pop(identifier, None)
+            if not diagnostics_by_identifier:
+                del self._diagnostics[uri]
+        return identifier
 
     def has_provider(self) -> bool:
         return bool(self._providers)

@@ -2497,8 +2497,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             registration_id = unregistration["id"]
             capability_path, registration_path = method_to_capability(unregistration["method"])
             if capability_path == 'diagnosticProvider':
-                if removed_identifiers := self.diagnostics.unregister_provider(registration_id):
-                    self._on_diagnostic_streams_removed_async(removed_identifiers)
+                if (identifier := self.diagnostics.unregister_provider(registration_id)) is not None:
+                    self._on_diagnostic_stream_removed_async(identifier)
                 continue
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
@@ -2512,10 +2512,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, capability_path)
 
-    def _on_diagnostic_streams_removed_async(self, identifiers: set[str]) -> None:
-        # Forget the result IDs of the removed streams, so that the diagnostics are pulled from scratch if a provider
+    def _on_diagnostic_stream_removed_async(self, identifier: str) -> None:
+        # Forget the result IDs of the removed stream, so that the diagnostics are pulled from scratch if a provider
         # with the same identifier gets registered again.
-        for key in [key for key in self.diagnostics_result_ids if key[1] in identifiers]:
+        for key in [key for key in self.diagnostics_result_ids if key[1] == identifier]:
             del self.diagnostics_result_ids[key]
         for sb in self.session_buffers_async():
             if uri := sb.get_uri():

@@ -191,12 +191,12 @@ class DiagnosticsStorageTestCase(TestCase):
         def messages() -> list[str]:
             return [diagnostic['message'] for diagnostic in storage.get_diagnostics_for_uri(TEST_FILE_URI)]
 
-        self.assertEqual(storage.unregister_provider('a'), {'a'})
+        self.assertEqual(storage.unregister_provider('a'), 'a')
         self.assertEqual(messages(), ['b', 'push'])
         # The identifier "b" is still provided by the provider with registration ID "b2".
-        self.assertEqual(storage.unregister_provider('b'), set())
+        self.assertIsNone(storage.unregister_provider('b'))
         self.assertEqual(messages(), ['b', 'push'])
-        self.assertEqual(storage.unregister_provider('b2'), {'b'})
+        self.assertEqual(storage.unregister_provider('b2'), 'b')
         self.assertEqual(messages(), ['push'])
         # Unknown registration IDs are ignored.
-        self.assertEqual(storage.unregister_provider('unknown'), set())
+        self.assertIsNone(storage.unregister_provider('unknown'))

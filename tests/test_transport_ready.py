@@ -84,8 +84,7 @@ class TransportReadyTestCase(SublimeAioTestCase):
 
     async def test_timeout_closes_transport(self) -> None:
         session, transport = await self.start(StallingPlugin, handshake=False)
-        with patch('LSP.plugin.core.sessions.TRANSPORT_READY_TIMEOUT', 0.1), \
-             self.assertRaisesRegex(Error, 'on_transport_ready did not finish'):
+        with patch('LSP.plugin.core.sessions.TRANSPORT_READY_TIMEOUT', 0.1), self.assertRaises(asyncio.TimeoutError):
             await session.initialize({}, None, transport)
         self.assertIsNone(transport._process)
 

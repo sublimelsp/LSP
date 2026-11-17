@@ -90,6 +90,7 @@ class CodeActionsManager:
         self.menu_actions_cache_key: str | None = None
         self.refactor_actions_cache: list[tuple[str, CodeAction]] = []
         self.source_actions_cache: list[tuple[str, CodeAction]] = []
+        self._menu_actions_task: asyncio.Future[list[CodeActionsByConfigName]] | None = None
 
     def request_for_region(
         self,
@@ -121,7 +122,7 @@ class CodeActionsManager:
                     return task
                 self._response_cache = None
         elif only_kinds == MENU_ACTIONS_KINDS:
-            self.menu_actions_cache_key = f"{view.buffer_id()}#{view.change_count()}:{region}"
+            self.menu_actions_cache_key = self._menu_actions_cache_key(view, region)
             self.refactor_actions_cache.clear()
             self.source_actions_cache.clear()
 
@@ -164,6 +165,22 @@ class CodeActionsManager:
         if location_cache_key:
             self._response_cache = (location_cache_key, task)
         return task
+
+    @staticmethod
+    def _menu_actions_cache_key(view: sublime.View, region: sublime.Region) -> str:
+        return f"{view.buffer_id()}#{view.change_count()}:{region}"
+
+    def is_menu_actions_cache_valid(self, view: sublime.View, region: sublime.Region) -> bool:
+        return self.menu_actions_cache_key == self._menu_actions_cache_key(view, region)
+
+    async def request_menu_actions(self, view: sublime.View, region: sublime.Region) -> None:
+        """
+        Request the code actions for the Refactor and Source Action menus, unless the cached ones (or the ones being
+        requested) are already for the given location. Returns once the actions for the given location are available.
+        """
+        if not self.is_menu_actions_cache_valid(view, region) or not self._menu_actions_task:
+            self._menu_actions_task = self.request_for_region(view, region, [], MENU_ACTIONS_KINDS, manual=True)
+        await self._menu_actions_task
 
     async def _collect_code_actions(
         self,
@@ -373,6 +390,11 @@ class LspCodeActionsCommand(LspTextCommand):
         listener = windows.listener_for_view(view)
         if not listener:
             return
+        # Sublime Text re-evaluates the menus after running this command, which would request the menu actions for this
+        # location after the request below. Some servers only keep the code actions from the most recent request, so
+        # the code action selected from the quick panel couldn't be resolved anymore. Request the menu actions first so
+        # that the request from the menus is skipped.
+        await actions_manager.request_menu_actions(view, region)
         session_buffer_diagnostics = listener.get_diagnostics_async(region)
         actions = await actions_manager.request_for_region(
             view, region, session_buffer_diagnostics, only_kinds, manual=True, progress=True
@@ -484,7 +506,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
         if not view:
             return False
         if (region := self._get_region(event)) is not None:
-            return actions_manager.menu_actions_cache_key == f"{view.buffer_id()}#{view.change_count()}:{region}"
+            return actions_manager.is_menu_actions_cache_valid(view, region)
         return False
 
     def _get_region(self, event: dict | None) -> sublime.Region | None:
@@ -504,7 +526,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
         if not view:
             return
         if (region := self._get_region(event)) is not None:
-            await actions_manager.request_for_region(view, region, [], MENU_ACTIONS_KINDS, manual=True)
+            await actions_manager.request_menu_actions(view, region)
 
 
 class LspRefactorCommand(LspMenuActionCommand):

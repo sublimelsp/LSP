@@ -17,8 +17,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 from typing import TYPE_CHECKING
-from typing import TypedDict
 from typing_extensions import NotRequired
+from typing_extensions import TypedDict
 import sublime
 import sublime_plugin
 import weakref
@@ -51,7 +51,7 @@ class RenamePathInputHandler(sublime_plugin.TextInputHandler):
         return len(path) > 0
 
 
-class LspRenamePathInputArgs(TypedDict):
+class LspRenamePathInputArgs(TypedDict, closed=True):
     paths: NotRequired[list[str]]
     new_name: NotRequired[str]
     prompt_workspace_edits: NotRequired[bool]

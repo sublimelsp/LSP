@@ -139,7 +139,7 @@ class TreeViewSheet(sublime.HtmlSheet):
         self.selected_node_id: str | None = None
         self.ordered_node_ids: list[str] = []
         self.root_nodes: list[str] = []
-        self.name = name
+        self.sheet_name = name
         self.data_provider = data_provider
         self.header = header
         self.data_provider.get_children(None).then(self._set_root_nodes)
@@ -357,7 +357,7 @@ class TreeViewSheet(sublime.HtmlSheet):
 
     def _subtree_html(self, node_id: str) -> str:
         node = self.nodes[node_id]
-        html = node.tree_item.html(self.name, node.indent_level, has_focus=node_id == self.selected_node_id)
+        html = node.tree_item.html(self.sheet_name, node.indent_level, has_focus=node_id == self.selected_node_id)
         if node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
             html += "".join([self._subtree_html(child_id) for child_id in node.child_ids])
         return html

@@ -455,13 +455,12 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             request_flags |= RequestFlags.INLAY_HINT
         if session == self.session_async('semanticTokensProvider', 0):
             request_flags |= RequestFlags.SEMANTIC_TOKENS
-        if session == self.session_async('documentOnTypeFormattingProvider', 0):
-            request_flags |= RequestFlags.ON_TYPE_FORMATTING
-        if (
-            len(selection := self.view.sel()) == 1
-            and session == self.session_async('linkedEditingRangeProvider', selection[0].b)
-        ):
-            request_flags |= RequestFlags.LINKED_EDITING_RANGE
+        if selection := self.view.sel():
+            point = selection[0].b
+            if session == self.session_async('documentOnTypeFormattingProvider', point):
+                request_flags |= RequestFlags.ON_TYPE_FORMATTING
+            if len(selection) == 1 and session == self.session_async('linkedEditingRangeProvider', point):
+                request_flags |= RequestFlags.LINKED_EDITING_RANGE
         return request_flags
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------

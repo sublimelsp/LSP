@@ -26,8 +26,8 @@ from typing import Any
 from typing import cast
 from typing import overload
 from typing import TYPE_CHECKING
-from typing import TypedDict
 from typing_extensions import NotRequired
+from typing_extensions import TypedDict
 from typing_extensions import TypeGuard
 import asyncio
 import os
@@ -69,13 +69,13 @@ SYMBOL_KIND_NAMES: dict[SymbolKind, str] = {
 }
 
 
-class DocumentSymbolValue(TypedDict):
+class DocumentSymbolValue(TypedDict, closed=True):
     deprecated: bool
     kind: int
     range: Range
 
 
-class WorkspaceSymbolValue(TypedDict):
+class WorkspaceSymbolValue(TypedDict, closed=True):
     deprecated: bool
     kind: int
     location: NotRequired[Location]

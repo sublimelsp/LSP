@@ -57,7 +57,9 @@ class WorkspaceFolder:
         return filename_to_uri(self.path)
 
     def includes_uri(self, uri: str) -> bool:
-        return uri.startswith(self.uri())
+        folder_uri = self.uri()
+        # Require a path separator after the folder URI so that a folder "/a/proj" doesn't include "/a/proj-other".
+        return uri == folder_uri or uri.startswith(folder_uri.rstrip('/') + '/')
 
 
 class ProjectFolders:

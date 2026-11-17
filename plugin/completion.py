@@ -159,7 +159,7 @@ def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItem
             default_text_edit = {
                 'newText': new_text,
                 'insert': edit_range.get('insert'),
-                'replace': edit_range.get('insert'),
+                'replace': edit_range.get('replace'),
             }
         elif is_range(edit_range):
             default_text_edit = {

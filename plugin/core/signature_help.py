@@ -10,7 +10,7 @@ from .views import FORMAT_STRING
 from .views import html_wrapper
 from .views import minihtml
 from typing import TYPE_CHECKING
-from typing import TypedDict
+from typing_extensions import TypedDict
 import html
 import re
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     import sublime
 
 
-class SignatureHelpStyle(TypedDict):
+class SignatureHelpStyle(TypedDict, closed=True):
     function_color: str
     active_parameter_color: str
     active_parameter_bold: bool

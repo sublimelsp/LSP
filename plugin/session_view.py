@@ -148,8 +148,8 @@ class SessionView:
     def _initialize_region_keys(self) -> None:
         """
         Initialize all region keys for the View.add_regions method to enforce a certain draw order for overlapping
-        diagnostics, semantic tokens, document highlights, and gutter icons. The draw order seems to follow the
-        following rules:
+        diagnostics, semantic tokens, document highlights, linked editing ranges, hover highlights, and gutter icons.
+        The draw order seems to follow the following rules:
           - inline decorations (underline & background) from region keys which were initialized _last_ are drawn on top
           - gutter icons from region keys which were initialized _first_ are drawn
         For more context, see https://github.com/sublimelsp/LSP/issues/1593.
@@ -157,6 +157,7 @@ class SessionView:
         r = [sublime.Region(0, 0)]
         document_highlight_style = userprefs().document_highlight_style
         hover_highlight_style = userprefs().hover_highlight_style
+        linked_editing_highlight_style = userprefs().linked_editing_highlight_style
         line_modes = ["m", "s"]
         self.view.add_regions(RegionKey.CODE_ACTION, r)  # code actions lightbulb icon should always be on top
         session_name = self.session.config.name
@@ -165,6 +166,8 @@ class SessionView:
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
                              document_highlight_key(kind, multiline=False)))
+        if linked_editing_highlight_style in {"background", "fill"}:
+            keys.append(RegionKey.LINKED_EDITING)
         if hover_highlight_style in {"background", "fill"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
@@ -179,6 +182,8 @@ class SessionView:
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
                              document_highlight_key(kind, multiline=False)))
+        if linked_editing_highlight_style in {"underline", "stippled"}:
+            keys.append(RegionKey.LINKED_EDITING)
         if hover_highlight_style in {"underline", "stippled"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:

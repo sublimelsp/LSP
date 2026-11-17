@@ -178,13 +178,13 @@ class SessionView:
             keys.extend(f"lsp{session_name}d{mode}{severity}_icon" for mode in line_modes)
         for severity in range(4, 0, -1):
             keys.extend(f"lsp{session_name}d{mode}{severity}_underline" for mode in line_modes)
-        if document_highlight_style in {"underline", "stippled"}:
+        if document_highlight_style in {"underline", "stippled", "outline"}:
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
                              document_highlight_key(kind, multiline=False)))
-        if linked_editing_highlight_style in {"underline", "stippled"}:
+        if linked_editing_highlight_style in {"underline", "stippled", "outline"}:
             keys.append(RegionKey.LINKED_EDITING)
-        if hover_highlight_style in {"underline", "stippled"}:
+        if hover_highlight_style in {"underline", "stippled", "outline"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:
             self.view.add_regions(key, r, flags=REGIONS_INITIALIZE_FLAGS)

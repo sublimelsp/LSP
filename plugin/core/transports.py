@@ -596,19 +596,11 @@ async def kill_all_subprocesses() -> None:
     await asyncio.gather(*[p.wait() for p in subprocesses], return_exceptions=True)
 
 
-async def _kill_process(process: asyncio.subprocess.Process) -> int | None:
-    try:
-        # Wait for the process to die, or zombie processes might be the result.
-        wait_task = asyncio.create_task(process.wait())
-        with contextlib.suppress(ProcessLookupError):  # The process might have exited already.
-            process.kill()
-            return await asyncio.shield(wait_task)  # ignore cancellations of the wait
-    except asyncio.CancelledError:
-        # asyncio.shield shields the task, but not this coroutine itself
-        pass
-    except Exception as ex:
-        exception_log("strange exception during process kill", ex)
-    return None
+async def _kill_process(process: asyncio.subprocess.Process) -> None:
+    with contextlib.suppress(ProcessLookupError):  # The process might have exited already.
+        process.kill()
+    # Wait for the process to die, or zombie processes might be the result.
+    await process.wait()
 
 
 def _fixup_startup_args(args: list[str]) -> Any:

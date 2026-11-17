@@ -197,10 +197,6 @@ class TaskContainer:
                 f"(MRO: {type(self).__mro__})",
             )
 
-    def is_current_task_in_task_container(self) -> bool:
-        """Whether the current task is inside this task container. Only safe to call from the asyncio thread."""
-        return asyncio.current_task() in self._tasks
-
     async def cancel_all_tasks(self) -> list[Exception]:
         """Cancel all running tasks."""
         tasks = list(self._tasks)

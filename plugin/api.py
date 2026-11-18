@@ -354,6 +354,16 @@ class OnPreStartContext:
     """The workspace folders active for this session."""
 
 
+@dataclass
+class OnTransportReadyContext:
+    """Context passed to `LspPlugin.on_transport_ready`."""
+
+    reader: asyncio.StreamReader
+    """The transports' stream reader."""
+    writer: asyncio.StreamWriter
+    """The transports' stream writer."""
+
+
 class LspPlugin(APIHandler):
     """
     Base class for LSP helper packages.
@@ -506,7 +516,7 @@ class LspPlugin(APIHandler):
         cls.name = cls.__module__.split('.')[0]  # pyright: ignore[reportAttributeAccessIssue]
         cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.name)  # pyright: ignore[reportAttributeAccessIssue]
 
-    async def on_transport_ready(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def on_transport_ready(self, context: OnTransportReadyContext) -> None:
         """
         Called before any JSON-RPC communication starts.
 

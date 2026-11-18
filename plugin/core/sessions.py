@@ -94,6 +94,7 @@ from ..api import AbstractPlugin
 from ..api import APIHandler
 from ..api import LspPlugin
 from ..api import notification_handler
+from ..api import OnTransportReadyContext
 from ..api import PostResponseCallback
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
@@ -1417,9 +1418,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self._plugin = self._plugin_class(weakref.ref(self))
             try:
                 # The read loop of the transport is not started yet, so the plugin has exclusive access to the streams.
-                await asyncio.wait_for(
-                    self._plugin.on_transport_ready(transport.reader, transport.writer), timeout=TRANSPORT_READY_TIMEOUT
-                )
+                context = OnTransportReadyContext(reader=transport.reader, writer=transport.writer)
+                await asyncio.wait_for(self._plugin.on_transport_ready(context), timeout=TRANSPORT_READY_TIMEOUT)
             except asyncio.TimeoutError as ex:
                 raise TimeoutError(
                     f"on_transport_ready did not finish in time ({TRANSPORT_READY_TIMEOUT} seconds)"

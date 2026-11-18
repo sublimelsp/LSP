@@ -5,6 +5,7 @@ from .setup import SublimeAioTestCase
 from .test_session import MockLogger
 from .test_session import MockManager
 from LSP.plugin.api import LspPlugin
+from LSP.plugin.api import OnTransportReadyContext
 from LSP.plugin.core.protocol import Error
 from LSP.plugin.core.sessions import Session
 from typing import TYPE_CHECKING
@@ -22,28 +23,28 @@ class HandshakePlugin(LspPlugin):
     pong = b""
 
     @override
-    async def on_transport_ready(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-        self.hello = await reader.readline()
+    async def on_transport_ready(self, context: OnTransportReadyContext) -> None:
+        self.hello = await context.reader.readline()
         # Yield to the event loop before continuing. A JSON-RPC read loop that runs at the same time would now consume
         # the reply of the server.
         await asyncio.sleep(0.1)
-        writer.write(b"ping\n")
-        await writer.drain()
-        self.pong = await reader.readline()
+        context.writer.write(b"ping\n")
+        await context.writer.drain()
+        self.pong = await context.reader.readline()
 
 
 class StallingPlugin(LspPlugin):
 
     @override
-    async def on_transport_ready(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def on_transport_ready(self, context: OnTransportReadyContext) -> None:
         # The server is not started with --handshake, so it never writes anything before JSON-RPC starts.
-        await reader.readline()
+        await context.reader.readline()
 
 
 class FailingPlugin(LspPlugin):
 
     @override
-    async def on_transport_ready(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def on_transport_ready(self, context: OnTransportReadyContext) -> None:
         raise RuntimeError("handshake failed")
 
 

@@ -10,6 +10,7 @@ icons/convert.bat export-ignore
 mypy.ini export-ignore
 renovate.json export-ignore
 stubs/ export-ignore
+stubs_third_party/ export-ignore
 tests/ export-ignore
 tox.ini export-ignore
 unittesting.json export-ignore

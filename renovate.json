@@ -29,6 +29,12 @@
       "automergeType": "branch"
     },
     {
+      "description": "Keep the Python 3.8-compatible stubs on the 4200 line",
+      "matchPackageNames": ["sublime-text-stubs"],
+      "matchCurrentVersion": "/^4200\\./",
+      "allowedVersions": "/^4200\\./"
+    },
+    {
       "description": "Group GitHub Actions updates",
       "matchManagers": [
         "github-actions"

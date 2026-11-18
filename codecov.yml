@@ -14,5 +14,6 @@ ignore:
   - Menus
   - messages
   - stubs
+  - stubs_third_party
   - Syntaxes
   - tests

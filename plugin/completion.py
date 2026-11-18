@@ -61,18 +61,21 @@ def format_details(detail: str, cutoff_length: int = 80) -> str:
 
 class CompletionTriggerInfo(NamedTuple):
     trigger: str
-    """The text that ST matches the user's input against, which also decides the prefix that gets replaced."""
+    """The text that ST matches the user's input against. For items without a text edit, it also decides the prefix
+    that gets replaced."""
     details_label: str
-    """The label text that didn't make it into the trigger and is shown in the details instead, or an empty string."""
+    """The part of the label and `labelDetails.detail` that didn't make it into the trigger and is shown in the details
+    instead, or an empty string."""
     label_detail_matched: bool
     """Whether the trigger was chosen because the label combined with `labelDetails.detail` matches `filterText`."""
 
 
-def completion_trigger_info(item: CompletionItem) -> CompletionTriggerInfo:
-    """Decide how the label, `labelDetails.detail` and `filterText` of an LSP completion item are presented in ST."""
-    label = item['label']
-    label_detail = (item.get('labelDetails') or {}).get('detail') or ""
-    filter_text = item.get('filterText') or ""
+def completion_trigger_info(label: str, label_detail: str, filter_text: str) -> CompletionTriggerInfo:
+    """
+    Decide how the `label`, `labelDetails.detail` and `filterText` of an LSP completion item are presented in ST.
+
+    Missing values should be passed as empty strings.
+    """
     if label_detail and (label + label_detail).startswith(filter_text):
         if label_detail[0].isalnum() and label.startswith(filter_text):
             # labelDetails.detail is likely a type annotation
@@ -94,7 +97,8 @@ def format_completion(
     view_id: int
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
-    lsp_label_description = (item.get('labelDetails') or {}).get('description') or ""
+    lsp_label_details = item.get('labelDetails') or {}
+    lsp_label_description = lsp_label_details.get('description') or ""
     lsp_detail = (item.get('detail') or "").replace("\n", " ")
     completion_kind = item.get('kind')
     kind = COMPLETION_KINDS.get(completion_kind, sublime.KIND_AMBIGUOUS) if completion_kind else sublime.KIND_AMBIGUOUS
@@ -104,9 +108,12 @@ def format_completion(
         args = f'{{"view_id":{view_id},"command":"lsp_resolve_docs","args":{{"index":{index},"session_name":"{session_name}"}}}}'  # ruff: ignore[line-too-long]
         href = f'subl:lsp_run_text_command_helper {args}'
         details.append(f"<a href='{href}'>More</a>")
-    trigger, details_label, label_detail_matched = completion_trigger_info(item)
+    trigger, details_label, label_detail_matched = completion_trigger_info(
+        item['label'], lsp_label_details.get('detail') or "", item.get('filterText') or "")
     if details_label:
         details.append(format_details(details_label))
+    # When labelDetails.detail is shown next to the label (in the trigger or in the details), the item's detail is
+    # likely redundant, so it's only used as a fallback annotation and isn't added to the details.
     if label_detail_matched or not lsp_label_description:
         annotation = lsp_label_description or lsp_detail
     else:

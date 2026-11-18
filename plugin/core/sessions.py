@@ -2883,10 +2883,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         await self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
 
     async def exit(self) -> None:
-        await self.notify(Notification.exit())
-        if self._transport:
-            await self._transport.close()
-            self._transport = None
+        try:
+            await self.notify(Notification.exit())
+        finally:
+            # Close the transport even if sending the notification failed. Otherwise the server process is left running.
+            if transport := self._transport:
+                self._transport = None
+                await transport.close()
 
     async def send_payload(self, payload: JSONRPCMessage) -> None:
         try:

@@ -5,7 +5,6 @@ from ..protocol import CodeActionContext
 from ..protocol import CodeActionKind
 from ..protocol import CodeActionParams
 from ..protocol import CodeActionTriggerKind
-from ..protocol import ColorInformation
 from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticSeverity
@@ -14,6 +13,7 @@ from ..protocol import DocumentDiagnosticParams
 from ..protocol import DocumentDiagnosticReport
 from ..protocol import DocumentDiagnosticReportKind
 from ..protocol import DocumentLink
+from ..protocol import DocumentLinkParams
 from ..protocol import DocumentOnTypeFormattingOptions
 from ..protocol import DocumentOnTypeFormattingParams
 from ..protocol import DocumentUri
@@ -82,14 +82,10 @@ from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
 from .inlay_hint import inlay_hint_to_phantom
 from dataclasses import dataclass
 from typing import Any
-from typing import Callable
 from typing import cast
-from typing import Coroutine
 from typing import TYPE_CHECKING
 from typing import TypeVar
-from typing_extensions import Concatenate
 from typing_extensions import deprecated
-from typing_extensions import ParamSpec
 from typing_extensions import TypeGuard
 from weakref import WeakSet
 import asyncio
@@ -100,7 +96,6 @@ import time
 if TYPE_CHECKING:
     from .core.promise import Promise
 
-P = ParamSpec('P')
 _SemanticTokensParamsT = TypeVar('_SemanticTokensParamsT', SemanticTokensParams, SemanticTokensRangeParams)
 
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
@@ -255,7 +250,7 @@ class SessionBuffer(TaskContainer):
             try:
                 request_flags = self._get_request_flags(view)
                 if request_flags & RequestFlags.DOCUMENT_COLOR:
-                    self._do_color_boxes_async(view, version)
+                    self.create_task(self._do_color_boxes(view, version))
                 self.create_task(self.do_document_diagnostic(view, version))
                 if request_flags & RequestFlags.SEMANTIC_TOKENS:
                     self.create_task(self.do_semantic_tokens(view, view.size() > HUGE_FILE_SIZE))
@@ -263,7 +258,7 @@ class SessionBuffer(TaskContainer):
                     self.create_task(self.do_inlay_hints(view))
                 self.create_task(self.do_code_lenses(view))
                 if userprefs().link_highlight_style == 'underline':
-                    self._do_document_link_async(view, version)
+                    self.create_task(self._do_document_link(view, version))
             except MissingUriError:
                 return
             await self.session.notify_plugin_on_session_buffer_change(self)
@@ -514,12 +509,12 @@ class SessionBuffer(TaskContainer):
         try:
             request_flags = self._get_request_flags(view)
             if request_flags & RequestFlags.DOCUMENT_COLOR:
-                self._do_color_boxes_async(view, version)
+                self.create_task(self._do_color_boxes(view, version))
             self.create_task(self.do_document_diagnostic(view, version))
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
                 self.create_task(self.do_semantic_tokens(view))
             if userprefs().link_highlight_style == 'underline':
-                self._do_document_link_async(view, version)
+                self.create_task(self._do_document_link(view, version))
             if request_flags & RequestFlags.INLAY_HINT:
                 self.create_task(self.do_inlay_hints(view))
             self.create_task(self.do_code_lenses(view))
@@ -552,7 +547,7 @@ class SessionBuffer(TaskContainer):
     def on_userprefs_changed_async(self) -> None:
         if userprefs().link_highlight_style == 'underline':
             if view := self.some_view():
-                self._do_document_link_async(view, view.change_count())
+                self.create_task(self._do_document_link(view, view.change_count()))
         else:
             self._redraw_document_links_async()
         if userprefs().semantic_highlighting:
@@ -588,19 +583,6 @@ class SessionBuffer(TaskContainer):
     def _reset_pending_refresh(self, flags: RequestFlags) -> None:
         """Reset the refresh marker for the request type(s) given by `flags`."""
         self.pending_refreshes &= ~flags
-
-    def _if_view_unchanged(
-        self, f: Callable[Concatenate[sublime.View, P], Coroutine[None, None, None] | None], version: int
-    ) -> Callable[P, None]:
-        """Ensures that the view is at the same version when we were called, before calling the `f` function."""
-        def handler(*args: P.args, **kwargs: P.kwargs) -> None:
-            if (view := self.some_view()) and view.change_count() == version:
-                if asyncio.iscoroutinefunction(f):
-                    self.create_task(f(view, *args, **kwargs))
-                else:
-                    f(view, *args, **kwargs)
-
-        return handler
 
     def _update_color_scheme_rules(self, view: sublime.View) -> None:
         # Color scheme rules for diagnostic tags
@@ -645,32 +627,29 @@ class SessionBuffer(TaskContainer):
 
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
-    def _do_color_boxes_async(self, view: sublime.View, version: int) -> None:
+    async def _do_color_boxes(self, view: sublime.View, version: int) -> None:
         if self.has_capability("colorProvider"):
-            self.session.send_request_async(
-                Request.documentColor(document_color_params(view), view),
-                self._if_view_unchanged(self._on_color_boxes_async, version)
-            )
-
-    def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation] | None) -> None:
-        phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response] if response else []
-        sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
+            response = await self.session.request(Request.documentColor(document_color_params(view), view))
+            if isinstance(response, Error):
+                return
+            if view.change_count() == version:
+                phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response] if response else []
+                sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
 
     def clear_color_boxes_async(self) -> None:
         sublime.set_timeout(lambda: self._color_phantoms.update([]))
 
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 
-    def _do_document_link_async(self, view: sublime.View, version: int) -> None:
+    async def _do_document_link(self, view: sublime.View, version: int) -> None:
         if self.has_capability("documentLinkProvider"):
-            self.session.send_request_async(
-                Request.documentLink({'textDocument': text_document_identifier(view)}, view),
-                self._if_view_unchanged(self._on_document_link_async, version)
-            )
-
-    def _on_document_link_async(self, view: sublime.View, response: list[DocumentLink] | None) -> None:
-        self._document_links = response or []
-        self._redraw_document_links_async()
+            params: DocumentLinkParams = {'textDocument': text_document_identifier(view)}
+            response = await self.session.request(Request.documentLink(params, view))
+            if isinstance(response, Error):
+                return
+            if view.change_count() == version:
+                self._document_links = response or []
+                self._redraw_document_links_async()
 
     def _redraw_document_links_async(self) -> None:
         if self._document_links and userprefs().link_highlight_style == "underline":

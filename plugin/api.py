@@ -518,8 +518,8 @@ class LspPlugin(APIHandler):
         When returning from this async method, the JSON-RPC communication starts. Do not use the session to send
         requests or notifications from this method, because they cannot be sent yet.
 
-        This method must finish within 5 seconds. If it raises an exception or takes too long, the server is shut down
-        and an error is shown.
+        This method must finish within `LSP.plugin.core.sessions.TRANSPORT_READY_TIMEOUT` seconds. If it raises an
+        exception or takes too long, the server is shut down and an error is shown.
         """
         pass
 

@@ -5,7 +5,6 @@ from ..protocol import CodeActionKind
 from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticSeverity
-from ..protocol import DocumentHighlight
 from ..protocol import DocumentHighlightKind
 from ..protocol import DocumentHighlightParams
 from ..protocol import DocumentUri
@@ -21,6 +20,7 @@ from .core.aio import gather_and_flatten_exceptions
 from .core.aio import get_clipboard
 from .core.aio import run_coroutine
 from .core.aio import run_on_asyncio_thread
+from .core.aio import run_on_main_thread
 from .core.aio import TaskContainer
 from .core.constants import ChangeEventAction
 from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
@@ -54,7 +54,6 @@ from .core.signature_help import SigHelp
 from .core.signature_help import SignatureHelpStyle
 from .core.type_converters import range_to_region
 from .core.types import basescope2languageid
-from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.url import CODE_ACTION_SCHEME
@@ -419,7 +418,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed(change_count, changes, action)
-        self._on_view_updated_async()
+        self._on_view_updated()
 
     def get_uri(self) -> DocumentUri:
         return self._uri
@@ -509,12 +508,13 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             self._code_actions_request_keys.clear()
             self._clear_code_actions_annotation()
         self._when_selection_remains_stable(
-            self._on_selection_modified_debounced, first_region, after_ms=self.debounce_time)
+            self._on_selection_modified_debounced, first_region, after_ms=self.debounce_time
+        )
         self._update_diagnostic_in_status_bar_async()
 
-    def _on_selection_modified_debounced(self) -> None:
+    async def _on_selection_modified_debounced(self) -> None:
         if userprefs().document_highlight_style:
-            self._do_highlights_async()
+            self.create_task(self._do_highlights())
         if userprefs().show_code_actions:
             self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
         code_lenses_enabled = LspToggleCodeLensesCommand.are_enabled(self.view.window())
@@ -925,17 +925,19 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 return True
         return False
 
-    def _do_highlights_async(self) -> None:
+    async def _do_highlights(self) -> None:
         region = first_selection_region(self.view)
         if region is None:
             return
         point = region.b
-        if session := self.session_async("documentHighlightProvider", point):
-            params: DocumentHighlightParams = {**text_document_position_params(self.view, point)}
-            request = Request.documentHighlight(params, self.view)
-            session.send_request_async(request, self._on_highlights)
-
-    def _on_highlights(self, response: list[DocumentHighlight] | None) -> None:
+        session = self.session_async("documentHighlightProvider", point)
+        if not session:
+            return
+        version = self.view.change_count()
+        params: DocumentHighlightParams = {**text_document_position_params(self.view, point)}
+        response = await session.request(Request.documentHighlight(params, self.view))
+        if not self._is_highlight_request_current(point, version) or isinstance(response, Error):
+            return
         if not isinstance(response, list):
             response = []
         kind2regions: dict[tuple[DocumentHighlightKind, bool], list[sublime.Region]] = {}
@@ -948,6 +950,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             kind2regions.setdefault((kind, multiline), []).append(r)
 
         def render_highlights_on_main_thread() -> None:
+            if not self._is_highlight_request_current(point, version):
+                return
             self._clear_highlight_regions()
             prefs = userprefs()
             flags_multi, flags_single = prefs.highlight_style_region_flags(prefs.document_highlight_style)
@@ -959,7 +963,13 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 flags = flags_multi if multiline else flags_single
                 self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
 
-        sublime.set_timeout(render_highlights_on_main_thread)
+        await run_on_main_thread(render_highlights_on_main_thread)
+
+    def _is_highlight_request_current(self, point: int, version: int) -> bool:
+        if self.view.change_count() != version:
+            return False
+        region = first_selection_region(self.view)
+        return region is not None and region.b == point
 
     # --- textDocument/foldingRange ------------------------------------------------------------------------------------
 
@@ -1023,7 +1033,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             exceptions = await asyncio.gather(
                 *(sv.on_revert() for sv in self.session_views_async()), return_exceptions=True
             )
-        self._on_view_updated_async()
+        self._on_view_updated()
         return exceptions
 
     async def reload(self) -> list[BaseException | None]:
@@ -1032,15 +1042,23 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             exceptions = await asyncio.gather(
                 *(sv.on_reload() for sv in self.session_views_async()), return_exceptions=True
             )
-        self._on_view_updated_async()
+        self._on_view_updated()
         return exceptions
 
     # --- Private utility methods --------------------------------------------------------------------------------------
 
-    def _when_selection_remains_stable(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
-        debounced(f, after_ms, partial(self._is_selection_stable_async, r))
+    def _when_selection_remains_stable(
+        self, coroutine_function: Callable[[], Coroutine[object, object, None]], r: sublime.Region, after_ms: int
+    ) -> None:
 
-    def _is_selection_stable_async(self, region: sublime.Region) -> bool:
+        async def run() -> None:
+            await asyncio.sleep(after_ms / 1000)
+            if self._is_selection_stable(r):
+                await coroutine_function()
+
+        self.create_task(run())
+
+    def _is_selection_stable(self, region: sublime.Region) -> bool:
         return bool(self._stored_selection and self._stored_selection[0] == region)
 
     def _register(self) -> None:
@@ -1073,7 +1091,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
                 debug("also registering", listener)
                 self.create_task(listener._on_load_impl())
 
-    def _on_view_updated_async(self) -> None:
+    def _on_view_updated(self) -> None:
         if self._should_format_on_paste:
             self._should_format_on_paste = False
 
@@ -1086,7 +1104,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
             return
         if userprefs().document_highlight_style:
             self._clear_highlight_regions()
-            self._when_selection_remains_stable(self._do_highlights_async, first_region, after_ms=self.debounce_time)
+            self._when_selection_remains_stable(self._do_highlights, first_region, after_ms=self.debounce_time)
         if userprefs().show_signature_help and (selection := self._stored_selection):
             if self._sighelp:
                 self.create_task(self.do_signature_help(SignatureHelpTriggerKind.ContentChange))
@@ -1175,7 +1193,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     def on_userprefs_changed_async(self) -> None:
         if userprefs().document_highlight_style:
-            self._do_highlights_async()
+            self.create_task(self._do_highlights())
         else:
             self._clear_highlight_regions()
         self._code_actions_for_selection.clear()

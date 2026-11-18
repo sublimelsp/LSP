@@ -1422,7 +1422,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 )
             except asyncio.TimeoutError as ex:
                 raise TimeoutError(
-                    f"{self._plugin.__class__.__qualname__}.on_transport_ready did not finish in time ({TRANSPORT_READY_TIMEOUT} seconds)"  # ruff: ignore[line-too-long]
+                    f"on_transport_ready did not finish in time ({TRANSPORT_READY_TIMEOUT} seconds)"
                 ) from ex
         self.transport = transport
         self.transport.start()

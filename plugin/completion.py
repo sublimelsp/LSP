@@ -390,11 +390,6 @@ class LspSelectCompletionCommand(LspTextCommand):
 
 class LspApplyCompletionCommand(LspTextCommand):
 
-    @classmethod
-    def apply_additional_text_edits(cls, view: sublime.View, item: CompletionItem) -> None:
-        if additional_edits := item.get('additionalTextEdits'):
-            apply_text_edits(view, additional_edits)
-
     def run(
         self,
         edit: sublime.Edit,
@@ -427,7 +422,8 @@ class LspApplyCompletionCommand(LspTextCommand):
                 'format': 'snippet' if is_snippet else 'text',
                 'keep_prefix': False,
             })
-        self.apply_additional_text_edits(self.view, item)
+        if additional_edits := item.get('additionalTextEdits'):
+            apply_text_edits(self.view, additional_edits)
         if command := item.get("command"):
             debug(f'Running server command "{command}" for view {self.view.id()}')
             self.view.run_command("lsp_execute", {

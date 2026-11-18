@@ -2497,7 +2497,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             registration_id = unregistration["id"]
             capability_path, registration_path = method_to_capability(unregistration["method"])
             if capability_path == 'diagnosticProvider':
-                self.diagnostics.unregister_provider(registration_id)
+                if (identifier := self.diagnostics.unregister_provider(registration_id)) is not None:
+                    self._on_diagnostic_stream_removed_async(identifier)
                 continue
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
@@ -2510,6 +2511,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 if isinstance(discarded, dict):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, capability_path)
+
+    def _on_diagnostic_stream_removed_async(self, identifier: str) -> None:
+        # Forget the result IDs of the removed stream, so that the diagnostics are pulled from scratch if a provider
+        # with the same identifier gets registered again.
+        for key in [key for key in self.diagnostics_result_ids if key[1] == identifier]:
+            del self.diagnostics_result_ids[key]
+        for sb in self.session_buffers_async():
+            if uri := sb.get_uri():
+                self._publish_diagnostics_to_session_buffer_async(sb, self.diagnostics.get_diagnostics_for_uri(uri))
+        if mgr := self.manager():
+            mgr.on_diagnostics_updated()
 
     def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
         if not self._watcher_impl:

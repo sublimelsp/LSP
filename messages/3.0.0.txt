@@ -16,6 +16,7 @@
 - `LspTextCommand` and `LspWindowCommand` subclasses can now define `run` as a coroutine
   (`async def run`). Such a method runs on the asyncio thread and, for `LspTextCommand`, does not
   receive an edit token. A regular `def run` keeps working as before.
+  By default, async-aware commands are cancelled when a new command invocation starts.
 - `LspPlugin` hooks, and `@command_handler`, `@request_handler` and `@uri_handler` handlers,
   can now be `async` functions. Handlers that return a `Promise` keep working.
 - Add `run_coroutine`, `run_on_asyncio_thread`, `run_on_threadpool`, `run_on_worker_thread`

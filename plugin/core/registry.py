@@ -13,6 +13,7 @@ from .windows import WindowRegistry
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import ClassVar
 from typing import Coroutine
 from typing import Generator
 from typing import Iterable
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
     from ...protocol import LocationLink
     from .sessions import AbstractViewListener
     from .sessions import Session
+    import concurrent.futures
 
 windows = WindowRegistry()
 
@@ -72,6 +74,18 @@ def _is_edit_parameter(param: inspect.Parameter) -> bool:
 
 class AsyncCommandMixin:
 
+    _current_run: concurrent.futures.Future[None] | None = None
+
+    cancel_previous_run: ClassVar[bool] = True
+    """Whether to cancel the previous `run` when a new `run` starts."""
+
+    def _on_current_run_done(self, f: concurrent.futures.Future[None]) -> None:
+        sublime.set_timeout(lambda: self._clear_current_run(f))
+
+    def _clear_current_run(self, f: concurrent.futures.Future[None]) -> None:
+        if self._current_run is f:
+            self._current_run = None
+
     def _async_run(
         self,
         args: dict[str, Any] | None,
@@ -93,7 +107,10 @@ class AsyncCommandMixin:
                 )
                 return
             raise
-        run_coroutine(coro)
+        if self.cancel_previous_run and self._current_run and not self._current_run.done():
+            self._current_run.cancel()
+        self._current_run = run_coroutine(coro)
+        self._current_run.add_done_callback(self._on_current_run_done)
 
 
 class LspWindowCommand(sublime_plugin.WindowCommand, AsyncCommandMixin):
@@ -119,6 +136,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand, AsyncCommandMixin):
 
     def __init__(self, window: sublime.Window) -> None:
         super().__init__(window)
+        AsyncCommandMixin.__init__(self)
         if not self.session_name:
             # Auto-detect session_name based on package name. In case of the LSP package use empty string.
             package_name = self.__module__.split('.')[0]
@@ -207,6 +225,7 @@ class LspTextCommand(sublime_plugin.TextCommand, AsyncCommandMixin):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        AsyncCommandMixin.__init__(self)
         if not self.session_name:
             # Auto-detect session_name based on package name. In case of the LSP package use empty string.
             package_name = self.__module__.split('.')[0]

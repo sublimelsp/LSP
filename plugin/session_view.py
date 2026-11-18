@@ -166,7 +166,7 @@ class SessionView:
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
                              document_highlight_key(kind, multiline=False)))
-        if linked_editing_highlight_style in {"background", "fill"}:
+        if linked_editing_highlight_style == "background":
             keys.append(RegionKey.LINKED_EDITING)
         if hover_highlight_style in {"background", "fill"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)

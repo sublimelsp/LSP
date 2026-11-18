@@ -2877,10 +2877,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             self.transport = None
 
     async def send_payload(self, payload: JSONRPCMessage) -> None:
-        try:
-            await self.transport.send(payload)  # pyright: ignore[reportOptionalMemberAccess]
-        except AttributeError:
-            pass
+        if self.transport:
+            await self.transport.send(payload)
 
     async def deduce_payload(
         self,

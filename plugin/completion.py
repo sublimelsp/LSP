@@ -32,8 +32,10 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from typing import Any
 from typing import cast
+from typing import ClassVar
 from typing import Generator
 from typing import List
+from typing import NamedTuple
 from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import Union
@@ -57,6 +59,32 @@ def format_details(detail: str, cutoff_length: int = 80) -> str:
     return html.escape(detail if len(detail) <= cutoff_length else detail[:cutoff_length] + '…')
 
 
+class CompletionTriggerInfo(NamedTuple):
+    trigger: str
+    """The text that ST matches the user's input against, which also decides the prefix that gets replaced."""
+    details_label: str
+    """The label text that didn't make it into the trigger and is shown in the details instead, or an empty string."""
+    label_detail_matched: bool
+    """Whether the trigger was chosen because the label combined with `labelDetails.detail` matches `filterText`."""
+
+
+def completion_trigger_info(item: CompletionItem) -> CompletionTriggerInfo:
+    """Decide how the label, `labelDetails.detail` and `filterText` of an LSP completion item are presented in ST."""
+    label = item['label']
+    label_detail = (item.get('labelDetails') or {}).get('detail') or ""
+    filter_text = item.get('filterText') or ""
+    if label_detail and (label + label_detail).startswith(filter_text):
+        if label_detail[0].isalnum() and label.startswith(filter_text):
+            # labelDetails.detail is likely a type annotation
+            # Don't append it to the trigger: https://github.com/sublimelsp/LSP/issues/2169
+            return CompletionTriggerInfo(label, label_detail, True)
+        # labelDetails.detail is likely a function signature
+        return CompletionTriggerInfo(label + label_detail, '', True)
+    if label.startswith(filter_text):
+        return CompletionTriggerInfo(label, label + label_detail if label_detail else '', False)
+    return CompletionTriggerInfo(filter_text, label + label_detail, False)
+
+
 def format_completion(
     item: CompletionItem,
     index: int,
@@ -66,11 +94,7 @@ def format_completion(
     view_id: int
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
-    lsp_label = item['label']
-    lsp_label_details = item.get('labelDetails') or {}
-    lsp_label_detail = lsp_label_details.get('detail') or ""
-    lsp_label_description = lsp_label_details.get('description') or ""
-    lsp_filter_text = item.get('filterText') or ""
+    lsp_label_description = (item.get('labelDetails') or {}).get('description') or ""
     lsp_detail = (item.get('detail') or "").replace("\n", " ")
     completion_kind = item.get('kind')
     kind = COMPLETION_KINDS.get(completion_kind, sublime.KIND_AMBIGUOUS) if completion_kind else sublime.KIND_AMBIGUOUS
@@ -80,30 +104,15 @@ def format_completion(
         args = f'{{"view_id":{view_id},"command":"lsp_resolve_docs","args":{{"index":{index},"session_name":"{session_name}"}}}}'  # ruff: ignore[line-too-long]
         href = f'subl:lsp_run_text_command_helper {args}'
         details.append(f"<a href='{href}'>More</a>")
-    if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
-        if lsp_label_detail[0].isalnum() and lsp_label.startswith(lsp_filter_text):
-            # labelDetails.detail is likely a type annotation
-            # Don't append it to the trigger: https://github.com/sublimelsp/LSP/issues/2169
-            trigger = lsp_label
-            details.append(format_details(lsp_label_detail))
-        else:
-            # labelDetails.detail is likely a function signature
-            trigger = lsp_label + lsp_label_detail
+    trigger, details_label, label_detail_matched = completion_trigger_info(item)
+    if details_label:
+        details.append(format_details(details_label))
+    if label_detail_matched or not lsp_label_description:
         annotation = lsp_label_description or lsp_detail
     else:
-        if lsp_label.startswith(lsp_filter_text):
-            trigger = lsp_label
-            if lsp_label_detail:
-                details.append(format_details(lsp_label + lsp_label_detail))
-        else:
-            trigger = lsp_filter_text
-            details.append(format_details(lsp_label + lsp_label_detail))
-        if lsp_label_description:
-            annotation = lsp_label_description
-            if lsp_detail:
-                details.append(format_details(lsp_detail))
-        else:
-            annotation = lsp_detail
+        annotation = lsp_label_description
+        if lsp_detail:
+            details.append(format_details(lsp_detail))
     if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
         annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
     text_edit = item.get('textEdit', item_defaults.get('editRange'))
@@ -319,7 +328,7 @@ class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
 
 class LspSelectCompletionCommand(LspTextCommand):
 
-    completions: dict[SessionName, CompletionsStore] = {}
+    completions: ClassVar[dict[SessionName, CompletionsStore]] = {}
 
     def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
         # This command runs synchronously from within "commit_completion", so this is where the flag can be read

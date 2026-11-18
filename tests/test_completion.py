@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .setup import TextDocumentTestCase
 from copy import deepcopy
+from LSP.plugin.completion import completion_trigger_info
 from LSP.plugin.completion import completion_with_defaults
 from LSP.plugin.completion import format_completion
 from LSP.protocol import CompletionItem
@@ -13,6 +14,7 @@ from LSP.protocol import InsertTextFormat
 from typing import Any
 from unittest import TestCase
 import asyncio
+import json
 import sublime
 
 additional_edits = {
@@ -902,9 +904,18 @@ class FormatCompletionsUnitTests(TestCase):
         item = format_completion(
             payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0)
         self.assertEqual(item.trigger, trigger)
+        self.assertEqual(completion_trigger_info(payload).trigger, trigger)
         self.assertEqual(item.annotation, annotation)
         self.assertEqual(item.details, details)
         self.assertEqual(item.flags, flags)
+
+    def test_command_arguments(self) -> None:
+        item = format_completion(
+            {"label": '"key"'}, index=3, can_resolve_completion_items=False, session_name='abc', item_defaults={},
+            view_id=0)
+        command, args = item.completion.split(' ', 1)
+        self.assertEqual(command, 'lsp_select_completion')
+        self.assertEqual(json.loads(args), {"index": 3, "session_name": "abc"})
 
     def test_label(self) -> None:
         self._verify_completion(

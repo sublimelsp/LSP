@@ -78,19 +78,15 @@ Since the use of `asyncio` in the LSP package, the ST worker thread is almost co
 
 Instead, a new thread, provided by the `sublime_aio` library, is used heavily instead. This thread is central to your package as well.
 
-There are two ways to "get on the asyncio thread":
+There are three ways to "get on the asyncio thread":
 
-1. Use `LSP.plugin.run_coroutine`: this utility function can be called from any thread, and schedules a new _coroutine object_, i.e. a function or method declared with the `async def` keywords:
+1. Define the `run` method of your `LspTextCommand` or `LspWindowCommand` as a coroutine with `async def run`. The command then runs on the asyncio thread. Note that an `async def run` method of an `LspTextCommand` does *not* receive an edit token, because the token would no longer be valid by the time the coroutine runs. If your command needs to modify the buffer directly, keep using a regular `def run(self, edit, ...)` method.
     ```python
-    from LSP.plugin import Error, LspTextCommand, run_coroutine
+    from LSP.plugin import Error, LspTextCommand
 
     class SomeCustomCommand(LspTextCommand):
 
-        def run(self, **kwargs: Any) -> None:
-            # This block of code runs on the *ST main* thread.
-            run_coroutine(self._run(**kwargs))
-
-        async def _run(self, **kwargs: Any) -> None:
+        async def run(self, **kwargs: Any) -> None:
             # This block of code runs on the *sublime_aio* thread.
             if session := self.session_by_name("some-language-server-name"):
                 # Note the use of the `await` keyword. No need to set up callbacks.
@@ -100,7 +96,17 @@ There are two ways to "get on the asyncio thread":
                     return
                 # handle response
     ```
-2. Use `LSP.plugin.run_on_asyncio_thread`: this utility function can be called from any thread, and schedules a new _function_:
+2. Use `LSP.plugin.run_coroutine`: this utility function can be called from any thread, and schedules a new _coroutine object_, i.e. a function or method declared with the `async def` keywords:
+    ```python
+    from LSP.plugin import run_coroutine
+
+    async def some_coroutine() -> None:
+        # This block of code runs on the *sublime_aio* thread.
+        pass
+
+    run_coroutine(some_coroutine())
+    ```
+3. Use `LSP.plugin.run_on_asyncio_thread`: this utility function can be called from any thread, and schedules a new _function_:
     ```python
     from LSP.plugin import run_on_asyncio_thread
 
@@ -109,6 +115,28 @@ There are two ways to "get on the asyncio thread":
 
     run_on_asyncio_thread(some_func_that_is_not_async_but_has_to_run_on_asyncio_context)
     ```
+
+### Update subclasses of `LspExecuteCommand`
+
+The `run` method of `LspExecuteCommand` is now a coroutine and no longer takes an edit token. If your package subclasses it and overrides `run`, update the override accordingly:
+
+```python
+# Before
+class SomeCustomCommand(LspExecuteCommand):
+
+    def run(self, edit: sublime.Edit, **kwargs: Any) -> None:
+        ...
+        super().run(edit, **kwargs)
+```
+
+```python
+# After
+class SomeCustomCommand(LspExecuteCommand):
+
+    async def run(self, **kwargs: Any) -> None:
+        ...
+        await super().run(**kwargs)
+```
 
 ### Replace `Session.open_uri_async` and `Session.open_location_async`
 

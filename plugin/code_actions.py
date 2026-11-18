@@ -6,6 +6,7 @@ from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
 from .core.aio import run_coroutine
+from .core.panels import show_quick_panel
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
@@ -20,7 +21,6 @@ from .core.views import text_document_code_action_params
 from .lsp_task import LspTask
 from abc import ABC
 from abc import abstractmethod
-from typing import Any
 from typing import AsyncGenerator
 from typing import cast
 from typing import final
@@ -31,6 +31,7 @@ from typing import Union
 from typing_extensions import override
 import asyncio
 import sublime
+import sublime_aio
 
 if TYPE_CHECKING:
     from .core.sessions import AbstractViewListener
@@ -90,6 +91,7 @@ class CodeActionsManager:
         self.menu_actions_cache_key: str | None = None
         self.refactor_actions_cache: list[tuple[str, CodeAction]] = []
         self.source_actions_cache: list[tuple[str, CodeAction]] = []
+        self._menu_actions_task: asyncio.Future[list[CodeActionsByConfigName]] | None = None
 
     def request_for_region(
         self,
@@ -121,7 +123,7 @@ class CodeActionsManager:
                     return task
                 self._response_cache = None
         elif only_kinds == MENU_ACTIONS_KINDS:
-            self.menu_actions_cache_key = f"{view.buffer_id()}#{view.change_count()}:{region}"
+            self.menu_actions_cache_key = self._menu_actions_cache_key(view, region)
             self.refactor_actions_cache.clear()
             self.source_actions_cache.clear()
 
@@ -164,6 +166,22 @@ class CodeActionsManager:
         if location_cache_key:
             self._response_cache = (location_cache_key, task)
         return task
+
+    @staticmethod
+    def _menu_actions_cache_key(view: sublime.View, region: sublime.Region) -> str:
+        return f"{view.buffer_id()}#{view.change_count()}:{region}"
+
+    def is_menu_actions_cache_valid(self, view: sublime.View, region: sublime.Region) -> bool:
+        return self.menu_actions_cache_key == self._menu_actions_cache_key(view, region)
+
+    async def request_menu_actions(self, view: sublime.View, region: sublime.Region) -> None:
+        """
+        Request the code actions for the Refactor and Source Action menus, unless the cached ones (or the ones being
+        requested) are already for the given location. Returns once the actions for the given location are available.
+        """
+        if not self.is_menu_actions_cache_valid(view, region) or not self._menu_actions_task:
+            self._menu_actions_task = self.request_for_region(view, region, [], MENU_ACTIONS_KINDS, manual=True)
+        await self._menu_actions_task
 
     async def _collect_code_actions(
         self,
@@ -353,19 +371,15 @@ class LspCodeActionsCommand(LspTextCommand):
             return self.is_enabled(event, point)
         return True
 
-    def run(
+    async def run(
         self,
-        edit: sublime.Edit,
         event: dict | None = None,
         only_kinds: list[str | CodeActionKind] | None = None,
         code_actions_by_config: list[CodeActionsByConfigName] | None = None
     ) -> None:
         if code_actions_by_config:
-            self._handle_code_actions(code_actions_by_config, run_first=True)
+            await self._handle_code_actions(code_actions_by_config, run_first=True)
             return
-        run_coroutine(self._run(only_kinds))
-
-    async def _run(self, only_kinds: list[str | CodeActionKind] | None = None) -> None:
         view = self.view
         region = first_selection_region(view)
         if region is None:
@@ -373,49 +387,39 @@ class LspCodeActionsCommand(LspTextCommand):
         listener = windows.listener_for_view(view)
         if not listener:
             return
+        # Sublime Text re-evaluates the menus after running this command, which would request the menu actions for this
+        # location after the request below. Some servers only keep the code actions from the most recent request, so
+        # the code action selected from the quick panel couldn't be resolved anymore. Request the menu actions first so
+        # that the request from the menus is skipped.
+        await actions_manager.request_menu_actions(view, region)
         session_buffer_diagnostics = listener.get_diagnostics_async(region)
         actions = await actions_manager.request_for_region(
             view, region, session_buffer_diagnostics, only_kinds, manual=True, progress=True
         )
-        sublime.set_timeout(lambda: self._handle_code_actions(actions))
+        await self._handle_code_actions(actions)
 
-    def _handle_code_actions(self, response: list[CodeActionsByConfigName], run_first: bool = False) -> None:
+    async def _handle_code_actions(self, response: list[CodeActionsByConfigName], run_first: bool = False) -> None:
         # Flatten response to a list of (config_name, code_action) tuples.
         actions: list[tuple[ConfigName, CodeActionOrCommand]] = []
         for config_name, session_actions in response:
             actions.extend([(config_name, action) for action in session_actions])
-        if actions:
-            if len(actions) == 1 and run_first:
-                self._handle_select(0, actions)
-            else:
-                self._show_code_actions(actions)
-        elif window := self.view.window():
-            window.status_message("No code actions available")
-
-    def _show_code_actions(self, actions: list[tuple[ConfigName, CodeActionOrCommand]]) -> None:
-        if window := self.view.window():
-            items, selected_index = format_code_actions_for_quick_panel(actions)
-            window.show_quick_panel(
-                items,
-                lambda i: self._handle_select(i, actions),
-                selected_index=selected_index,
-                placeholder="Code action")
-
-    def _handle_select(self, index: int, actions: list[tuple[ConfigName, CodeActionOrCommand]]) -> None:
-        if index == -1:
+        if not actions:
+            if window := self.view.window():
+                window.status_message("No code actions available")
             return
-
-        async def run() -> None:
-            config_name, action = actions[index]
-            if session := self.session_by_name(config_name):
-                response = await session.run_code_action(action, progress=True, view=self.view)
-                self._handle_response_async(config_name, response)
-
-        run_coroutine(run())
-
-    def _handle_response_async(self, session_name: str, response: Any) -> None:
-        if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {response}")
+        index = 0
+        if len(actions) > 1 or not run_first:
+            if not (window := self.view.window()):
+                return
+            items, selected_index = format_code_actions_for_quick_panel(actions)
+            index = await show_quick_panel(window, items, selected_index=selected_index, placeholder="Code action")
+            if index == -1:
+                return
+        config_name, action = actions[index]
+        if session := self.session_by_name(config_name):
+            result = await session.run_code_action(action, progress=True, view=self.view)
+            if isinstance(result, Error):
+                await sublime_aio.error_message(f"{config_name}: {result}")
 
 
 # This command must be a WindowCommand in order to reliably hide corresponding menu entries when no view has focus.
@@ -465,26 +469,20 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
     def want_event(self) -> bool:
         return True
 
-    def run(self, index: int, event: dict | None = None) -> None:
-        run_coroutine(self._run(index, event))
-
-    async def _run(self, index: int, event: dict | None) -> None:
+    async def run(self, index: int, event: dict | None = None) -> None:
         if self._is_cache_valid(event):
             config_name, action = self.actions_cache[index]
             if session := self.session_by_name(config_name):
                 response = await session.run_code_action(action, progress=True, view=self.view)
-                self._handle_response_async(config_name, response)
-
-    def _handle_response_async(self, session_name: str, response: Any) -> None:
-        if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {response}")
+                if isinstance(response, Error):
+                    await sublime_aio.error_message(f"{config_name}: {response}")
 
     def _is_cache_valid(self, event: dict | None) -> bool:
         view = self.view
         if not view:
             return False
         if (region := self._get_region(event)) is not None:
-            return actions_manager.menu_actions_cache_key == f"{view.buffer_id()}#{view.change_count()}:{region}"
+            return actions_manager.is_menu_actions_cache_valid(view, region)
         return False
 
     def _get_region(self, event: dict | None) -> sublime.Region | None:
@@ -504,7 +502,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
         if not view:
             return
         if (region := self._get_region(event)) is not None:
-            await actions_manager.request_for_region(view, region, [], MENU_ACTIONS_KINDS, manual=True)
+            await actions_manager.request_menu_actions(view, region)
 
 
 class LspRefactorCommand(LspMenuActionCommand):

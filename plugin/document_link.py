@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .core.aio import run_coroutine
 from .core.logging import exception_log
 from .core.open import open_file_uri
 from .core.open import open_in_browser
@@ -17,7 +16,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ..protocol import URI
     from .core.sessions import Session
-    import sublime
 
 
 class LspOpenLinkCommand(LspTextCommand):
@@ -35,10 +33,7 @@ class LspOpenLinkCommand(LspTextCommand):
             return False
         return True
 
-    def run(self, edit: sublime.Edit, event: dict | None = None, point: int | None = None) -> None:
-        run_coroutine(self._run(event, point))
-
-    async def _run(self, event: dict | None, point: int | None) -> None:
+    async def run(self, event: dict | None = None, point: int | None = None) -> None:
         if (position := get_position(self.view, event, point)) is not None:
             if session := self.best_session(self.capability, position):
                 response = await session.request(

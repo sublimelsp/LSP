@@ -5,6 +5,7 @@ from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentUri
 from ..protocol import Location
 from ..protocol import LocationLink
+from ..protocol import TextDocumentPositionParams
 from .core.aio import run_coroutine
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.input_handlers import PreselectedListInputHandler
@@ -71,9 +72,8 @@ class LspGotoCommand(LspTextCommand):
             return self.is_enabled(event, point, side_by_side, force_group, fallback, group)
         return True
 
-    def run(
+    async def run(
         self,
-        _: sublime.Edit,
         event: dict | None = None,
         point: int | None = None,
         side_by_side: bool = False,
@@ -83,37 +83,21 @@ class LspGotoCommand(LspTextCommand):
     ) -> None:
         position = get_position(self.view, event, point)
         session = self.best_session(self.capability, position)
-        if session and position is not None:
-            params = text_document_position_params(self.view, position)
-            request = Request(self.method, params, self.view, progress=True)
-            session.send_request(
-                request,
-                partial(self._handle_response_async, session, side_by_side, force_group, fallback, group, position)
-            )
-        else:
+        if not session or position is None:
             self._handle_no_results(fallback, side_by_side)
-
-    def _handle_response_async(
-        self,
-        session: Session,
-        side_by_side: bool,
-        force_group: bool,
-        fallback: bool,
-        group: int,
-        position: int,
-        response: Location | list[Location] | list[LocationLink] | None
-    ) -> None:
+            return
+        params = text_document_position_params(self.view, position)
+        request: Request[TextDocumentPositionParams, Location | list[Location] | list[LocationLink] | None]
+        request = Request(self.method, params, self.view, progress=True)
+        response = await session.request(request)
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-            run_coroutine(open_location(session, response, side_by_side, force_group, group))
-        elif isinstance(response, list):
-            if len(response) == 0:
-                self._handle_no_results(fallback, side_by_side)
-            elif len(response) == 1:
-                self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-                run_coroutine(open_location(session, response[0], side_by_side, force_group, group))
+            await open_location(session, response, side_by_side, force_group, group)
+        elif isinstance(response, list) and response:
+            self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
+            if len(response) == 1:
+                await open_location(session, response[0], side_by_side, force_group, group)
             else:
-                self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 placeholder = self.placeholder_text + " " + self.view.substr(self.view.word(position))
                 kind = get_symbol_kind_from_scope(self.view.scope_name(position))
                 sublime.set_timeout(

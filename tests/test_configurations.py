@@ -127,7 +127,7 @@ class WindowConfigManagerTests(ViewTestCase):
         manager = WindowConfigManager(self.window, {TEST_CONFIG.name: TEST_CONFIG})
         self.assertIn(TEST_CONFIG.name, manager.all)
         manager.add_change_listener(change_listener)
-        manager.update(TEST_CONFIG.name)
+        manager.update({TEST_CONFIG.name})
         change_listener.on_configs_changed.assert_not_called()
         change_listener.on_server_settings_changed.assert_not_called()
         self.assertIn(TEST_CONFIG.name, manager.all)
@@ -140,7 +140,7 @@ class WindowConfigManagerTests(ViewTestCase):
         manager = WindowConfigManager(self.window, {config.name: config})
         manager.add_change_listener(change_listener)
         config.settings.set('foo', 'bar')
-        manager.update(config.name)
+        manager.update({config.name})
         change_listener.on_configs_changed.assert_not_called()
         change_listener.on_server_settings_changed.assert_called_once_with([config])
         self.assertIn(config.name, manager.all)
@@ -153,7 +153,7 @@ class WindowConfigManagerTests(ViewTestCase):
         manager = WindowConfigManager(self.window, {config.name: config})
         manager.add_change_listener(change_listener)
         config.initialization_options.set('foo', 'bar')
-        manager.update(config.name)
+        manager.update({config.name})
         change_listener.on_configs_changed.assert_called_once_with([config])
         change_listener.on_server_settings_changed.assert_not_called()
         self.assertIn(config.name, manager.all)
@@ -166,10 +166,26 @@ class WindowConfigManagerTests(ViewTestCase):
         manager = WindowConfigManager(self.window, global_configs)
         manager.add_change_listener(change_listener)
         global_configs[TEST_CONFIG.name] = TEST_CONFIG
-        manager.update(TEST_CONFIG.name)
+        manager.update({TEST_CONFIG.name})
         change_listener.on_configs_changed.assert_called_once_with([TEST_CONFIG])
         change_listener.on_server_settings_changed.assert_not_called()
         self.assertIn(TEST_CONFIG.name, manager.all)
+
+    def test_multiple_global_configs_added(self) -> None:
+        change_listener = WindowConfigChangeTestListener()
+        change_listener.on_configs_changed = MagicMock()
+        change_listener.on_server_settings_changed = MagicMock()
+        other_config = ClientConfig(name="test-other", command=[], selector="text.plain", tcp_port=None)
+        global_configs = {}
+        manager = WindowConfigManager(self.window, global_configs)
+        manager.add_change_listener(change_listener)
+        global_configs[TEST_CONFIG.name] = TEST_CONFIG
+        global_configs[other_config.name] = other_config
+        manager.update({TEST_CONFIG.name, other_config.name})
+        change_listener.on_configs_changed.assert_called_once_with([TEST_CONFIG, other_config])
+        change_listener.on_server_settings_changed.assert_not_called()
+        self.assertIn(TEST_CONFIG.name, manager.all)
+        self.assertIn(other_config.name, manager.all)
 
     def test_global_config_removed(self) -> None:
         change_listener = WindowConfigChangeTestListener()
@@ -218,7 +234,7 @@ class WindowConfigManagerTests(ViewTestCase):
         manager = WindowConfigManager(self.window, {})
         self.assertIn(PROJECT_TEST_CONFIG_NAME, manager.all)
         manager.add_change_listener(change_listener)
-        manager.update(PROJECT_TEST_CONFIG_NAME)
+        manager.update({PROJECT_TEST_CONFIG_NAME})
         change_listener.on_configs_changed.assert_not_called()
         change_listener.on_server_settings_changed.assert_not_called()
         self.assertIn(PROJECT_TEST_CONFIG_NAME, manager.all)
@@ -239,7 +255,7 @@ class WindowConfigManagerTests(ViewTestCase):
         manager = WindowConfigManager(self.window, {})
         manager.add_change_listener(change_listener)
         config['settings'] = {'foo': 'bar'}
-        manager.update(PROJECT_TEST_CONFIG_NAME)
+        manager.update({PROJECT_TEST_CONFIG_NAME})
         changed_config = manager.all[PROJECT_TEST_CONFIG_NAME]
         change_listener.on_configs_changed.assert_not_called()
         change_listener.on_server_settings_changed.assert_called_once_with([changed_config])
@@ -261,7 +277,7 @@ class WindowConfigManagerTests(ViewTestCase):
         manager = WindowConfigManager(self.window, {})
         manager.add_change_listener(change_listener)
         config['initialization_options'] = {'foo': 'bar'}
-        manager.update(PROJECT_TEST_CONFIG_NAME)
+        manager.update({PROJECT_TEST_CONFIG_NAME})
         self.assertIn(PROJECT_TEST_CONFIG_NAME, manager.all)
         change_listener.on_configs_changed.assert_called_once_with([manager.all[PROJECT_TEST_CONFIG_NAME]])
         change_listener.on_server_settings_changed.assert_not_called()

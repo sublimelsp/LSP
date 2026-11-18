@@ -297,7 +297,6 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "source.json-tmlanguage": "jsonc",  # https://github.com/SublimeText/PackageDev
     "source.json.sublime": "jsonc",  # https://github.com/SublimeText/PackageDev
     "source.jsx": LanguageKind.JavaScriptReact,
-    "source.Kotlin": "kotlin",  # https://github.com/vkostyukov/kotlin-sublime-package
     "source.modern-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
     "source.objc": LanguageKind.ObjectiveC,
     "source.objc++": LanguageKind.ObjectiveCPP,

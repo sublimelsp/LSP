@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .aio import run_coroutine
+from .panels import show_quick_panel
 from .settings import userprefs
 from .type_converters import position_to_offset
 from .views import first_selection_region
@@ -8,12 +10,17 @@ from .views import MissingUriError
 from .views import uri_from_view
 from .windows import WindowManager
 from .windows import WindowRegistry
-from functools import partial
+from typing import Any
+from typing import Callable
+from typing import cast
+from typing import Coroutine
 from typing import Generator
 from typing import Iterable
 from typing import TYPE_CHECKING
+import inspect
 import operator
 import sublime
+import sublime_api  # pyright: ignore[reportMissingImports]
 import sublime_plugin
 
 if TYPE_CHECKING:
@@ -51,10 +58,55 @@ def get_position(view: sublime.View, event: dict | None = None, point: int | Non
         return None
 
 
-class LspWindowCommand(sublime_plugin.WindowCommand):
+def _is_edit_parameter(param: inspect.Parameter) -> bool:
+    """Check whether the given parameter of a `TextCommand.run` method looks like it receives the edit token."""
+    if param.kind not in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}:
+        return False
+    if param.name in {'edit', '_edit', '_'}:
+        return True
+    annotation = param.annotation
+    if isinstance(annotation, str):
+        return annotation in {'sublime.Edit', 'Edit'}
+    return annotation is sublime.Edit
+
+
+class AsyncCommandMixin:
+
+    def _async_run(
+        self,
+        args: dict[str, Any] | None,
+        command: sublime_plugin.Command,
+        window: sublime.Window,
+        can_accept_input: Callable[[], bool],
+    ) -> None:
+        run = cast('Callable[..., Coroutine[Any, Any, None]]', command.run)
+        try:
+            # Calling a coroutine function only binds the arguments and does not execute its body yet. So a TypeError
+            # raised here can only originate from missing or unexpected arguments.
+            coro = run(**args) if args else run()
+        except TypeError as e:
+            # Matches both "missing N required positional argument(s)" and "missing N required keyword-only
+            # argument(s)".
+            if 'required' in str(e) and window and can_accept_input():
+                window.run_command(
+                    'show_overlay', {'overlay': 'command_palette', 'command': command.name(), 'args': args}
+                )
+                return
+            raise
+        run_coroutine(coro)
+
+
+class LspWindowCommand(sublime_plugin.WindowCommand, AsyncCommandMixin):
     """
     Inherit from this class to define requests which are not bound to a particular view. This allows to run requests
     for example from links in HtmlSheets or when an unrelated file has focus.
+
+    A derived class may define its `run` method in one of two ways:
+
+    - As a blocking `def run(self, **kwargs)`. It runs on the main thread, just like a regular
+      `sublime_plugin.WindowCommand`.
+    - As a coroutine `async def run(self, **kwargs)`. It runs on the asyncio thread. Use this when the command needs to
+      await requests to a language server.
     """
 
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
@@ -72,6 +124,15 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             package_name = self.__module__.split('.')[0]
             if package_name != 'LSP':
                 self.session_name = package_name
+
+    def run_(self, edit_token: int, args: dict[str, Any] | None) -> None:
+        if not inspect.iscoroutinefunction(self.run):
+            super().run_(edit_token, args)  # pyright: ignore[reportAttributeAccessIssue]
+            return
+        args = self.filter_args(args)  # pyright: ignore[reportAttributeAccessIssue]
+        self._async_run(
+            args, self, self.window, lambda: sublime_api.window_can_accept_input(self.window.id(), self.name(), args)
+        )
 
     def is_enabled(self) -> bool:
         return self.session() is not None
@@ -114,10 +175,18 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         return windows.lookup(self.window)
 
 
-class LspTextCommand(sublime_plugin.TextCommand):
+class LspTextCommand(sublime_plugin.TextCommand, AsyncCommandMixin):
     """
     Inherit from this class to define your requests that should be triggered via the command palette and/or a
     keybinding.
+
+    A derived class may define its `run` method in one of two ways:
+
+    - As a blocking `def run(self, edit, **kwargs)`. It runs on the main thread and receives an edit token, just like
+      a regular `sublime_plugin.TextCommand`. Use this when the command needs to modify the buffer directly.
+    - As a coroutine `async def run(self, **kwargs)`. It runs on the asyncio thread and does not receive an edit
+      token, because the token would no longer be valid by the time the coroutine runs. Use this when the command
+      needs to await requests to a language server.
     """
 
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
@@ -128,6 +197,14 @@ class LspTextCommand(sublime_plugin.TextCommand):
     # name attached to the active view. By default it will default to the name of the pacakge it's defined in.
     session_name: str = ''
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        run = cls.__dict__.get('run')
+        if run is not None and inspect.iscoroutinefunction(run):
+            params = list(inspect.signature(run).parameters.values())
+            if len(params) > 1 and _is_edit_parameter(params[1]):
+                raise TypeError(f"{cls.__name__}.run is a coroutine function and must not take an edit token")
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         if not self.session_name:
@@ -135,6 +212,16 @@ class LspTextCommand(sublime_plugin.TextCommand):
             package_name = self.__module__.split('.')[0]
             if package_name != 'LSP':
                 self.session_name = package_name
+
+    def run_(self, edit_token: int, args: dict[str, Any] | None) -> None:
+        if not inspect.iscoroutinefunction(self.run):
+            super().run_(edit_token, args)  # pyright: ignore[reportAttributeAccessIssue]
+            return
+        args = self.filter_args(args)  # pyright: ignore[reportAttributeAccessIssue]
+        if window := self.view.window():
+            self._async_run(
+                args, self, window, lambda: sublime_api.view_can_accept_input(self.view.id(), self.name(), args)
+            )
 
     def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if self.capability:
@@ -187,7 +274,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 class LspOpenLocationCommand(LspWindowCommand):
     """A command to be used by third-party ST packages that need to open an URI with some abstract scheme."""
 
-    def run(
+    async def run(
         self,
         location: Location | LocationLink,
         session_name: str | None = None,
@@ -201,60 +288,49 @@ class LspOpenLocationCommand(LspWindowCommand):
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # ruff: ignore[line-too-long]
                 elif 'shift' in modifier_keys:
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
-        sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
+        if session := self.session_by_name(session_name) if session_name else self.session():
+            if not await session.open_location(location, flags, group):
+                uri, _ = get_uri_and_position_from_location(location)
+                message = f"Failed to open {uri}"
+                sublime.status_message(message)
 
     def want_event(self) -> bool:
         return True
 
-    def _run_async(
-        self, location: Location | LocationLink, session_name: str | None, flags: sublime.NewFileFlags, group: int
-    ) -> None:
-        if session := self.session_by_name(session_name) if session_name else self.session():
-            session.open_location_async(location, flags, group) \
-                .then(lambda view: self._handle_continuation(location, view is not None))
-
-    def _handle_continuation(self, location: Location | LocationLink, success: bool) -> None:
-        if not success:
-            uri, _ = get_uri_and_position_from_location(location)
-            message = f"Failed to open {uri}"
-            sublime.status_message(message)
-
 
 class LspRestartServerCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, config_name: str | None = None) -> None:
+    async def run(self, config_name: str | None = None) -> None:
         wm = windows.lookup(self.view.window())
         if not wm:
             return
-        self._config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
-        if not self._config_names:
+        config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
+        if not config_names:
             return
-        if len(self._config_names) == 1:
-            self.restart_server(wm, 0)
+        if len(config_names) == 1:
+            index = 0
+        elif window := self.view.window():
+            index = await show_quick_panel(window, config_names)
         else:
-            wm.window.show_quick_panel(self._config_names, partial(self.restart_server, wm))
+            index = -1
+        if index != -1:
+            await wm.restart_sessions([config_names[index]])
 
     def want_event(self) -> bool:
         return False
 
-    def restart_server(self, wm: WindowManager, index: int) -> None:
-        if index == -1:
-            return
 
-        def run_async() -> None:
-            wm.restart_sessions_async([self._config_names[index]])
+class LspCheckApplicableCommand(LspTextCommand):
 
-        sublime.set_timeout_async(run_async)
-
-
-class LspCheckApplicableCommand(sublime_plugin.TextCommand):
-
-    def run(self, edit: sublime.Edit, session_name: str) -> None:
-        sublime.set_timeout_async(lambda: self._run_async(session_name))
-
-    def _run_async(self, session_name: str) -> None:
+    async def run(self, session_name: str) -> None:
         if wm := windows.lookup(self.view.window()):
-            wm.recheck_is_applicable_async(self.view, session_name)
+            await wm.recheck_is_applicable(self.view, session_name)
+
+    def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
+        return True
+
+    def want_event(self) -> bool:
+        return False
 
 
 def navigate_diagnostics(

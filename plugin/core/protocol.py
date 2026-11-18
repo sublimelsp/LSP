@@ -10,12 +10,12 @@ from typing import Generic
 from typing import List
 from typing import Literal
 from typing import TYPE_CHECKING
-from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import TypeAlias
+from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
     from plugin.api import PostResponseCallback
@@ -28,21 +28,21 @@ P_contra = TypeVar('P_contra', bound=LSPAny, contravariant=True)
 R = TypeVar('R', bound=LSPAny)
 
 
-class RequestMessage(TypedDict):
+class RequestMessage(TypedDict, closed=True):
     jsonrpc: str
     id: str | int
     method: str
     params: NotRequired[Any]
 
 
-class ResponseMessage(TypedDict):
+class ResponseMessage(TypedDict, closed=True):
     jsonrpc: str
     id: str | int
     result: NotRequired[Any]
     error: NotRequired[ResponseError]
 
 
-class NotificationMessage(TypedDict):
+class NotificationMessage(TypedDict, closed=True):
     jsonrpc: str
     method: str
     params: NotRequired[Any]
@@ -326,7 +326,7 @@ class Error(Exception):
         return f"{super().__str__()} ({self._code})"
 
     @classmethod
-    def from_exception(cls, ex: Exception) -> Error:
+    def from_exception(cls, ex: BaseException) -> Error:
         return Error(ErrorCodes.InternalError, str(ex))
 
 
@@ -448,13 +448,13 @@ class Point(TextPosition):
     pass
 
 
-class ResponseError(TypedDict):
+class ResponseError(TypedDict, closed=True):
     code: int
     message: str
     data: NotRequired[LSPAny]
 
 
-class ResolvedCodeLens(TypedDict):
+class ResolvedCodeLens(TypedDict, closed=True):
     range: Range
     command: Command
     uses_cached_command: NotRequired[bool]
@@ -464,347 +464,347 @@ class ResolvedCodeLens(TypedDict):
 RangeLsp = Range
 
 
-class ApplyWorkspaceEditRequest(TypedDict):
+class ApplyWorkspaceEditRequest(TypedDict, closed=True):
     method: Literal['workspace/applyEdit']
     params: ApplyWorkspaceEditParams
 
 
-class CallHierarchyIncomingCallsRequest(TypedDict):
+class CallHierarchyIncomingCallsRequest(TypedDict, closed=True):
     method: Literal['callHierarchy/incomingCalls']
     params: CallHierarchyIncomingCallsParams
 
 
-class CallHierarchyOutgoingCallsRequest(TypedDict):
+class CallHierarchyOutgoingCallsRequest(TypedDict, closed=True):
     method: Literal['callHierarchy/outgoingCalls']
     params: CallHierarchyOutgoingCallsParams
 
 
-class CallHierarchyPrepareRequest(TypedDict):
+class CallHierarchyPrepareRequest(TypedDict, closed=True):
     method: Literal['textDocument/prepareCallHierarchy']
     params: CallHierarchyPrepareParams
 
 
-class CodeActionRequest(TypedDict):
+class CodeActionRequest(TypedDict, closed=True):
     method: Literal['textDocument/codeAction']
     params: CodeActionParams
 
 
-class CodeActionResolveRequest(TypedDict):
+class CodeActionResolveRequest(TypedDict, closed=True):
     method: Literal['codeAction/resolve']
     params: CodeAction
 
 
-class CodeLensRefreshRequest(TypedDict):
+class CodeLensRefreshRequest(TypedDict, closed=True):
     method: Literal['workspace/codeLens/refresh']
     params: None
 
 
-class CodeLensRequest(TypedDict):
+class CodeLensRequest(TypedDict, closed=True):
     method: Literal['textDocument/codeLens']
     params: CodeLensParams
 
 
-class CodeLensResolveRequest(TypedDict):
+class CodeLensResolveRequest(TypedDict, closed=True):
     method: Literal['codeLens/resolve']
     params: CodeLens
 
 
-class ColorPresentationRequest(TypedDict):
+class ColorPresentationRequest(TypedDict, closed=True):
     method: Literal['textDocument/colorPresentation']
     params: ColorPresentationParams
 
 
-class CompletionRequest(TypedDict):
+class CompletionRequest(TypedDict, closed=True):
     method: Literal['textDocument/completion']
     params: CompletionParams
 
 
-class CompletionResolveRequest(TypedDict):
+class CompletionResolveRequest(TypedDict, closed=True):
     method: Literal['completionItem/resolve']
     params: CompletionItem
 
 
-class ConfigurationRequest(TypedDict):
+class ConfigurationRequest(TypedDict, closed=True):
     method: Literal['workspace/configuration']
     params: ConfigurationParams
 
 
-class DeclarationRequest(TypedDict):
+class DeclarationRequest(TypedDict, closed=True):
     method: Literal['textDocument/declaration']
     params: DeclarationParams
 
 
-class DefinitionRequest(TypedDict):
+class DefinitionRequest(TypedDict, closed=True):
     method: Literal['textDocument/definition']
     params: DefinitionParams
 
 
-class DiagnosticRefreshRequest(TypedDict):
+class DiagnosticRefreshRequest(TypedDict, closed=True):
     method: Literal['workspace/diagnostic/refresh']
     params: None
 
 
-class DocumentColorRequest(TypedDict):
+class DocumentColorRequest(TypedDict, closed=True):
     method: Literal['textDocument/documentColor']
     params: DocumentColorParams
 
 
-class DocumentDiagnosticRequest(TypedDict):
+class DocumentDiagnosticRequest(TypedDict, closed=True):
     method: Literal['textDocument/diagnostic']
     params: DocumentDiagnosticParams
 
 
-class DocumentFormattingRequest(TypedDict):
+class DocumentFormattingRequest(TypedDict, closed=True):
     method: Literal['textDocument/formatting']
     params: DocumentFormattingParams
 
 
-class DocumentHighlightRequest(TypedDict):
+class DocumentHighlightRequest(TypedDict, closed=True):
     method: Literal['textDocument/documentHighlight']
     params: DocumentHighlightParams
 
 
-class DocumentLinkRequest(TypedDict):
+class DocumentLinkRequest(TypedDict, closed=True):
     method: Literal['textDocument/documentLink']
     params: DocumentLinkParams
 
 
-class DocumentLinkResolveRequest(TypedDict):
+class DocumentLinkResolveRequest(TypedDict, closed=True):
     method: Literal['documentLink/resolve']
     params: DocumentLink
 
 
-class DocumentOnTypeFormattingRequest(TypedDict):
+class DocumentOnTypeFormattingRequest(TypedDict, closed=True):
     method: Literal['textDocument/onTypeFormatting']
     params: DocumentOnTypeFormattingParams
 
 
-class DocumentRangeFormattingRequest(TypedDict):
+class DocumentRangeFormattingRequest(TypedDict, closed=True):
     method: Literal['textDocument/rangeFormatting']
     params: DocumentRangeFormattingParams
 
 
-class DocumentRangesFormattingRequest(TypedDict):
+class DocumentRangesFormattingRequest(TypedDict, closed=True):
     method: Literal['textDocument/rangesFormatting']
     params: DocumentRangesFormattingParams
 
 
-class DocumentSymbolRequest(TypedDict):
+class DocumentSymbolRequest(TypedDict, closed=True):
     method: Literal['textDocument/documentSymbol']
     params: DocumentSymbolParams
 
 
-class ExecuteCommandRequest(TypedDict):
+class ExecuteCommandRequest(TypedDict, closed=True):
     method: Literal['workspace/executeCommand']
     params: ExecuteCommandParams
 
 
-class FoldingRangeRefreshRequest(TypedDict):
+class FoldingRangeRefreshRequest(TypedDict, closed=True):
     method: Literal['workspace/foldingRange/refresh']
     params: None
 
 
-class FoldingRangeRequest(TypedDict):
+class FoldingRangeRequest(TypedDict, closed=True):
     method: Literal['textDocument/foldingRange']
     params: FoldingRangeParams
 
 
-class HoverRequest(TypedDict):
+class HoverRequest(TypedDict, closed=True):
     method: Literal['textDocument/hover']
     params: HoverParams
 
 
-class ImplementationRequest(TypedDict):
+class ImplementationRequest(TypedDict, closed=True):
     method: Literal['textDocument/implementation']
     params: ImplementationParams
 
 
-class InitializeRequest(TypedDict):
+class InitializeRequest(TypedDict, closed=True):
     method: Literal['initialize']
     params: InitializeParams
 
 
-class InlayHintRefreshRequest(TypedDict):
+class InlayHintRefreshRequest(TypedDict, closed=True):
     method: Literal['workspace/inlayHint/refresh']
     params: None
 
 
-class InlayHintRequest(TypedDict):
+class InlayHintRequest(TypedDict, closed=True):
     method: Literal['textDocument/inlayHint']
     params: InlayHintParams
 
 
-class InlayHintResolveRequest(TypedDict):
+class InlayHintResolveRequest(TypedDict, closed=True):
     method: Literal['inlayHint/resolve']
     params: InlayHint
 
 
-class InlineCompletionRequest(TypedDict):
+class InlineCompletionRequest(TypedDict, closed=True):
     method: Literal['textDocument/inlineCompletion']
     params: InlineCompletionParams
 
 
-class InlineValueRefreshRequest(TypedDict):
+class InlineValueRefreshRequest(TypedDict, closed=True):
     method: Literal['workspace/inlineValue/refresh']
     params: None
 
 
-class InlineValueRequest(TypedDict):
+class InlineValueRequest(TypedDict, closed=True):
     method: Literal['textDocument/inlineValue']
     params: InlineValueParams
 
 
-class LinkedEditingRangeRequest(TypedDict):
+class LinkedEditingRangeRequest(TypedDict, closed=True):
     method: Literal['textDocument/linkedEditingRange']
     params: LinkedEditingRangeParams
 
 
-class MonikerRequest(TypedDict):
+class MonikerRequest(TypedDict, closed=True):
     method: Literal['textDocument/moniker']
     params: MonikerParams
 
 
-class PrepareRenameRequest(TypedDict):
+class PrepareRenameRequest(TypedDict, closed=True):
     method: Literal['textDocument/prepareRename']
     params: PrepareRenameParams
 
 
-class ReferencesRequest(TypedDict):
+class ReferencesRequest(TypedDict, closed=True):
     method: Literal['textDocument/references']
     params: ReferenceParams
 
 
-class RegistrationRequest(TypedDict):
+class RegistrationRequest(TypedDict, closed=True):
     method: Literal['client/registerCapability']
     params: RegistrationParams
 
 
-class RenameRequest(TypedDict):
+class RenameRequest(TypedDict, closed=True):
     method: Literal['textDocument/rename']
     params: RenameParams
 
 
-class SelectionRangeRequest(TypedDict):
+class SelectionRangeRequest(TypedDict, closed=True):
     method: Literal['textDocument/selectionRange']
     params: SelectionRangeParams
 
 
-class SemanticTokensDeltaRequest(TypedDict):
+class SemanticTokensDeltaRequest(TypedDict, closed=True):
     method: Literal['textDocument/semanticTokens/full/delta']
     params: SemanticTokensDeltaParams
 
 
-class SemanticTokensRangeRequest(TypedDict):
+class SemanticTokensRangeRequest(TypedDict, closed=True):
     method: Literal['textDocument/semanticTokens/range']
     params: SemanticTokensRangeParams
 
 
-class SemanticTokensRefreshRequest(TypedDict):
+class SemanticTokensRefreshRequest(TypedDict, closed=True):
     method: Literal['workspace/semanticTokens/refresh']
     params: None
 
 
-class SemanticTokensRequest(TypedDict):
+class SemanticTokensRequest(TypedDict, closed=True):
     method: Literal['textDocument/semanticTokens/full']
     params: SemanticTokensParams
 
 
-class ShowDocumentRequest(TypedDict):
+class ShowDocumentRequest(TypedDict, closed=True):
     method: Literal['window/showDocument']
     params: ShowDocumentParams
 
 
-class ShowMessageRequest(TypedDict):
+class ShowMessageRequest(TypedDict, closed=True):
     method: Literal['window/showMessageRequest']
     params: ShowMessageRequestParams
 
 
-class ShutdownRequest(TypedDict):
+class ShutdownRequest(TypedDict, closed=True):
     method: Literal['shutdown']
     params: None
 
 
-class SignatureHelpRequest(TypedDict):
+class SignatureHelpRequest(TypedDict, closed=True):
     method: Literal['textDocument/signatureHelp']
     params: SignatureHelpParams
 
 
-class TextDocumentContentRefreshRequest(TypedDict):
+class TextDocumentContentRefreshRequest(TypedDict, closed=True):
     method: Literal['workspace/textDocumentContent/refresh']
     params: TextDocumentContentRefreshParams
 
 
-class TextDocumentContentRequest(TypedDict):
+class TextDocumentContentRequest(TypedDict, closed=True):
     method: Literal['workspace/textDocumentContent']
     params: TextDocumentContentParams
 
 
-class TypeDefinitionRequest(TypedDict):
+class TypeDefinitionRequest(TypedDict, closed=True):
     method: Literal['textDocument/typeDefinition']
     params: TypeDefinitionParams
 
 
-class TypeHierarchyPrepareRequest(TypedDict):
+class TypeHierarchyPrepareRequest(TypedDict, closed=True):
     method: Literal['textDocument/prepareTypeHierarchy']
     params: TypeHierarchyPrepareParams
 
 
-class TypeHierarchySubtypesRequest(TypedDict):
+class TypeHierarchySubtypesRequest(TypedDict, closed=True):
     method: Literal['typeHierarchy/subtypes']
     params: TypeHierarchySubtypesParams
 
 
-class TypeHierarchySupertypesRequest(TypedDict):
+class TypeHierarchySupertypesRequest(TypedDict, closed=True):
     method: Literal['typeHierarchy/supertypes']
     params: TypeHierarchySupertypesParams
 
 
-class UnregistrationRequest(TypedDict):
+class UnregistrationRequest(TypedDict, closed=True):
     method: Literal['client/unregisterCapability']
     params: UnregistrationParams
 
 
-class WillCreateFilesRequest(TypedDict):
+class WillCreateFilesRequest(TypedDict, closed=True):
     method: Literal['workspace/willCreateFiles']
     params: CreateFilesParams
 
 
-class WillDeleteFilesRequest(TypedDict):
+class WillDeleteFilesRequest(TypedDict, closed=True):
     method: Literal['workspace/willDeleteFiles']
     params: DeleteFilesParams
 
 
-class WillRenameFilesRequest(TypedDict):
+class WillRenameFilesRequest(TypedDict, closed=True):
     method: Literal['workspace/willRenameFiles']
     params: RenameFilesParams
 
 
-class WillSaveTextDocumentWaitUntilRequest(TypedDict):
+class WillSaveTextDocumentWaitUntilRequest(TypedDict, closed=True):
     method: Literal['textDocument/willSaveWaitUntil']
     params: WillSaveTextDocumentParams
 
 
-class WorkDoneProgressCreateRequest(TypedDict):
+class WorkDoneProgressCreateRequest(TypedDict, closed=True):
     method: Literal['window/workDoneProgress/create']
     params: WorkDoneProgressCreateParams
 
 
-class WorkspaceDiagnosticRequest(TypedDict):
+class WorkspaceDiagnosticRequest(TypedDict, closed=True):
     method: Literal['workspace/diagnostic']
     params: WorkspaceDiagnosticParams
 
 
-class WorkspaceFoldersRequest(TypedDict):
+class WorkspaceFoldersRequest(TypedDict, closed=True):
     method: Literal['workspace/workspaceFolders']
     params: None
 
 
-class WorkspaceSymbolRequest(TypedDict):
+class WorkspaceSymbolRequest(TypedDict, closed=True):
     method: Literal['workspace/symbol']
     params: WorkspaceSymbolParams
 
 
-class WorkspaceSymbolResolveRequest(TypedDict):
+class WorkspaceSymbolResolveRequest(TypedDict, closed=True):
     method: Literal['workspaceSymbol/resolve']
     params: WorkspaceSymbol
 
@@ -886,362 +886,362 @@ ServerRequest: TypeAlias = Union[
 ]
 
 
-class ApplyWorkspaceEditResponse(TypedDict):
+class ApplyWorkspaceEditResponse(TypedDict, closed=True):
     method: Literal['workspace/applyEdit']
     params: ApplyWorkspaceEditParams
     result: ApplyWorkspaceEditResult
 
 
-class CallHierarchyIncomingCallsResponse(TypedDict):
+class CallHierarchyIncomingCallsResponse(TypedDict, closed=True):
     method: Literal['callHierarchy/incomingCalls']
     result: Union[List[CallHierarchyIncomingCall], None]
 
 
-class CallHierarchyOutgoingCallsResponse(TypedDict):
+class CallHierarchyOutgoingCallsResponse(TypedDict, closed=True):
     method: Literal['callHierarchy/outgoingCalls']
     result: Union[List[CallHierarchyOutgoingCall], None]
 
 
-class CallHierarchyPrepareResponse(TypedDict):
+class CallHierarchyPrepareResponse(TypedDict, closed=True):
     method: Literal['textDocument/prepareCallHierarchy']
     result: Union[List[CallHierarchyItem], None]
 
 
-class CodeActionResponse(TypedDict):
+class CodeActionResponse(TypedDict, closed=True):
     method: Literal['textDocument/codeAction']
     result: Union[List[Union[Command, CodeAction]], None]
 
 
-class CodeActionResolveResponse(TypedDict):
+class CodeActionResolveResponse(TypedDict, closed=True):
     method: Literal['codeAction/resolve']
     result: CodeAction
 
 
-class CodeLensRefreshResponse(TypedDict):
+class CodeLensRefreshResponse(TypedDict, closed=True):
     method: Literal['workspace/codeLens/refresh']
     params: None
     result: None
 
 
-class CodeLensResponse(TypedDict):
+class CodeLensResponse(TypedDict, closed=True):
     method: Literal['textDocument/codeLens']
     result: Union[List[CodeLens], None]
 
 
-class CodeLensResolveResponse(TypedDict):
+class CodeLensResolveResponse(TypedDict, closed=True):
     method: Literal['codeLens/resolve']
     result: CodeLens
 
 
-class ColorPresentationResponse(TypedDict):
+class ColorPresentationResponse(TypedDict, closed=True):
     method: Literal['textDocument/colorPresentation']
-    result: Union[List[ColorPresentation], None]
+    result: List[ColorPresentation]
 
 
-class CompletionResponse(TypedDict):
+class CompletionResponse(TypedDict, closed=True):
     method: Literal['textDocument/completion']
     result: Union[List[CompletionItem], CompletionList, None]
 
 
-class CompletionResolveResponse(TypedDict):
+class CompletionResolveResponse(TypedDict, closed=True):
     method: Literal['completionItem/resolve']
     result: CompletionItem
 
 
-class ConfigurationResponse(TypedDict):
+class ConfigurationResponse(TypedDict, closed=True):
     method: Literal['workspace/configuration']
     params: ConfigurationParams
     result: List[LSPAny]
 
 
-class DeclarationResponse(TypedDict):
+class DeclarationResponse(TypedDict, closed=True):
     method: Literal['textDocument/declaration']
     result: Union[Declaration, List[DeclarationLink], None]
 
 
-class DefinitionResponse(TypedDict):
+class DefinitionResponse(TypedDict, closed=True):
     method: Literal['textDocument/definition']
     result: Union[Definition, List[DefinitionLink], None]
 
 
-class DiagnosticRefreshResponse(TypedDict):
+class DiagnosticRefreshResponse(TypedDict, closed=True):
     method: Literal['workspace/diagnostic/refresh']
     params: None
     result: None
 
 
-class DocumentColorResponse(TypedDict):
+class DocumentColorResponse(TypedDict, closed=True):
     method: Literal['textDocument/documentColor']
-    result: Union[List[ColorInformation], None]
+    result: List[ColorInformation]
 
 
-class DocumentDiagnosticResponse(TypedDict):
+class DocumentDiagnosticResponse(TypedDict, closed=True):
     method: Literal['textDocument/diagnostic']
     result: DocumentDiagnosticReport
 
 
-class DocumentFormattingResponse(TypedDict):
+class DocumentFormattingResponse(TypedDict, closed=True):
     method: Literal['textDocument/formatting']
     result: Union[List[TextEdit], None]
 
 
-class DocumentHighlightResponse(TypedDict):
+class DocumentHighlightResponse(TypedDict, closed=True):
     method: Literal['textDocument/documentHighlight']
     result: Union[List[DocumentHighlight], None]
 
 
-class DocumentLinkResponse(TypedDict):
+class DocumentLinkResponse(TypedDict, closed=True):
     method: Literal['textDocument/documentLink']
     result: Union[List[DocumentLink], None]
 
 
-class DocumentLinkResolveResponse(TypedDict):
+class DocumentLinkResolveResponse(TypedDict, closed=True):
     method: Literal['documentLink/resolve']
     result: DocumentLink
 
 
-class DocumentOnTypeFormattingResponse(TypedDict):
+class DocumentOnTypeFormattingResponse(TypedDict, closed=True):
     method: Literal['textDocument/onTypeFormatting']
     result: Union[List[TextEdit], None]
 
 
-class DocumentRangeFormattingResponse(TypedDict):
+class DocumentRangeFormattingResponse(TypedDict, closed=True):
     method: Literal['textDocument/rangeFormatting']
     result: Union[List[TextEdit], None]
 
 
-class DocumentRangesFormattingResponse(TypedDict):
+class DocumentRangesFormattingResponse(TypedDict, closed=True):
     method: Literal['textDocument/rangesFormatting']
     result: Union[List[TextEdit], None]
 
 
-class DocumentSymbolResponse(TypedDict):
+class DocumentSymbolResponse(TypedDict, closed=True):
     method: Literal['textDocument/documentSymbol']
     result: Union[List[SymbolInformation], List[DocumentSymbol], None]
 
 
-class ExecuteCommandResponse(TypedDict):
+class ExecuteCommandResponse(TypedDict, closed=True):
     method: Literal['workspace/executeCommand']
     result: Union[LSPAny, None]
 
 
-class FoldingRangeRefreshResponse(TypedDict):
+class FoldingRangeRefreshResponse(TypedDict, closed=True):
     method: Literal['workspace/foldingRange/refresh']
     params: None
     result: None
 
 
-class FoldingRangeResponse(TypedDict):
+class FoldingRangeResponse(TypedDict, closed=True):
     method: Literal['textDocument/foldingRange']
     result: Union[List[FoldingRange], None]
 
 
-class HoverResponse(TypedDict):
+class HoverResponse(TypedDict, closed=True):
     method: Literal['textDocument/hover']
     result: Union[Hover, None]
 
 
-class ImplementationResponse(TypedDict):
+class ImplementationResponse(TypedDict, closed=True):
     method: Literal['textDocument/implementation']
     result: Union[Definition, List[DefinitionLink], None]
 
 
-class InitializeResponse(TypedDict):
+class InitializeResponse(TypedDict, closed=True):
     method: Literal['initialize']
     result: InitializeResult
 
 
-class InlayHintRefreshResponse(TypedDict):
+class InlayHintRefreshResponse(TypedDict, closed=True):
     method: Literal['workspace/inlayHint/refresh']
     params: None
     result: None
 
 
-class InlayHintResponse(TypedDict):
+class InlayHintResponse(TypedDict, closed=True):
     method: Literal['textDocument/inlayHint']
     result: Union[List[InlayHint], None]
 
 
-class InlayHintResolveResponse(TypedDict):
+class InlayHintResolveResponse(TypedDict, closed=True):
     method: Literal['inlayHint/resolve']
     result: InlayHint
 
 
-class InlineCompletionResponse(TypedDict):
+class InlineCompletionResponse(TypedDict, closed=True):
     method: Literal['textDocument/inlineCompletion']
     result: Union[InlineCompletionList, List[InlineCompletionItem], None]
 
 
-class InlineValueRefreshResponse(TypedDict):
+class InlineValueRefreshResponse(TypedDict, closed=True):
     method: Literal['workspace/inlineValue/refresh']
     params: None
     result: None
 
 
-class InlineValueResponse(TypedDict):
+class InlineValueResponse(TypedDict, closed=True):
     method: Literal['textDocument/inlineValue']
     result: Union[List[InlineValue], None]
 
 
-class LinkedEditingRangeResponse(TypedDict):
+class LinkedEditingRangeResponse(TypedDict, closed=True):
     method: Literal['textDocument/linkedEditingRange']
     result: Union[LinkedEditingRanges, None]
 
 
-class MonikerResponse(TypedDict):
+class MonikerResponse(TypedDict, closed=True):
     method: Literal['textDocument/moniker']
     result: Union[List[Moniker], None]
 
 
-class PrepareRenameResponse(TypedDict):
+class PrepareRenameResponse(TypedDict, closed=True):
     method: Literal['textDocument/prepareRename']
     result: Union[PrepareRenameResult, None]
 
 
-class ReferencesResponse(TypedDict):
+class ReferencesResponse(TypedDict, closed=True):
     method: Literal['textDocument/references']
     result: Union[List[Location], None]
 
 
-class RegistrationResponse(TypedDict):
+class RegistrationResponse(TypedDict, closed=True):
     method: Literal['client/registerCapability']
     params: RegistrationParams
     result: None
 
 
-class RenameResponse(TypedDict):
+class RenameResponse(TypedDict, closed=True):
     method: Literal['textDocument/rename']
     result: Union[WorkspaceEdit, None]
 
 
-class SelectionRangeResponse(TypedDict):
+class SelectionRangeResponse(TypedDict, closed=True):
     method: Literal['textDocument/selectionRange']
     result: Union[List[SelectionRange], None]
 
 
-class SemanticTokensDeltaResponse(TypedDict):
+class SemanticTokensDeltaResponse(TypedDict, closed=True):
     method: Literal['textDocument/semanticTokens/full/delta']
     result: Union[SemanticTokens, SemanticTokensDelta, None]
 
 
-class SemanticTokensRangeResponse(TypedDict):
+class SemanticTokensRangeResponse(TypedDict, closed=True):
     method: Literal['textDocument/semanticTokens/range']
     result: Union[SemanticTokens, None]
 
 
-class SemanticTokensRefreshResponse(TypedDict):
+class SemanticTokensRefreshResponse(TypedDict, closed=True):
     method: Literal['workspace/semanticTokens/refresh']
     params: None
     result: None
 
 
-class SemanticTokensResponse(TypedDict):
+class SemanticTokensResponse(TypedDict, closed=True):
     method: Literal['textDocument/semanticTokens/full']
     result: Union[SemanticTokens, None]
 
 
-class ShowDocumentResponse(TypedDict):
+class ShowDocumentResponse(TypedDict, closed=True):
     method: Literal['window/showDocument']
     params: ShowDocumentParams
     result: ShowDocumentResult
 
 
-class ShowMessageResponse(TypedDict):
+class ShowMessageResponse(TypedDict, closed=True):
     method: Literal['window/showMessageRequest']
     params: ShowMessageRequestParams
     result: Union[MessageActionItem, None]
 
 
-class ShutdownResponse(TypedDict):
+class ShutdownResponse(TypedDict, closed=True):
     method: Literal['shutdown']
     result: None
 
 
-class SignatureHelpResponse(TypedDict):
+class SignatureHelpResponse(TypedDict, closed=True):
     method: Literal['textDocument/signatureHelp']
     result: Union[SignatureHelp, None]
 
 
-class TextDocumentContentRefreshResponse(TypedDict):
+class TextDocumentContentRefreshResponse(TypedDict, closed=True):
     method: Literal['workspace/textDocumentContent/refresh']
     params: TextDocumentContentRefreshParams
     result: None
 
 
-class TextDocumentContentResponse(TypedDict):
+class TextDocumentContentResponse(TypedDict, closed=True):
     method: Literal['workspace/textDocumentContent']
     result: TextDocumentContentResult
 
 
-class TypeDefinitionResponse(TypedDict):
+class TypeDefinitionResponse(TypedDict, closed=True):
     method: Literal['textDocument/typeDefinition']
     result: Union[Definition, List[DefinitionLink], None]
 
 
-class TypeHierarchyPrepareResponse(TypedDict):
+class TypeHierarchyPrepareResponse(TypedDict, closed=True):
     method: Literal['textDocument/prepareTypeHierarchy']
     result: Union[List[TypeHierarchyItem], None]
 
 
-class TypeHierarchySubtypesResponse(TypedDict):
+class TypeHierarchySubtypesResponse(TypedDict, closed=True):
     method: Literal['typeHierarchy/subtypes']
     result: Union[List[TypeHierarchyItem], None]
 
 
-class TypeHierarchySupertypesResponse(TypedDict):
+class TypeHierarchySupertypesResponse(TypedDict, closed=True):
     method: Literal['typeHierarchy/supertypes']
     result: Union[List[TypeHierarchyItem], None]
 
 
-class UnregistrationResponse(TypedDict):
+class UnregistrationResponse(TypedDict, closed=True):
     method: Literal['client/unregisterCapability']
     params: UnregistrationParams
     result: None
 
 
-class WillCreateFilesResponse(TypedDict):
+class WillCreateFilesResponse(TypedDict, closed=True):
     method: Literal['workspace/willCreateFiles']
     result: Union[WorkspaceEdit, None]
 
 
-class WillDeleteFilesResponse(TypedDict):
+class WillDeleteFilesResponse(TypedDict, closed=True):
     method: Literal['workspace/willDeleteFiles']
     result: Union[WorkspaceEdit, None]
 
 
-class WillRenameFilesResponse(TypedDict):
+class WillRenameFilesResponse(TypedDict, closed=True):
     method: Literal['workspace/willRenameFiles']
     result: Union[WorkspaceEdit, None]
 
 
-class WillSaveTextDocumentWaitUntilResponse(TypedDict):
+class WillSaveTextDocumentWaitUntilResponse(TypedDict, closed=True):
     method: Literal['textDocument/willSaveWaitUntil']
     result: Union[List[TextEdit], None]
 
 
-class WorkDoneProgressCreateResponse(TypedDict):
+class WorkDoneProgressCreateResponse(TypedDict, closed=True):
     method: Literal['window/workDoneProgress/create']
     params: WorkDoneProgressCreateParams
     result: None
 
 
-class WorkspaceDiagnosticResponse(TypedDict):
+class WorkspaceDiagnosticResponse(TypedDict, closed=True):
     method: Literal['workspace/diagnostic']
     result: WorkspaceDiagnosticReport
 
 
-class WorkspaceFoldersResponse(TypedDict):
+class WorkspaceFoldersResponse(TypedDict, closed=True):
     method: Literal['workspace/workspaceFolders']
     params: None
     result: Union[List[WorkspaceFolder], None]
 
 
-class WorkspaceSymbolResponse(TypedDict):
+class WorkspaceSymbolResponse(TypedDict, closed=True):
     method: Literal['workspace/symbol']
     result: Union[List[SymbolInformation], List[WorkspaceSymbol], None]
 
 
-class WorkspaceSymbolResolveResponse(TypedDict):
+class WorkspaceSymbolResolveResponse(TypedDict, closed=True):
     method: Literal['workspaceSymbol/resolve']
     result: WorkspaceSymbol
 
@@ -1323,132 +1323,132 @@ ClientResponse: TypeAlias = Union[
 ]
 
 
-class CancelNotification(TypedDict):
+class CancelNotification(TypedDict, closed=True):
     method: Literal['$/cancelRequest']
     params: CancelParams
 
 
-class DidChangeConfigurationNotification(TypedDict):
+class DidChangeConfigurationNotification(TypedDict, closed=True):
     method: Literal['workspace/didChangeConfiguration']
     params: DidChangeConfigurationParams
 
 
-class DidChangeNotebookDocumentNotification(TypedDict):
+class DidChangeNotebookDocumentNotification(TypedDict, closed=True):
     method: Literal['notebookDocument/didChange']
     params: DidChangeNotebookDocumentParams
 
 
-class DidChangeTextDocumentNotification(TypedDict):
+class DidChangeTextDocumentNotification(TypedDict, closed=True):
     method: Literal['textDocument/didChange']
     params: DidChangeTextDocumentParams
 
 
-class DidChangeWatchedFilesNotification(TypedDict):
+class DidChangeWatchedFilesNotification(TypedDict, closed=True):
     method: Literal['workspace/didChangeWatchedFiles']
     params: DidChangeWatchedFilesParams
 
 
-class DidChangeWorkspaceFoldersNotification(TypedDict):
+class DidChangeWorkspaceFoldersNotification(TypedDict, closed=True):
     method: Literal['workspace/didChangeWorkspaceFolders']
     params: DidChangeWorkspaceFoldersParams
 
 
-class DidCloseNotebookDocumentNotification(TypedDict):
+class DidCloseNotebookDocumentNotification(TypedDict, closed=True):
     method: Literal['notebookDocument/didClose']
     params: DidCloseNotebookDocumentParams
 
 
-class DidCloseTextDocumentNotification(TypedDict):
+class DidCloseTextDocumentNotification(TypedDict, closed=True):
     method: Literal['textDocument/didClose']
     params: DidCloseTextDocumentParams
 
 
-class DidCreateFilesNotification(TypedDict):
+class DidCreateFilesNotification(TypedDict, closed=True):
     method: Literal['workspace/didCreateFiles']
     params: CreateFilesParams
 
 
-class DidDeleteFilesNotification(TypedDict):
+class DidDeleteFilesNotification(TypedDict, closed=True):
     method: Literal['workspace/didDeleteFiles']
     params: DeleteFilesParams
 
 
-class DidOpenNotebookDocumentNotification(TypedDict):
+class DidOpenNotebookDocumentNotification(TypedDict, closed=True):
     method: Literal['notebookDocument/didOpen']
     params: DidOpenNotebookDocumentParams
 
 
-class DidOpenTextDocumentNotification(TypedDict):
+class DidOpenTextDocumentNotification(TypedDict, closed=True):
     method: Literal['textDocument/didOpen']
     params: DidOpenTextDocumentParams
 
 
-class DidRenameFilesNotification(TypedDict):
+class DidRenameFilesNotification(TypedDict, closed=True):
     method: Literal['workspace/didRenameFiles']
     params: RenameFilesParams
 
 
-class DidSaveNotebookDocumentNotification(TypedDict):
+class DidSaveNotebookDocumentNotification(TypedDict, closed=True):
     method: Literal['notebookDocument/didSave']
     params: DidSaveNotebookDocumentParams
 
 
-class DidSaveTextDocumentNotification(TypedDict):
+class DidSaveTextDocumentNotification(TypedDict, closed=True):
     method: Literal['textDocument/didSave']
     params: DidSaveTextDocumentParams
 
 
-class ExitNotification(TypedDict):
+class ExitNotification(TypedDict, closed=True):
     method: Literal['exit']
     params: None
 
 
-class InitializedNotification(TypedDict):
+class InitializedNotification(TypedDict, closed=True):
     method: Literal['initialized']
     params: InitializedParams
 
 
-class LogMessageNotification(TypedDict):
+class LogMessageNotification(TypedDict, closed=True):
     method: Literal['window/logMessage']
     params: LogMessageParams
 
 
-class LogTraceNotification(TypedDict):
+class LogTraceNotification(TypedDict, closed=True):
     method: Literal['$/logTrace']
     params: LogTraceParams
 
 
-class ProgressNotification(TypedDict):
+class ProgressNotification(TypedDict, closed=True):
     method: Literal['$/progress']
     params: ProgressParams
 
 
-class PublishDiagnosticsNotification(TypedDict):
+class PublishDiagnosticsNotification(TypedDict, closed=True):
     method: Literal['textDocument/publishDiagnostics']
     params: PublishDiagnosticsParams
 
 
-class SetTraceNotification(TypedDict):
+class SetTraceNotification(TypedDict, closed=True):
     method: Literal['$/setTrace']
     params: SetTraceParams
 
 
-class ShowMessageNotification(TypedDict):
+class ShowMessageNotification(TypedDict, closed=True):
     method: Literal['window/showMessage']
     params: ShowMessageParams
 
 
-class TelemetryEventNotification(TypedDict):
+class TelemetryEventNotification(TypedDict, closed=True):
     method: Literal['telemetry/event']
     params: LSPAny
 
 
-class WillSaveTextDocumentNotification(TypedDict):
+class WillSaveTextDocumentNotification(TypedDict, closed=True):
     method: Literal['textDocument/willSave']
     params: WillSaveTextDocumentParams
 
 
-class WorkDoneProgressCancelNotification(TypedDict):
+class WorkDoneProgressCancelNotification(TypedDict, closed=True):
     method: Literal['window/workDoneProgress/cancel']
     params: WorkDoneProgressCancelParams
 

@@ -1,26 +1,23 @@
 from __future__ import annotations
 
 from .core.edit import show_summary_message
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.type_converters import range_to_region
 from .core.views import text_document_position_params
 from .edit import prompt_for_workspace_edits
-from functools import partial
-from typing import Any
 from typing import TYPE_CHECKING
 from typing_extensions import TypeGuard
 import sublime
 import sublime_plugin
-import weakref
 
 if TYPE_CHECKING:
     from ..protocol import PrepareRenameParams
     from ..protocol import PrepareRenameResult
     from ..protocol import Range
     from ..protocol import RenameParams
-    from ..protocol import WorkspaceEdit
     from .core.sessions import Session
 
 PREPARE_RENAME_CAPABILITY = "renameProvider.prepareProvider"
@@ -48,7 +45,7 @@ def is_range_response(result: PrepareRenameResult) -> TypeGuard[Range]:
 #  - based on the "prepare" response, the "placeholder" value is computed
 #  - "lsp_symbol_rename" command is re-triggered with computed "placeholder" argument
 #  - run() gets called with "placeholder" argument set
-#  - run() manually throws a TypeError
+#  - run() manually shows the input overlay of the Command Palette
 #  - input() gets called with "placeholder" argument set - returns an instance of "RenameSymbolInputHandler"
 #  - input overlay triggered
 #  - user enters new name and confirms
@@ -92,66 +89,50 @@ class LspSymbolRenameCommand(LspTextCommand):
             placeholder = self.view.substr(self.view.word(point))
         return RenameSymbolInputHandler(self.view, placeholder)
 
-    def run(
+    async def run(
         self,
-        edit: sublime.Edit,
         new_name: str = "",
         placeholder: str = "",
         session_name: str | None = None,
         event: dict | None = None,
         point: int | None = None
     ) -> None:
-        if listener := self.get_listener():
-            listener.purge_changes_async()
         location = get_position(self.view, event, point)
         session = self._get_prepare_rename_session(point, session_name)
         if new_name or placeholder or not session:
             if location is not None and new_name:
-                self._do_rename(location, placeholder, new_name, session)
+                await self._do_rename(location, placeholder, new_name, session)
                 return
             # Trigger InputHandler manually.
-            raise TypeError("required positional argument")
+            args = {
+                'new_name': new_name or None,
+                'placeholder': placeholder or None,
+                'session_name': session_name,
+                'event': event,
+                'point': point,
+            }
+            args = {key: value for key, value in args.items() if value is not None}
+            if self.input(args) is not None and (window := self.view.window()):
+                window.run_command('show_overlay', {'overlay': 'command_palette', 'command': self.name(), 'args': args})
+            return
         if location is None:
             return
-        params: PrepareRenameParams = {
-            **text_document_position_params(self.view, location)
-        }
-        request = Request.prepareRename(params, self.view, progress=True)
-        session.send_request(
-            request, partial(self._on_prepare_result, location, session.config.name), self._on_prepare_error)
+        await self._do_rename_with_prepare_provider(location, session)
 
     def _get_prepare_rename_session(self, point: int | None, session_name: str | None) -> Session | None:
         return self.session_by_name(session_name, PREPARE_RENAME_CAPABILITY) if session_name \
             else self.best_session(PREPARE_RENAME_CAPABILITY, point)
 
-    def _do_rename(self, position: int, old_name: str, new_name: str, preferred_session: Session | None) -> None:
-        session = preferred_session or self.best_session(self.capability, position)
-        if not session:
-            return
-        position_params = text_document_position_params(self.view, position)
-        params: RenameParams = {
-            "textDocument": position_params["textDocument"],
-            "position": position_params["position"],
-            "newName": new_name,
+    async def _do_rename_with_prepare_provider(self, pos: int, session: Session) -> None:
+        if listener := self.get_listener():
+            await listener.purge_changes()
+        params: PrepareRenameParams = {
+            **text_document_position_params(self.view, pos)
         }
-        request = Request.rename(params, self.view, progress=True)
-        session.send_request(request, partial(self._on_rename_result_async, session, f"Rename {old_name} → {new_name}"))
-
-    def _on_rename_result_async(self, session: Session, label: str, response: WorkspaceEdit | None) -> None:
-        if not response:
-            session.window.status_message('Nothing to rename')
+        response = await session.request(Request.prepareRename(params, self.view, progress=True))
+        if isinstance(response, Error):
+            sublime.error_message(f"Rename error: {response}")
             return
-        prompt_for_workspace_edits(session, response, label=label) \
-            .then(partial(self.on_prompt_for_workspace_edits_concluded, weakref.ref(session), response))
-
-    def on_prompt_for_workspace_edits_concluded(
-        self, weak_session: weakref.ref[Session], response: WorkspaceEdit, accepted: bool
-    ) -> None:
-        if accepted and (session := weak_session()):
-            session.apply_workspace_edit_async(response, is_refactoring=True) \
-                .then(lambda tup: show_summary_message(session.window, *tup))
-
-    def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:
             sublime.error_message("The current selection cannot be renamed")
             return
@@ -164,11 +145,31 @@ class LspSymbolRenameCommand(LspTextCommand):
             pos = range_to_region(self.view, response["range"]).a  # type: ignore
         else:
             placeholder = self.view.substr(self.view.word(pos))
-        args = {"placeholder": placeholder, "point": pos, "session_name": session_name}
+        args = {"placeholder": placeholder, "point": pos, "session_name": session.config.name}
         self.view.run_command("lsp_symbol_rename", args)
 
-    def _on_prepare_error(self, error: Any) -> None:
-        sublime.error_message("Rename error: {}".format(error["message"]))
+    async def _do_rename(self, position: int, old_name: str, new_name: str, preferred_session: Session | None) -> None:
+        if listener := self.get_listener():
+            await listener.purge_changes()
+        session = preferred_session or self.best_session(self.capability, position)
+        if not session:
+            return
+        position_params = text_document_position_params(self.view, position)
+        params: RenameParams = {
+            "textDocument": position_params["textDocument"],
+            "position": position_params["position"],
+            "newName": new_name,
+        }
+        response = await session.request(Request.rename(params, self.view, progress=True))
+        if isinstance(response, Error):
+            sublime.error_message(f"Rename error: {response}")
+            return
+        if not response:
+            session.window.status_message('Nothing to rename')
+            return
+        if await prompt_for_workspace_edits(session, response, label=f"Rename {old_name} → {new_name}"):
+            summary = await session.apply_workspace_edit(response, is_refactoring=True)
+            show_summary_message(session.window, *summary)
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):

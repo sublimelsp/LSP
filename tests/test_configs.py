@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .test_mocks import TEST_CONFIG
+from copy import deepcopy
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.transports import TransportConfig
 from LSP.plugin.core.types import ClientConfig
@@ -148,7 +149,7 @@ class ConfigParsingTests(DeferrableTestCase):
             },
         }
         config = read_client_config("test", settings)
-        self.assertEqual(config.unknown, settings['unknown'])
+        self.assertEqual(config.root_settings['unknown'], settings['unknown'])
 
     def test_shallow_merges_overrides_for_unknown_root_keys(self) -> None:
         settings = {
@@ -162,16 +163,27 @@ class ConfigParsingTests(DeferrableTestCase):
             }
         }
         config = update_client_config(read_client_config("test", settings), overriddes)
-        self.assertEqual(config.unknown, overriddes['unknown'])
+        self.assertEqual(config.root_settings['unknown'], overriddes['unknown'])
 
-    def test_attribute_access_prefers_native_keys(self) -> None:
+    def test_root_settings_exclude_native_keys(self) -> None:
         settings = {
             "settings": {
                 "setting1": 1
             },
+            "unknown": {
+                "foo": 1
+            },
         }
         config = read_client_config("test", settings)
         self.assertIsInstance(config.settings, DottedDict)
+        self.assertNotIn("settings", config.root_settings)
+        self.assertFalse(hasattr(config, "unknown"))
+
+    def test_deepcopy(self) -> None:
+        config = read_client_config("test", {"command": ["ls"], "unknown": {"foo": 1}})
+        config_copy = deepcopy(config)
+        self.assertEqual(config_copy, config)
+        self.assertEqual(config_copy.root_settings["unknown"], {"foo": 1})
 
     def test_does_not_have_subscription_access(self) -> None:
         settings = {

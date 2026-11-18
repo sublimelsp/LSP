@@ -27,6 +27,12 @@ If you want to create a new key binding that is different from the ones that are
 
 Generally, you should not need to restrict your key bindings to specific scopes and just rely on checking the capability context.
 
+### Save key binding
+
+LSP overrides the <kbd>Ctrl</kbd> <kbd>S</kbd> key binding (<kbd>Command</kbd> <kbd>S</kbd> on macOS) with the `lsp_save` command in views that have a language server attached. This is required for the `"lsp_format_on_save"` and `"lsp_code_actions_on_save"` features, which need to wait for responses from the language server before the file is saved. These features don't run when the file is saved in a different way, for example from the main menu.
+
+If this key binding conflicts with a key binding from another package, it can be disabled by setting `"disable_lsp_save"` to `true` in `Preferences.sublime-settings`. Since this is a regular view setting, it can also be set in syntax-specific settings, or by another package on specific views only.
+
 
 ## Mouse map configuration
 
@@ -72,6 +78,7 @@ Below is a list of supported commands and the corresponding keyboard shortcut (i
 | Goto Type Definition | unbound | `lsp_symbol_type_definition`
 | Goto Diagnostic | unbound<br>suggested: <kbd>F8</kbd> | `lsp_goto_diagnostic`<br>Supports optional argument `"severity_level"` for the severity level of included diagnostics: 1 (error), 2 (warning), 3 (information), 4 (hint). Uses the `"show_diagnostics_severity_level"` setting if not provided.
 | Next Diagnostic | unbound | `lsp_next_diagnostic`<br>Supports optional argument `"severity_level"`
+| Open Remote Log Viewer | unbound | `lsp_open_remote_log_viewer`
 | Previous Diagnostic | unbound | `lsp_prev_diagnostic`<br>Supports optional argument `"severity_level"`
 | Hover Popup | unbound | `lsp_hover`
 | Insert/Replace Completions | <kbd>Alt</kbd> <kbd>Enter</kbd> | `lsp_commit_completion_with_opposite_insert_mode`

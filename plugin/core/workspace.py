@@ -4,6 +4,9 @@ from .types import diff
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
+from pathlib import Path
+from typing import Any
+from typing import cast
 from typing import TYPE_CHECKING
 import os
 import sublime
@@ -54,7 +57,9 @@ class WorkspaceFolder:
         return filename_to_uri(self.path)
 
     def includes_uri(self, uri: str) -> bool:
-        return uri.startswith(self.uri())
+        folder_uri = self.uri()
+        # Require a path separator after the folder URI so that a folder "/a/proj" doesn't include "/a/proj-other".
+        return uri == folder_uri or uri.startswith(folder_uri.rstrip('/') + '/')
 
 
 class ProjectFolders:
@@ -72,7 +77,7 @@ class ProjectFolders:
         project_data = self._window.project_data()
         if not isinstance(project_data, dict):
             return
-        for i, folder in enumerate(project_data.get('folders', [])):
+        for i, folder in enumerate(cast('list[dict[str, Any]]', project_data.get('folders', []))):
             exclude_patterns = []
             # Use canoncial path from `window.folders` rather than potentially relative path from project data.
             path = folders[i]
@@ -132,6 +137,11 @@ def sorted_workspace_folders(folders: list[str], file_path: str) -> list[Workspa
     other_paths: list[str] = []
 
     for folder in folders:
+        # Sublime Text keeps folders in the window even after they were deleted from disk. Those are filtered out here
+        # rather than in ProjectFolders.folders because ProjectFolders matches its folders to the project's "folders"
+        # entries by index (for folder_exclude_patterns), which would break if some of them were removed.
+        if not Path(folder).is_dir():
+            continue
         if is_subpath_of(file_path, folder):
             if matching_paths and len(folder) > len(matching_paths[0]):
                 matching_paths.insert(0, folder)
@@ -146,7 +156,7 @@ def sorted_workspace_folders(folders: list[str], file_path: str) -> list[Workspa
 def enable_in_project(window: sublime.Window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', {})
+        project_settings = cast('dict[str, Any]', project_data.setdefault('settings', {}))
         project_lsp_settings = project_settings.setdefault('LSP', {})
         project_client_settings = project_lsp_settings.setdefault(config_name, {})
         project_client_settings['enabled'] = True
@@ -159,7 +169,7 @@ def enable_in_project(window: sublime.Window, config_name: str) -> None:
 def disable_in_project(window: sublime.Window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', {})
+        project_settings = cast('dict[str, Any]', project_data.setdefault('settings', {}))
         project_lsp_settings = project_settings.setdefault('LSP', {})
         project_client_settings = project_lsp_settings.setdefault(config_name, {})
         project_client_settings['enabled'] = False

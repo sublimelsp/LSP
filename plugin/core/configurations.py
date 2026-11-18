@@ -12,10 +12,13 @@ from abc import abstractmethod
 from collections import deque
 from datetime import datetime
 from datetime import timedelta
+from typing import Any
+from typing import cast
 from typing import Generator
 from typing import Literal
 from typing import TYPE_CHECKING
 from weakref import WeakSet
+import asyncio
 
 if TYPE_CHECKING:
     import sublime
@@ -76,17 +79,19 @@ class WindowConfigManager:
         except (IndexError, RuntimeError):
             pass
 
-    def update(self, updated_config_name: str | None = None) -> None:
-        self._reload_configs(updated_config_name, notify_listeners=True)
+    def update(self, updated_config_names: set[str] | None = None) -> None:
+        self._reload_configs(updated_config_names, notify_listeners=True)
 
-    def _reload_configs(self, updated_config_name: str | None = None, notify_listeners: bool = False) -> None:
+    def _reload_configs(self, updated_config_names: set[str] | None = None, notify_listeners: bool = False) -> None:
         project_data = self._window.project_data()
-        project_settings = project_data.get("settings", {}).get("LSP", {}) if isinstance(project_data, dict) else {}
+        project_settings: dict[str, Any] = {}
+        if isinstance(project_data, dict):
+            project_settings = cast('dict[str, Any]', project_data.get("settings", {})).get("LSP", {})
 
-        def resolve_configs(updated_config_name: str | None = None) -> Generator[tuple[ConfigChangeType, ClientConfig]]:
+        def resolve_configs() -> Generator[tuple[ConfigChangeType, ClientConfig]]:
             seen_config_names: set[str] = set()
             for name, config in self._global_configs.items():
-                if updated_config_name and updated_config_name != name:
+                if updated_config_names is not None and name not in updated_config_names:
                     continue
                 overrides = project_settings.pop(name, None)
                 if not isinstance(overrides, dict):
@@ -98,7 +103,7 @@ class WindowConfigManager:
                 seen_config_names.add(name)
                 yield compare_configs(stored_config, updated_config)
             for name, config in project_settings.items():
-                if updated_config_name and updated_config_name != name:
+                if updated_config_names is not None and name not in updated_config_names:
                     continue
                 if name in self._disabled_for_session:
                     config["enabled"] = False
@@ -113,6 +118,8 @@ class WindowConfigManager:
                 seen_config_names.add(name)
             # Configs in "all" that were not seen are gone.
             removed_names = self.all.keys() - seen_config_names
+            if updated_config_names is not None:
+                removed_names &= updated_config_names
             for name in removed_names:
                 yield ('removed', self.all[name])
 
@@ -134,11 +141,13 @@ class WindowConfigManager:
             'settings_changed': [],
             'unchanged': []
         }
-        if updated_config_name:
-            if result := next(resolve_configs(updated_config_name), None):
-                change_type, config = result
+        if updated_config_names is not None:
+            for change_type, config in resolve_configs():
                 changes[change_type].append(config)
-                self.all[config.name] = config
+                if change_type == 'removed':
+                    self.all.pop(config.name, None)
+                else:
+                    self.all[config.name] = config
         else:
             for result in resolve_configs():
                 change_type, config = result
@@ -160,14 +169,14 @@ class WindowConfigManager:
     def enable_config(self, config_name: str) -> None:
         if not self._reenable_disabled_for_session(config_name):
             enable_in_project(self._window, config_name)
-        self.update(config_name)
+        self.update({config_name})
 
     def disable_config(self, config_name: str, only_for_session: bool = False) -> None:
         if only_for_session:
             self._disabled_for_session.add(config_name)
         else:
             disable_in_project(self._window, config_name)
-        self.update(config_name)
+        self.update({config_name})
 
     def record_crash(self, config_name: str, exit_code: int, exception: Exception | None) -> bool:
         """
@@ -183,6 +192,8 @@ class WindowConfigManager:
         crash_count = len([crash for crash in self._crashes[config_name] if crash > timeout])
         printf(f"{config_name} crashed ({crash_count} / {RETRY_MAX_COUNT} times in the last "
                f"{RETRY_COUNT_TIMEDELTA.total_seconds()} seconds), exit code {exit_code}, exception: {exception}")
+        if isinstance(exception, asyncio.IncompleteReadError):
+            printf(f"server's output:\n{exception.partial.decode('utf-8', 'replace')}")
         return crash_count < RETRY_MAX_COUNT
 
     def _reenable_disabled_for_session(self, config_name: str) -> bool:

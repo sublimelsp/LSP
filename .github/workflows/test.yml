@@ -7,10 +7,13 @@ on:
     paths-ignore:
       - ".github/workflows/docs.yml"
       - "docs/**"
+  # Runs on all pull requests, including docs-only ones, because the "Require CI" ruleset requires its checks.
   pull_request:
-    paths-ignore:
-      - ".github/workflows/docs.yml"
-      - "docs/**"
+
+concurrency:
+  # Cancel superseded runs of the same pull request. Runs on main get a unique group so that they are never cancelled.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   Unittesting:
@@ -30,13 +33,29 @@ jobs:
         with:
           coverage: true
 
+  # A single check that sums up the Unittesting jobs on all platforms, for the "Require CI" ruleset to require.
+  Unittesting-result:
+    name: Unittesting result
+    needs: Unittesting
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Unittesting result
+        env:
+          RESULT: ${{ needs.Unittesting.result }}
+        run: |
+          echo "Unittesting result: $RESULT"
+          test "$RESULT" = success
+
   Lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.14'
+          python-version: '3.15'
       - run: pip3 install tox --user
       - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       - run: tox
+        env:
+          RUFF_OUTPUT_FORMAT: github

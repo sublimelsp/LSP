@@ -21,8 +21,7 @@ if TYPE_CHECKING:
 class LspExecuteCommand(LspTextCommand):
     """Helper command for triggering workspace/executeCommand requests."""
 
-    def run(self,
-            edit: sublime.Edit,
+    async def run(self,
             command_name: str | None = None,
             command_args: list[Any] | None = None,
             session_name: str | None = None,
@@ -32,15 +31,11 @@ class LspExecuteCommand(LspTextCommand):
             params: ExecuteCommandParams = {"command": command_name}
             if command_args:
                 params["arguments"] = self._expand_variables(command_args)
-
-            def handle_response(response: Any) -> None:
-                assert command_name
-                if isinstance(response, Error):
-                    self.handle_error_async(response, command_name)
-                    return
-                self.handle_success_async(response, command_name)
-
-            session.execute_command(params, progress=True, view=self.view).then(handle_response)
+            result = await session.run_command(params, progress=True, view=self.view)
+            if isinstance(result, Error):
+                self.handle_error_async(result, command_name)
+            else:
+                self.handle_success_async(result, command_name)
 
     def handle_success_async(self, result: Any, command_name: str) -> None:
         """

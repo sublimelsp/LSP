@@ -18,6 +18,7 @@ from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
+from .plugin.core.aio import run_coroutine
 from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
 from .plugin.core.open import g_opening_files
@@ -68,6 +69,7 @@ from .plugin.inlay_hint import LspToggleInlayHintsCommand
 from .plugin.panels import LspClearLogPanelCommand
 from .plugin.panels import LspClearMessagesPanelCommand
 from .plugin.panels import LspClearPanelCommand
+from .plugin.panels import LspOpenRemoteLogViewerCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleLogPanelLinesLimitCommand
 from .plugin.panels import LspToggleMessagesPanelCommand
@@ -93,9 +95,17 @@ from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
 from typing import Any
+from typing import TYPE_CHECKING
 import os
 import sublime
+import sublime_aio
 import sublime_plugin
+
+if TYPE_CHECKING:
+    import asyncio
+
+# Uncomment to see all invocations that are marked @deprecated in the Console.
+# warnings.simplefilter('always', DeprecationWarning)
 
 __all__ = (
     "DocumentSyncListener",
@@ -142,6 +152,7 @@ __all__ = (
     "LspOnDoubleClickCommand",
     "LspOpenLinkCommand",
     "LspOpenLocationCommand",
+    "LspOpenRemoteLogViewerCommand",
     "LspParseVscodePackageJson",
     "LspPrevDiagnosticCommand",
     "LspRefactorCommand",
@@ -228,18 +239,18 @@ def plugin_loaded() -> None:
 
 def plugin_unloaded() -> None:
     _unregister_all_plugins()
-    windows.disable()
-    for listeners in sublime_plugin.view_event_listeners.values():
-        for listener in listeners:
-            if isinstance(listener, DocumentSyncListener):
+    run_coroutine(windows.disable())
+    for window in sublime.windows():
+        for view in window.views(include_transient=True):
+            if listener := sublime_plugin.find_view_event_listener(view, DocumentSyncListener):
                 listener.before_destroy()
     unload_settings()
 
 
-class Listener(sublime_plugin.EventListener):
+class Listener(sublime_aio.EventListener):
 
-    def on_exit(self) -> None:
-        kill_all_subprocesses()
+    async def on_exit(self) -> None:
+        await kill_all_subprocesses()
 
     def on_load_project_async(self, window: sublime.Window) -> None:
         if manager := windows.lookup(window):
@@ -259,36 +270,30 @@ class Listener(sublime_plugin.EventListener):
         if ST_VERSION < 4184:  # https://github.com/sublimehq/sublime_text/issues/4630#issuecomment-2502781628
             # Workaround for ViewEventListener.on_post_move_async not being triggered when air-dropping a tab:
             # https://github.com/sublimehq/sublime_text/issues/4630
-            listeners = sublime_plugin.view_event_listeners.get(view.id())
-            if not isinstance(listeners, list):
-                return
-            for listener in listeners:
-                if isinstance(listener, DocumentSyncListener):
-                    # we need a small delay here, so that the DocumentSyncListener will recognize a possible new window
-                    sublime.set_timeout_async(listener.on_post_move_window_async, 1)
-                    return
+            if listener := sublime_plugin.find_view_event_listener(view, DocumentSyncListener):
+                # we need a small delay here, so that the DocumentSyncListener will recognize a possible new window
+                sublime.set_timeout_async(listener.on_post_move_window_async, 1)
 
-    def on_load(self, view: sublime.View) -> None:
+    async def on_load(self, view: sublime.View) -> None:
         file_name = view.file_name()
         if not file_name:
             return
-        for fn in g_opening_files:
-            if fn == file_name or os.path.samefile(fn, file_name):
-                # Remove it from the pending opening files, and resolve the promise.
-                g_opening_files.pop(fn)[1](view)
-                break
+        if future := self._find_opening_file_future(file_name):
+            future.set_result(view)
 
-    def on_pre_close(self, view: sublime.View) -> None:
+    async def on_pre_close(self, view: sublime.View) -> None:
         file_name = view.file_name()
         if not file_name:
             return
+        if future := self._find_opening_file_future(file_name):
+            # The view got closed before it finished loading. This can happen.
+            future.set_result(None)
+
+    def _find_opening_file_future(self, file_name: str) -> asyncio.Future[sublime.View | None] | None:
         for fn in g_opening_files:
             if fn == file_name or os.path.samefile(fn, file_name):
-                tup = g_opening_files.pop(fn, None)  # ruff: ignore[loop-iterator-mutation]
-                if tup:
-                    # The view got closed before it finished loading. This can happen.
-                    tup[1](None)
-                    break
+                return g_opening_files.pop(fn, None)
+        return None
 
     def on_post_window_command(self, window: sublime.Window, command_name: str, args: dict[str, Any] | None) -> None:
         if command_name == "show_panel":

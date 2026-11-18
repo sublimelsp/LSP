@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from .core.constants import CODE_LENS_ENABLED_KEY
+from .core.panels import show_quick_panel
 from .core.protocol import Error
+from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.type_converters import range_to_region
-from functools import partial
 from typing import cast
 from typing import TYPE_CHECKING
 from typing_extensions import TypeGuard
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from ..protocol import CodeLens
     from ..protocol import Command
     from ..protocol import Range
+    from .core.sessions import Session
 
 
 def is_resolved(code_lens: CodeLens | ResolvedCodeLens) -> TypeGuard[ResolvedCodeLens]:
@@ -49,13 +51,14 @@ class CachedCodeLens:
         self.range = HashableRange(data['range'])
         self.cached_command = data.get('command')
 
-    def on_resolve(self, response: CodeLens | Error) -> None:
-        if isinstance(response, Error):
-            return
-        assert is_resolved(response)
-        self.data = response
-        self.range = HashableRange(response['range'])
-        self.cached_command = response['command']
+    async def resolve(self, session: Session, view: sublime.View) -> CachedCodeLens:
+        response = await session.request(Request('codeLens/resolve', self.data, view))
+        if not isinstance(response, Error):
+            assert is_resolved(response)
+            self.data = response
+            self.range = HashableRange(response['range'])
+            self.cached_command = response['command']
+        return self
 
 
 class CodeLensCache:
@@ -125,19 +128,16 @@ class LspToggleCodeLensesCommand(LspWindowCommand):
     def is_checked(self) -> bool:
         return self.are_enabled(self.window)
 
-    def run(self) -> None:
+    async def run(self) -> None:
         enable = not self.is_checked()
         self.window.settings().set(CODE_LENS_ENABLED_KEY, enable)
-        sublime.set_timeout_async(partial(self._update_views_async, enable))
-
-    def _update_views_async(self, enable: bool) -> None:
         window_manager = windows.lookup(self.window)
         if not window_manager:
             return
         for session in window_manager.get_sessions():
             for session_view in session.session_views_async():
                 if enable:
-                    session_view.session_buffer.do_code_lenses_async(session_view.view)
+                    await session_view.session_buffer.do_code_lenses(session_view.view)
                 else:
                     session_view.clear_code_lenses_async()
 
@@ -146,7 +146,7 @@ class LspCodeLensCommand(LspTextCommand):
 
     capability = 'codeLensProvider'
 
-    def run(self, edit: sublime.Edit) -> None:
+    async def run(self) -> None:
         listener = windows.listener_for_view(self.view)
         if not listener:
             return
@@ -157,20 +157,16 @@ class LspCodeLensCommand(LspTextCommand):
                 commands.extend((session_name, command) for command in sv.get_code_lenses_for_region(region))
         if not commands:
             return
-        if len(commands) == 1:
-            self.on_select(commands, 0)
-        elif window := self.view.window():
-            window.show_quick_panel(
-                [sublime.QuickPanelItem(cmd["title"], annotation=session_name) for session_name, cmd in commands],
-                lambda index: self.on_select(commands, index)
+        index = 0
+        if len(commands) > 1:
+            if not (window := self.view.window()):
+                return
+            index = await show_quick_panel(
+                window,
+                [sublime.QuickPanelItem(cmd["title"], annotation=session_name) for session_name, cmd in commands]
             )
-
-    def want_event(self) -> bool:
-        return False
-
-    def on_select(self, commands: list[tuple[str, Command]], index: int) -> None:
-        if index == -1:
-            return
+            if index == -1:
+                return
         session_name, command = commands[index]
         args = {
             "session_name": session_name,
@@ -178,3 +174,6 @@ class LspCodeLensCommand(LspTextCommand):
             "command_args": command.get("arguments")
         }
         self.view.run_command("lsp_execute", args)
+
+    def want_event(self) -> bool:
+        return False

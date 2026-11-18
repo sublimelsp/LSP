@@ -194,7 +194,6 @@ class TestDocumentSelector(unittest.TestCase):
             "source.json.tern": "json",
             "source.jsx": "javascriptreact",
             "source.jsx.unittest": "javascriptreact",
-            "source.Kotlin": "kotlin",
             "source.modern-fortran": "fortran",
             "source.objc": "objective-c",
             "source.objc++": "objective-cpp",

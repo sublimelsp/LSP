@@ -12,7 +12,7 @@ from .core.promise import Promise
 from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.url import parse_uri
-from .core.views import get_line
+from .core.views import get_file_lines
 from contextlib import contextmanager
 from typing import Any
 from typing import Callable
@@ -60,12 +60,11 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
 
 class LspApplyWorkspaceEditCommand(LspWindowCommand):
 
-    def run(
+    async def run(
         self, session_name: str, edit: WorkspaceEdit, label: str | None = None, is_refactoring: bool = False
     ) -> None:
         if session := self.session_by_name(session_name):
-            sublime.set_timeout_async(
-                lambda: session.apply_workspace_edit_async(edit, label=label, is_refactoring=is_refactoring))
+            await session.apply_workspace_edit(edit, label=label, is_refactoring=is_refactoring)
         else:
             debug('Could not find session', session_name, 'required to apply WorkspaceEdit')
 
@@ -300,10 +299,13 @@ def _render_workspace_edit_panel(
         filename_line = '{}:'.format(_get_relative_path(wm, file) if scheme == 'file' else uri)
         to_render.append(filename_line)
         reference_document.append(filename_line)
-        for edit in changes:
+        if scheme == 'file':
+            rows = [parse_lsp_position(edit['range']['start'])[0] for edit in changes]
+            line_contents = get_file_lines(wm.window, file, rows, strip=False)
+        else:
+            line_contents = ['<no preview available>'] * len(changes)
+        for edit, line_content in zip(changes, line_contents):
             start_row, start_col_utf16 = parse_lsp_position(edit['range']['start'])
-            line_content = get_line(wm.window, file, start_row, strip=False) if scheme == 'file' else \
-                '<no preview available>'
             start_col = utf16_to_code_points(line_content, start_col_utf16)
             original_line = ROWCOL_PREFIX.format(start_row + 1, start_col + 1, line_content.strip() + "\n")
             reference_document.append(original_line)
@@ -374,7 +376,7 @@ def utf16_to_code_points(s: str, col: int) -> int:
             break
         utf16_len += 1 if ord(c) < 65536 else 2
     else:
-        idx += 1  # get_line function trims the trailing '\n'
+        idx += 1  # get_file_lines function trims the trailing '\n'
     return idx
 
 

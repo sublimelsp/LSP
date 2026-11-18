@@ -10,16 +10,16 @@ from .views import FORMAT_STRING
 from .views import html_wrapper
 from .views import minihtml
 from typing import TYPE_CHECKING
-from typing import TypedDict
+from typing_extensions import TypedDict
 import html
 import re
-import sublime
 
 if TYPE_CHECKING:
     from .constants import MarkdownLangMap
+    import sublime
 
 
-class SignatureHelpStyle(TypedDict):
+class SignatureHelpStyle(TypedDict, closed=True):
     function_color: str
     active_parameter_color: str
     active_parameter_bold: bool
@@ -43,9 +43,9 @@ class LspSignatureHelpShowCommand(LspTextCommand):
     def want_event(self) -> bool:
         return False
 
-    def run(self, _: sublime.Edit) -> None:
+    async def run(self) -> None:
         if listener := self.get_listener():
-            sublime.set_timeout_async(lambda: listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked))
+            await listener.do_signature_help(SignatureHelpTriggerKind.Invoked)
 
 
 class SigHelp:

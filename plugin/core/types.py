@@ -10,6 +10,8 @@ from ...protocol import ServerCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextDocumentSyncOptions
 from ...protocol import URI
+from .aio import run_coroutine
+from .aio import TaskContainer
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
 from .constants import MarkdownLangMap
@@ -34,16 +36,17 @@ from typing import Generator
 from typing import Iterable
 from typing import List
 from typing import TYPE_CHECKING
-from typing import TypedDict
 from typing import TypeVar
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import override
+from typing_extensions import TypedDict
 from typing_extensions import TypeGuard
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
 from wcmatch.glob import IGNORECASE
+import asyncio
 import contextlib
 import fnmatch
 import os
@@ -51,6 +54,7 @@ import posixpath
 import re
 import sublime
 import time
+import weakref
 
 if TYPE_CHECKING:
     from .file_watcher import FileWatcherEventType
@@ -65,7 +69,7 @@ PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 MarkdownLangMapJson = Dict[str, List[List[str]]]
 
 
-class FileWatcherConfig(TypedDict):
+class FileWatcherConfig(TypedDict, closed=True):
     patterns: list[str]
     events: NotRequired[list[FileWatcherEventType]]
     ignores: NotRequired[list[str]]
@@ -164,24 +168,23 @@ def sublime_pattern_to_glob(pattern: str, *, is_directory_pattern: bool, root_pa
     return glob
 
 
-def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
-              async_thread: bool = False) -> None:
+def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True) -> None:
     """
-    Possibly run a function at a later point in time, either on the async thread or on the main thread.
+    Possibly run a function at a later point in time. Always on the asyncio thread.
+
+    Note: use asyncio.sleep(x) and simple condition checking if you're already running in an `async` function.
 
     :param      f:             The function to possibly run. Its return type is discarded.
     :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
     :param      condition:     The condition that must evaluate to True in order to run the function
-    :param      async_thread:  If true, run the function on the async worker thread, otherwise run the function on the
-                               main thread
     """
 
-    def run() -> None:
+    async def run() -> None:
+        await asyncio.sleep(timeout_ms / 1000.0)
         if condition():
             f()
 
-    runner = sublime.set_timeout_async if async_thread else sublime.set_timeout
-    runner(run, timeout_ms)
+    run_coroutine(run())
 
 
 @dataclass
@@ -208,39 +211,45 @@ class DebouncerNonThreadSafe:
     When calling `debounce()` multiple times, if the time span between calls is shorter than the specified `timeout_ms`,
     the callback function will only be called once, after `timeout_ms` since the last call.
 
-    This implementation is not thread safe. You must ensure that `debounce()` is called from the same thread as
-    was chosen during initialization through the `async_thread` argument.
+    This implementation is not thread safe. You must ensure that `debounce()` is called from the asyncio thread.
     """
 
-    def __init__(self, async_thread: bool) -> None:
-        self._async_thread = async_thread
+    def __init__(self, task_container: TaskContainer) -> None:
+        self._task_container = weakref.ref(task_container)
         self._current_id = -1
         self._next_id = 0
+        self._task: asyncio.Task | None = None
 
     def debounce(
         self, f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True
     ) -> None:
         """
-        Possibly run a function at a later point in time on the thread chosen during initialization.
+        Possibly run a function at a later point in time on the asyncio thread.
 
         :param      f:             The function to possibly run
         :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
         :param      condition:     The condition that must evaluate to True in order to run the function
         """
+        task_container = self._task_container()
+        if not task_container:
+            return
 
-        def run(debounce_id: int) -> None:
+        async def run(debounce_id: int) -> None:
+            await asyncio.sleep(timeout_ms / 1000.0)
             if debounce_id != self._current_id:
                 return
             if condition():
                 f()
 
-        runner = sublime.set_timeout_async if self._async_thread else sublime.set_timeout
         current_id = self._current_id = self._next_id
         self._next_id += 1
-        runner(lambda: run(current_id), timeout_ms)
+        self._task = task_container.create_task(run(current_id))
 
     def cancel_pending(self) -> None:
         self._current_id = -1
+        if self._task:
+            self._task.cancel()
+            self._task = None
 
 
 def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:
@@ -272,7 +281,7 @@ class Settings:
     link_highlight_style = cast("str", None)
     log_debug = cast("bool", None)
     log_max_size = cast("int", None)
-    log_server = cast("list[str]", None)
+    log_server = cast("bool", None)
     lsp_code_actions_on_format = cast("dict[str, bool]", None)
     lsp_code_actions_on_save = cast("dict[str, bool]", None)
     lsp_format_on_paste = cast("bool", None)
@@ -351,14 +360,14 @@ class Settings:
         r("show_symbol_action_links", False)
         r("show_view_status", True)
 
-        # Backwards-compatible with the bool setting
         log_server = s.get("log_server")
         if isinstance(log_server, bool):
-            self.log_server = ["panel"] if log_server else []
-        elif isinstance(log_server, list):
             self.log_server = log_server
+        elif isinstance(log_server, list):
+            # Backwards-compatible with the deprecated array of loggers.
+            self.log_server = "panel" in log_server
         else:
-            self.log_server = []
+            self.log_server = True
 
         # Backwards-compatible with the bool setting
         auto_show_diagnostics_panel = s.get("auto_show_diagnostics_panel")
@@ -379,7 +388,7 @@ class Settings:
             r("inhibit_word_completions", True)
 
         # correctness checking will happen inside diagnostics_highlight_style_flags method
-        self.diagnostics_highlight_style = s.get("diagnostics_highlight_style")  # type: ignore
+        self.diagnostics_highlight_style = cast('str | dict[str, str]', s.get("diagnostics_highlight_style"))
 
         # Backwards-compatible with "show_diagnostics_highlights"
         if s.get("show_diagnostics_highlights") is False:
@@ -444,12 +453,6 @@ class SemanticToken:
     region: sublime.Region
     type: str
     modifiers: list[str]
-
-
-class ClientStates:
-    STARTING = 0
-    READY = 1
-    STOPPING = 2
 
 
 def is_notebook_cell_text_document_filter(document_filter: DocumentFilter) -> TypeGuard[NotebookCellTextDocumentFilter]:
@@ -556,7 +559,13 @@ _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
     'textDocument/willSave': ('textDocumentSync.willSave', None),
     'textDocument/willSaveWaitUntil': ('textDocumentSync.willSaveWaitUntil', None),
     'textDocument/formatting': ('documentFormattingProvider', None),
-    'textDocument/documentColor': ('colorProvider', None)
+    'textDocument/documentColor': ('colorProvider', None),
+    'textDocument/onTypeFormatting': ('documentOnTypeFormattingProvider', None),
+    'textDocument/rangeFormatting': ('documentRangeFormattingProvider', None),
+    'textDocument/prepareCallHierarchy': ('callHierarchyProvider', None),
+    'textDocument/prepareTypeHierarchy': ('typeHierarchyProvider', None),
+    'workspace/willRenameFiles': ('workspace.fileOperations.willRename', None),
+    'workspace/didRenameFiles': ('workspace.fileOperations.didRename', None),
 }
 
 
@@ -576,6 +585,7 @@ def method_to_capability(method: str) -> tuple[str, str]:
         textDocument/definition --> (definitionProvider, definitionProvider.id)
         textDocument/references --> (referencesProvider, referencesProvider.id)
         textDocument/didOpen --> (textDocumentSync.didOpen, textDocumentSync.didOpen.id)
+        textDocument/semanticTokens --> (semanticTokensProvider, semanticTokensProvider.id)
     """
     capability_path, registration_path = _METHOD_TO_CAPABILITY_EXCEPTIONS.get(method, (None, None))
     if capability_path is None:
@@ -771,8 +781,8 @@ class ClientConfig:
     file types it applies to, transport options, and LSP-level options such as initialization options and capability
     overrides.
 
-    All root configuration keys from corresponding server configuration (for example the backing LSP-*.sublime-settings
-    file) are accessible through attribute access (`.foo`).
+    Root configuration keys from the corresponding server configuration (for example the backing LSP-*.sublime-settings
+    file) that don't have a dedicated property are accessible through `root_settings`.
     """
 
     CONFIG_KEYS: Final[set[str]] = {
@@ -897,12 +907,6 @@ class ClientConfig:
             self._custom_config_keys = {}
         self._view_status_handler = default_status_view_handler
 
-    def __getattr__(self, name: str, /) -> Any:
-        """Get property through attribute access (`.foo`) for properties that don't exist natively."""
-        if name in self._custom_config_keys:
-            return self._custom_config_keys[name]
-        raise AttributeError(name)
-
     @property
     def root_settings(self) -> dict[str, Any]:
         """Provides access to server configuration keys that are not explicitly exposed on ClientConfig."""
@@ -963,7 +967,7 @@ class ClientConfig:
         """
         s = settings_store.settings
         file = settings_store.settings_path
-        base = sublime.decode_value(sublime.load_resource(file))
+        base = cast("dict[str, Any]", sublime.decode_value(sublime.load_resource(file)))
         settings = DottedDict(deepcopy(base.get("settings", {})))  # defined by the plugin author
         settings.update(deepcopy(read_dict_setting(s, "settings", {})))  # overrides from the user
         # "initialization_options" with backwards compatibility for "initializationOptions"
@@ -985,22 +989,22 @@ class ClientConfig:
             name=name,
             selector=_read_selector(s),
             priority_selector=_read_priority_selector(s),
-            schemes=deepcopy(s.get("schemes")),
+            schemes=cast("list[str]", deepcopy(s.get("schemes"))),
             command=deepcopy(read_list_setting(s, "command", [])),
-            tcp_port=deepcopy(s.get("tcp_port")),
-            auto_complete_selector=deepcopy(s.get("auto_complete_selector")),
+            tcp_port=cast("int | None", deepcopy(s.get("tcp_port"))),
+            auto_complete_selector=cast("str | None", deepcopy(s.get("auto_complete_selector"))),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             initialization_options=initialization_options,
             settings=settings,
             env=deepcopy(read_dict_setting(s, "env", {})),
-            experimental_capabilities=deepcopy(s.get("experimental_capabilities")),
+            experimental_capabilities=cast("dict[str, Any] | None", deepcopy(s.get("experimental_capabilities"))),
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "all_files")),
-            markdown_language_map=deepcopy(s.get("markdown_language_map")),
-            syntax_map=deepcopy(s.get("syntax_map")),
+            markdown_language_map=cast("MarkdownLangMapJson | None", deepcopy(s.get("markdown_language_map"))),
+            syntax_map=cast("dict[str, str] | None", deepcopy(s.get("syntax_map"))),
             path_maps=PathMap.parse(s.get("path_maps")),
             settings_store=settings_store,
             custom_config_keys=deepcopy(s.to_dict())

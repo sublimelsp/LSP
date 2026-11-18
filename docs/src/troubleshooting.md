@@ -2,7 +2,7 @@
 
 Following are the primary places to look at when diagnosing issues:
 
-1. Run `LSP: Toggle Log Panel` from the *Command Palette* to see communication logs between the server and the client. It allows to see what the server is doing exactly.
+1. Run `LSP: Toggle Log Panel` from the *Command Palette* to see communication logs between the server and the client. It allows to see what the server is doing exactly. For a more convenient, browser-based view of that communication, run `LSP: Open Remote Log Viewer` from the *Command Palette* or choose `Open Remote Log Viewer` from the context menu of the log panel. It starts a local websocket server that only accepts connections from the viewer opened with a randomly generated token. The server stops automatically when no viewer is connected to it for one minute.
 2. Open the *Sublime Text* console by going to `View` -> `Show Console` from the main menu. It provides information about installed packages, potential LSP crashes and additional LSP debugging logs when `log_debug` is enabled in `Preferences: LSP Settings`.
 3. Focus the relevant file, then run `LSP: Troubleshoot server` from the *Command Palette* and select a server to see troubleshooting information. It can be a very efficient way to diagnose problems quickly when shared.
 

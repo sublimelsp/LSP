@@ -19,21 +19,22 @@ from typing import List
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import TypedDict
 from typing import Union
 from typing_extensions import NotRequired
+from typing_extensions import TypedDict
 from typing_extensions import TypeGuard
 import sublime
 
 WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit, SnippetTextEdit]], Optional[str], Optional[int]]]  # ruff: ignore[line-too-long]
 
 
-class WorkspaceEditSummary(TypedDict):
+class WorkspaceEditSummary(TypedDict, closed=True):
     total_changes: int
     edited_files: int
     created_files: NotRequired[int]
     renamed_files: NotRequired[int]
     deleted_files: NotRequired[int]
+    deleted_folders: NotRequired[int]
 
 
 def is_text_document_edit(
@@ -119,6 +120,7 @@ def apply_text_edits(
             }
         )
     elif required_view_version is None or required_view_version == view.change_count():
+        # TODO: Communicate results back.
         view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': label})
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
     # thread, and that we've received view changes in the asynchronous thread.

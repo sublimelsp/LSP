@@ -7,9 +7,15 @@
   some APIs were deprecated or changed, and plugin code now runs on a different thread.
   Package authors should read the migration guide:
   https://lsp.sublimetext.io/migrating_to_async_lsp_plugin/
+- The `run` method of `LspExecuteCommand` is now a coroutine (`async def run`) and no longer takes an
+  edit token. Subclasses that override `run(self, edit, ...)` and call `super().run(edit, ...)`
+  must be updated; see the migration guide.
 
 # Features
 
+- `LspTextCommand` and `LspWindowCommand` subclasses can now define `run` as a coroutine
+  (`async def run`). Such a method runs on the asyncio thread and, for `LspTextCommand`, does not
+  receive an edit token. A regular `def run` keeps working as before.
 - `LspPlugin` hooks, and `@command_handler`, `@request_handler` and `@uri_handler` handlers,
   can now be `async` functions. Handlers that return a `Promise` keep working.
 - Add `run_coroutine`, `run_on_asyncio_thread`, `run_on_threadpool`, `run_on_worker_thread`

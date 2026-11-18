@@ -6,6 +6,7 @@ from .api import IsApplicableContext
 from .api import LspPlugin
 from .api import notification_handler
 from .api import OnPreStartContext
+from .api import OnTransportReadyContext
 from .api import PluginStartError
 from .api import register_plugin
 from .api import request_handler
@@ -88,6 +89,7 @@ __all__ = [
     'MarkdownLangMap',
     'Notification',
     'OnPreStartContext',
+    'OnTransportReadyContext',
     'PackagedTask',
     'PluginStartError',
     'PortableTimeoutError',

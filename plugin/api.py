@@ -359,9 +359,9 @@ class OnTransportReadyContext:
     """Context passed to `LspPlugin.on_transport_ready`."""
 
     reader: asyncio.StreamReader
-    """The transports' stream reader."""
+    """The transport's stream reader."""
     writer: asyncio.StreamWriter
-    """The transports' stream writer."""
+    """The transport's stream writer."""
 
 
 class LspPlugin(APIHandler):

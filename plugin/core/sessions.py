@@ -1139,7 +1139,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
     ) -> None:
-        self.transport: Transport | None = None
+        self._transport: Transport | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
@@ -1424,8 +1424,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 raise TimeoutError(
                     f"on_transport_ready did not finish in time ({TRANSPORT_READY_TIMEOUT} seconds)"
                 ) from ex
-        self.transport = transport
-        self.transport.start()
+        self._transport = transport
+        self._transport.start()
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         result = await self.request(Request.initialize(params))
         if isinstance(result, Error):
@@ -2509,7 +2509,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             registration_id = unregistration["id"]
             capability_path, registration_path = method_to_capability(unregistration["method"])
             if capability_path == 'diagnosticProvider':
-                self.diagnostics.unregister_provider(registration_id)
+                if (identifier := self.diagnostics.unregister_provider(registration_id)) is not None:
+                    self._on_diagnostic_stream_removed_async(identifier)
                 continue
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
@@ -2522,6 +2523,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 if isinstance(discarded, dict):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, capability_path)
+
+    def _on_diagnostic_stream_removed_async(self, identifier: str) -> None:
+        # Forget the result IDs of the removed stream, so that the diagnostics are pulled from scratch if a provider
+        # with the same identifier gets registered again.
+        for key in [key for key in self.diagnostics_result_ids if key[1] == identifier]:
+            del self.diagnostics_result_ids[key]
+        for sb in self.session_buffers_async():
+            if uri := sb.get_uri():
+                self._publish_diagnostics_to_session_buffer_async(sb, self.diagnostics.get_diagnostics_for_uri(uri))
+        if mgr := self.manager():
+            mgr.on_diagnostics_updated()
 
     def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
         if not self._watcher_impl:
@@ -2682,7 +2694,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
         self.exiting = True
-        self.transport = None
+        self._transport = None
         for _request, _result_handler, error_handler in self._response_handlers.values():
             error_handler(Error(ErrorCodes.InternalError, "transport closed").to_lsp())
         self._response_handlers.clear()
@@ -2884,13 +2896,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
     async def exit(self) -> None:
         await self.notify(Notification.exit())
-        if self.transport:
-            await self.transport.close()
-            self.transport = None
+        if self._transport:
+            await self._transport.close()
+            self._transport = None
 
     async def send_payload(self, payload: JSONRPCMessage) -> None:
         try:
-            await self.transport.send(payload)  # pyright: ignore[reportOptionalMemberAccess]
+            await self._transport.send(payload)  # pyright: ignore[reportOptionalMemberAccess]
         except AttributeError:
             pass
 

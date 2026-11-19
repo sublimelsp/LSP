@@ -32,7 +32,7 @@ For the best in-editor experience, install [LSP-pyright](https://packages.sublim
 
 **LSP-pyright** - make sure that LSP-pyright is up to date and enable the following setting. It resolves the `sublime` and `sublime_plugin` modules to the Sublime Text API stubs bundled with LSP-pyright, and other plugin dependencies (such as `lsp_utils`) to the ones installed in Sublime Text. Add this to your `LSP-pyright` settings or to your project-specific settings:
 
-```json
+```jsonc
 "settings": {
     "pyright.dev_environment": "sublime_text_38"
 }
@@ -42,7 +42,7 @@ The stubs bundled with LSP-pyright can briefly lag behind the version pinned in 
 
 - The `tox` environment, which the [pre-commit hook](#pre-commit-hooks) creates and keeps up to date, as does running `tox` manually. Its Python version is set by `base_python` in `pyproject.toml`.
 
-  ```json
+  ```jsonc
   "settings": {
       "pyright.dev_environment": "sublime_text_38",
       "python.analysis.extraPaths": [
@@ -54,7 +54,7 @@ The stubs bundled with LSP-pyright can briefly lag behind the version pinned in 
 
 - A `.venv` environment, which you create with [uv](https://docs.astral.sh/uv/) by running `uv sync --group lint`. It uses the Python version from `.python-version`. Run the command again after the dependencies in `pyproject.toml` change.
 
-  ```json
+  ```jsonc
   "settings": {
       "pyright.dev_environment": "sublime_text_38",
       "python.analysis.extraPaths": [
@@ -69,7 +69,7 @@ Stubs for other third-party dependencies (mdpopups, sublime_aio, wcmatch) live i
 **LSP-ruff** - enable auto-fix on save so that linting violations and import ordering are corrected automatically.
 Add this to your `LSP` settings or to your project-specific settings:
 
-```json
+```jsonc
 "lsp_code_actions_on_save": {
     "source.fixAll.ruff": true,
     "source.organizeImports.ruff": true,

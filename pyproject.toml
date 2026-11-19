@@ -12,14 +12,13 @@ lint = [
 pythonVersion = "3.8"
 reportIncompatibleMethodOverride = "none"
 reportMissingModuleSource = "none"
-stubPath = "./stubs_third_party"
+stubPath = "./stubs"
 typeCheckingMode = "standard"
 
 [tool.ruff]
 exclude = [
   "third_party",
   "stubs",
-  "stubs_third_party",
 ]
 line-length = 120
 target-version = "py38"
@@ -166,6 +165,6 @@ pass_env = ["GITHUB_ACTIONS", "RUFF_OUTPUT_FORMAT"]
 # Run all commands even if one fails, so that every problem is reported. The run still fails.
 ignore_errors = true
 commands = [
-  ["basedpyright", "--pythonpath", "{env_python}", "plugin", "stubs", "stubs_third_party"],
+  ["basedpyright", "--pythonpath", "{env_python}", "plugin", "stubs"],
   ["ruff", "check"],
 ]

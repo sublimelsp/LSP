@@ -21,6 +21,9 @@ env_list = ["py3"]
 no_package = true
 
 [tool.tox.env_run_base]
+# A fixed version installs the same stubs everywhere and gives the env a predictable site-packages path, which
+# CONTRIBUTING.md refers to. Keep it below 3.14 to get the sublime-text-stubs for the Python 3.8 plugin host.
+base_python = ["python3.13"]
 dependency_groups = ["lint"]
 # Lets basedpyright and ruff report problems as GitHub annotations in CI.
 pass_env = ["GITHUB_ACTIONS", "RUFF_OUTPUT_FORMAT"]

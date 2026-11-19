@@ -25,17 +25,46 @@ Run `tox` to check your work before submitting — this runs the same checks tha
 
 ### Recommended editor setup
 
-For the best in-editor experience, install [LSP-pyright](https://packages.sublimetext.io/packages/LSP-pyright) and
-[LSP-ruff](https://packages.sublimetext.io/packages/LSP-ruff) packages.
+For the best in-editor experience, install [LSP-pyright](https://packages.sublimetext.io/packages/LSP-pyright) and [LSP-ruff](https://packages.sublimetext.io/packages/LSP-ruff) packages.
 
-**LSP-pyright** - enable the following setting to ensure that `sublime` and `sublime_plugin` module types are resolved
-correctly. Add this to your `LSP-pyright` settings or to your project-specific settings:
+> [!NOTE]
+> `tox` (and CI) is the source of truth for type checking. It checks LSP against the [sublime-text-stubs](https://pypi.org/project/sublime-text-stubs/) version pinned in `pyproject.toml`. The editor setup below aims to match it, but can occasionally differ.
+
+**LSP-pyright** - make sure that LSP-pyright is up to date and enable the following setting. It resolves the `sublime` and `sublime_plugin` modules to the Sublime Text API stubs bundled with LSP-pyright, and other plugin dependencies (such as `lsp_utils`) to the ones installed in Sublime Text. Add this to your `LSP-pyright` settings or to your project-specific settings:
 
 ```json
 "settings": {
     "pyright.dev_environment": "sublime_text_38"
 }
 ```
+
+The stubs bundled with LSP-pyright can briefly lag behind the version pinned in `pyproject.toml`. To type check against exactly the same stubs as `tox`, add the `site-packages` directory of a local virtual environment to `python.analysis.extraPaths` in your project-specific settings. Entries listed there take precedence over the stubs bundled with LSP-pyright. Use one of these environments:
+
+- The `tox` environment, which the [pre-commit hook](#pre-commit-hooks) creates and keeps up to date, as does running `tox` manually. Its Python version is set by `base_python` in `pyproject.toml`.
+
+  ```json
+  "settings": {
+      "pyright.dev_environment": "sublime_text_38",
+      "python.analysis.extraPaths": [
+          // On Windows, use "${folder}/.tox/py3/Lib/site-packages".
+          "${folder}/.tox/py3/lib/python3.13/site-packages"
+      ]
+  }
+  ```
+
+- A `.venv` environment, which you create with [uv](https://docs.astral.sh/uv/) by running `uv sync --group lint`. It uses the Python version from `.python-version`. Run the command again after the dependencies in `pyproject.toml` change.
+
+  ```json
+  "settings": {
+      "pyright.dev_environment": "sublime_text_38",
+      "python.analysis.extraPaths": [
+          // On Windows, use "${folder}/.venv/Lib/site-packages".
+          "${folder}/.venv/lib/python3.8/site-packages"
+      ]
+  }
+  ```
+
+Stubs for other third-party dependencies (mdpopups, sublime_aio, wcmatch) live in the `stubs/` directory and are picked up automatically through `stubPath` in `pyproject.toml`.
 
 **LSP-ruff** - enable auto-fix on save so that linting violations and import ordering are corrected automatically.
 Add this to your `LSP` settings or to your project-specific settings:

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from .setup import TextDocumentTestCase
 from copy import deepcopy
+from LSP.plugin.completion import completion_trigger_info
 from LSP.plugin.completion import completion_with_defaults
+from LSP.plugin.completion import CompletionTriggerInfo
 from LSP.plugin.completion import format_completion
 from LSP.protocol import CompletionItem
 from LSP.protocol import CompletionItemDefaults
@@ -13,6 +15,7 @@ from LSP.protocol import InsertTextFormat
 from typing import Any
 from unittest import TestCase
 import asyncio
+import json
 import sublime
 
 additional_edits = {
@@ -906,6 +909,30 @@ class FormatCompletionsUnitTests(TestCase):
         self.assertEqual(item.details, details)
         self.assertEqual(item.flags, flags)
 
+    def test_command_arguments(self) -> None:
+        item = format_completion(
+            {"label": "key"}, index=3, can_resolve_completion_items=False, session_name='abc', item_defaults={},
+            view_id=0)
+        command, args = item.completion.split(' ', 1)
+        self.assertEqual(command, 'lsp_select_completion')
+        self.assertEqual(json.loads(args), {"index": 3, "session_name": "abc"})
+
+    def test_empty_label_with_filter_text(self) -> None:
+        # No empty segment is added to the details for the empty label.
+        self._verify_completion(
+            {
+                "label": "",
+                "filterText": "foo",
+                "detail": "bar",
+                "labelDetails": {
+                    "description": "baz"
+                },
+            },
+            trigger='foo',
+            annotation='baz',
+            details='bar'
+        )
+
     def test_label(self) -> None:
         self._verify_completion(
             {
@@ -1073,3 +1100,41 @@ class FormatCompletionsUnitTests(TestCase):
             trigger='create_texture (uint width, uint height, ubyte* ptr)',
             annotation='Texture2D'
         )
+
+
+class CompletionTriggerInfoUnitTests(TestCase):
+
+    def test_label_only(self) -> None:
+        self.assertEqual(completion_trigger_info('foo', '', ''), CompletionTriggerInfo('foo', '', False))
+
+    def test_label_detail_type_annotation(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('foo', 'int', ''), CompletionTriggerInfo('foo', 'int', True))
+
+    def test_label_detail_function_signature(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('foo', '(a, b)', ''), CompletionTriggerInfo('foo(a, b)', '', True))
+
+    def test_label_detail_matching_filter_text_only_with_label_detail(self) -> None:
+        # The filter text matches only when labelDetails.detail is appended to the label.
+        self.assertEqual(
+            completion_trigger_info('foo', 'bar', 'foob'), CompletionTriggerInfo('foobar', '', True))
+
+    def test_filter_text_matching_label(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('foo', '', 'fo'), CompletionTriggerInfo('foo', '', False))
+
+    def test_filter_text_matching_label_but_not_label_detail(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('foo', '(a)', 'foox'), CompletionTriggerInfo('foox', 'foo(a)', False))
+
+    def test_filter_text_not_matching_label(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('@foo', '', 'foo'), CompletionTriggerInfo('foo', '@foo', False))
+
+    def test_filter_text_not_matching_label_with_label_detail(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('@foo', '(a)', 'foo'), CompletionTriggerInfo('foo', '@foo(a)', False))
+
+    def test_empty_label_with_filter_text(self) -> None:
+        self.assertEqual(completion_trigger_info('', '', 'foo'), CompletionTriggerInfo('foo', '', False))

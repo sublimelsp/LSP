@@ -15,6 +15,22 @@ reportMissingModuleSource = "none"
 stubPath = "./stubs"
 typeCheckingMode = "standard"
 
+[tool.tox]
+requires = ["tox>=4.22"]
+env_list = ["py3"]
+no_package = true
+
+[tool.tox.env_run_base]
+dependency_groups = ["lint"]
+# Lets basedpyright and ruff report problems as GitHub annotations in CI.
+pass_env = ["GITHUB_ACTIONS", "RUFF_OUTPUT_FORMAT"]
+# Run all commands even if one fails, so that every problem is reported. The run still fails.
+ignore_errors = true
+commands = [
+  ["basedpyright", "--pythonpath", "{env_python}", "plugin", "stubs"],
+  ["ruff", "check"],
+]
+
 [tool.ruff]
 exclude = [
   "third_party",
@@ -30,6 +46,26 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 # Automatically detect the appropriate line ending.
 line-ending = "auto"
+
+[tool.ruff.lint.isort]
+case-sensitive = false
+force-single-line = true
+from-first = true
+no-sections = true
+order-by-type = false
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.per-file-ignores]
+"plugin/core/typing.py" = ["unused-import"]
+"protocol/__init__.py" = [
+  "missing-trailing-period",
+  "missing-terminal-punctuation",
+  "noqa-comments",
+]
+"plugin/core/protocol.py" = [
+  "non-pep585-annotation",
+  "non-pep604-annotation-union",
+]
 
 [tool.ruff.lint]
 # Enable preview rules.
@@ -133,38 +169,3 @@ ignore = [
   "raise-within-try",
 ]
 
-[tool.ruff.lint.isort]
-case-sensitive = false
-force-single-line = true
-from-first = true
-no-sections = true
-order-by-type = false
-required-imports = ["from __future__ import annotations"]
-
-[tool.ruff.lint.per-file-ignores]
-"plugin/core/typing.py" = ["unused-import"]
-"protocol/__init__.py" = [
-  "missing-trailing-period",
-  "missing-terminal-punctuation",
-  "noqa-comments",
-]
-"plugin/core/protocol.py" = [
-  "non-pep585-annotation",
-  "non-pep604-annotation-union",
-]
-
-[tool.tox]
-requires = ["tox>=4.22"]
-env_list = ["py3"]
-no_package = true
-
-[tool.tox.env_run_base]
-dependency_groups = ["lint"]
-# Lets basedpyright and ruff report problems as GitHub annotations in CI.
-pass_env = ["GITHUB_ACTIONS", "RUFF_OUTPUT_FORMAT"]
-# Run all commands even if one fails, so that every problem is reported. The run still fails.
-ignore_errors = true
-commands = [
-  ["basedpyright", "--pythonpath", "{env_python}", "plugin", "stubs"],
-  ["ruff", "check"],
-]

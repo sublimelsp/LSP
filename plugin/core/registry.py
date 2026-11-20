@@ -136,7 +136,6 @@ class LspWindowCommand(sublime_plugin.WindowCommand, AsyncCommandMixin):
 
     def __init__(self, window: sublime.Window) -> None:
         super().__init__(window)
-        AsyncCommandMixin.__init__(self)
         if not self.session_name:
             # Auto-detect session_name based on package name. In case of the LSP package use empty string.
             package_name = self.__module__.split('.')[0]
@@ -225,7 +224,6 @@ class LspTextCommand(sublime_plugin.TextCommand, AsyncCommandMixin):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        AsyncCommandMixin.__init__(self)
         if not self.session_name:
             # Auto-detect session_name based on package name. In case of the LSP package use empty string.
             package_name = self.__module__.split('.')[0]

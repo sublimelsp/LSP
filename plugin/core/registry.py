@@ -13,6 +13,7 @@ from .windows import WindowRegistry
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import ClassVar
 from typing import Coroutine
 from typing import Generator
 from typing import Iterable
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
     from ...protocol import LocationLink
     from .sessions import AbstractViewListener
     from .sessions import Session
+    import concurrent.futures
 
 windows = WindowRegistry()
 
@@ -72,7 +74,19 @@ def _is_edit_parameter(param: inspect.Parameter) -> bool:
 
 class AsyncCommandMixin:
 
-    def _async_run(
+    _current_run: concurrent.futures.Future[None] | None = None
+
+    cancel_previous_run: ClassVar[bool] = False
+    """Whether to cancel the previous `run` when a new `run` starts."""
+
+    def _on_current_run_done(self, f: concurrent.futures.Future[None]) -> None:
+        sublime.set_timeout(lambda: self._clear_current_run(f))
+
+    def _clear_current_run(self, f: concurrent.futures.Future[None]) -> None:
+        if self._current_run is f:
+            self._current_run = None
+
+    def _run_coro(
         self,
         args: dict[str, Any] | None,
         command: sublime_plugin.Command,
@@ -93,7 +107,10 @@ class AsyncCommandMixin:
                 )
                 return
             raise
-        run_coroutine(coro)
+        if self.cancel_previous_run and self._current_run and not self._current_run.done():
+            self._current_run.cancel()
+        self._current_run = run_coroutine(coro)
+        self._current_run.add_done_callback(self._on_current_run_done)
 
 
 class LspWindowCommand(sublime_plugin.WindowCommand, AsyncCommandMixin):
@@ -130,7 +147,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand, AsyncCommandMixin):
             super().run_(edit_token, args)  # pyright: ignore[reportAttributeAccessIssue]
             return
         args = self.filter_args(args)  # pyright: ignore[reportAttributeAccessIssue]
-        self._async_run(
+        self._run_coro(
             args, self, self.window, lambda: sublime_api.window_can_accept_input(self.window.id(), self.name(), args)
         )
 
@@ -219,7 +236,7 @@ class LspTextCommand(sublime_plugin.TextCommand, AsyncCommandMixin):
             return
         args = self.filter_args(args)  # pyright: ignore[reportAttributeAccessIssue]
         if window := self.view.window():
-            self._async_run(
+            self._run_coro(
                 args, self, window, lambda: sublime_api.view_can_accept_input(self.view.id(), self.name(), args)
             )
 

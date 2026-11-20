@@ -145,6 +145,7 @@ class LspToggleCodeLensesCommand(LspWindowCommand):
 class LspCodeLensCommand(LspTextCommand):
 
     capability = 'codeLensProvider'
+    cancel_previous_run = True
 
     async def run(self) -> None:
         listener = windows.listener_for_view(self.view)
@@ -168,12 +169,15 @@ class LspCodeLensCommand(LspTextCommand):
             if index == -1:
                 return
         session_name, command = commands[index]
-        args = {
-            "session_name": session_name,
-            "command_name": command["command"],
-            "command_args": command.get("arguments")
-        }
-        self.view.run_command("lsp_execute", args)
+        if session := self.session_by_name(session_name):
+            await session.run_command(
+                {
+                    'command': command["command"],
+                    'arguments': command.get("arguments", []),
+                },
+                progress=True,
+                view=self.view,
+            )
 
     def want_event(self) -> bool:
         return False

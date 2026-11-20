@@ -96,6 +96,8 @@ link_kinds = [
 
 class LspHoverCommand(LspTextCommand):
 
+    cancel_previous_run = True
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._base_dir: str | None = None

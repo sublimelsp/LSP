@@ -47,6 +47,7 @@ class LspGotoCommand(LspTextCommand):
     method = ''
     placeholder_text = ''
     fallback_command = ''
+    cancel_previous_run = True
 
     def is_enabled(
         self,

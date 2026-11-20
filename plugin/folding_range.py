@@ -61,6 +61,7 @@ class LspFoldCommand(LspTextCommand):
     """
 
     capability = 'foldingRangeProvider'
+    cancel_previous_run = True
     folding_ranges: list[FoldingRange] = []
     change_count = -1
     folding_region: sublime.Region | None = None

@@ -88,6 +88,13 @@ def completion_trigger_info(label: str, label_detail: str, filter_text: str) -> 
     return CompletionTriggerInfo(filter_text, label + label_detail, False)
 
 
+def completion_item_trigger(item: CompletionItem) -> str:
+    """Return the trigger that `format_completion` creates the ST completion item with."""
+    label_details = item.get('labelDetails') or {}
+    label_detail = label_details.get('detail') or ""
+    return completion_trigger_info(item['label'], label_detail, item.get('filterText') or "").trigger
+
+
 def format_completion(
     item: CompletionItem,
     index: int,
@@ -128,18 +135,16 @@ def format_completion(
         oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
         command_url = "subl:lsp_commit_completion_with_opposite_insert_mode"
         details.append(f"<a href='{command_url}'>{oposite_insert_mode}</a>")
-    completion = sublime.CompletionItem(
+    return sublime.CompletionItem(
         trigger,
         annotation,
         # Not using "sublime.format_command" in a hot path to avoid slow json.dumps.
         f'lsp_select_completion {{"index":{index},"session_name":"{session_name}"}}',
         sublime.CompletionFormat.COMMAND,
         kind,
+        flags=sublime.CompletionItemFlags.KEEP_PREFIX,
         details=" | ".join(details)
     )
-    if text_edit:
-        completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
-    return completion
 
 
 def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit, *, reverse_insert_mode: bool) -> Range:
@@ -337,37 +342,88 @@ class LspSelectCompletionCommand(LspTextCommand):
 
     completions: ClassVar[dict[SessionName, CompletionsStore]] = {}
 
+    def want_event(self) -> bool:
+        return False
+
     def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
         # This command runs synchronously from within "commit_completion", so this is where the flag can be read
         # reliably. Pass it on explicitly rather than reading it later, for example after the item was resolved.
         reverse_insert_mode = LspCommitCompletionWithOppositeInsertMode.active
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
-        if text_edit := item.get("textEdit"):
-            new_text = text_edit["newText"].replace("\r", "")
-            edit_region = range_to_region(
-                self.view, get_text_edit_range(text_edit, reverse_insert_mode=reverse_insert_mode))
-            for region in self._translated_regions(edit_region):
-                self.view.erase(edit, region)
-        else:
-            new_text = item.get("insertText") or item["label"]
-            new_text = new_text.replace("\r", "")
-        if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
-            self.view.run_command("insert_snippet", {"contents": new_text})
-        else:
-            self.view.run_command("insert", {"characters": new_text})
-        run_coroutine(self._run(session_name, item))
-
-    async def _run(self, session_name: str, item: CompletionItem) -> None:
+        # The same trigger that the committed ST completion item was created with.
+        trigger = completion_item_trigger(item)
+        # The completion items are committed with the KEEP_PREFIX flag, so before running this command ST rolls the
+        # buffer back to its state at the time completions were queried (dropping characters typed while the popup was
+        # open). Resolve the text edit range now, while the buffer matches the document the server computed the
+        # completions for. The "textEdit" property is not resolved lazily, so it doesn't change after
+        # "completionItem/resolve".
+        edit_region: list[int] | None = None
+        if text_edit := item.get('textEdit'):
+            region = range_to_region(self.view, get_text_edit_range(text_edit, reverse_insert_mode=reverse_insert_mode))
+            edit_region = [region.a, region.b]
+        args: dict[str, Any] = {
+            'session_name': session_name,
+            'trigger': trigger,
+            'reverse_insert_mode': reverse_insert_mode,
+            'edit_region': edit_region,
+            'change_count': self.view.change_count(),
+            'change_id': list(self.view.change_id()),
+        }
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
         if session and not item.get('additionalTextEdits'):
-            resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
-            if isinstance(resolved_item, Error):
-                debug("Error resolving completion item:", resolved_item)
+            run_coroutine(self._resolve_and_apply(session, item, args))
+        else:
+            self._apply_completion(item, args)
+
+    async def _resolve_and_apply(self, session: Session, item: CompletionItem, args: dict[str, Any]) -> None:
+        resolved_item = await session.request(Request.resolveCompletionItem(item, self.view))
+        if isinstance(resolved_item, Error):
+            debug("Error resolving completion item:", resolved_item)
+        else:
+            item = resolved_item
+        self._apply_completion(item, args)
+
+    def _apply_completion(self, item: CompletionItem, args: dict[str, Any]) -> None:
+        self.view.run_command('lsp_apply_completion', {**args, 'item': item})
+
+
+class LspApplyCompletionCommand(LspTextCommand):
+
+    def run(
+        self,
+        edit: sublime.Edit,
+        session_name: str,
+        item: CompletionItem,
+        trigger: str,
+        reverse_insert_mode: bool,
+        edit_region: list[int] | None = None,
+        change_count: int | None = None,
+        change_id: list[int] | None = None
+    ) -> None:
+        is_snippet = item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet
+        if text_edit := item.get("textEdit"):
+            new_text = text_edit["newText"].replace("\r", "")
+            text_edit_region = self._text_edit_region(
+                text_edit, reverse_insert_mode, edit_region, change_count, change_id)
+            for region in self._translated_regions(text_edit_region):
+                self.view.erase(edit, region)
+            # The text edit range defines what to replace, so the text is inserted without any prefix removal.
+            if is_snippet:
+                self.view.run_command("insert_snippet", {"contents": new_text})
             else:
-                item = resolved_item
+                self.view.run_command("insert", {"characters": new_text})
+        else:
+            new_text = (item.get("insertText") or item["label"]).replace("\r", "")
+            # Without a text edit, let ST remove the prefix the same way it does for a non-KEEP_PREFIX completion item.
+            self.view.run_command('insert_completion', {
+                'trigger': trigger,
+                'completion': new_text,
+                'format': 'snippet' if is_snippet else 'text',
+                'keep_prefix': False,
+            })
         if additional_edits := item.get('additionalTextEdits'):
-            await apply_text_edits(self.view, additional_edits)
+            apply_text_edits(self.view, additional_edits)
         if command := item.get("command"):
             debug(f'Running server command "{command}" for view {self.view.id()}')
             self.view.run_command("lsp_execute", {
@@ -376,8 +432,28 @@ class LspSelectCompletionCommand(LspTextCommand):
                 "session_name": session_name
             })
 
-    def want_event(self) -> bool:
-        return False
+    def _text_edit_region(
+        self,
+        text_edit: TextEdit | InsertReplaceEdit,
+        reverse_insert_mode: bool,
+        edit_region: list[int] | None,
+        change_count: int | None,
+        change_id: list[int] | None
+    ) -> sublime.Region:
+        if edit_region is not None:
+            # The region was computed when the completion was selected.
+            region = sublime.Region(*edit_region)
+            if change_count is None or self.view.change_count() == change_count:
+                return region
+            if change_id is not None:
+                # Map it through the changes made since then, for example characters typed while the completion item
+                # was being resolved. Only do that when the buffer was modified: the change id can move on without a
+                # modification, and transforming across such a step returns an invalid region.
+                a, b, c = change_id
+                region = self.view.transform_region_from(region, (a, b, c))
+                if region.a >= 0 and region.b >= 0:
+                    return region
+        return range_to_region(self.view, get_text_edit_range(text_edit, reverse_insert_mode=reverse_insert_mode))
 
     def _translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
         selection = self.view.sel()

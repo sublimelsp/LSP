@@ -1795,6 +1795,15 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
         return self.create_task_and_wrap_in_compat_promise(do())
 
+    def open_externally(self, uri: DocumentUri | str) -> bool:
+        """
+        Open a URI or a file path with the default application of the OS.
+
+        This function blocks until the OS command that opens the URI returns. Returns whether the URI was opened
+        successfully.
+        """
+        return open_externally(uri)
+
     @deprecated("use Session.open_location instead")
     def open_location_async(
         self,
@@ -2564,7 +2573,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     async def on_window_show_document(self, params: ShowDocumentParams) -> ShowDocumentResult:
         uri = params.get("uri")
         if params.get("external"):
-            return {"success": open_externally(uri)}
+            return {"success": self.open_externally(uri)}
         # TODO: ST API does not allow us to say "do not focus this new view"
         result = await self.open_uri(uri, params.get("selection"))
         return {"success": bool(result)}

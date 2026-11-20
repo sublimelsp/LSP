@@ -86,7 +86,7 @@ class AsyncCommandMixin:
         if self._current_run is f:
             self._current_run = None
 
-    def _async_run(
+    def _run_coro(
         self,
         args: dict[str, Any] | None,
         command: sublime_plugin.Command,
@@ -148,7 +148,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand, AsyncCommandMixin):
             super().run_(edit_token, args)  # pyright: ignore[reportAttributeAccessIssue]
             return
         args = self.filter_args(args)  # pyright: ignore[reportAttributeAccessIssue]
-        self._async_run(
+        self._run_coro(
             args, self, self.window, lambda: sublime_api.window_can_accept_input(self.window.id(), self.name(), args)
         )
 
@@ -238,7 +238,7 @@ class LspTextCommand(sublime_plugin.TextCommand, AsyncCommandMixin):
             return
         args = self.filter_args(args)  # pyright: ignore[reportAttributeAccessIssue]
         if window := self.view.window():
-            self._async_run(
+            self._run_coro(
                 args, self, window, lambda: sublime_api.view_can_accept_input(self.view.id(), self.name(), args)
             )
 

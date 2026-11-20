@@ -142,6 +142,7 @@ def make_header(session_name: str, sheet_name: str, direction: int, root_element
 
 
 class LspHierarchyCommand(LspTextCommand, ABC):
+    cancel_previous_run = True
 
     @classmethod
     @abstractmethod

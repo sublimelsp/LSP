@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 class LspColorPresentationCommand(LspTextCommand):
 
     capability = 'colorProvider'
+    cancel_previous_run = True
 
     async def run(self, color_information: ColorInformation) -> None:
         session = self.best_session(self.capability)

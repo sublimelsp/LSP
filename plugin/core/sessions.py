@@ -110,6 +110,7 @@ from .constants import MarkdownLangMap
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
+from .constants import ST_PLATFORM
 from .constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .edit import is_create_file
 from .edit import is_delete_file
@@ -127,7 +128,6 @@ from .logging import exception_log
 from .logging import exceptions_log
 from .logging import printf
 from .open import center_selection
-from .open import open_externally
 from .open import open_file
 from .open import open_resource
 from .progress import WindowProgressReporter
@@ -203,6 +203,7 @@ import itertools
 import mdpopups
 import os
 import sublime
+import subprocess
 import threading
 import weakref
 
@@ -1802,7 +1803,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         Returns whether the URI was opened successfully. Note that this currently blocks the event loop until the OS
         command that opens the URI returns.
         """
-        return open_externally(uri)
+        try:
+            if ST_PLATFORM == "windows":
+                os.startfile(uri)  # type: ignore
+            elif ST_PLATFORM == "osx":
+                subprocess.check_call(("/usr/bin/open", uri))  # ruff: ignore[run-process-in-async-function]
+            else:  # linux
+                subprocess.check_call(("xdg-open", uri))  # ruff: ignore[start-process-with-partial-path, run-process-in-async-function]
+        except Exception as ex:
+            exception_log(f"Failed to open {uri}", ex)
+            return False
+        return True
 
     @deprecated("use Session.open_location instead")
     def open_location_async(

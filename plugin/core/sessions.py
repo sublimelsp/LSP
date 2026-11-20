@@ -1135,7 +1135,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
     ) -> None:
-        self.transport: Transport | None = None
+        self._transport: Transport | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
@@ -1148,9 +1148,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.diagnostics = DiagnosticsStorage()
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
         self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, RequestController | None] = {}
-        self.exiting = False
-        # Whether `end()` was called, so the server stopping afterwards is not a crash.
-        self.end_requested = False
+        self._exiting = False
+        self._end_requested = False
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0
         self._variables: dict[str, str] = {}
@@ -1181,6 +1180,15 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     def plugin(self) -> AbstractPlugin | LspPlugin | None:
         return self._plugin
 
+    @property
+    def exiting(self) -> bool:
+        return self._exiting
+
+    @property
+    def end_requested(self) -> bool:
+        """Whether `end()` was called, so the server stopping afterwards is not a crash."""
+        return self._end_requested
+
     # --- session view management --------------------------------------------------------------------------------------
 
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:
@@ -1201,7 +1209,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 await self.end()
                 self._maybe_end_task = None
 
-        if self.exiting:
+        if self._exiting:
             # This means we're really ending, just return and let this object shutdown.
             return
         # If we're at this point, then we are certain the `end()` method isn't running. Maybe there is an existing
@@ -1398,7 +1406,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         try:
             return await self._initialize_impl(variables, working_directory, transport)
         except:
-            self.end_requested = True
+            self._end_requested = True
             await transport.close()
             raise
 
@@ -1410,8 +1418,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     ) -> InitializeResult | Error:
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
-        self.transport = transport
-        self.transport.start()
+        self._transport = transport
+        self._transport.start()
         self.working_directory = working_directory
         self._variables = variables
         params = get_initialize_params(variables, self._workspace_folders, self.config)
@@ -2497,7 +2505,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             registration_id = unregistration["id"]
             capability_path, registration_path = method_to_capability(unregistration["method"])
             if capability_path == 'diagnosticProvider':
-                self.diagnostics.unregister_provider(registration_id)
+                if (identifier := self.diagnostics.unregister_provider(registration_id)) is not None:
+                    self._on_diagnostic_stream_removed_async(identifier)
                 continue
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
@@ -2510,6 +2519,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 if isinstance(discarded, dict):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, capability_path)
+
+    def _on_diagnostic_stream_removed_async(self, identifier: str) -> None:
+        # Forget the result IDs of the removed stream, so that the diagnostics are pulled from scratch if a provider
+        # with the same identifier gets registered again.
+        for key in [key for key in self.diagnostics_result_ids if key[1] == identifier]:
+            del self.diagnostics_result_ids[key]
+        for sb in self.session_buffers_async():
+            if uri := sb.get_uri():
+                self._publish_diagnostics_to_session_buffer_async(sb, self.diagnostics.get_diagnostics_for_uri(uri))
+        if mgr := self.manager():
+            mgr.on_diagnostics_updated()
 
     def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
         if not self._watcher_impl:
@@ -2631,10 +2651,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
     async def end(self) -> None:
-        if self.exiting:
+        if self._exiting:
             return
-        self.exiting = True
-        self.end_requested = True
+        self._exiting = True
+        self._end_requested = True
         if self._plugin:
             self._plugin.on_session_end_async(None, None)
             self._plugin = None
@@ -2669,8 +2689,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         return await session_view.shutdown()
 
     async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
-        self.exiting = True
-        self.transport = None
+        self._exiting = True
+        self._transport = None
         for _request, _result_handler, error_handler in self._response_handlers.values():
             error_handler(Error(ErrorCodes.InternalError, "transport closed").to_lsp())
         self._response_handlers.clear()
@@ -2705,7 +2725,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         result = CancellableRequest(future, request_id, self)
-        if self.exiting and r.method != "shutdown":
+        if self._exiting and r.method != "shutdown":
             future.cancel()
             return result
         if r.progress and isinstance(r.params, dict):
@@ -2871,14 +2891,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         await self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
 
     async def exit(self) -> None:
-        await self.notify(Notification.exit())
-        if self.transport:
-            await self.transport.close()
-            self.transport = None
+        try:
+            await self.notify(Notification.exit())
+        finally:
+            # Close the transport even if sending the notification failed. Otherwise the server process is left running.
+            if transport := self._transport:
+                self._transport = None
+                await transport.close()
 
     async def send_payload(self, payload: JSONRPCMessage) -> None:
-        if self.transport:
-            await self.transport.send(payload)
+        if self._transport:
+            await self._transport.send(payload)
 
     async def deduce_payload(
         self,
@@ -2957,7 +2980,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         raise
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)
-        elif not self.exiting:
+        elif not self._exiting:
             debug("no handler found for payload:", payload)
 
     async def _handle_plugin_on_pre_send_response_async(

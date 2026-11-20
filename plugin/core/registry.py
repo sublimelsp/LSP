@@ -76,7 +76,7 @@ class AsyncCommandMixin:
 
     _current_run: concurrent.futures.Future[None] | None = None
 
-    cancel_previous_run: ClassVar[bool] = True
+    cancel_previous_run: ClassVar[bool] = False
     """Whether to cancel the previous `run` when a new `run` starts."""
 
     def _on_current_run_done(self, f: concurrent.futures.Future[None]) -> None:

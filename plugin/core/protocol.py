@@ -238,6 +238,12 @@ class Request(Generic[P_contra, R]):
         return Request('textDocument/foldingRange', params, view)
 
     @classmethod
+    def linkedEditingRange(
+        cls, params: LinkedEditingRangeParams, view: sublime.View
+    ) -> Request[LinkedEditingRangeParams, LinkedEditingRanges | None]:
+        return Request('textDocument/linkedEditingRange', params, view)
+
+    @classmethod
     def formatting(
         cls, params: DocumentFormattingParams, view: sublime.View
     ) -> Request[DocumentFormattingParams, list[TextEdit] | None]:

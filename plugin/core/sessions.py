@@ -94,6 +94,7 @@ from ..api import AbstractPlugin
 from ..api import APIHandler
 from ..api import LspPlugin
 from ..api import notification_handler
+from ..api import OnTransportReadyContext
 from ..api import PostResponseCallback
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
@@ -1129,6 +1130,9 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 _DELETE_TIMEOUT_MS = 1000
 _DELETE_POLL_INTERVAL_MS = 10
 
+# How long LspPlugin.on_transport_ready may take, in seconds.
+TRANSPORT_READY_TIMEOUT = 5
+
 
 class Session(APIHandler, TransportCallbacks, TaskContainer):
 
@@ -1416,12 +1420,20 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         working_directory: str | None,
         transport: Transport
     ) -> InitializeResult | Error:
-        if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
-            self._plugin = self._plugin_class(weakref.ref(self))
-        self._transport = transport
-        self._transport.start()
         self.working_directory = working_directory
         self._variables = variables
+        if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
+            self._plugin = self._plugin_class(weakref.ref(self))
+            try:
+                # The read loop of the transport is not started yet, so the plugin has exclusive access to the streams.
+                context = OnTransportReadyContext(reader=transport.reader, writer=transport.writer)
+                await asyncio.wait_for(self._plugin.on_transport_ready(context), timeout=TRANSPORT_READY_TIMEOUT)
+            except asyncio.TimeoutError as ex:
+                raise TimeoutError(
+                    f"on_transport_ready did not finish in time ({TRANSPORT_READY_TIMEOUT} seconds)"
+                ) from ex
+        self._transport = transport
+        self._transport.start()
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         result = await self.request(Request.initialize(params))
         if isinstance(result, Error):

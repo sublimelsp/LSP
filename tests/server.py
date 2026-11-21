@@ -18,6 +18,9 @@ Tests can await this request to make sure that they receive notification before 
 resumes (since response to request will arrive after requested notification).
 
 To make the server do a request when running a Command, send the $test/setupCommandAction request.
+
+To make the server do a handshake before JSON-RPC communication starts, pass the --handshake flag. The server then
+writes a "hello" line, waits for a "ping" line and replies with a "pong" line.
 """
 from __future__ import annotations
 
@@ -547,6 +550,16 @@ class Mode(enum.StrEnum):
     client = "client"
 
 
+async def handshake(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    writer.write(b"hello\n")
+    await writer.drain()
+    line = await reader.readline()
+    if line != b"ping\n":
+        raise RuntimeError(f"unexpected handshake message: {line!r}")
+    writer.write(b"pong\n")
+    await writer.drain()
+
+
 async def serve(session: Session, sleep_ms_after_exit: int = 0) -> bool:
     shutdown_received = await session.run_forever()
     if sleep_ms_after_exit > 0:
@@ -554,9 +567,16 @@ async def serve(session: Session, sleep_ms_after_exit: int = 0) -> bool:
     return shutdown_received
 
 
-async def main(tcp_port: int | None = None, mode: Mode = Mode.server, sleep_ms_after_exit: int = 0) -> bool:
+async def main(
+    tcp_port: int | None = None,
+    mode: Mode = Mode.server,
+    sleep_ms_after_exit: int = 0,
+    do_handshake: bool = False,
+) -> bool:
     if tcp_port is None:
         reader, writer = await stdio()
+        if do_handshake:
+            await handshake(reader, writer)
         session = Session(reader, writer)
         return await serve(session, sleep_ms_after_exit)
 
@@ -570,6 +590,8 @@ async def main(tcp_port: int | None = None, mode: Mode = Mode.server, sleep_ms_a
                 self.session_ended = asyncio.Event()
 
             async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+                if do_handshake:
+                    await handshake(reader, writer)
                 session = Session(reader, writer)
                 try:
                     self.received_shutdown = await session.run_forever()
@@ -592,6 +614,8 @@ async def main(tcp_port: int | None = None, mode: Mode = Mode.server, sleep_ms_a
 
     print("running in TCP client mode", file=sys.stderr)
     reader, writer = await asyncio.open_connection(host=None, port=tcp_port)
+    if do_handshake:
+        await handshake(reader, writer)
     session = Session(reader, writer)
     return await serve(session, sleep_ms_after_exit)
 
@@ -603,6 +627,7 @@ if __name__ == '__main__':
         tcp_port: int | None = None
         mode: Mode = Mode.server
         sleep_ms_after_exit: int
+        handshake: bool = False
 
     parser = ArgumentParser(prog=__package__, description=__doc__)
     parser.add_argument("-v", "--version", action="store_true", help="print version and exit")
@@ -614,6 +639,11 @@ if __name__ == '__main__':
         default=0,
         help="sleep this many milliseconds after receiving the exit notification",
     )
+    parser.add_argument(
+        "--handshake",
+        action="store_true",
+        help="do a handshake before JSON-RPC communication starts",
+    )
     args = parser.parse_args(namespace=CmdLineArgs())
     if args.version:
         print(__package__, __version__)
@@ -622,7 +652,9 @@ if __name__ == '__main__':
     asyncio.set_event_loop(loop)
     shutdown_received = False
     try:
-        shutdown_received = loop.run_until_complete(main(args.tcp_port, args.mode, args.sleep_ms_after_exit))
+        shutdown_received = loop.run_until_complete(
+            main(args.tcp_port, args.mode, args.sleep_ms_after_exit, args.handshake)
+        )
     except KeyboardInterrupt:
         pass
     loop.run_until_complete(loop.shutdown_asyncgens())

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .setup import SublimeAioTestCase
 from .test_mocks import TEST_CONFIG
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.sessions import get_initialize_params
@@ -21,6 +22,7 @@ from LSP.protocol import TextDocumentSyncKind
 from typing import Any
 from typing import Generator
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock
 import sublime
 import unittest
 import weakref
@@ -295,3 +297,18 @@ class SessionTest(unittest.TestCase):
     def test_get_session_buffer_for_uri_with_files(self) -> None:
         # TODO: write windows-only test
         pass
+
+
+class SessionExitTest(SublimeAioTestCase):
+
+    async def test_exit_closes_transport_when_sending_fails(self) -> None:
+        manager = MockManager(sublime.active_window())
+        session = Session(manager=manager, logger=MockLogger(), workspace_folders=[], config=TEST_CONFIG,
+                          plugin_class=None)
+        transport = AsyncMock()
+        transport.send.side_effect = RuntimeError("send failed")
+        session._transport = transport
+        with self.assertRaises(RuntimeError):
+            await session.exit()
+        transport.close.assert_awaited_once()
+        self.assertIsNone(session._transport)

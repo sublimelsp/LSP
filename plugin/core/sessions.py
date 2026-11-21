@@ -1152,9 +1152,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.diagnostics = DiagnosticsStorage()
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
         self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, RequestController | None] = {}
-        self.exiting = False
-        # Whether `end()` was called, so the server stopping afterwards is not a crash.
-        self.end_requested = False
+        self._exiting = False
+        self._end_requested = False
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0
         self._variables: dict[str, str] = {}
@@ -1185,6 +1184,15 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     def plugin(self) -> AbstractPlugin | LspPlugin | None:
         return self._plugin
 
+    @property
+    def exiting(self) -> bool:
+        return self._exiting
+
+    @property
+    def end_requested(self) -> bool:
+        """Whether `end()` was called, so the server stopping afterwards is not a crash."""
+        return self._end_requested
+
     # --- session view management --------------------------------------------------------------------------------------
 
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:
@@ -1205,7 +1213,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 await self.end()
                 self._maybe_end_task = None
 
-        if self.exiting:
+        if self._exiting:
             # This means we're really ending, just return and let this object shutdown.
             return
         # If we're at this point, then we are certain the `end()` method isn't running. Maybe there is an existing
@@ -1402,7 +1410,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         try:
             return await self._initialize_impl(variables, working_directory, transport)
         except:
-            self.end_requested = True
+            self._end_requested = True
             await transport.close()
             raise
 
@@ -2655,10 +2663,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
     async def end(self) -> None:
-        if self.exiting:
+        if self._exiting:
             return
-        self.exiting = True
-        self.end_requested = True
+        self._exiting = True
+        self._end_requested = True
         if self._plugin:
             self._plugin.on_session_end_async(None, None)
             self._plugin = None
@@ -2693,7 +2701,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         return await session_view.shutdown()
 
     async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
-        self.exiting = True
+        self._exiting = True
         self._transport = None
         for _request, _result_handler, error_handler in self._response_handlers.values():
             error_handler(Error(ErrorCodes.InternalError, "transport closed").to_lsp())
@@ -2729,7 +2737,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         result = CancellableRequest(future, request_id, self)
-        if self.exiting and r.method != "shutdown":
+        if self._exiting and r.method != "shutdown":
             future.cancel()
             return result
         if r.progress and isinstance(r.params, dict):
@@ -2895,16 +2903,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         await self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
 
     async def exit(self) -> None:
-        await self.notify(Notification.exit())
-        if self._transport:
-            await self._transport.close()
-            self._transport = None
+        try:
+            await self.notify(Notification.exit())
+        finally:
+            # Close the transport even if sending the notification failed. Otherwise the server process is left running.
+            if transport := self._transport:
+                self._transport = None
+                await transport.close()
 
     async def send_payload(self, payload: JSONRPCMessage) -> None:
-        try:
-            await self._transport.send(payload)  # pyright: ignore[reportOptionalMemberAccess]
-        except AttributeError:
-            pass
+        if self._transport:
+            await self._transport.send(payload)
 
     async def deduce_payload(
         self,
@@ -2983,7 +2992,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         raise
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)
-        elif not self.exiting:
+        elif not self._exiting:
             debug("no handler found for payload:", payload)
 
     async def _handle_plugin_on_pre_send_response_async(

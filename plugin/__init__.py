@@ -36,6 +36,7 @@ from .core.protocol import Error
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
+from .core.protocol import ResponseError
 from .core.protocol import ServerNotification
 from .core.protocol import ServerRequest
 from .core.protocol import ServerResponse
@@ -96,6 +97,7 @@ __all__ = [
     'Promise',
     'Request',
     'Response',
+    'ResponseError',
     'ServerNotification',
     'ServerRequest',
     'ServerResponse',

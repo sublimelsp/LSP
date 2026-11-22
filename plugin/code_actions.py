@@ -360,7 +360,6 @@ class CodeActionsOnFormatOnSaveTask(CodeActionsOnFormatTask):
 class LspCodeActionsCommand(LspTextCommand):
 
     capability = 'codeActionProvider'
-    cancel_previous_run = True
 
     def is_visible(
         self,

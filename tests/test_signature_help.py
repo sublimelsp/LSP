@@ -202,7 +202,7 @@ class SignatureHelpTest(unittest.TestCase):
                 "signatures":
                 [
                     {
-                        "label": "\U0001f635(x, y)",
+                        "label": "😵(x, y)",
                         "parameters":
                         [
                             {
@@ -220,7 +220,7 @@ class SignatureHelpTest(unittest.TestCase):
             r'''
             <div class="[^"]+">
                 <div class="highlight">
-                    <span style="color: #\w{6}">\U0001f635\(</span>
+                    <span style="color: #\w{6}">😵\(</span>
                     <span style="color: #\w{6}">x</span>
                     <span style="color: #\w{6}">, </span>
                     <span style="color: #\w{6}; font-weight: bold">y</span>

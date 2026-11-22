@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from .setup import TextDocumentTestCase
 from copy import deepcopy
+from LSP.plugin.completion import completion_item_trigger
+from LSP.plugin.completion import completion_trigger_info
 from LSP.plugin.completion import completion_with_defaults
+from LSP.plugin.completion import CompletionTriggerInfo
 from LSP.plugin.completion import format_completion
+from LSP.plugin.completion import LspApplyCompletionCommand
 from LSP.protocol import CompletionItem
 from LSP.protocol import CompletionItemDefaults
 from LSP.protocol import CompletionItemKind
@@ -12,7 +16,9 @@ from LSP.protocol import CompletionItemTag
 from LSP.protocol import InsertTextFormat
 from typing import Any
 from unittest import TestCase
+from unittest.mock import patch
 import asyncio
+import json
 import sublime
 
 additional_edits = {
@@ -56,10 +62,22 @@ class CompletionsTestsBase(TextDocumentTestCase):
         await self.wait_until(self.view.is_auto_complete_visible)
 
     async def commit_completion(self, commit_completion_command: str = "commit_completion") -> None:
-        current_change_count = self.view.change_count()
-        await self.wait_until_auto_complete_is_visible()
-        self.view.run_command(commit_completion_command)
-        await self.wait_until(lambda: self.view.change_count() > current_change_count)
+        # The completion is applied by the "lsp_apply_completion" command, which runs asynchronously when the item
+        # needs to be resolved first. Neither a change of the change count nor a "textDocument/didChange" notification
+        # can tell when that has happened, because ST's KEEP_PREFIX rollback modifies the buffer too, so wait for the
+        # command itself.
+        applied = False
+        original_run = LspApplyCompletionCommand.run
+
+        def run(command: LspApplyCompletionCommand, *args: Any, **kwargs: Any) -> None:
+            nonlocal applied
+            original_run(command, *args, **kwargs)
+            applied = True
+
+        with patch.object(LspApplyCompletionCommand, 'run', run):
+            await self.wait_until_auto_complete_is_visible()
+            self.view.run_command(commit_completion_command)
+            await self.wait_until(lambda: applied)
 
     async def select_completion(self) -> None:
         self.view.run_command('auto_complete')
@@ -75,6 +93,7 @@ class CompletionsTestsBase(TextDocumentTestCase):
     async def verify(self, *, completion_items: list[dict[str, Any]], insert_text: str, expected_text: str) -> None:
         if insert_text:
             self.type(insert_text)
+            await self.await_message("textDocument/didChange")
         await self.mock_response("textDocument/completion", completion_items)
         await self.select_completion()
         await self.await_message("textDocument/completion")
@@ -93,6 +112,14 @@ class QueryCompletionsTests(CompletionsTestsBase):
             completion_items=[{'label': 'asdf'}, {'label': 'efcgh'}],
             insert_text='',
             expected_text='asdf')
+
+    async def test_replaces_typed_prefix_as_long_as_the_trigger(self) -> None:
+        # Completions are queried after the last keystroke, as happens after a re-query when typing while a slow
+        # completion request is pending. The typed "edit" must be replaced even though it's as long as the trigger.
+        await self.verify(
+            completion_items=[{'label': 'Edit'}],
+            insert_text='sublime.edit',
+            expected_text='sublime.Edit')
 
     async def test_prefer_insert_text_over_label(self) -> None:
         await self.verify(
@@ -897,14 +924,41 @@ class ItemDefaultTests(TestCase):
 class FormatCompletionsUnitTests(TestCase):
 
     def _verify_completion(
-        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = '', flags: int = 0
+        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = ''
     ) -> None:
         item = format_completion(
             payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0)
         self.assertEqual(item.trigger, trigger)
+        # "lsp_select_completion" recomputes the trigger with this function, so it must match.
+        self.assertEqual(completion_item_trigger(payload), trigger)
         self.assertEqual(item.annotation, annotation)
         self.assertEqual(item.details, details)
-        self.assertEqual(item.flags, flags)
+        # All items are committed with KEEP_PREFIX, and the prefix is removed by "lsp_apply_completion".
+        self.assertEqual(item.flags, sublime.CompletionItemFlags.KEEP_PREFIX)
+
+    def test_command_arguments(self) -> None:
+        item = format_completion(
+            {"label": "key"}, index=3, can_resolve_completion_items=False, session_name='abc', item_defaults={},
+            view_id=0)
+        command, args = item.completion.split(' ', 1)
+        self.assertEqual(command, 'lsp_select_completion')
+        self.assertEqual(json.loads(args), {"index": 3, "session_name": "abc"})
+
+    def test_empty_label_with_filter_text(self) -> None:
+        # No empty segment is added to the details for the empty label.
+        self._verify_completion(
+            {
+                "label": "",
+                "filterText": "foo",
+                "detail": "bar",
+                "labelDetails": {
+                    "description": "baz"
+                },
+            },
+            trigger='foo',
+            annotation='baz',
+            details='bar'
+        )
 
     def test_label(self) -> None:
         self._verify_completion(
@@ -1073,3 +1127,41 @@ class FormatCompletionsUnitTests(TestCase):
             trigger='create_texture (uint width, uint height, ubyte* ptr)',
             annotation='Texture2D'
         )
+
+
+class CompletionTriggerInfoUnitTests(TestCase):
+
+    def test_label_only(self) -> None:
+        self.assertEqual(completion_trigger_info('foo', '', ''), CompletionTriggerInfo('foo', '', False))
+
+    def test_label_detail_type_annotation(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('foo', 'int', ''), CompletionTriggerInfo('foo', 'int', True))
+
+    def test_label_detail_function_signature(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('foo', '(a, b)', ''), CompletionTriggerInfo('foo(a, b)', '', True))
+
+    def test_label_detail_matching_filter_text_only_with_label_detail(self) -> None:
+        # The filter text matches only when labelDetails.detail is appended to the label.
+        self.assertEqual(
+            completion_trigger_info('foo', 'bar', 'foob'), CompletionTriggerInfo('foobar', '', True))
+
+    def test_filter_text_matching_label(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('foo', '', 'fo'), CompletionTriggerInfo('foo', '', False))
+
+    def test_filter_text_matching_label_but_not_label_detail(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('foo', '(a)', 'foox'), CompletionTriggerInfo('foox', 'foo(a)', False))
+
+    def test_filter_text_not_matching_label(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('@foo', '', 'foo'), CompletionTriggerInfo('foo', '@foo', False))
+
+    def test_filter_text_not_matching_label_with_label_detail(self) -> None:
+        self.assertEqual(
+            completion_trigger_info('@foo', '(a)', 'foo'), CompletionTriggerInfo('foo', '@foo(a)', False))
+
+    def test_empty_label_with_filter_text(self) -> None:
+        self.assertEqual(completion_trigger_info('', '', 'foo'), CompletionTriggerInfo('foo', '', False))

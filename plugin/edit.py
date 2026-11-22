@@ -4,6 +4,7 @@ from .core.constants import ChangeEventAction
 from .core.edit import is_snippet_text_edit
 from .core.edit import parse_lsp_position
 from .core.edit import parse_workspace_edit
+from .core.edit import utf16_to_code_points
 from .core.edit import WorkspaceChanges
 from .core.logging import debug
 from .core.panels import buttons_html
@@ -363,21 +364,6 @@ def _render_workspace_edit_panel(
     pm.update_workspace_edit_panel_buttons([
         sublime.Phantom(sublime.Region(len(to_render[0]) - 1), content, sublime.PhantomLayout.BLOCK)
     ])
-
-
-def utf16_to_code_points(s: str, col: int) -> int:
-    """Convert a position from UTF-16 code units to Unicode code points, usable for string slicing."""
-    utf16_len = 0
-    idx = 0
-    for idx, c in enumerate(s):
-        if utf16_len >= col:
-            if utf16_len > col:  # If col is in the middle of a character (emoji), don't advance to the next code point
-                idx -= 1
-            break
-        utf16_len += 1 if ord(c) < 65536 else 2
-    else:
-        idx += 1  # get_file_lines function trims the trailing '\n'
-    return idx
 
 
 class LspConcludeWorkspaceEditPanelCommand(sublime_plugin.WindowCommand):

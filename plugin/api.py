@@ -521,9 +521,9 @@ class LspPlugin(APIHandler):
         Called before any JSON-RPC communication starts.
 
         Override to do custom communication with the language server, such as a handshake. The communication is not
-        logged. Use the provided writer object to write bytes; use the reader object to read bytes. The plugin has
-        exclusive access to both streams until this method returns. Do not read more bytes than belong to the custom
-        communication, because those bytes are then missing from the JSON-RPC stream.
+        logged. Use the provided context object to read and write bytes. The plugin has exclusive access to both streams
+        in the context object until this method returns. Do not read more bytes than belong to the custom communication,
+        because those bytes are then missing from the JSON-RPC stream.
 
         When returning from this async method, the JSON-RPC communication starts. Do not use the session to send
         requests or notifications from this method, because they cannot be sent yet.

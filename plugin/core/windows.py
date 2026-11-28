@@ -82,6 +82,7 @@ import websockets.http11  # pyright: ignore[reportMissingImports]
 
 if TYPE_CHECKING:
     from .tree_view import TreeViewSheet
+    from collections.abc import Coroutine
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
@@ -171,23 +172,25 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     def disable_config_async(self, config_name: str) -> None:
         self._config_manager.disable_config(config_name)
 
-    def register_listener_async(self, listener: AbstractViewListener) -> None:
+    async def register_listener(self, listener: AbstractViewListener) -> list[Session | BaseException | None] | None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         # Update workspace folders in case the user have changed those since window was created.
         # There is no currently no notification in ST that would notify about folder changes.
         self.update_workspace_folders_async()
         workspace_folders = self._workspace.get_workspace_folders()
         self._listeners.add(listener)
+        coros: list[Coroutine[Any, Any, Session | None]] = []
         for config in self._config_manager.match_view(listener.view, workspace_folders):
             if plugin := get_plugin(config.name):
                 if issubclass(plugin, LspPlugin):
                     context = IsApplicableContext(config, listener.view, workspace_folders)
                     if plugin.is_applicable_async(context):
-                        run_coroutine(self.start(config, listener))
+                        coros.append(self.start(config, listener))
                 elif plugin.is_applicable(listener.view, config):
-                    run_coroutine(self.start(config, listener))
+                    coros.append(self.start(config, listener))
             else:
-                run_coroutine(self.start(config, listener))
+                coros.append(self.start(config, listener))
+        return await asyncio.gather(*coros, return_exceptions=True) if coros else None
 
     def unregister_listener_async(self, listener: AbstractViewListener) -> None:
         self._listeners.discard(listener)
@@ -379,7 +382,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
-            self.register_listener_async(listener)
+            await self.register_listener(listener)
 
     async def _end_sessions(self, config_names: list[str] | None = None) -> None:
         if not self._start_lock:
@@ -453,7 +456,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 restart = sublime.ok_cancel_dialog(msg, "Restart")
             if restart:
                 for listener in self._listeners:
-                    self.register_listener_async(listener)
+                    await self.register_listener(listener)
             else:
                 self._config_manager.disable_config(config.name, only_for_session=True)
 

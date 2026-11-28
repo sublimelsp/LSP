@@ -449,8 +449,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
 
     async def _on_load_impl(self) -> None:
         if not self._registered and is_regular_view(self.view):
-            self._register()
-            return
+            await self._register()
         if initially_folded_kinds := userprefs().initially_folded:
             if session := self.session_async('foldingRangeProvider'):
                 params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
@@ -471,7 +470,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if self.view.is_loading() or not is_regular_view(self.view):
             return
         if not self._registered:
-            self._register()
+            await self._register()
         session_views = self.session_views_async()
         if not session_views:
             return
@@ -1061,7 +1060,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
     def _is_selection_stable(self, region: sublime.Region) -> bool:
         return bool(self._stored_selection and self._stored_selection[0] == region)
 
-    def _register(self) -> None:
+    async def _register(self) -> None:
         buf = self.view.buffer()
         if not buf:
             debug("not tracking bufferless view", self.view.id())
@@ -1075,7 +1074,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener, 
         if not self._manager:
             return
         try:
-            self._manager.register_listener_async(self)
+            await self._manager.register_listener(self)
         except MissingUriError:
             return  # view already closed; don't care
         self._registered = True

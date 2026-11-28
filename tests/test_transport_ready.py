@@ -98,7 +98,9 @@ class TransportReadyTestCase(SublimeAioTestCase):
         for factory in self.factories:
             with self.subTest(factory=factory):
                 session, transport = await self.start(factory, StallingPlugin, handshake=False)
-                with patch('LSP.plugin.core.sessions.TRANSPORT_READY_TIMEOUT', 0.1), self.assertRaises(TimeoutError):
+                with patch('LSP.plugin.core.sessions.TRANSPORT_READY_TIMEOUT', 0.1), self.assertRaisesRegex(
+                    TimeoutError, 'on_transport_ready did not finish'
+                ):
                     await session.initialize({}, None, transport)
                 self.assertIsNone(transport._process)
 

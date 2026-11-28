@@ -1,4 +1,5 @@
 from __future__ import annotations
+import contextlib
 
 from ...protocol import AnnotatedTextEdit
 from ...protocol import ApplyWorkspaceEditParams
@@ -1412,7 +1413,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         except:
             self._end_requested = True
             exit_code, ex = await transport.close()
-            await self.on_transport_close(exit_code or 0, ex)
+            if not self._transport:
+                with contextlib.suppress(Exception):
+                    await self.on_transport_close(exit_code or 0, ex)
             raise
 
     async def _initialize_impl(

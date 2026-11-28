@@ -42,6 +42,13 @@ TIMEOUT_TIME = 10000 if CI else 2000
 text_config = ClientConfig(name="textls", selector="text.plain", command=[], tcp_port=None)
 
 
+class IntegerNotZero:  # ruff: ignore[eq-without-hash]
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, int):
+            raise TypeError
+        return value != 0
+
+
 def make_stdio_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
     """Create a config for starting the fake language server in STDIO mode."""
     return ClientConfig(

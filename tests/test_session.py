@@ -95,13 +95,13 @@ class MockLogger(Logger):
     def outgoing_error_response(self, request_id: Any, error: Error) -> None:
         pass
 
-    def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
+    def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
         pass
 
     def outgoing_notification(self, method: str, params: Any) -> None:
         pass
 
-    def incoming_response(self, request_id: int | None, params: Any, is_error: bool, blocking: bool) -> None:
+    def incoming_response(self, request_id: int | str, params: Any, is_error: bool) -> None:
         pass
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:

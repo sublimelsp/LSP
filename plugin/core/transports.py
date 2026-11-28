@@ -374,6 +374,14 @@ class Transport(TaskContainer):
         """
         return self._process_args
 
+    @property
+    def reader(self) -> asyncio.StreamReader:
+        return self._reader
+
+    @property
+    def writer(self) -> asyncio.StreamWriter:
+        return self._writer
+
     async def send(self, payload: JSONRPCMessage) -> None:
         """Write a JSON-RPC message. Messages sent after `close()` are dropped."""
         if self._task is None:

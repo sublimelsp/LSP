@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from .aio import run_on_main_thread
 from .constants import ST_PACKAGES_PATH
-from .constants import ST_PLATFORM
 from .constants import ST_VERSION
-from .logging import exception_log
 from .protocol import UINT_MAX
 from .type_converters import range_to_region
 from .url import parse_uri
@@ -16,7 +14,6 @@ import os
 import re
 import sublime
 import sublime_plugin
-import subprocess
 import webbrowser
 
 if TYPE_CHECKING:
@@ -174,18 +171,3 @@ def open_in_browser(uri: str) -> None:
         uri = "https://" + uri
     if not webbrowser.open(uri):
         sublime.status_message("failed to open: " + uri)
-
-
-def open_externally(uri: str) -> bool:
-    """A blocking function that invokes the OS's `open with default extension`."""
-    try:
-        if ST_PLATFORM == "windows":
-            os.startfile(uri)  # type: ignore
-        elif ST_PLATFORM == "osx":
-            subprocess.check_call(("/usr/bin/open", uri))
-        else:  # linux
-            subprocess.check_call(("xdg-open", uri))  # ruff: ignore[start-process-with-partial-path]
-    except Exception as ex:
-        exception_log(f"Failed to open {uri}", ex)
-        return False
-    return True

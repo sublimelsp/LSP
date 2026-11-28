@@ -1,5 +1,4 @@
 from __future__ import annotations
-import contextlib
 
 from ...protocol import AnnotatedTextEdit
 from ...protocol import ApplyWorkspaceEditParams
@@ -201,6 +200,7 @@ from urllib.parse import urldefrag
 from urllib.parse import urlparse
 from weakref import WeakSet
 import asyncio
+import contextlib
 import itertools
 import mdpopups
 import os

@@ -66,6 +66,7 @@ from .plugin.hover import LspHoverCommand
 from .plugin.hover import LspToggleHoverPopupsCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
 from .plugin.inlay_hint import LspToggleInlayHintsCommand
+from .plugin.linked_editing import LspApplyLinkedEditsCommand
 from .plugin.panels import LspClearLogPanelCommand
 from .plugin.panels import LspClearMessagesPanelCommand
 from .plugin.panels import LspClearPanelCommand
@@ -113,6 +114,7 @@ __all__ = (
     "LspActivateTreeItemCommand",
     "LspApplyCompletionCommand",
     "LspApplyDocumentEditCommand",
+    "LspApplyLinkedEditsCommand",
     "LspApplyTextDocumentEditCommand",
     "LspApplyWorkspaceEditCommand",
     "LspCallHierarchyCommand",

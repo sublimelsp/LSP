@@ -90,6 +90,20 @@ The highlighting color can be adjusted with color scheme rules for the following
 If `"document_highlight_style"` is set to `"background"` in the LSP settings, the highlighting color can be controlled using the "background" property in the color scheme rule.
 
 
+## Linked Editing
+
+Some language servers can report ranges in the file that always have the same content, for example the opening and closing tag names of an HTML element.
+When linked editing is enabled, editing the text in one of these ranges applies the same change to the other ranges.
+Undo reverts the change in all ranges at once.
+
+While linked editing is active, the linked ranges are highlighted with the style from the `"linked_editing_highlight_style"` setting (underline by default).
+The highlighting color can be adjusted with a color scheme rule for the `markup.highlight.linked-editing` scope (cyan by default).
+
+!!! note
+    Linked editing is disabled by default.
+    To enable it, set `"linked_editing": true` in the LSP settings.
+
+
 ## Semantic Highlighting
 
 === "enabled"

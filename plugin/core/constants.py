@@ -73,6 +73,8 @@ class RequestFlags(IntFlag):
     """ textDocument/codeLens """
     DIAGNOSTIC = 32
     """ textDocument/diagnostic """
+    LINKED_EDITING_RANGE = 64
+    """ textDocument/linkedEditingRange """
 
 
 class RegionKey(StrEnum):
@@ -81,6 +83,7 @@ class RegionKey(StrEnum):
     CODE_ACTION = 'lsp_code_action'
     DOCUMENT_LINK = 'lsp_document_link'
     HOVER_HIGHLIGHT = 'lsp_hover_highlight'
+    LINKED_EDITING = 'lsp_linked_editing'
     REFERENCE_HIGHLIGHT = 'lsp_reference_highlight'
 
 
@@ -267,6 +270,7 @@ SIGNATURE_HELP_FUNCTION_SCOPE = 'meta.signature-help.lsp'
 SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp variable.parameter.sighelp.active.lsp'
 SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp'
 LIGHTBULB_SCOPE = 'region.yellowish lightbulb.lsp'
+LINKED_EDITING_SCOPE = 'region.cyanish markup.highlight.linked-editing.lsp'
 
 COMMAND_TO_CHANGE_EVENT_ACTION: dict[str, ChangeEventAction] = {
     'cut': ChangeEventAction.CUT,

@@ -55,6 +55,7 @@ class SessionView:
     AC_TRIGGERS_KEY = "auto_complete_triggers"
     COMPLETION_PROVIDER_KEY = "completionProvider"
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
+    LINKED_EDITING_RANGE_PROVIDER_KEY = "linkedEditingRangeProvider"
 
     _session_buffers: WeakValueDictionary[tuple[int, int], SessionBuffer] = WeakValueDictionary()
 
@@ -147,8 +148,8 @@ class SessionView:
     def _initialize_region_keys(self) -> None:
         """
         Initialize all region keys for the View.add_regions method to enforce a certain draw order for overlapping
-        diagnostics, semantic tokens, document highlights, and gutter icons. The draw order seems to follow the
-        following rules:
+        diagnostics, semantic tokens, document highlights, linked editing ranges, hover highlights, and gutter icons.
+        The draw order seems to follow the following rules:
           - inline decorations (underline & background) from region keys which were initialized _last_ are drawn on top
           - gutter icons from region keys which were initialized _first_ are drawn
         For more context, see https://github.com/sublimelsp/LSP/issues/1593.
@@ -156,6 +157,7 @@ class SessionView:
         r = [sublime.Region(0, 0)]
         document_highlight_style = userprefs().document_highlight_style
         hover_highlight_style = userprefs().hover_highlight_style
+        linked_editing_highlight_style = userprefs().linked_editing_highlight_style
         line_modes = ["m", "s"]
         self.view.add_regions(RegionKey.CODE_ACTION, r)  # code actions lightbulb icon should always be on top
         session_name = self.session.config.name
@@ -164,6 +166,8 @@ class SessionView:
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
                              document_highlight_key(kind, multiline=False)))
+        if linked_editing_highlight_style == "background":
+            keys.append(RegionKey.LINKED_EDITING)
         if hover_highlight_style in {"background", "fill"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
@@ -174,11 +178,13 @@ class SessionView:
             keys.extend(f"lsp{session_name}d{mode}{severity}_icon" for mode in line_modes)
         for severity in range(4, 0, -1):
             keys.extend(f"lsp{session_name}d{mode}{severity}_underline" for mode in line_modes)
-        if document_highlight_style in {"underline", "stippled"}:
+        if document_highlight_style in {"underline", "stippled", "outline"}:
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
                              document_highlight_key(kind, multiline=False)))
-        if hover_highlight_style in {"underline", "stippled"}:
+        if linked_editing_highlight_style in {"underline", "stippled", "outline"}:
+            keys.append(RegionKey.LINKED_EDITING)
+        if hover_highlight_style in {"underline", "stippled", "outline"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:
             self.view.add_regions(key, r, flags=REGIONS_INITIALIZE_FLAGS)
@@ -289,12 +295,18 @@ class SessionView:
             trigger_chars = options.get("triggerCharacters")
             if isinstance(trigger_chars, list) or self.session.config.auto_complete_selector:
                 self._register_auto_complete_triggers(registration_id, trigger_chars or [])
+        elif capability_path == self.LINKED_EDITING_RANGE_PROVIDER_KEY and \
+                self.get_request_flags() & RequestFlags.LINKED_EDITING_RANGE and (listener := self.listener()):
+            # The caret may already be inside of linked editing ranges.
+            listener.do_linked_editing_ranges_async()
 
     def on_capability_removed_async(self, registration_id: str, capability_path: str) -> None:
         if capability_path == self.HOVER_PROVIDER_KEY:
             self._decrement_hover_count()
         elif capability_path.startswith(self.COMPLETION_PROVIDER_KEY):
             self._unregister_auto_complete_triggers(registration_id)
+        elif capability_path == self.LINKED_EDITING_RANGE_PROVIDER_KEY and (listener := self.listener()):
+            listener.clear_linked_editing_async()
 
     def has_capability_async(self, capability_path: str) -> bool:
         return self.session_buffer.has_capability(capability_path)
@@ -384,8 +396,8 @@ class SessionView:
     async def on_reload(self) -> None:
         await self.session_buffer.on_reload(self.view)
 
-    async def purge_changes(self) -> None:
-        await self.session_buffer.purge_changes(self.view)
+    async def purge_changes(self, *, defer_requests: bool = False) -> None:
+        await self.session_buffer.purge_changes(self.view, defer_requests=defer_requests)
 
     async def on_pre_save(self) -> None:
         await self.session_buffer.on_pre_save(self.view)

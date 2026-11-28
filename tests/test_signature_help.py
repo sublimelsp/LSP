@@ -195,6 +195,40 @@ class SignatureHelpTest(unittest.TestCase):
             '''
         )
 
+    def test_parameter_ranges_utf16(self) -> None:
+        # The emoji takes two UTF-16 code units, but only a single code point.
+        self.assert_render(
+            {
+                "signatures":
+                [
+                    {
+                        "label": "😵(x, y)",
+                        "parameters":
+                        [
+                            {
+                                "label": [3, 4],
+                            },
+                            {
+                                "label": [6, 7],
+                            }
+                        ]
+                    }
+                ],
+                "activeSignature": 0,
+                "activeParameter": 1
+            },
+            r'''
+            <div class="[^"]+">
+                <div class="highlight">
+                    <span style="color: #\w{6}">😵\(</span>
+                    <span style="color: #\w{6}">x</span>
+                    <span style="color: #\w{6}">, </span>
+                    <span style="color: #\w{6}; font-weight: bold">y</span>
+                    <span style="color: #\w{6}">\)</span>
+                </div>
+            '''
+        )
+
     def test_overloads(self) -> None:
         self.assert_render(
             {

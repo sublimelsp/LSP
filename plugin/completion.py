@@ -14,6 +14,7 @@ from ..protocol import MarkupKind
 from ..protocol import Range
 from ..protocol import TextEdit
 from .core.aio import run_coroutine
+from .core.aio import run_on_worker_thread
 from .core.constants import COMPLETION_KINDS
 from .core.constants import MarkdownLangMap
 from .core.edit import apply_text_edits
@@ -201,7 +202,8 @@ def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItem
 async def query_completions(
     view: sublime.View, location: int, triggered_manually: bool, sessions: list[Session]
 ) -> tuple[list[sublime.CompletionItem], sublime.AutoCompleteFlags]:
-    return _resolve_completions(
+    return await run_on_worker_thread(
+        _resolve_completions,
         view,
         triggered_manually,
         zip(

@@ -184,6 +184,7 @@ class LspSelectionSetCommand(sublime_plugin.TextCommand):
 class LspDocumentSymbolsCommand(LspTextCommand):
 
     capability = 'documentSymbolProvider'
+    cancel_previous_run = True
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)

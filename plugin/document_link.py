@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 class LspOpenLinkCommand(LspTextCommand):
 
     capability = 'documentLinkProvider'
+    cancel_previous_run = True
 
     def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if not super().is_enabled(event, point):

@@ -31,6 +31,7 @@ OutputMode = Literal['output_panel', 'quick_panel']
 class LspSymbolReferencesCommand(LspTextCommand):
 
     capability = 'referencesProvider'
+    cancel_previous_run = True
 
     def is_enabled(
         self,

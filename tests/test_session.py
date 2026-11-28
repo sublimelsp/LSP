@@ -312,3 +312,23 @@ class SessionExitTest(SublimeAioTestCase):
             await session.exit()
         transport.close.assert_awaited_once()
         self.assertIsNone(session._transport)
+
+
+class SessionProgressTest(SublimeAioTestCase):
+
+    def _create_session(self) -> Session:
+        manager = MockManager(sublime.active_window())
+        return Session(manager=manager, logger=MockLogger(), workspace_folders=[], config=TEST_CONFIG,
+                       plugin_class=None)
+
+    async def test_progress_end_without_begin(self) -> None:
+        session = self._create_session()
+        await session.on_window_work_done_progress_create({'token': 'token'}, 1)
+        session.on_progress({'token': 'token', 'value': {'kind': 'end'}})
+        self.assertNotIn('token', session._progress)
+
+    async def test_progress_report_without_begin(self) -> None:
+        session = self._create_session()
+        await session.on_window_work_done_progress_create({'token': 'token'}, 1)
+        session.on_progress({'token': 'token', 'value': {'kind': 'report', 'message': 'working'}})
+        self.assertIsNone(session._progress['token'])

@@ -2645,12 +2645,16 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             elif kind == 'report':
                 value = cast('WorkDoneProgressReport', value)
                 progress = self._progress[token]
-                assert isinstance(progress, WindowProgressReporter)
+                if progress is None:
+                    debug(f'$/progress report without begin for token: {token}')
+                    return
                 progress(value.get("message"), value.get("percentage"))
             elif kind == 'end':
                 value = cast('WorkDoneProgressEnd', value)
                 progress = self._progress.pop(token)
-                assert isinstance(progress, WindowProgressReporter)
+                if progress is None:
+                    debug(f'$/progress end without begin for token: {token}')
+                    return
                 title = progress.title
                 progress = None
                 message = value.get('message')

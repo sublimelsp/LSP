@@ -153,9 +153,10 @@ class ClientConfigs:
         clients = settings.get("clients")
         if isinstance(clients, dict):
             config = clients.setdefault(config_name, {})
-            config['enabled'] = is_enabled
-            settings.set("clients", clients)
-            sublime.save_settings("LSP.sublime-settings")
+            if isinstance(config, dict):
+                config['enabled'] = is_enabled
+                settings.set("clients", clients)
+                sublime.save_settings("LSP.sublime-settings")
 
     def enable(self, config_name: str) -> None:
         self._set_enabled(config_name, True)

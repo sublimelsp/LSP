@@ -4,13 +4,14 @@ from .api import get_plugin
 from .api import LspPlugin
 from .api import OnPreStartContext
 from .api import PluginStartError
-from .core.aio import run_coroutine
 from .core.aio import run_on_threadpool
 from .core.css import css
 from .core.logging import debug
+from .core.panels import show_quick_panel
+from .core.registry import LspWindowCommand
 from .core.registry import windows
+from .core.transports import Transport
 from .core.transports import TransportCallbacks
-from .core.transports import TransportWrapper
 from .core.types import ClientConfig
 from .core.version import __version__
 from .core.views import extract_variables
@@ -29,6 +30,7 @@ import json
 import mdpopups
 import os
 import sublime
+import sublime_aio
 import sublime_plugin
 import textwrap
 import traceback
@@ -306,41 +308,37 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         view.set_read_only(True)
 
 
-class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
+class LspTroubleshootServerCommand(LspWindowCommand):
 
-    def run(self) -> None:
+    async def run(self) -> None:
         wm = windows.lookup(self.window)
         if not wm:
             return
-        view = wm.window.active_view()
-        if not view:
-            sublime.message_dialog('Troubleshooting must be run with a file opened')
+        active_view = wm.window.active_view()
+        if not active_view:
+            await sublime_aio.message_dialog('Troubleshooting must be run with a file opened')
             return
-        active_view = view
         configs = wm.get_config_manager().get_configs()
         config_names = [config.name for config in configs]
-        if config_names:
-            wm.window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),
-                                       placeholder='Select server to troubleshoot')
-
-    def on_selected(self, selected_index: int, configs: list[ClientConfig], active_view: sublime.View) -> None:
+        if not config_names:
+            return
+        selected_index = await show_quick_panel(self.window, config_names, placeholder='Select server to troubleshoot')
         if selected_index == -1:
             return
         config = configs[selected_index]
         output_sheet = mdpopups.new_html_sheet(
-            self.window, f'Server: {config.name}', '# Running server test...',
+            wm.window, f'Server: {config.name}', '# Running server test...',
             css=css().sheets, wrapper_class=css().sheets_classname)
-        # Store the instance so that it's not GC'ed before it's finished.
-        self.test_runner: ServerTestRunner | None = ServerTestRunner(
-            config, self.window, active_view,
+        await ServerTestRunner(
+            config, wm.window, active_view,
             lambda resolved_command, cwd, output, exit_code: self.update_sheet(
-                config, active_view, output_sheet, resolved_command, cwd, output, exit_code))
-        run_coroutine(self.test_runner.run())
+                config, active_view, output_sheet, resolved_command, cwd, output, exit_code)).run()
+
+    def is_enabled(self) -> bool:
+        return True
 
     def update_sheet(self, config: ClientConfig, active_view: sublime.View | None, output_sheet: sublime.HtmlSheet,
-                     resolved_command: list[str] | None, cwd: str | None, server_output: str,
-                     exit_code: int) -> None:
-        self.test_runner = None
+                     resolved_command: list[str] | None, cwd: str | None, server_output: str, exit_code: int) -> None:
         frontmatter = mdpopups.format_frontmatter({'allow_code_wrap': True})
         contents = self.get_contents(config, active_view, resolved_command, cwd, server_output, exit_code)
         # The href needs to be encoded to avoid having markdown parser ruin it.
@@ -493,29 +491,29 @@ class ServerTestRunner(TransportCallbacks):
     Server is automatically closed after defined timeout.
     """
 
-    CLOSE_TIMEOUT_SEC = 2
-
     def __init__(
         self,
         config: ClientConfig,
         window: sublime.Window,
         initiating_view: sublime.View,
-        on_close: Callable[[list[str] | None, str | None, str, int], None]
+        on_close: Callable[[list[str] | None, str | None, str, int], None],
     ) -> None:
         self._config = config
         self._window = window
         self._initiating_view = initiating_view
         self._on_close = on_close
-        self._transport: TransportWrapper | None = None
-        self._resolved_command: list[str] | None = None
-        self._cwd: str | None = None
         self._stderr_lines: list[str] = []
 
-    async def run(self) -> None:
+    async def run(self, close_timeout_sec: float = 2.0) -> None:
         view = self._initiating_view
         file_path = view.file_name() or ''
         config = ClientConfig.from_config(self._config, {})
-
+        transport: Transport | None = None
+        exit_code: int | None = None
+        exception: BaseException | None = None
+        cwd: str | None = None
+        resolved_command: list[str] | None = None
+        output: str = ""
         try:
             workspace = ProjectFolders(self._window)
             workspace_folders = sorted_workspace_folders(workspace.folders, file_path)
@@ -545,14 +543,21 @@ class ServerTestRunner(TransportCallbacks):
                     if new_cwd := plugin_class.on_pre_start(self._window, view, workspace_folders, config):
                         cwd = new_cwd
 
-            self._cwd = cwd
             transport_config = config.create_transport_config()
-            self._transport = await transport_config.start(config.command, config.env, cwd, variables, self)
-            self._resolved_command = self._transport.process_args
-            await asyncio.sleep(self.CLOSE_TIMEOUT_SEC)
-            await self._transport.close()
+            transport = await transport_config.start(config.command, config.env, cwd, variables, self)
+            resolved_command = transport.process_args
+            transport.start()
+            await asyncio.sleep(close_timeout_sec)
         except Exception as ex:
-            await self.on_transport_close(-1, ex)
+            output = ''.join(traceback.format_exception(type(ex), ex, ex.__traceback__))
+        finally:
+            if transport:
+                exit_code, exception = await transport.close()
+            if exception:
+                output += ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
+            else:
+                output += '\n'.join(self._stderr_lines).rstrip()
+            sublime.set_timeout(lambda: self._on_close(resolved_command, cwd, output, exit_code or 0))
 
     async def on_payload(self, payload: dict[str, Any]) -> None:
         pass
@@ -561,11 +566,7 @@ class ServerTestRunner(TransportCallbacks):
         self._stderr_lines.append(message)
 
     async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
-        if exception:
-            output = ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
-        else:
-            output = '\n'.join(self._stderr_lines).rstrip()
-        sublime.set_timeout(lambda: self._on_close(self._resolved_command, self._cwd, output, exit_code))
+        pass
 
 
 class LspOnDoubleClickCommand(sublime_plugin.TextCommand):

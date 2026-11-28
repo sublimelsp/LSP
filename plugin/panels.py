@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from .core.aio import run_coroutine
+from .core.aio import run_on_main_thread
+from .core.open import open_in_browser
 from .core.panels import LOG_LINES_LIMIT_SETTING_NAME
 from .core.panels import PanelName
 from .core.registry import windows
 from .core.views import mutable
+from .core.windows import RemoteLogServer
 from sublime_plugin import WindowCommand
 import sublime
 import sublime_plugin
@@ -135,3 +139,14 @@ class LspClearLogPanelCommand(sublime_plugin.TextCommand):
             return
         if panel := wm.panel_manager and wm.panel_manager.ensure_log_panel():
             panel.run_command("lsp_clear_panel")
+
+
+class LspOpenRemoteLogViewerCommand(WindowCommand):
+    """Start the remote log server, if not running yet, and open the log viewer in the default browser."""
+
+    def run(self) -> None:
+        run_coroutine(self._run_async())
+
+    async def _run_async(self) -> None:
+        await RemoteLogServer.start()
+        await run_on_main_thread(open_in_browser, RemoteLogServer.viewer_url())

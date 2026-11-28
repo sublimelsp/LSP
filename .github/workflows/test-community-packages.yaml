@@ -11,7 +11,7 @@ concurrency:
 jobs:
   type-check:
     name: Type-check community packages
-    runs-on: macOS-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Check out PR branch
         uses: actions/checkout@v7

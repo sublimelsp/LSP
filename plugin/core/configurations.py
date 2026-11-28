@@ -12,6 +12,8 @@ from abc import abstractmethod
 from collections import deque
 from datetime import datetime
 from datetime import timedelta
+from typing import Any
+from typing import cast
 from typing import Generator
 from typing import Literal
 from typing import TYPE_CHECKING
@@ -82,7 +84,9 @@ class WindowConfigManager:
 
     def _reload_configs(self, updated_config_names: set[str] | None = None, notify_listeners: bool = False) -> None:
         project_data = self._window.project_data()
-        project_settings = project_data.get("settings", {}).get("LSP", {}) if isinstance(project_data, dict) else {}
+        project_settings: dict[str, Any] = {}
+        if isinstance(project_data, dict):
+            project_settings = cast('dict[str, Any]', project_data.get("settings", {})).get("LSP", {})
 
         def resolve_configs() -> Generator[tuple[ConfigChangeType, ClientConfig]]:
             seen_config_names: set[str] = set()

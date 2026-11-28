@@ -20,13 +20,15 @@ import sys
 if TYPE_CHECKING:
     from .promise import ResolveFunc
     from contextvars import Context
-    from sublime_aio import T
-    from sublime_aio import Ts
+    from typing import TypeVar
     from typing_extensions import ParamSpec
+    from typing_extensions import TypeVarTuple
     from typing_extensions import Unpack
     import concurrent.futures
 
     P = ParamSpec("P")
+    T = TypeVar("T")
+    Ts = TypeVarTuple("Ts")
 
 
 if sys.version_info >= (3, 11, 0):

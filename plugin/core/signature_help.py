@@ -3,7 +3,7 @@ from __future__ import annotations
 from ...protocol import SignatureHelp
 from ...protocol import SignatureHelpTriggerKind
 from ...protocol import SignatureInformation
-from .aio import run_coroutine
+from .edit import utf16_to_code_points
 from .logging import debug
 from .registry import LspTextCommand
 from .views import FORMAT_MARKUP_CONTENT
@@ -11,7 +11,7 @@ from .views import FORMAT_STRING
 from .views import html_wrapper
 from .views import minihtml
 from typing import TYPE_CHECKING
-from typing import TypedDict
+from typing_extensions import TypedDict
 import html
 import re
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     import sublime
 
 
-class SignatureHelpStyle(TypedDict):
+class SignatureHelpStyle(TypedDict, closed=True):
     function_color: str
     active_parameter_color: str
     active_parameter_bold: bool
@@ -44,9 +44,9 @@ class LspSignatureHelpShowCommand(LspTextCommand):
     def want_event(self) -> bool:
         return False
 
-    def run(self, _: sublime.Edit) -> None:
+    async def run(self) -> None:
         if listener := self.get_listener():
-            run_coroutine(listener.do_signature_help(SignatureHelpTriggerKind.Invoked))
+            await listener.do_signature_help(SignatureHelpTriggerKind.Invoked)
 
 
 class SigHelp:
@@ -120,8 +120,8 @@ class SigHelp:
             for i, param in enumerate(parameters):
                 rawlabel = param["label"]
                 if isinstance(rawlabel, list):
-                    # TODO: UTF-16 offsets
-                    start, end = rawlabel[0], rawlabel[1]
+                    # The offsets are based on a UTF-16 string representation of the signature label.
+                    start, end = utf16_to_code_points(label, rawlabel[0]), utf16_to_code_points(label, rawlabel[1])
                 else:
                     # Note that this route is from an earlier spec. It is a bad way of doing things because this
                     # route relies on the client being smart enough to figure where the parameter is inside of

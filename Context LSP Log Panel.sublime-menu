@@ -12,6 +12,13 @@
         "caption": "-"
     },
     {
+        "caption": "Open Remote Log Viewer",
+        "command": "lsp_open_remote_log_viewer",
+    },
+    {
+        "caption": "-"
+    },
+    {
         "command": "copy"
     },
     {

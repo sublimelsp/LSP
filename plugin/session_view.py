@@ -22,6 +22,7 @@ from .core.views import make_command_link
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any
+from typing import cast
 from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakValueDictionary
@@ -212,8 +213,8 @@ class SessionView:
                     continue
                 if trigger.get("server", "") == name and trigger.get("registration_id", "") == registration_id:
                     continue
-                new_triggers.append(trigger)
-            settings.set(self.AC_TRIGGERS_KEY, triggers)
+                new_triggers.append(cast('dict[str, str]', trigger))
+            settings.set(self.AC_TRIGGERS_KEY, new_triggers)
 
     def _apply_auto_complete_triggers(
         self,
@@ -238,7 +239,7 @@ class SessionView:
         if isinstance(registration_id, str):
             # This key is not used by Sublime, but is used as a "breadcrumb" as well, for dynamic registrations.
             trigger["registration_id"] = registration_id
-        triggers: list[dict[str, str]] = settings.get(self.AC_TRIGGERS_KEY) or []
+        triggers = cast('list[dict[str, str]]', settings.get(self.AC_TRIGGERS_KEY) or [])
         triggers.append(trigger)
         settings.set(self.AC_TRIGGERS_KEY, triggers)
 
@@ -289,10 +290,10 @@ class SessionView:
             if isinstance(trigger_chars, list) or self.session.config.auto_complete_selector:
                 self._register_auto_complete_triggers(registration_id, trigger_chars or [])
 
-    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: dict[str, Any]) -> None:
-        if self.HOVER_PROVIDER_KEY in discarded_capabilities:
+    def on_capability_removed_async(self, registration_id: str, capability_path: str) -> None:
+        if capability_path == self.HOVER_PROVIDER_KEY:
             self._decrement_hover_count()
-        elif self.COMPLETION_PROVIDER_KEY in discarded_capabilities:
+        elif capability_path.startswith(self.COMPLETION_PROVIDER_KEY):
             self._unregister_auto_complete_triggers(registration_id)
 
     def has_capability_async(self, capability_path: str) -> bool:

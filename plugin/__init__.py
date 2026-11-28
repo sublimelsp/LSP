@@ -35,6 +35,7 @@ from .core.protocol import Error
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
+from .core.protocol import ResponseError
 from .core.protocol import ServerNotification
 from .core.protocol import ServerRequest
 from .core.protocol import ServerResponse
@@ -44,7 +45,6 @@ from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import SessionViewProtocol
-from .core.transports import TransportWrapper
 from .core.type_converters import point_to_offset
 from .core.type_converters import position_to_offset
 from .core.type_converters import range_to_region
@@ -95,6 +95,7 @@ __all__ = [
     'Promise',
     'Request',
     'Response',
+    'ResponseError',
     'ServerNotification',
     'ServerRequest',
     'ServerResponse',
@@ -102,7 +103,6 @@ __all__ = [
     'SessionBufferProtocol',
     'SessionViewProtocol',
     'TextPosition',
-    'TransportWrapper',
     'WorkspaceFolder',
     '__version__',
     'apply_text_edits',

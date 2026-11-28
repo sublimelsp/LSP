@@ -24,12 +24,12 @@ from typing import Set
 from typing import Tuple
 from typing import Type
 from typing import TYPE_CHECKING
-from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 from typing_extensions import NotRequired
 from typing_extensions import ParamSpec
 from typing_extensions import Required
+from typing_extensions import TypedDict
 from typing_extensions import TypeGuard
 import sys
 

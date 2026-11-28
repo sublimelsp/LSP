@@ -151,8 +151,8 @@ from .protocol import ServerResponse
 from .protocol import TextPosition
 from .settings import globalprefs
 from .settings import userprefs
+from .transports import Transport
 from .transports import TransportCallbacks
-from .transports import TransportWrapper
 from .types import Capabilities
 from .types import ClientConfig
 from .types import diff
@@ -714,7 +714,7 @@ class SessionViewProtocol(Protocol):
     def on_capability_added_async(self, registration_id: str, capability_path: str, options: dict[str, Any]) -> None:
         ...
 
-    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: dict[str, Any]) -> None:
+    def on_capability_removed_async(self, registration_id: str, capability_path: str) -> None:
         ...
 
     def has_capability_async(self, capability_path: str) -> bool:
@@ -1135,7 +1135,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
     ) -> None:
-        self.transport: TransportWrapper | None = None
+        self._transport: Transport | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
@@ -1148,7 +1148,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self.diagnostics = DiagnosticsStorage()
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
         self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, RequestController | None] = {}
-        self.exiting = False
+        self._exiting = False
+        self._end_requested = False
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0
         self._variables: dict[str, str] = {}
@@ -1179,6 +1180,15 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     def plugin(self) -> AbstractPlugin | LspPlugin | None:
         return self._plugin
 
+    @property
+    def exiting(self) -> bool:
+        return self._exiting
+
+    @property
+    def end_requested(self) -> bool:
+        """Whether `end()` was called, so the server stopping afterwards is not a crash."""
+        return self._end_requested
+
     # --- session view management --------------------------------------------------------------------------------------
 
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:
@@ -1199,7 +1209,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 await self.end()
                 self._maybe_end_task = None
 
-        if self.exiting:
+        if self._exiting:
             # This means we're really ending, just return and let this object shutdown.
             return
         # If we're at this point, then we are certain the `end()` method isn't running. Maybe there is an existing
@@ -1391,11 +1401,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self,
         variables: dict[str, str],
         working_directory: str | None,
-        transport: TransportWrapper
+        transport: Transport
     ) -> InitializeResult | Error:
         try:
             return await self._initialize_impl(variables, working_directory, transport)
         except:
+            self._end_requested = True
             await transport.close()
             raise
 
@@ -1403,11 +1414,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         self,
         variables: dict[str, str],
         working_directory: str | None,
-        transport: TransportWrapper
+        transport: Transport
     ) -> InitializeResult | Error:
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
-        self.transport = transport
+        self._transport = transport
+        self._transport.start()
         self.working_directory = working_directory
         self._variables = variables
         params = get_initialize_params(variables, self._workspace_folders, self.config)
@@ -1642,7 +1654,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 # TODO: Handle error.
                 return False
             content = response['text'].replace('\r', '')
-            syntax = self.config.syntax_map.get(parse_uri(uri)[0], '')
+            syntax = self.config.syntax_map.get(parse_uri(uri)[0])
+            if not syntax:
+                # Try to derive the syntax from path segment of the URI or from first content line
+                syntax_obj = sublime.find_syntax_for_file(title, first_line=content.partition('\n')[0])
+                syntax = syntax_obj.path if syntax_obj else ''
             return self._on_view_for_uri_opened(
                 await self._open_scratch_buffer(title, content, syntax, flags, group), uri, r
             )
@@ -1779,6 +1795,15 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
 
         return self.create_task_and_wrap_in_compat_promise(do())
 
+    async def open_externally(self, uri: DocumentUri | str) -> bool:
+        """
+        Open a URI or a file path with the default application of the OS.
+
+        Returns whether the URI was opened successfully. Note that this currently blocks the event loop until the OS
+        command that opens the URI returns.
+        """
+        return open_externally(uri)
+
     @deprecated("use Session.open_location instead")
     def open_location_async(
         self,
@@ -1838,33 +1863,21 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         *,
         label: str | None = None,
         is_refactoring: bool = False,
-    ) -> ApplyWorkspaceEditResult:
+    ) -> tuple[ApplyWorkspaceEditResult, WorkspaceEditSummary]:
         created_files: list[FileCreate] = []
         renamed_files: list[FileRename] = []
         deleted_files: list[FileDelete] = []
+        deleted_folders: list[FileDelete] = []
+        edited_files: set[DocumentUri] = set()
+        total_changes_in_edited_files = 0
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
-        index = 0  # Assuming 0-based indexing for the ApplyWorkspaceEditResult.faildedChange value
-        result = await self._apply_document_changes_recursive(
-            document_changes, change_annotations, created_files, renamed_files, deleted_files, index, label, auto_save
-        )
-        self._set_selected_sheets(selected_sheets)
-        self._set_focused_sheet(active_sheet)
-        self._notify_after_resource_operations(created_files, renamed_files, deleted_files)
-        return result
+        result: ApplyWorkspaceEditResult = {'applied': True}
 
-    async def _apply_document_changes_recursive(
-        self,
-        document_changes: list[TextDocumentEdit | CreateFile | RenameFile | DeleteFile],
-        change_annotations: dict[ChangeAnnotationIdentifier, ChangeAnnotation],
-        created_files: list[FileCreate],
-        renamed_files: list[FileRename],
-        deleted_files: list[FileDelete],
-        index: int,
-        label: str | None,
-        auto_save: str
-    ) -> ApplyWorkspaceEditResult:
+        def failure(failure_reason: str, index: int) -> ApplyWorkspaceEditResult:
+            printf(f'Error while applying WorkspaceEdit: {failure_reason}')
+            return {'applied': False, 'failureReason': failure_reason, 'failedChange': index}
 
         async def apply_text_document_edit(
             view: sublime.View | Literal[False] | None,
@@ -1885,6 +1898,9 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             else:
                 edit_label = label
             view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': edit_label})
+            nonlocal total_changes_in_edited_files
+            total_changes_in_edited_files += len(edits)
+            edited_files.add(uri)
             if view and view_state_actions:
                 await self._set_view_state(view_state_actions, view)
             return None
@@ -1934,101 +1950,124 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             # TODO: ideally we'd have a callback for 'delete_folder'
             return await wait_for_path_deletion(path)
 
-        async def on_deleted(uri: DocumentUri, failure_reason: str | None) -> ApplyWorkspaceEditResult:
-            if not failure_reason:
-                deleted_files.append({'uri': uri})
-            return await _continue(failure_reason)
-
-        async def _continue(failure_reason: str | None) -> ApplyWorkspaceEditResult:
-            if failure_reason:
-                printf(f'Error while applying WorkspaceEdit: {failure_reason}')
-                return {
-                    'applied': False,
-                    'failureReason': failure_reason,
-                    'failedChange': index
-                }
-            return await self._apply_document_changes_recursive(
-                document_changes,
-                change_annotations,
-                created_files,
-                renamed_files,
-                deleted_files,
-                index + 1,
-                label,
-                auto_save
-            )
-
+        index = 0
         try:
-            document_change = document_changes.pop(0)
-        except IndexError:
-            # All document changes were handled
-            return {'applied': True}
-        if is_text_document_edit(document_change):
-            text_document = document_change['textDocument']
-            uri = text_document['uri']
-            version = text_document['version']
-            view_state_actions = self._get_view_state_actions(uri, auto_save)
-            view = await self.open_uri(uri)
-            failure_reason = await apply_text_document_edit(
-                view, uri, document_change['edits'], version, view_state_actions)
-            return await _continue(failure_reason)
-        if is_create_file(document_change):
-            uri = document_change['uri']
-            options = document_change.get('options', {})
-            scheme, path = parse_uri(uri)
-            if scheme != 'file':
-                return await _continue(f'CreateFile not supported for URI {uri}')
-            if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
-                if options.get('overwrite'):
-                    failure_reason = await delete_file(path)
-                    return await _continue(failure_reason or create_file(path))
-                if options.get('ignoreIfExists'):
-                    return await _continue(None)
-                return await _continue(f'CreateFile failed because a file already exists at target {uri}')
-            if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
-                # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
-                return await _continue(f'CreateFile failed because a folder already exists at target {uri}')
-            return await _continue(create_file(path))
-        if is_rename_file(document_change):
-            old_uri = document_change['oldUri']
-            new_uri = document_change['newUri']
-            options = document_change.get('options', {})
-            old_scheme, old_path = parse_uri(old_uri)
-            if old_scheme != 'file':
-                return await _continue(f'RenameFile not supported for URI {old_uri}')
-            if not os.path.exists(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
-                return await _continue(f'RenameFile failed because {old_uri} does not exist')
-            new_scheme, new_path = parse_uri(new_uri)
-            if new_scheme != 'file':
-                return await _continue(f'RenameFile not supported for URI {new_uri}')
-            if os.path.isfile(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
-                if options.get('overwrite') and os.path.isfile(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
-                    failure_reason = await delete_file(new_path)
-                    return await _continue(failure_reason or rename_file(old_path, new_path))
-                if options.get('ignoreIfExists'):
-                    return await _continue(None)
-                return await _continue(f'RenameFile failed because target {new_uri} already exists')
-            if os.path.isdir(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
-                # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
-                return await _continue(f'RenameFile failed because target {new_uri} already exists')
-            return await _continue(rename_file(old_path, new_path))
-        if is_delete_file(document_change):
-            uri = document_change['uri']
-            options = document_change.get('options', {})
-            scheme, path = parse_uri(uri)
-            if scheme != 'file':
-                return await _continue(f'DeleteFile not supported for URI {uri}')
-            if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
-                return await on_deleted(uri, await delete_file(path))
-            if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
-                if os.listdir(path) and not options.get('recursive'):
-                    return await _continue(f'DeleteFile failed because folder {uri} is not empty')
-                return await on_deleted(uri, await delete_folder(path))
-            if options.get('ignoreIfNotExists'):
-                return await _continue(None)
-            return await _continue(f'DeleteFile failed because {uri} does not exist')
-        # Should be unreachable, but must return value on all code paths to satisfy type checker
-        return await _continue('Unknown document change type')
+            for index, document_change in enumerate(document_changes):
+                if is_text_document_edit(document_change):
+                    text_document = document_change['textDocument']
+                    uri = text_document['uri']
+                    version = text_document['version']
+                    edits = document_change['edits']
+                    view_state_actions = self._get_view_state_actions(uri, auto_save)
+                    view = await self.open_uri(uri)
+                    if failure_reason := await apply_text_document_edit(view, uri, edits, version, view_state_actions):
+                        result = failure(failure_reason, index)
+                        break
+                elif is_create_file(document_change):
+                    uri = document_change['uri']
+                    options = document_change.get('options', {})
+                    scheme, path = parse_uri(uri)
+                    if scheme != 'file':
+                        result = failure(f'CreateFile not supported for URI {uri}', index)
+                        break
+                    if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        if options.get('overwrite'):
+                            if failure_reason := await delete_file(path):
+                                result = failure(failure_reason, index)
+                                break
+                            if failure_reason := create_file(path):
+                                result = failure(failure_reason, index)
+                                break
+                            continue
+                        if options.get('ignoreIfExists'):
+                            continue
+                        result = failure(f'CreateFile failed because a file already exists at target {uri}', index)
+                        break
+                    if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
+                        result = failure(f'CreateFile failed because a folder already exists at target {uri}', index)
+                        break
+                    if failure_reason := create_file(path):
+                        result = failure(failure_reason, index)
+                        break
+                elif is_rename_file(document_change):
+                    old_uri = document_change['oldUri']
+                    new_uri = document_change['newUri']
+                    options = document_change.get('options', {})
+                    old_scheme, old_path = parse_uri(old_uri)
+                    if old_scheme != 'file':
+                        result = failure(f'RenameFile not supported for URI {old_uri}', index)
+                        break
+                    if not os.path.exists(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        result = failure(f'RenameFile failed because {old_uri} does not exist', index)
+                        break
+                    new_scheme, new_path = parse_uri(new_uri)
+                    if new_scheme != 'file':
+                        result = failure(f'RenameFile not supported for URI {new_uri}', index)
+                        break
+                    if os.path.isfile(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        if options.get('overwrite') and os.path.isfile(old_path):  # ruff: ignore[blocking-path-method-in-async-function]
+                            if failure_reason := await delete_file(new_path):
+                                result = failure(failure_reason, index)
+                                break
+                            if failure_reason := rename_file(old_path, new_path):
+                                result = failure(failure_reason, index)
+                                break
+                            continue
+                        if options.get('ignoreIfExists'):
+                            continue
+                        result = failure(f'RenameFile failed because target {new_uri} already exists', index)
+                        break
+                    if os.path.isdir(new_path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        # Don't allow to overwrite entire folders, even if the CreateFileOptions.overwrite flag is set
+                        result = failure(f'RenameFile failed because target {new_uri} already exists', index)
+                        break
+                    if failure_reason := rename_file(old_path, new_path):
+                        result = failure(failure_reason, index)
+                        break
+                elif is_delete_file(document_change):
+                    uri = document_change['uri']
+                    options = document_change.get('options', {})
+                    scheme, path = parse_uri(uri)
+                    if scheme != 'file':
+                        result = failure(f'DeleteFile not supported for URI {uri}', index)
+                        break
+                    if os.path.isfile(path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        if failure_reason := await delete_file(path):
+                            result = failure(failure_reason, index)
+                            break
+                        deleted_files.append({'uri': uri})
+                        continue
+                    if os.path.isdir(path):  # ruff: ignore[blocking-path-method-in-async-function]
+                        if os.listdir(path) and not options.get('recursive'):
+                            result = failure(f'DeleteFile failed because folder {uri} is not empty', index)
+                            break
+                        if failure_reason := await delete_folder(path):
+                            result = failure(failure_reason, index)
+                            break
+                        deleted_folders.append({'uri': uri})
+                        continue
+                    if options.get('ignoreIfNotExists'):
+                        continue
+                    result = failure(f'DeleteFile failed because {uri} does not exist', index)
+                    break
+                else:
+                    result = failure('Unknown document change type', index)
+                    break
+        except Exception as ex:
+            result = failure(str(ex), index)
+        self._set_selected_sheets(selected_sheets)
+        self._set_focused_sheet(active_sheet)
+        self._notify_after_resource_operations(created_files, renamed_files, deleted_files + deleted_folders)
+        summary: WorkspaceEditSummary = {
+            'total_changes': total_changes_in_edited_files,
+            'edited_files': len(edited_files),
+            'created_files': len(created_files),
+            'renamed_files': len(renamed_files),
+            'deleted_files': len(deleted_files),
+            'deleted_folders': len(deleted_folders)
+        }
+        return result, summary
 
     async def apply_workspace_edit(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
@@ -2045,31 +2084,11 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 for uri, edits in edit.get('changes', {}).items()
             ])
         change_annotations = edit.get('changeAnnotations', {})
-        summary: WorkspaceEditSummary = {
-            'total_changes': 0,
-            'edited_files': 0,
-            'created_files': 0,
-            'renamed_files': 0,
-            'deleted_files': 0
-        }
-        for document_change in document_changes:
-            if is_text_document_edit(document_change):
-                summary['total_changes'] += len(document_change['edits'])
-                summary['edited_files'] += 1
-            elif is_create_file(document_change):
-                summary['created_files'] += 1
-            elif is_rename_file(document_change):
-                summary['renamed_files'] += 1
-            elif is_delete_file(document_change):
-                summary['deleted_files'] += 1
-        return (
-            await self.apply_document_changes(
-                document_changes,
-                change_annotations,
-                label=label,
-                is_refactoring=is_refactoring or self._is_executing_refactoring_command
-            ),
-            summary
+        return await self.apply_document_changes(
+            document_changes,
+            change_annotations,
+            label=label,
+            is_refactoring=is_refactoring or self._is_executing_refactoring_command
         )
 
     @deprecated("use Session.apply_workspace_edit instead")
@@ -2495,7 +2514,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
             registration_id = unregistration["id"]
             capability_path, registration_path = method_to_capability(unregistration["method"])
             if capability_path == 'diagnosticProvider':
-                self.diagnostics.unregister_provider(registration_id)
+                if (identifier := self.diagnostics.unregister_provider(registration_id)) is not None:
+                    self._on_diagnostic_stream_removed_async(identifier)
                 continue
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
@@ -2507,7 +2527,18 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 # or a completionProvider for trigger characters.
                 if isinstance(discarded, dict):
                     for sv in self.session_views_async():
-                        sv.on_capability_removed_async(registration_id, discarded)
+                        sv.on_capability_removed_async(registration_id, capability_path)
+
+    def _on_diagnostic_stream_removed_async(self, identifier: str) -> None:
+        # Forget the result IDs of the removed stream, so that the diagnostics are pulled from scratch if a provider
+        # with the same identifier gets registered again.
+        for key in [key for key in self.diagnostics_result_ids if key[1] == identifier]:
+            del self.diagnostics_result_ids[key]
+        for sb in self.session_buffers_async():
+            if uri := sb.get_uri():
+                self._publish_diagnostics_to_session_buffer_async(sb, self.diagnostics.get_diagnostics_for_uri(uri))
+        if mgr := self.manager():
+            mgr.on_diagnostics_updated()
 
     def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
         if not self._watcher_impl:
@@ -2542,7 +2573,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     async def on_window_show_document(self, params: ShowDocumentParams) -> ShowDocumentResult:
         uri = params.get("uri")
         if params.get("external"):
-            return {"success": open_externally(uri)}
+            return {"success": await self.open_externally(uri)}
         # TODO: ST API does not allow us to say "do not focus this new view"
         result = await self.open_uri(uri, params.get("selection"))
         return {"success": bool(result)}
@@ -2629,9 +2660,10 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
     async def end(self) -> None:
-        if self.exiting:
+        if self._exiting:
             return
-        self.exiting = True
+        self._exiting = True
+        self._end_requested = True
         if self._plugin:
             self._plugin.on_session_end_async(None, None)
             self._plugin = None
@@ -2666,8 +2698,8 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         return await session_view.shutdown()
 
     async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
-        self.exiting = True
-        self.transport = None
+        self._exiting = True
+        self._transport = None
         for _request, _result_handler, error_handler in self._response_handlers.values():
             error_handler(Error(ErrorCodes.InternalError, "transport closed").to_lsp())
         self._response_handlers.clear()
@@ -2702,7 +2734,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         result = CancellableRequest(future, request_id, self)
-        if self.exiting and r.method != "shutdown":
+        if self._exiting and r.method != "shutdown":
             future.cancel()
             return result
         if r.progress and isinstance(r.params, dict):
@@ -2828,10 +2860,13 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         return (promise, request_id)
 
     async def cancel_request(self, request_id: int) -> None:
-        if request_id in self._response_handlers:
+        if tup := self._response_handlers.get(request_id):
+            request, _, error_handler = tup
+            # The server may still reply with a regular result, which must not reach the caller anymore.
+            self._response_handlers[request_id] = (request, lambda _: None, lambda _: None)
+            error_handler({"code": LSPErrorCodes.RequestCancelled, "message": "Request canceled by client"})
+            self._invoke_views(request, "on_request_canceled_async", request_id)
             await self.notify(Notification("$/cancelRequest", {"id": request_id}))
-            if tup := self._response_handlers.get(request_id):
-                self._invoke_views(tup[0], "on_request_canceled_async", request_id)
 
     async def notify(self, notification: Notification[P_contra]) -> None:
         """Send a notification to the server."""
@@ -2865,16 +2900,17 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
         await self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
 
     async def exit(self) -> None:
-        await self.notify(Notification.exit())
-        if self.transport:
-            await self.transport.close()
-            self.transport = None
+        try:
+            await self.notify(Notification.exit())
+        finally:
+            # Close the transport even if sending the notification failed. Otherwise the server process is left running.
+            if transport := self._transport:
+                self._transport = None
+                await transport.close()
 
     async def send_payload(self, payload: JSONRPCMessage) -> None:
-        try:
-            await self.transport.send(payload)  # pyright: ignore[reportOptionalMemberAccess]
-        except AttributeError:
-            pass
+        if self._transport:
+            await self._transport.send(payload)
 
     async def deduce_payload(
         self,
@@ -2939,10 +2975,12 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                 else:
                     # server request
                     try:
+                        response = await handler(result, req_id)
+                        # A request handler that returns a Promise resolves it with an `Error` when it fails.
+                        if isinstance(response.result, Error):
+                            raise response.result
                         await self.send_response(
-                            await self._handle_plugin_on_pre_send_response_async(
-                                method, result, await handler(result, req_id)
-                            )
+                            await self._handle_plugin_on_pre_send_response_async(method, result, response)
                         )
                     except Error as err:
                         await self.send_error_response(req_id, err)
@@ -2951,7 +2989,7 @@ class Session(APIHandler, TransportCallbacks, TaskContainer):
                         raise
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)
-        elif not self.exiting:
+        elif not self._exiting:
             debug("no handler found for payload:", payload)
 
     async def _handle_plugin_on_pre_send_response_async(

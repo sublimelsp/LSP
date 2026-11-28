@@ -6,8 +6,13 @@ from typing import Iterable
 from typing import Literal
 from typing import Optional
 from typing import Tuple
+from typing import TYPE_CHECKING
+import asyncio
 import html
 import sublime
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 LOG_LINES_LIMIT_SETTING_NAME = 'lsp_limit_lines'
 MAX_LOG_LINES_LIMIT_ON = 500
@@ -81,6 +86,52 @@ def buttons_html(buttons: Iterable[PanelButton]) -> str:
         "<a href='{}'{}>{}</a>".format(href, f" class='{style}'" if style else "", html.escape(label))
         for href, label, style in buttons
     ))
+
+
+def show_quick_panel(
+    window: sublime.Window,
+    items: list[str] | list[list[str]] | list[sublime.QuickPanelItem],
+    flags: sublime.QuickPanelFlags = sublime.QuickPanelFlags.NONE,
+    selected_index: int = -1,
+    on_highlight: Callable[[int], None] | None = None,
+    placeholder: str | None = None,
+) -> asyncio.Future[int]:
+    """
+    Show a quick panel to select an item in a list.
+
+    :param window: The window to use for the quick panel.
+    :param items: May be either a list of strings, or a list of lists of strings where the first item is the trigger and
+    all subsequent strings are details shown below.
+    :param flags: `QuickPanelFlags` controlling behavior. The `WANT_EVENT` bit is set to 0.
+    :param selected_index: The initially selected item. `-1` for no selection.
+    :param on_highlight: Called every time the highlighted item in the quick panel is changed. Note that this callback
+    runs on the main thread, not on the asyncio thread.
+    :param placeholder: Text displayed in the filter input field before any query is typed.
+    :raises RuntimeError: when this function is not called from the asyncio thread.
+    """
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
+    # Clear the WANT_EVENT bit.
+    flags &= ~sublime.QuickPanelFlags.WANT_EVENT
+
+    def on_select(index: int) -> None:
+        # Called by ST on the main thread; resolve the future on the loop's thread.
+        loop.call_soon_threadsafe(_set_result_unless_done, future, index)
+
+    window.show_quick_panel(
+        items=items,
+        on_select=on_select,
+        flags=flags,
+        selected_index=selected_index,
+        on_highlight=on_highlight,
+        placeholder=placeholder,
+    )
+    return future
+
+
+def _set_result_unless_done(future: asyncio.Future[int], value: int) -> None:
+    if not future.done():
+        future.set_result(value)
 
 
 class PanelName:

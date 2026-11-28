@@ -17,7 +17,7 @@ from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
-from sublime_plugin import view_event_listeners
+from sublime_plugin import find_view_event_listener
 from typing import Any
 from typing import Callable
 from typing import Coroutine
@@ -218,10 +218,7 @@ class TextDocumentTestCase(SublimeAioTestCase):
         # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
         # opening file (manager missing in DocumentSyncListener)
         # Revisit this once we're on ST4.
-        for listener in view_event_listeners[cls.view.id()]:
-            if isinstance(listener, DocumentSyncListener):
-                return listener
-        return None
+        return find_view_event_listener(cls.view, DocumentSyncListener)
 
     @staticmethod
     async def wait_until(condition: Callable[[], bool]) -> None:

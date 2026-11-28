@@ -19,21 +19,22 @@ from typing import List
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import TypedDict
 from typing import Union
 from typing_extensions import NotRequired
+from typing_extensions import TypedDict
 from typing_extensions import TypeGuard
 import sublime
 
 WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit, SnippetTextEdit]], Optional[str], Optional[int]]]  # ruff: ignore[line-too-long]
 
 
-class WorkspaceEditSummary(TypedDict):
+class WorkspaceEditSummary(TypedDict, closed=True):
     total_changes: int
     edited_files: int
     created_files: NotRequired[int]
     renamed_files: NotRequired[int]
     deleted_files: NotRequired[int]
+    deleted_folders: NotRequired[int]
 
 
 def is_text_document_edit(
@@ -88,6 +89,21 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None = None
 
 def parse_lsp_position(position: Position) -> tuple[int, int]:
     return position['line'], min(UINT_MAX, position['character'])
+
+
+def utf16_to_code_points(s: str, col: int) -> int:
+    """Convert a position from UTF-16 code units to Unicode code points, usable for string slicing."""
+    utf16_len = 0
+    idx = 0
+    for idx, c in enumerate(s):
+        if utf16_len >= col:
+            if utf16_len > col:  # If col is in the middle of a character (emoji), don't advance to the next code point
+                idx -= 1
+            break
+        utf16_len += 1 if ord(c) < 65536 else 2
+    else:
+        idx += 1  # get_file_lines function trims the trailing '\n'
+    return idx
 
 
 def apply_text_edits(

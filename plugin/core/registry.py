@@ -79,7 +79,7 @@ class AsyncCommandMixin:
         window: sublime.Window,
         can_accept_input: Callable[[], bool],
     ) -> None:
-        run = cast('Callable[..., Coroutine[Any, Any, None]]', command.run)
+        run = cast('Callable[..., Coroutine[Any, Any, None]]', command.run)  # pyright: ignore[reportAttributeAccessIssue]
         try:
             # Calling a coroutine function only binds the arguments and does not execute its body yet. So a TypeError
             # raised here can only originate from missing or unexpected arguments.
@@ -126,7 +126,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand, AsyncCommandMixin):
                 self.session_name = package_name
 
     def run_(self, edit_token: int, args: dict[str, Any] | None) -> None:
-        if not inspect.iscoroutinefunction(self.run):
+        if not inspect.iscoroutinefunction(self.run):  # pyright: ignore[reportAttributeAccessIssue]
             super().run_(edit_token, args)  # pyright: ignore[reportAttributeAccessIssue]
             return
         args = self.filter_args(args)  # pyright: ignore[reportAttributeAccessIssue]
@@ -214,7 +214,7 @@ class LspTextCommand(sublime_plugin.TextCommand, AsyncCommandMixin):
                 self.session_name = package_name
 
     def run_(self, edit_token: int, args: dict[str, Any] | None) -> None:
-        if not inspect.iscoroutinefunction(self.run):
+        if not inspect.iscoroutinefunction(self.run):  # pyright: ignore[reportAttributeAccessIssue]
             super().run_(edit_token, args)  # pyright: ignore[reportAttributeAccessIssue]
             return
         args = self.filter_args(args)  # pyright: ignore[reportAttributeAccessIssue]

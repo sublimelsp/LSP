@@ -2,7 +2,9 @@ version = 1
 revision = 5
 requires-python = ">=3.8"
 resolution-markers = [
-    "python_full_version >= '3.10'",
+    "python_full_version >= '3.14'",
+    "python_full_version == '3.13.*'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
     "python_full_version < '3.10'",
 ]
 
@@ -12,6 +14,8 @@ lint = [
     { name = "orjson", marker = "python_full_version < '3.10'", specifier = "==3.10.15" },
     { name = "orjson", marker = "python_full_version >= '3.10'", specifier = "==3.13.0" },
     { name = "ruff", specifier = "==0.17.5" },
+    { name = "sublime-text-stubs", marker = "python_full_version < '3.14'", specifier = "==4200.2" },
+    { name = "sublime-text-stubs", marker = "python_full_version >= '3.14'", specifier = "==4213.1" },
 ]
 
 [[package]]
@@ -136,7 +140,9 @@ name = "orjson"
 version = "3.13.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.10'",
+    "python_full_version >= '3.14'",
+    "python_full_version == '3.13.*'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f2/72/380b97dc45bd162d23afe5194721ef678d9eac7cfaa549fe2873f7f0a518/orjson-3.13.0.tar.gz", hash = "sha256:d1de5eb04485110c5da4c657e49168995d55e076b1ce60f1a042e254f4186c4f", size = 2732604, upload-time = "2026-10-07T14:09:25.719Z" }
 wheels = [
@@ -223,4 +229,30 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/2c/a5/2e136dede2a88aaaf54498bbbdc81bc810f788ef6ef01efb97037d73cd1d/ruff-0.17.5-py3-none-win32.whl", hash = "sha256:e1546609b2ad73f1d6c5c076881b788672b7b3cc3283981182cbdbb6524ed88a", size = 9929908, upload-time = "2026-11-12T17:54:47.067Z" },
     { url = "https://files.pythonhosted.org/packages/ec/8c/e4db9ae1e0ee233c04df007ab6d0d42f799ae9abd95d352b6092ee7bc4bf/ruff-0.17.5-py3-none-win_amd64.whl", hash = "sha256:aa415d57c244299279901d776607fee3df7831c2a7435433fbfacde8632c6550", size = 10275454, upload-time = "2026-11-12T17:54:49.401Z" },
     { url = "https://files.pythonhosted.org/packages/e6/65/a1648bc1550e7683bf7bf1e2ce2485c9f8535cbca6cca9ec7b73cc12fb8e/ruff-0.17.5-py3-none-win_arm64.whl", hash = "sha256:64a6fd668a336df959c522991de33e9e3c8be463afc0c9ac8f029f9d19ef756e", size = 9849020, upload-time = "2026-11-12T17:54:52.055Z" },
+]
+
+[[package]]
+name = "sublime-text-stubs"
+version = "4200.2"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version == '3.13.*'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
+    "python_full_version < '3.10'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/54/e5/0684ae617e4a6f34789c92098c57e12860f968b5c5afc6c4133fc10b8226/sublime_text_stubs-4200.2.tar.gz", hash = "sha256:cdca1c2cf7c32da495f77ee3aad6a800417be65a6ea8383f7fa1c9f436a1a24c", size = 82292, upload-time = "2026-11-05T00:38:42.597Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/cf/08db0e4a9c3fc593fd7281743f49fd39c7df1cdbd4c9fb3f62b753b20f96/sublime_text_stubs-4200.2-py3-none-any.whl", hash = "sha256:15c50ac7d902297dc311fba99e7d4f910ba90241956eb78066248fe817b1bd31", size = 37719, upload-time = "2026-11-05T00:38:41.268Z" },
+]
+
+[[package]]
+name = "sublime-text-stubs"
+version = "4213.1"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ba/19/6d63141554e05edb20ef98379988fb88cdce3973065d828c6fbdabe58ff0/sublime_text_stubs-4213.1.tar.gz", hash = "sha256:797a0f219846fb2dc155e585371686a407d62277c8608d09317d107f4bf53515", size = 86185, upload-time = "2026-11-05T00:38:15.271Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/c4/62427d627269109ca3d8f353d9dd17c11b97ea3fa00d7d15b2718a14d2fa/sublime_text_stubs-4213.1-py3-none-any.whl", hash = "sha256:7f30dfad8d0a85b8518d3f96757af298448b1ec0d5c8511a072b6c8a30995cee", size = 37876, upload-time = "2026-11-05T00:38:14.023Z" },
 ]

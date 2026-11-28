@@ -115,6 +115,29 @@ There are three ways to "get on the asyncio thread":
     run_on_asyncio_thread(some_func_that_is_not_async_but_has_to_run_on_asyncio_context)
     ```
 
+### Consider setting `cancel_previous_run` in `LspTextCommand` or `LspWindowCommand`
+
+The command classes `LspTextCommand` and `LspWindowCommand` now have the ability to _cancel_ the previous run invocation. For every view/tab in the editor, there is a corresponding instance of `LspTextCommand`. When the user issues a new run invocation of that instance, the previous, possibly in-flight, run can now be optionally cancelled.
+
+This is a small increase in user experience for query-like commands that do not alter the state of the buffer.
+
+To opt into this automatic cancellation behavior, set the class-level boolean `cancel_previous_run` to `True`:
+
+```python
+    from LSP.plugin import LspTextCommand
+
+    class SomeCustomCommand(LspTextCommand):
+
+        cancel_previous_run = True
+
+        async def run(self, **kwargs: Any) -> None:
+            ...
+```
+
+Cancellation surfaces as an `asyncio.CancelledError` exception.
+
+The same can be done for `LspWindowCommand`-derived classes. For those, the cancellation happens on the window level. So, a new run invocation in one tab cancels it for all tabs.
+
 ### Update subclasses of `LspExecuteCommand`
 
 The `run` method of `LspExecuteCommand` is now a coroutine and no longer takes an edit token. If your package subclasses it and overrides `run`, update the override accordingly:
